@@ -1,0 +1,10 @@
+# FGTEST voltage source model file : LHC RB
+
+V_REF_DELAY   1.03E-3
+V_MEAS_DELAY  1.3E-3
+TRACK_DELAY   2.33E-3
+NUM           1.0
+DEN           1.0
+
+# EOF
+

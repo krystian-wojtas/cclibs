@@ -1,0 +1,10 @@
+# FGTEST regulation file: LHC RB
+
+PERIOD_ITERS      100
+TRACK_DELAY       100E-3
+CLBW              0.4
+CLBW2             0.4
+Z                 0.5
+PURE_DELAY        0.0
+
+# EOF

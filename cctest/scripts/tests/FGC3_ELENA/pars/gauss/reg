@@ -1,0 +1,10 @@
+# FGTEST regulation file: ACAPULCO with FGC2 in PSB
+
+PERIOD_ITERS      10
+TRACK_DELAY       2.0E-3
+CLBW              100
+CLBW2             100
+Z                 0.7
+PURE_DELAY        1.0E-3
+
+# EOF

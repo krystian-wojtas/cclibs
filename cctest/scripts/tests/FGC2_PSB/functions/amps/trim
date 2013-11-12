@@ -1,0 +1,6 @@
+# FGTEST TRIM file
+
+INITIAL_REF     -10.0
+FINAL_REF       10.0
+
+# EOF

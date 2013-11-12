@@ -1,0 +1,10 @@
+# FGTEST global control file
+
+RUN_DELAY       5.0
+STOP_DELAY      5.0
+ITER_PERIOD     1.0E-3
+UNITS           AMPS
+FG_LIMITS       DISABLED
+SIM_LOAD        ENABLED
+
+# EOF

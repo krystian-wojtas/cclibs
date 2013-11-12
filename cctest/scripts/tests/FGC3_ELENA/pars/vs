@@ -1,0 +1,11 @@
+# FGTEST voltage source model file : Main ELENA dipole converter with FGC3
+
+V_REF_DELAY   1.0E-4
+V_MEAS_DELAY  1.3E-4
+TRACK_DELAY   2.987E-4
+NATURAL_FREQ  2000
+TAU_ZERO      0.0
+Z             0.9
+
+# EOF
+

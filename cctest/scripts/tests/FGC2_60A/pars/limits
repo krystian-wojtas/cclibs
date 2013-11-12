@@ -1,0 +1,20 @@
+# FGTEST limits file: LHC60A
+
+I_POS           60.0
+I_MIN           0.0
+I_NEG           -60.0
+I_RATE          1.0
+I_ACCELERATION  1.0
+I_ERR_WARNING   0.1
+I_ERR_FAULT     1.0
+I_QUADRANTS41   -60.0,60.0
+
+V_POS           8.0
+V_NEG           -8.0
+V_RATE          1.0E3
+V_ACCELERATION  1.0E6
+V_ERR_WARNING   0.1
+V_ERR_FAULT     1.0
+V_QUADRANTS41   5.0,8.0
+
+# EOF

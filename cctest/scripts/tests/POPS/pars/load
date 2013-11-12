@@ -1,0 +1,14 @@
+# FGTEST load file: POPS
+
+OHMS_SER        0.02
+OHMS_PAR        1.0E8
+OHMS_MAG        0.3
+HENRYS          0.96
+HENRYS_SAT      0.36
+I_SAT_START     3600.0
+I_SAT_END       6000.0
+GAUSS_PER_AMP   2.5
+I_MEAS_DELAY    1.3E-3
+SIM_TC_ERROR    0.1
+
+# EOF

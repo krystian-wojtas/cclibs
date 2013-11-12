@@ -1,0 +1,8 @@
+# FGTEST START file
+
+FEEDFORWARD_V_REF       5000
+CLOSELOOP_LEVEL         500
+FINAL_REF               1100
+ACCELERATION            2E5
+
+# EOF

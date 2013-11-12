@@ -1,0 +1,8 @@
+# FGTEST voltage source model file : ACAPULCO with FGC2 in PSB
+
+V_REF_DELAY   1.0E-3
+V_MEAS_DELAY  1.3E-3
+TRACK_DELAY   2.3E-3
+
+# EOF
+

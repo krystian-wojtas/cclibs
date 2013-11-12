@@ -1,0 +1,16 @@
+# FGTEST load file:  ACAPULCO with FGC3 in PSB
+
+OHMS_SER        0.002
+OHMS_PAR        1.0E8
+OHMS_MAG        0.0
+HENRYS          80E-6
+HENRYS_SAT      80E-6
+I_SAT_START     0.0
+I_SAT_END       0.0
+GAUSS_PER_AMP   1.0
+I_MEAS_DELAY    1.3E-4
+PERTURB_VOLTS   1.0
+PERTURB_TIME    0.0
+SIM_TC_ERROR    0.0
+
+# EOF

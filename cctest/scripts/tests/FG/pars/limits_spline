@@ -1,0 +1,8 @@
+# FGTEST limits file
+
+V_POS           1000.0
+V_NEG           -1000.0
+V_RATE          0.0
+V_ACCELERATION  1.80E-7
+
+# EOF

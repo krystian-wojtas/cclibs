@@ -1,0 +1,9 @@
+# FGTEST TEST file
+
+INITIAL_REF     2.0
+AMPLITUDE_PP    1.0
+NUM_CYCLES      5
+PERIOD          1.0
+WINDOW          DISABLED
+
+# EOF

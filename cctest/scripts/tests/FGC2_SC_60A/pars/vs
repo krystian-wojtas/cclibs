@@ -1,0 +1,10 @@
+# FGTEST voltage source model file : LHC 60A
+
+V_REF_DELAY   1.0E-3
+V_MEAS_DELAY  1.3E-3
+TRACK_DELAY   2.3E-3
+NUM           1.0,0.00
+DEN           1.0
+
+# EOF
+

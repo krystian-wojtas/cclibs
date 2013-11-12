@@ -1,0 +1,10 @@
+# FGTEST regulation file: LHC 60A
+
+PERIOD_ITERS      20
+TRACK_DELAY       20E-3
+CLBW              1.0E5
+CLBW2             1.0
+Z                 0.8
+PURE_DELAY        0.0E-3
+
+# EOF
