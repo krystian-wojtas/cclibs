@@ -1,0 +1,21 @@
+# Filename: Makefile
+#
+# Purpose:  Makefile for libfg
+#
+# Author:   Stephen Page
+
+lib         = $(exec_path)/libfg.a
+
+lib_heads   = inc/libfg.h inc/libfg
+
+fgc         = ../../..
+
+# Source files
+
+source      = $(wildcard $(src_path)/*.c) $(wildcard $(src_path)/*.cpp)
+
+# Include general makefile
+
+include $(fgc)/sw/make/general
+
+# EOF
