@@ -1,5 +1,6 @@
 *.csv
 Darwin/
+Linux/
 i686/
 dep/
 obj/
