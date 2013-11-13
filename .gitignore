@@ -1,3 +1,5 @@
+*.csv
+Darwin/
 i686/
 dep/
 obj/
