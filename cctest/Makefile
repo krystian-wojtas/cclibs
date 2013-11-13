@@ -56,7 +56,7 @@ all: $(exec)
 clean:
 	rm -f $(exec) $(dep_path)/*.d $(obj_path)/*.o 
 
-$(exec): $(objects) $(libfg) $(libreg) $(inc_path)/flot.h
+$(exec): $(objects) $(libfg) $(libreg)
 	@[ -d $(@D) ] || mkdir -p $(@D)
 	$(CC) $(CFLAGS) -o $@ $^ $(libs)
 
@@ -66,7 +66,7 @@ include $(wildcard $(dep_path)/*.d)
 
 # C objects
 
-$(obj_path)/%.o: %.c
+$(obj_path)/%.o: %.c $(inc_path)/flot.h
 	@[ -d $(@D) ]       || mkdir -p $(@D)
 	@[ -d $(dep_path) ] || mkdir -p $(dep_path)
 	$(CC) $(CFLAGS) -MD -MF $(@:$(obj_path)/%.o=$(dep_path)/%.d) $(includes) -c -o $@ $<
