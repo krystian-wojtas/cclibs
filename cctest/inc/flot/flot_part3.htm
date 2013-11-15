@@ -38,10 +38,11 @@
 
         analog_options =
         {
-            series:    { shadowSize: 1, lines: { show: true, lineWidth: 1}, points: { radius: 2} },
-            grid:      { color: "#444", borderWidth: 1, backgroundColor: "#FFF" },
-            yaxis:     { labelWidth:220 },
-            legend:    { container: analog_legend_div, position: "nw", labelFormatter: function (label, series) { return '<a href="javascript:ToggleVisibility(' + series.index + ');">' + label + '</a>'; }},
+            series:         { shadowSize: 1, lines: { show: true, lineWidth: 1}, points: { radius: 2} },
+            grid:           { color: "#444", borderWidth: 1, backgroundColor: "#FFF" },
+            yaxis:          { labelWidth:220 },
+            legend:         { container: analog_legend_div, position: "nw", labelFormatter: function (label, series) { return '<a href="javascript:ToggleVisibility(' + series.index + ');">' + label + '</a>'; }},
+            selection       { mode: "xy" },
             touchselection: { mode: "xy", invalidSelectionCallback: ZoomOut },
         };
 
