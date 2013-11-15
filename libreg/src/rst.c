@@ -62,7 +62,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     float c2;
     float d1;
     float d2;
-    float s;
+    float q1;
+    float q2;
 
     // Calculate a2 = 1 - exp(t1) using Maclaruin series if t1 is small
 
@@ -120,8 +121,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         // Option 4 - pure delay fraction 1.401 - 2.01
 
         alg_index = 4;
-        b0 = 1.0;           // TODO
-        b1 = b0;
+        b0_b1 = load->gain1 * a2;
+        b0 = b0_b1 * (2.0 - delay_fraction);
+        b1 = b0_b1 * (delay_fraction - 1.0);
     }
     else
     {
@@ -142,15 +144,15 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     // Calculate intermediate values
 
     c1 = -exp(-pars->period * TWO_PI * clbw);
-    s  =  exp(-pars->period * TWO_PI * clbw2 * z);
-    d1 = -2.0 * s * cos(pars->period * TWO_PI * clbw2 * sqrt(1.0 - z * z));
-    d2 =  s * s;
+    q1 =  exp(-pars->period * TWO_PI * clbw2 * z);
+    d1 = -2.0 * q1 * cos(pars->period * TWO_PI * clbw2 * sqrt(1.0 - z * z));
+    d2 =  q1 * q1;
 
     // Calculate RST coefficients
 
     switch(alg_index)
     {
-    case 1:                                             // Algorithm 1 : Pure delay fraction 0 - 0.401
+    case 1:                                             // Algorithm 1 : Pure delay fraction 0 - 0.401 (dead-beat)
 
         pars->rst.r[0] = c1 + d1 - a1 + 2.0;
         pars->rst.r[1] = c1*d1 + d2 + 2.0*a1 - 1.0;
@@ -166,10 +168,10 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[2] = c1*d1 + d2;
         pars->rst.t[3] = c1*d2;
 
-        pars->rst.track_delay = pars->period;               // Track delay is 1 period
+        pars->rst.track_delay = pars->period;               // Track delay is exactly 1 period
         break;
 
-    case 2:                                             // Algorithm 2 : Pure delay fraction 0.401 - 1.01
+    case 2:                                             // Algorithm 2 : Pure delay fraction 0.401 - 1.01 (not dead-beat)
 
         pars->rst.r[0] = (3*a1 + c1 + d1 + 2*a1*c1 + 2*a1*d1 + a1*d2 - c1*d2 + a1*c1*d1 + 2)/(b0_b1*(a1 + 1)*(a1 + 1)) +
                          (b1*(c1 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1)) + (a1*(a1 - c1)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0));
@@ -181,20 +183,11 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
         pars->rst.s[0] = 1.0;
 
-//      (b0^2*b1 + 2*b0*b1^2 + b1^3)/(b0^3 + 2*b0^2*b1 + b0*b1^2) -
-//      (b1*(b1 - b0*c1)*(d2*b0^2 - d1*b0*b1 + b1^2))/(b0*(b0 + b1)^2*(b1 - a1*b0)) – 2;
-
         pars->rst.s[1] = (b0*b0*b1 + 2*b0*b1*b1 + b1*b1*b1)/(b0*b0*b0 + 2*b0*b0*b1 + b0*b1*b1) -
                          (b1*(b1 - b0*c1)*(d2*b0*b0 - d1*b0*b1 + b1*b1))/(b0*b0_b1*b0_b1*(b1 - a1*b0)) - 2;
 
-//      (2*b1*(b1 - b0*c1)*(d2*b0^2 - d1*b0*b1 + b1^2))/(b0*(b0 + b1)^2*(b1 - a1*b0)) -
-//      (2*(b0^2*b1 + 2*b0*b1^2 + b1^3))/(b0^3 + 2*b0^2*b1 + b0*b1^2) + 1;
-
         pars->rst.s[2] = (2*b1*(b1 - b0*c1)*(d2*b0*b0 - d1*b0*b1 + b1*b1))/(b0*b0_b1*b0_b1*(b1 - a1*b0)) -
                          (2*(b0*b0*b1 + 2*b0*b1*b1 + b1*b1*b1))/(b0*b0*b0 + 2*b0*b0*b1 + b0*b1*b1) + 1;
-
-//      (b0^2*b1 + 2*b0*b1^2 + b1^3)/(b0^3 + 2*b0^2*b1 + b0*b1^2) -
-//      (b1*(b1 - b0*c1)*(d2*b0^2 - d1*b0*b1 + b1^2))/(b0*(b0 + b1)^2*(b1 - a1*b0));
 
         pars->rst.s[3] = (b0*b0*b1 + 2*b0*b1*b1 + b1*b1*b1)/(b0*b0*b0 + 2*b0*b0*b1 + b0*b1*b1) -
                          (b1*(b1 - b0*c1)*(d2*b0*b0 - d1*b0*b1 + b1*b1))/(b0*b0_b1*b0_b1*(b1 - a1*b0));
@@ -204,23 +197,23 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[2] = (c1*d1 + d2) / b0_b1;
         pars->rst.t[3] = c1*d2 / b0_b1;
 
-        pars->rst.track_delay = 2.0 * pars->period;         // Track delay is 2 periods
+        pars->rst.track_delay = 2.0 * pars->period;         // Track delay is about 2 periods (not dead-beat)
         break;
 
-    case 3:                                            // Algorithm 3 : Pure delay fraction 1.01 - 1.401
+    case 3:                                            // Algorithm 3 : Pure delay fraction 1.01 - 1.401 (dead-beat)
 
         c2 = exp(-pars->period * TWO_PI * clbw3);
-        s  = 2.0 - a1 + c1 + c2 + d1;
+        q1 = 2.0 - a1 + c1 + c2 + d1;
 
-        pars->rst.r[0] = s*(2.0 - a1) + d2 + c1*c2 + d1*(c1 + c2) + 2.0*a1 - 1.0;
-        pars->rst.r[1] = s*(2.0*a1 - 1.0)  + c1*c2*d1 + d2*(c1 + c2) - a1;
-        pars->rst.r[2] = c1*c2*d2 - a1*s;
+        pars->rst.r[0] = q1*(2.0 - a1) + d2 + c1*c2 + d1*(c1 + c2) + 2.0*a1 - 1.0;
+        pars->rst.r[1] = q1*(2.0*a1 - 1.0)  + c1*c2*d1 + d2*(c1 + c2) - a1;
+        pars->rst.r[2] = c1*c2*d2 - a1*q1;
 
         pars->rst.s[0] = b0;
-        pars->rst.s[1] = b0*(s - 2.0) + b1;
-        pars->rst.s[2] = b1*(s - 2.0) - b0*(2.0*s - 1.0);
-        pars->rst.s[3] = b0*s         - b1*(2.0*s - 1.0);
-        pars->rst.s[4] = b1*s;
+        pars->rst.s[1] = b0*(q1 - 2.0) + b1;
+        pars->rst.s[2] = b1*(q1 - 2.0) - b0*(2.0*q1 - 1.0);
+        pars->rst.s[3] = b0*q1         - b1*(2.0*q1 - 1.0);
+        pars->rst.s[4] = b1*q1;
 
         pars->rst.t[0] = 1.0;
         pars->rst.t[1] = c1 + c2 + d1;
@@ -228,12 +221,45 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[3] = c1*c2*d1 + d2*(c1 + c2);
         pars->rst.t[4] = c1*c2*d2;
 
-        pars->rst.track_delay = 2.0 * pars->period;         // Track delay is 2 periods
+        pars->rst.track_delay = 2.0 * pars->period;         // Track delay is exactly 2 periods (dead-beat)
         break;
 
-    case 4:                                             // Algorithm 4 : Pure delay fraction 1.401 - 2.01
+    case 4:                                             // Algorithm 4 : Pure delay fraction 1.401 - 2.01 (not dead-beat)
 
-        pars->rst.track_delay = 3.0 * pars->period;         // Track delay is 3 periods
+        c2 = exp(-pars->period * TWO_PI * clbw3);
+        q1 = 2.0 - a1 + c1 + c2 + d1;
+
+        pars->rst.r[0] = (4*a1 + 2*c1 + 2*c2 + 2*d1 + d2 + 3*a1*c1 + 3*a1*c2 + 3*a1*d1 + 2*a1*d2 + c1*c2 + c1*d1 + c2*d1 + 
+                          2*a1*c1*c2 + 2*a1*c1*d1 + a1*c1*d2 + 2*a1*c2*d1 + a1*c2*d2 - c1*c2*d2 + a1*c1*c2*d1 + 3)/(b0_b1*(a1 + 1)*(a1 + 1)) + 
+                          (b1*(c1 + 1)*(c2 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1)) - 
+                          (a1*(a1 - c1)*(a1 - c2)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0));        
+
+        pars->rst.r[1] = (c1*d2 - c2 - d1 - c1 + c2*d2 + 3*a1*a1*c1 + 3*a1*a1*c2 + 3*a1*a1*d1 + 2*a1*a1*d2 + 4*a1*a1 + c1*c2*d1 + 2*c1*c2*d2 + 
+                          2*a1*a1*c1*c2 + 2*a1*a1*c1*d1 + a1*a1*c1*d2 + 2*a1*a1*c2*d1 + a1*a1*c2*d2 + a1*a1*c1*c2*d1 - 2)/(b0_b1*(a1 + 1)*(a1 + 1)) + 
+                         (2*a1*(a1 - c1)*(a1 - c2)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0)) + 
+                         (b1*(a1 - 1)*(c1 + 1)*(c2 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1));
+
+        pars->rst.r[2] = (a1*(2*a1 + a1*c1 + a1*c2 + a1*d1 - a1*a1 - c1*c2*d2)*b0*b0 + 
+                          a1*(4*a1 - c1 - c2 - d1 + 2*a1*c1 + 2*a1*c2 + 2*a1*d1 + c1*d2 + c2*d2 - 2*a1*a1 + c1*c2*d1 - 2)*b0*b1 - 
+                          a1*(2*c1 - 2*a1 + 2*c2 + 2*d1 + d2 - a1*c1 - a1*c2 - a1*d1 + c1*c2 + c1*d1 + c2*d1 + a1*a1 + 3)*b1*b1)/(b0_b1*b0_b1*(b1 - a1*b0));
+        
+        q2 = (b1*(c1 + c2 + d1 - c1*d2 - c2*d2 - c1*c2*d1 - 2*c1*c2*d2 + 2) + a1*b1*(2*c1 + 2*c2 + 2*d1 + d2 + c1*c2 + c1*d1 + c2*d1 - c1*c2*d2 + 3))/(b0_b1*(a1 + 1)*(a1 + 1)) + 
+             (b1*b1*(c1 + 1)*(c2 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1)) + 
+             (b1*(a1 - c1)*(a1 - c2)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0));
+        
+        pars->rst.s[0] = 1.0;
+        pars->rst.s[1] = q1 - 2.0;
+        pars->rst.s[2] = q2 - 2.0*q1 + 1.0;
+        pars->rst.s[3] = q1 - 2.0*q2;
+        pars->rst.s[4] = q2;
+    
+        pars->rst.t[0] = 1.0 / b0_b1;
+        pars->rst.t[1] = (c1 + c2 + d1) / b0_b1;
+        pars->rst.t[2] = (d2 + c1*c2 + c1*d1 + c2*d1) / b0_b1;
+        pars->rst.t[3] = (c1*d2 + c2*d2 + c1*c2*d1) / b0_b1;
+        pars->rst.t[4] = c1*c2*d2 / b0_b1;
+     
+        pars->rst.track_delay = 3.0 * pars->period;         // Track delay is about 3 periods (not dead-beat)
         break;
     }
 }
