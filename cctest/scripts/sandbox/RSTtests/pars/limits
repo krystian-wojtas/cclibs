@@ -1,0 +1,28 @@
+# CCTEST limits file:  ELENA main dipole with FGC3
+
+B_POS           4000.0
+B_MIN           0.0
+B_NEG           -4000.0
+B_RATE          10000.0
+B_ACCELERATION  0.0
+B_ERR_WARNING   0.0
+B_ERR_FAULT     0.0
+
+I_POS           4000.0
+I_MIN           0.0
+I_NEG           -400.0
+I_RATE          1000.0
+I_ACCELERATION  0.0
+I_ERR_WARNING   0.0
+I_ERR_FAULT     0.0
+I_QUADRANTS41   0.0,0.0
+
+V_POS           450.0
+V_NEG           -450.0
+V_RATE          5.0E5
+V_ACCELERATION  0.0
+V_ERR_WARNING   0.0
+V_ERR_FAULT     0.0
+V_QUADRANTS41   0.0,0.0
+
+# EOF
