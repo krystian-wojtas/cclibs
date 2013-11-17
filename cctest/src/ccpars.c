@@ -239,7 +239,8 @@ static void ccparsReadFile(char option, struct ccpars *ccpars, char *filename, u
 /*---------------------------------------------------------------------------------------------------------*/
 static void ccparsPrintf(char * format, ...)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will print to memory that
+  This function will print to memory that will later be written to the output to create the parameter and
+  debug pop-ups
 \*---------------------------------------------------------------------------------------------------------*/
 {
     va_list     argv;
@@ -605,6 +606,12 @@ void ccparsGenerateReport(void)
 {
     unsigned        i;
 
+    // Generate inline div for the Show pars pop-up
+
+    ccparsPrintf("<!-- Simulation parameters pop-up -->\n\n");
+    ccparsPrintf("    <div id='inline_pars' style='padding:10px; background:#fff;font-size:14px;'>\n");
+    ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Simulation Parameters:</p>\n      <p><pre>\n");
+
     // Generate report of parameter values if verbose option (-v) or FLOT output format selected
 
     if(ccpars_global.verbose_flag || ccpars_global.output_format == CC_FLOT)
@@ -618,160 +625,169 @@ void ccparsGenerateReport(void)
 
         if(ccpars_load.status == 1)
         {
-            // Report input parameters
-
             ccparsReportPars("LOAD",load_pars_list);
-
-            // Report internally calculated load parameters
-
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:inv_henrys",
-                         reg_pars.load_pars.inv_henrys);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:ohms",
-                         reg_pars.load_pars.ohms);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:tc",
-                         reg_pars.load_pars.tc);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain0",
-                         reg_pars.load_pars.gain0);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain1",
-                         reg_pars.load_pars.gain1);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain2",
-                         reg_pars.load_pars.gain2);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain3",
-                         reg_pars.load_pars.gain3);
-            ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "LOAD:gain10",
-                         reg_pars.load_pars.gain10);
-
-            if(reg_pars.load_pars.sat.i_end > 0.0)
-            {
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.i_delta",
-                             reg_pars.load_pars.sat.i_delta);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.b_end",
-                             reg_pars.load_pars.sat.b_end);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.b_factor",
-                             reg_pars.load_pars.sat.b_factor);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.l_rate",
-                             reg_pars.load_pars.sat.l_rate);
-                ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "LOAD:sat.l_clip",
-                             reg_pars.load_pars.sat.l_clip);
-            }
-
-            // Report internally calculated simulated load parameters
-
-            ccparsPrintf("%-*s% d\n",     PARS_INDENT, "SIMLOAD:vs_undersampled_flag",
-                         reg_pars.sim_load_pars.vs_undersampled_flag);
-            ccparsPrintf("%-*s% d\n",     PARS_INDENT, "SIMLOAD:load_undersampled_flag",
-                         reg_pars.sim_load_pars.load_undersampled_flag);
-            ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:period_tc_ratio",
-                         reg_pars.sim_load_pars.period_tc_ratio);
-
-            if(ccpars_load.sim_tc_error != 0.0)
-            {
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_ser",
-                             reg_pars.sim_load_pars.load_pars.ohms_ser);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_par",
-                             reg_pars.sim_load_pars.load_pars.ohms_par);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_mag",
-                             reg_pars.sim_load_pars.load_pars.ohms_mag);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:henrys",
-                             reg_pars.sim_load_pars.load_pars.henrys);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:inv_henrys",
-                             reg_pars.sim_load_pars.load_pars.inv_henrys);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms",
-                             reg_pars.sim_load_pars.load_pars.ohms);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:tc",
-                             reg_pars.sim_load_pars.load_pars.tc);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain0",
-                             reg_pars.sim_load_pars.load_pars.gain0);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain1",
-                             reg_pars.sim_load_pars.load_pars.gain1);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain2",
-                             reg_pars.sim_load_pars.load_pars.gain2);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain3",
-                             reg_pars.sim_load_pars.load_pars.gain3);
-                ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:gain10",
-                             reg_pars.sim_load_pars.load_pars.gain10);
-
-                if(reg_pars.sim_load_pars.load_pars.sat.i_end > 0.0)
-                {
-                    ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.henrys",
-                                 reg_pars.sim_load_pars.load_pars.sat.henrys);
-                    ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.i_delta",
-                                 reg_pars.sim_load_pars.load_pars.sat.i_delta);
-                    ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.b_end",
-                                 reg_pars.sim_load_pars.load_pars.sat.b_end);
-                    ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.b_factor",
-                                 reg_pars.sim_load_pars.load_pars.sat.b_factor);
-                    ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.l_rate",
-                                 reg_pars.sim_load_pars.load_pars.sat.l_rate);
-                    ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:sat.l_clip",
-                                 reg_pars.sim_load_pars.load_pars.sat.l_clip);
-                }
-            }
         }
 
         if(ccpars_vs.status == 1)
         {
-            // Report input parameters
-
             ccparsReportPars("VS",vs_pars_list);
-
-            // Report internally calculated parameters
-
-            ccparsPrintf("%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:numerator",
-                         reg_pars.sim_vs_pars.num[0],
-                         reg_pars.sim_vs_pars.num[1],
-                         reg_pars.sim_vs_pars.num[2],
-                         reg_pars.sim_vs_pars.num[3]);
-
-            ccparsPrintf("%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:denominator",
-                         reg_pars.sim_vs_pars.den[0],
-                         reg_pars.sim_vs_pars.den[1],
-                         reg_pars.sim_vs_pars.den[2],
-                         reg_pars.sim_vs_pars.den[3]);
-
-            ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMVS:gain",reg_pars.sim_vs_pars.gain);
         }
 
         if(ccpars_reg.status == 1)
         {
             ccparsReportPars("REG",reg_pars_list);
-
-            {
-                if(ccpars_global.units == REG_CURRENT)
-                {
-                    for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
-                    {
-                       ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "RST:",
-                                       reg_pars.i_rst_pars.rst.r[i],
-                                       reg_pars.i_rst_pars.rst.s[i],
-                                       reg_pars.i_rst_pars.rst.t[i]);
-                    }
-                    ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "RST:t0_correction",
-                                       reg_pars.i_rst_pars.t0_correction);
-                }
-                else
-                {
-                    for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
-                    {
-                       ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "RST:",
-                                       reg_pars.b_rst_pars.rst.r[i],
-                                       reg_pars.b_rst_pars.rst.s[i],
-                                       reg_pars.b_rst_pars.rst.t[i]);
-                    }
-                    ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "RST:t0_correction",
-                                       reg_pars.b_rst_pars.t0_correction);
-                }
-            }
         }
 
         ccparsReportPars("DATA",func[ccpars_global.function].pars);
-
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:duration",    fg_meta.duration);
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.start", fg_meta.range.start);
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.end",   fg_meta.range.end);
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.min",   fg_meta.range.min);
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.max",   fg_meta.range.max);
     }
+
+    // Generate inline div for the Show debug pop-up
+
+    ccparsPrintf("      </pre></p>\n    </div>\n\n<!-- Debug parameters pop-up -->\n\n");
+    ccparsPrintf("    <div id='inline_debug' style='padding:10px; background:#fff;font-size:14px;'>\n");
+    ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Debug Information:</p>\n      <p><pre>\n");
+
+    if(ccpars_load.status == 1)
+    {
+        // Report internally calculated load parameters
+
+        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:inv_henrys",
+                     reg_pars.load_pars.inv_henrys);
+        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:ohms",
+                     reg_pars.load_pars.ohms);
+        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:tc",
+                     reg_pars.load_pars.tc);
+        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain0",
+                     reg_pars.load_pars.gain0);
+        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain1",
+                     reg_pars.load_pars.gain1);
+        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain2",
+                     reg_pars.load_pars.gain2);
+        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain3",
+                     reg_pars.load_pars.gain3);
+        ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "LOAD:gain10",
+                     reg_pars.load_pars.gain10);
+
+        if(reg_pars.load_pars.sat.i_end > 0.0)
+        {
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.i_delta",
+                         reg_pars.load_pars.sat.i_delta);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.b_end",
+                         reg_pars.load_pars.sat.b_end);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.b_factor",
+                         reg_pars.load_pars.sat.b_factor);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.l_rate",
+                         reg_pars.load_pars.sat.l_rate);
+            ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "LOAD:sat.l_clip",
+                         reg_pars.load_pars.sat.l_clip);
+        }
+
+        // Report internally calculated simulated load parameters
+
+        ccparsPrintf("%-*s% d\n",     PARS_INDENT, "SIMLOAD:vs_undersampled_flag",
+                     reg_pars.sim_load_pars.vs_undersampled_flag);
+        ccparsPrintf("%-*s% d\n",     PARS_INDENT, "SIMLOAD:load_undersampled_flag",
+                     reg_pars.sim_load_pars.load_undersampled_flag);
+        ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:period_tc_ratio",
+                     reg_pars.sim_load_pars.period_tc_ratio);
+
+        if(ccpars_load.sim_tc_error != 0.0)
+        {
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_ser",
+                         reg_pars.sim_load_pars.load_pars.ohms_ser);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_par",
+                         reg_pars.sim_load_pars.load_pars.ohms_par);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_mag",
+                         reg_pars.sim_load_pars.load_pars.ohms_mag);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:henrys",
+                         reg_pars.sim_load_pars.load_pars.henrys);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:inv_henrys",
+                         reg_pars.sim_load_pars.load_pars.inv_henrys);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms",
+                         reg_pars.sim_load_pars.load_pars.ohms);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:tc",
+                         reg_pars.sim_load_pars.load_pars.tc);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain0",
+                         reg_pars.sim_load_pars.load_pars.gain0);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain1",
+                         reg_pars.sim_load_pars.load_pars.gain1);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain2",
+                         reg_pars.sim_load_pars.load_pars.gain2);
+            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain3",
+                         reg_pars.sim_load_pars.load_pars.gain3);
+            ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:gain10",
+                         reg_pars.sim_load_pars.load_pars.gain10);
+
+            if(reg_pars.sim_load_pars.load_pars.sat.i_end > 0.0)
+            {
+                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.henrys",
+                             reg_pars.sim_load_pars.load_pars.sat.henrys);
+                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.i_delta",
+                             reg_pars.sim_load_pars.load_pars.sat.i_delta);
+                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.b_end",
+                             reg_pars.sim_load_pars.load_pars.sat.b_end);
+                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.b_factor",
+                             reg_pars.sim_load_pars.load_pars.sat.b_factor);
+                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.l_rate",
+                             reg_pars.sim_load_pars.load_pars.sat.l_rate);
+                ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:sat.l_clip",
+                             reg_pars.sim_load_pars.load_pars.sat.l_clip);
+            }
+        }
+    }
+
+    if(ccpars_vs.status == 1)
+    {
+        // Report internally calculated parameters
+
+        ccparsPrintf("%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:numerator",
+                     reg_pars.sim_vs_pars.num[0],
+                     reg_pars.sim_vs_pars.num[1],
+                     reg_pars.sim_vs_pars.num[2],
+                     reg_pars.sim_vs_pars.num[3]);
+
+        ccparsPrintf("%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:denominator",
+                     reg_pars.sim_vs_pars.den[0],
+                     reg_pars.sim_vs_pars.den[1],
+                     reg_pars.sim_vs_pars.den[2],
+                     reg_pars.sim_vs_pars.den[3]);
+
+        ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMVS:gain",reg_pars.sim_vs_pars.gain);
+    }
+
+    if(ccpars_reg.status == 1)
+    {
+        if(ccpars_global.units == REG_CURRENT)
+        {
+            for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+            {
+               ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "RST:",
+                               reg_pars.i_rst_pars.rst.r[i],
+                               reg_pars.i_rst_pars.rst.s[i],
+                               reg_pars.i_rst_pars.rst.t[i]);
+            }
+            ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "RST:t0_correction",
+                               reg_pars.i_rst_pars.t0_correction);
+        }
+        else
+        {
+            for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+            {
+               ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "RST:",
+                               reg_pars.b_rst_pars.rst.r[i],
+                               reg_pars.b_rst_pars.rst.s[i],
+                               reg_pars.b_rst_pars.rst.t[i]);
+            }
+            ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "RST:t0_correction",
+                               reg_pars.b_rst_pars.t0_correction);
+        }
+    }
+
+    ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:duration",    fg_meta.duration);
+    ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.start", fg_meta.range.start);
+    ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.end",   fg_meta.range.end);
+    ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.min",   fg_meta.range.min);
+    ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.max",   fg_meta.range.max);
 
     // Print report to stderr if verbose flag (-v) was set
 

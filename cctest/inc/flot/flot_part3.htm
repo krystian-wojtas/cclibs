@@ -361,7 +361,8 @@
     <a href='javascript:AllNoneVisible(0);'>Hide all signals</a> |
     <a href='javascript:ToggleMode(0);'>Toggle E-Scaling</a> |
     <a href='javascript:ToggleMode(1);'>Toggle Derivative</a> |
-    <a class='inline' href='#inline_parameters'>Show parameters</a> |
+    <a class='inline' href='#inline_pars'>Show pars</a> |
+    <a class='inline' href='#inline_debug'>Show debug</a> |
     <a class='inline' href='#inline_about'>About</a> |
     <a class='inline' href='#inline_help'>Help</a>
   </p>
@@ -389,7 +390,7 @@
         <p>For more information or to download the cclibs software, go to the
         <a href='http://cern.ch/project-cclibs/' target='_blank'>website for cclibs</a>.
         For information on all the parameters, consult the
-        <a href='http://cern.ch/project-cclibs/doc/cctest_user_guide.pdf' target='_blank'>user guide</a>.
+        <a href='https://github.com/qking/cclibs/raw/master/cctest/doc/cctest_user_guide.pdf' target='_blank'>user guide</a>.
         </p>
         <p>This webpage uses the
         <a href='http://www.flotcharts.org/' target='_blank'>FLOT library</a> for the graphs and
@@ -407,9 +408,10 @@
                 on the signal's name in the legend.  To control the visiblity of all the analog signals, click
                 on the "Show All Signals" or "Hide All Signals" links.
                 The visibility of digital signals cannot be controlled.</li><br/>
-            <li><strong>Zooming in</strong><br/><br/>Select the zoom area using the left pointer button.</li><br/>
-            <li><strong>Zooming out</strong><br/><br/>Press the right pointer button to zoom out to the previous
-                zoom level.</li><br/>
+            <li><strong>Zooming in</strong><br/><br/>Select the zoom area using the left pointer button or your 
+                finger on a toch device.</li><br/>
+            <li><strong>Zooming out</strong><br/><br/>Press the right pointer button or tap anywhere on a touch
+                device to zoom out to the previous zoom level.</li><br/>
             <li><strong>E-Scaling</strong><br/><br/>Click on the "Toggle E-Scaling" link to toggle between normal
                 scaling mode and exponential scaling mode.  In this mode, every signal is scaled by a
                 power of 10 to be within the range &plusmn;10. The scale factors are shown in the legend
@@ -423,8 +425,3 @@
         </p>
     </div>
 
-    <!-- Simulation parameters pop-up -->
-
-    <div id='inline_parameters' style='padding:10px; background:#fff;font-size:14px;'>
-      <p style='font-size:22px;font-weight:bold;'>cctest Simulation Parameters:</p>
-      <p><pre>
