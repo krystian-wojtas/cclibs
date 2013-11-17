@@ -38,24 +38,10 @@
     <script language="javascript" type="text/javascript" src="../../flot/jquery.min.js"></script>
     <script language="javascript" type="text/javascript" src="../../flot/jquery.flot.min.js"></script>
     <script language="javascript" type="text/javascript" src="../../flot/jquery.flot.resize.min.js"></script>
+    <script language="javascript" type="text/javascript" src="../../flot/jquery.flot.selection.js"></script>
     <script language="javascript" type="text/javascript" src="../../colorbox/jquery.colorbox-min.js"></script>
     <script language="javascript" type="text/javascript">
 
-    // ----- User Modernizr.touch test to choose selection plug-in for mouse or touch -----
-    
-    var selection_script = document.createElement('script');
-
-    if(Modernizr.touch)
-    {
-       selection_script.setAttribute('src', "../../flot/jquery.flot.touchselection.js");
-    }
-    else
-    {
-       selection_script.setAttribute('src', "../../flot/jquery.flot.selection.min.js");
-    }
-    
-    document.getElementsByTagName('head')[0].appendChild(selection_script);
-        
     // ----- Global variables -----
 
     var i;

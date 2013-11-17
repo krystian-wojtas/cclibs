@@ -42,8 +42,7 @@
             grid:           { color: "#444", borderWidth: 1, backgroundColor: "#FFF" },
             yaxis:          { labelWidth:220 },
             legend:         { container: analog_legend_div, position: "nw", labelFormatter: function (label, series) { return '<a href="javascript:ToggleVisibility(' + series.index + ');">' + label + '</a>'; }},
-            selection       { mode: "xy" },
-            touchselection: { mode: "xy", invalidSelectionCallback: ZoomOut },
+            selection:      { mode: "xy", touch: Modernizr.touch, tapCallback: ZoomOut }
         };
 
         analog_options_zoom = analog_options;
