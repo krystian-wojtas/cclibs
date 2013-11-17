@@ -112,7 +112,7 @@ The plugin allso adds the following methods to the plot object:
 
         function onMouseDown(e) {
             e.preventDefault();
-            if (e.which != 1)  // only accept left-click
+            if(!plot.getOptions().selection.touch && e.which != 1)  // only accept left-click
                 return;
             
             // cancel out any text selections
