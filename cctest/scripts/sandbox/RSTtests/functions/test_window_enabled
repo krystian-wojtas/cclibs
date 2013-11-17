@@ -2,8 +2,8 @@
 
 INITIAL_REF     100.0
 AMPLITUDE_PP    100.0
-NUM_CYCLES      5
-PERIOD          1.0
+NUM_CYCLES      2
+PERIOD          0.5
 WINDOW          ENABLED
 
 # EOF
