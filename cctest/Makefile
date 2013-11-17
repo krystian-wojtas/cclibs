@@ -83,6 +83,9 @@ $(inc_path)/flot.h: $(inc_path)/flot/flot_header.h $(inc_path)/flot/flot_footer.
 flot:
 	./scripts/tests/run_all.sh
 
+sandbox:
+	./scripts/sandbox/run_all.sh
+
 # Make test output the new reference
 
 reference:
@@ -106,7 +109,6 @@ test:
 install:
 	cp $(exec) $(install_path)
 
-
-.PHONY: all clean reference test flot install
+.PHONY: all clean reference test flot sandbox install
 
 # EOF
