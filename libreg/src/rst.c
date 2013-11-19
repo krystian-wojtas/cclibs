@@ -185,6 +185,18 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         fprintf(stderr,"d1=%.8E\n",d1);
         fprintf(stderr,"R0=%.8E\n",pars->rst.r[0]);
 
+        fprintf(stderr,"Ra=%.8E\n",(3*a1 + c1 + d1 + 2*a1*c1 + 2*a1*d1 + a1*d2 - c1*d2 + a1*c1*d1 + 2));
+        fprintf(stderr,"Rb=%.8E\n",(b0_b1*(a1 + 1)*(a1 + 1)));
+        fprintf(stderr,"Rc=%.8E\n",(3*a1 + c1 + d1 + 2*a1*c1 + 2*a1*d1 + a1*d2 - c1*d2 + a1*c1*d1 + 2)/(b0_b1*(a1 + 1)*(a1 + 1)));
+
+        fprintf(stderr,"Rd=%.8E\n",(b1*(c1 + 1)*(d1 + d2 + 1)));
+        fprintf(stderr,"Re=%.8E\n",(b0_b1*b0_b1*(a1 + 1)));
+        fprintf(stderr,"Rf=%.8E\n",(b1*(c1 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1)));
+
+        fprintf(stderr,"Rh=%.8E\n",(a1*(a1 - c1)*(a1*a1 - d1*a1 + d2)));
+        fprintf(stderr,"Ri=%.8E\n",((a1 + 1)*(a1 + 1)*(b1 - a1*b0)));
+        fprintf(stderr,"Rj=%.8E\n",(a1*(a1 - c1)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0)));
+
 
 
 
