@@ -22,6 +22,7 @@
             In Longchamp notation, R and S are exchanged.
 \*---------------------------------------------------------------------------------------------------------*/
 
+#include <stdio.h>
 #include <math.h>
 #include "libreg/rst.h"
 
@@ -175,6 +176,18 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
         pars->rst.r[0] = (3*a1 + c1 + d1 + 2*a1*c1 + 2*a1*d1 + a1*d2 - c1*d2 + a1*c1*d1 + 2)/(b0_b1*(a1 + 1)*(a1 + 1)) +
                          (b1*(c1 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1)) + (a1*(a1 - c1)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0));
+
+        fprintf(stderr,"a1=%.8E\n",a1);
+        fprintf(stderr,"b0=%.8E\n",b0);
+        fprintf(stderr,"b1=%.8E\n",b1);
+        fprintf(stderr,"b0_b1=%.8E\n",b0_b1);
+        fprintf(stderr,"c1=%.8E\n",c1);
+        fprintf(stderr,"d1=%.8E\n",d1);
+        fprintf(stderr,"R0=%.8E\n",pars->rst.r[0]);
+
+
+
+
 
         pars->rst.r[1] = (d2 + c1*d1 + 2*c1*d2 + 2*a1*a1*c1 + 2*a1*a1*d1 + a1*a1*d2 + 3*a1*a1 + a1*a1*c1*d1 - 1)/(b0_b1*(a1 + 1)*(a1 + 1)) -
                          (2*a1*(a1 - c1)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0)) + (b1*(a1 - 1)*(c1 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1));
