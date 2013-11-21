@@ -87,6 +87,11 @@ static void PrepareLoad(void)
                   "(circuit time constant is less than 1/3 x iteration period)\n",stderr);
             exit(EXIT_FAILURE);
         }
+
+        // Initialise measurement filters
+
+        regMeasFilterInit(&reg_pars.i_meas, &reg.i_meas, ccpars_load.i_meas_pars.num, ccpars_load.i_meas_pars.den);
+        regMeasFilterInit(&reg_pars.b_meas, &reg.b_meas, ccpars_load.b_meas_pars.num, ccpars_load.b_meas_pars.den);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -192,9 +197,9 @@ static void PrepareSimulation(void)
         // Initialise load model for simulation using the sim_tc_error factor to mismatch the regulation
         // First set the V/I/B measurements to cover all three regulation modes
 
-        reg.v_meas.raw = fg_meta.range.start * reg_pars.sim_vs_pars.gain;     // Set v_meas to voltage on load
-        reg.i_meas.raw = fg_meta.range.start;                                 // i_meas
-        reg.b_meas.raw = fg_meta.range.start;                                 // b_meas
+        reg.v_meas.unfiltered = fg_meta.range.start * reg_pars.sim_vs_pars.gain;     // Set v_meas to voltage on load
+        reg.i_meas.unfiltered = fg_meta.range.start;                                 // i_meas
+        reg.b_meas.unfiltered = fg_meta.range.start;                                 // b_meas
 
         regSetSimLoad(&reg, &reg_pars, ccpars_global.units, ccpars_load.sim_tc_error);
 
@@ -205,7 +210,7 @@ static void PrepareSimulation(void)
 
         reg.v_ref_sat     =
         reg.v_ref_limited =
-        reg.v_ref         = regSimVsInitHistory(&reg_pars.sim_vs_pars, &reg.sim_vs_vars, reg.v_meas.raw);
+        reg.v_ref         = regSimVsInitHistory(&reg_pars.sim_vs_pars, &reg.sim_vs_vars, reg.v_meas.unfiltered);
 
         // Initialise measurement delay structures for simulated field, current and voltage measurements.
         // The delay must include the voltage reference delay and the measurement delay minus 1 period.
@@ -236,11 +241,21 @@ static void PrepareSimulation(void)
                          delay_in_iterations,
                          reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag);
 
+        // Initialise voltage measurement filter
+
+        regMeasFilterInit(&reg_pars.v_meas, &reg.v_meas, ccpars_vs.v_meas_pars.num, ccpars_vs.v_meas_pars.den);
+
+        // Initialise measurement filter histories
+
+        regMeasFilterInitHistory(&reg.v_meas, reg.v_meas.unfiltered);
+        regMeasFilterInitHistory(&reg.i_meas, reg.i_meas.unfiltered);
+        regMeasFilterInitHistory(&reg.b_meas, reg.b_meas.unfiltered);
+
         // Initialise measurement delay histories
 
-        regDelayInitVars(&reg.v_meas_delay, reg.v_meas.raw);
-        regDelayInitVars(&reg.i_meas_delay, reg.i_meas.raw);
-        regDelayInitVars(&reg.b_meas_delay, reg.b_meas.raw);
+        regDelayInitVars(&reg.v_meas_delay, reg.v_meas.unfiltered);
+        regDelayInitVars(&reg.i_meas_delay, reg.i_meas.unfiltered);
+        regDelayInitVars(&reg.b_meas_delay, reg.b_meas.unfiltered);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -302,7 +317,7 @@ static void PrepareRegulation(void)
                 // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
                 // corresponds to steady state reg.b_meas (last parameter is the rate of change)
 
-                regSetMode(&reg, &reg_pars, REG_FIELD, reg.b_meas.raw, 0.0);
+                regSetMode(&reg, &reg_pars, REG_FIELD, reg.b_meas.unfiltered, 0.0);
                 break;
 
             case REG_CURRENT:   // Initialise current regulation
@@ -320,7 +335,7 @@ static void PrepareRegulation(void)
                 // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
                 // corresponds to steady state reg.i_meas (last parameter is the rate of change)
 
-                regSetMode(&reg, &reg_pars, REG_CURRENT, reg.i_meas.raw, 0.0);
+                regSetMode(&reg, &reg_pars, REG_CURRENT, reg.i_meas.unfiltered, 0.0);
                 break;
             }
 

@@ -135,11 +135,11 @@ static float ccrunTestOpeningLoop(float time, float ref)
     {
         if(ccpars_global.units == REG_CURRENT)
         {
-            regSetMode(&reg, &reg_pars, REG_CURRENT, reg.i_meas.raw, 0.0);
+            regSetMode(&reg, &reg_pars, REG_CURRENT, reg.i_meas.unfiltered, 0.0);
         }
         else
         {
-            regSetMode(&reg, &reg_pars, REG_FIELD,   reg.b_meas.raw, 0.0);
+            regSetMode(&reg, &reg_pars, REG_FIELD,   reg.b_meas.unfiltered, 0.0);
         }
 
         ccsigsStoreCursor(CSR_REGMODE,"Close-loop");

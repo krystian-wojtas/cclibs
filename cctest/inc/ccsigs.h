@@ -53,19 +53,22 @@ enum ccsig_idx
     ANA_B_REF,                  // Field reference
     ANA_B_REF_LIMITED,          // Field reference after limits applied
     ANA_B_REF_RST,              // Field reference stored in RST history (limited and after back-calculation)
-    ANA_B_MEAS,                 // Field measurement (raw)
-    ANA_B_REG,                  // Field measurement used for regulation (raw or decimated)
+    ANA_B_MEAS,                 // Unfiltered field measurement
+    ANA_B_MEAS_FLTR,            // Filtered field measurement
+    ANA_B_REG,                  // Field measurement used for regulation (filtered and/or decimated)
     ANA_B_ERR,                  // Field regulation error
     ANA_I_REF,                  // Current reference
     ANA_I_REF_LIMITED,          // Current reference after limits applied
     ANA_I_REF_RST,              // Current reference stored in RST history (limited and after back-calculation)
-    ANA_I_MEAS,                 // Measured current (raw)
-    ANA_I_REG,                  // Measured current used for regulation (raw or decimated)
+    ANA_I_MEAS,                 // Unfiltered measured current
+    ANA_I_MEAS_FLTR,            // Filtered measured current
+    ANA_I_REG,                  // Measured current used for regulation (filtered and/or decimated)
     ANA_I_ERR,                  // Current regulation error
     ANA_V_REF,                  // Voltage reference
     ANA_V_REF_SAT,              // Voltage reference after magnet saturation compensation applied
     ANA_V_REF_LIMITED,          // Voltage reference after saturation compensation and limits applied
-    ANA_V_MEAS,                 // Measured voltage
+    ANA_V_MEAS,                 // Unfiltered measured voltage
+    ANA_V_MEAS_FLTR,            // Filtered measured voltage
     ANA_V_ERR,                  // Voltage regulation error
     ANA_MAX_ABS_B_ERR,          // Max absolute field regulation error
     ANA_MAX_ABS_I_ERR,          // Max absolute current regulation error
@@ -116,18 +119,21 @@ FGSIGS_EXT struct signals signals[]
     { "B_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "B_REF_RST",              ANALOG,         "TRAIL_STEP" },
     { "B_MEAS",                 ANALOG,         ""           },
+    { "B_MEAS_FLTR",            ANALOG,         ""           },
     { "B_REG",                  ANALOG,         "TRAIL_STEP" },
     { "B_ERR",                  ANALOG,         "TRAIL_STEP" },
     { "I_REF",                  ANALOG,         "TRAIL_STEP" },
     { "I_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "I_REF_RST",              ANALOG,         "TRAIL_STEP" },
     { "I_MEAS",                 ANALOG,         ""           },
+    { "I_MEAS_FLTR",            ANALOG,         ""           },
     { "I_REG",                  ANALOG,         "TRAIL_STEP" },
     { "I_ERR",                  ANALOG,         "TRAIL_STEP" },
     { "V_REF",                  ANALOG,         "TRAIL_STEP" },
     { "V_REF_SAT",              ANALOG,         "TRAIL_STEP" },
     { "V_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "V_MEAS",                 ANALOG,         ""           },
+    { "V_MEAS_FLTR",            ANALOG,         ""           },
     { "V_ERR",                  ANALOG,         "TRAIL_STEP" },
     { "MAX_ABS_B_ERR",          ANALOG,         "TRAIL_STEP" },
     { "MAX_ABS_I_ERR",          ANALOG,         "TRAIL_STEP" },

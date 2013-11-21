@@ -281,6 +281,7 @@ void ccsigsPrepare(void)
 
         ccsigsEnableSignal(ANA_V_REF_LIMITED);
         ccsigsEnableSignal(ANA_V_MEAS);
+        ccsigsEnableSignal(ANA_V_MEAS_FLTR);
         ccsigsEnableSignal(ANA_V_ERR);
         ccsigsEnableSignal(ANA_MAX_ABS_V_ERR);
         ccsigsEnableSignal(DIG_V_REF_CLIP);
@@ -298,6 +299,7 @@ void ccsigsPrepare(void)
             ccsigsEnableSignal(ANA_B_REF_LIMITED);
             ccsigsEnableSignal(ANA_B_REF_RST);
             ccsigsEnableSignal(ANA_B_MEAS);
+            ccsigsEnableSignal(ANA_B_MEAS_FLTR);
             ccsigsEnableSignal(ANA_B_REG);
             ccsigsEnableSignal(ANA_B_ERR);
             ccsigsEnableSignal(ANA_MAX_ABS_B_ERR);
@@ -331,6 +333,7 @@ void ccsigsPrepare(void)
         // Current simulation signals
 
         ccsigsEnableSignal(ANA_I_MEAS);
+        ccsigsEnableSignal(ANA_I_MEAS_FLTR);
         ccsigsEnableSignal(DIG_I_MEAS_TRIP);
         ccsigsEnableSignal(DIG_I_MEAS_LOW);
         ccsigsEnableSignal(DIG_I_MEAS_ZERO);
@@ -356,7 +359,8 @@ void ccsigsStore(float time)
     {
         // Store voltage reference signals
 
-        ccsigsStoreAnalog (ANA_V_MEAS,         reg.v_meas.raw);
+        ccsigsStoreAnalog (ANA_V_MEAS,         reg.v_meas.unfiltered);
+        ccsigsStoreAnalog (ANA_V_MEAS_FLTR,    reg.v_meas.filtered);
         ccsigsStoreAnalog (ANA_V_REF,          reg.v_ref);
         ccsigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
         ccsigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
@@ -375,7 +379,8 @@ void ccsigsStore(float time)
 
             // Field regulation signals
 
-            ccsigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.raw);
+            ccsigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.unfiltered);
+            ccsigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.filtered);
             ccsigsStoreAnalog( ANA_B_REG,          reg.b_meas.regulated);
             ccsigsStoreAnalog (ANA_B_REF,          reg.ref);
             ccsigsStoreAnalog (ANA_B_REF_LIMITED,  reg.ref_limited);
@@ -413,7 +418,8 @@ void ccsigsStore(float time)
 
         // Store current simulation signals
 
-        ccsigsStoreAnalog (ANA_I_MEAS,      reg.i_meas.raw);
+        ccsigsStoreAnalog (ANA_I_MEAS,      reg.i_meas.unfiltered);
+        ccsigsStoreAnalog (ANA_I_MEAS_FLTR, reg.i_meas.filtered);
 
         ccsigsStoreDigital(DIG_I_MEAS_TRIP, reg.lim_i_meas.flags.trip);
         ccsigsStoreDigital(DIG_I_MEAS_LOW,  reg.lim_i_meas.flags.low);
