@@ -23,16 +23,128 @@
 #include "libreg.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-static void regDecimateMeas(struct reg_converter *reg, struct reg_meas *meas, uint32_t decimate_flag)
+void regMeasFilterInit(struct reg_meas_pars *pars, struct reg_meas_vars *vars,
+                      float  num[REG_N_IIR_COEFFS], float den[REG_N_IIR_COEFFS])
+/*---------------------------------------------------------------------------------------------------------*\
+  This function calculates the floating point correction and the order of the IIR filter. It also
+  saves the filter coefficients in the filter parameter structure.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t        i;
+
+    // Calculate the num[0] correction due to single precision floating point coefficients
+    // For the gain of the filter to be unity, sum(num) must equal sum(den):
+
+    pars->num0_correction = ( (double)den[10] +
+                              (double)den[ 9] +
+                              (double)den[ 8] +
+                              (double)den[ 7] +
+                              (double)den[ 6] +
+                              (double)den[ 5] +
+                              (double)den[ 4] +
+                              (double)den[ 3] +
+                              (double)den[ 2] +
+                              (double)den[ 1] +
+                              (double)den[ 0] ) -
+                            ( (double)num[10] +
+                              (double)num[ 9] +
+                              (double)num[ 8] +
+                              (double)num[ 7] +
+                              (double)num[ 6] +
+                              (double)num[ 5] +
+                              (double)num[ 4] +
+                              (double)num[ 3] +
+                              (double)num[ 2] +
+                              (double)num[ 1] +
+                              (double)num[ 0] );
+
+// Analyse filter coefficients to derive the filter order and save filter coefficients
+
+    i = REG_N_IIR_COEFFS;
+
+    while(i > 0)
+    {
+        i--;
+
+        pars->num[i] = num[i];
+        pars->den[i] = den[i];
+
+        if(pars->order == 0 && (num[i] != 0.0 || den[i] != 0.0))
+        {
+            pars->order = i;
+        }
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void regMeasFilterInitHistory(struct reg_meas_vars *vars, float init_meas)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function calculates the floating point correction and the order of the IIR filter. It also initialises
+  the history in case a simulation is being prepared with a non-zero initial measurement value.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t        i;
+
+    // Initialise filter history
+
+    for(i = 0; i < REG_N_IIR_COEFFS ; i++)
+    {
+        vars->iir_in[i] = vars->iir_out[i] = init_meas;
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static void regMeasFilter(struct reg_meas_pars *pars, struct reg_meas_vars *vars)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will apply the IIR filter to the measurement.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t    par_idx;
+    uint32_t    var_idx  = vars->iir_latest_index;
+    uint32_t    order = pars->order;
+    float       filtered = 0.0;
+
+    // Apply transfer function to IIR history
+
+    for(par_idx = 1 ; par_idx <= order ; par_idx++)
+    {
+        filtered += pars->num[par_idx] * vars->iir_in[var_idx] - pars->den[par_idx] * vars->iir_out[var_idx];
+
+        if(var_idx == 0)
+        {
+            var_idx = order;
+        }
+        else
+        {
+            var_idx--;
+        }
+    }
+
+    vars->filtered = (filtered + vars->unfiltered * pars->num[0] + vars->unfiltered * pars->num0_correction) / pars->den[0];   // Normally den[0] will be 1.0
+
+    // Adjust var_idx to next free record
+
+    var_idx = ++vars->iir_latest_index;
+
+    if(var_idx > order)
+    {
+        var_idx = vars->iir_latest_index = 0;
+    }
+
+    // Save new filter input and output in the history
+
+    vars->iir_in [var_idx] = vars->unfiltered;
+    vars->iir_out[var_idx] = vars->filtered;
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static void regDecimateMeas(struct reg_converter *reg, struct reg_meas_vars *meas, uint32_t decimate_flag)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will calculate the measurement for regulation based on the decimate flag.
-  If disabled, the raw measurement is used, otherwise, the raw measurement is decimated (averaged) over
-  the regulation period.
+  If disabled, the filtered measurement is used, otherwise, the filtered measurement is decimated (averaged)
+  over the regulation period.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     if(decimate_flag)
     {
-        meas->accumulator += meas->raw;
+        meas->accumulator += meas->filtered;
 
         if(reg->iteration_counter == 0)
         {
@@ -42,7 +154,7 @@ static void regDecimateMeas(struct reg_converter *reg, struct reg_meas *meas, ui
     }
     else
     {
-        meas->regulated   = meas->raw;
+        meas->regulated   = meas->filtered;
         meas->accumulator = 0.0;
     }
 }
@@ -79,23 +191,23 @@ void regSetSimLoad(struct reg_converter *reg, struct reg_converter_pars *reg_par
     {
     default:
 
-        regSimLoadSetVoltage(&reg_pars->sim_load_pars, &reg->sim_load_vars, reg->v_meas.raw);
+        regSimLoadSetVoltage(&reg_pars->sim_load_pars, &reg->sim_load_vars, reg->v_meas.unfiltered);
         break;
 
     case REG_CURRENT:
 
-        regSimLoadSetCurrent(&reg_pars->sim_load_pars, &reg->sim_load_vars, reg->i_meas.raw);
+        regSimLoadSetCurrent(&reg_pars->sim_load_pars, &reg->sim_load_vars, reg->i_meas.unfiltered);
         break;
 
     case REG_FIELD:
 
-        regSimLoadSetField(&reg_pars->sim_load_pars, &reg->sim_load_vars, reg->b_meas.raw);
+        regSimLoadSetField(&reg_pars->sim_load_pars, &reg->sim_load_vars, reg->b_meas.unfiltered);
         break;
     }
 
-    reg->v_meas.regulated = reg->v_meas.raw = reg->sim_load_vars.voltage;
-    reg->i_meas.regulated = reg->i_meas.raw = reg->sim_load_vars.current;
-    reg->b_meas.regulated = reg->b_meas.raw = reg->sim_load_vars.field;
+    reg->v_meas.regulated = reg->v_meas.unfiltered = reg->sim_load_vars.voltage;
+    reg->i_meas.regulated = reg->i_meas.unfiltered = reg->sim_load_vars.current;
+    reg->b_meas.regulated = reg->b_meas.unfiltered = reg->sim_load_vars.field;
 }
 
 /*---------------------------------------------------------------------------------------------------------*/
@@ -121,33 +233,33 @@ void regSetMeas(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
     {
         // Use measured values for voltage, current and field
 
-        reg->v_meas.raw = v_meas;
-        reg->i_meas.raw = i_meas;
-        reg->b_meas.raw = b_meas;
+        reg->v_meas.unfiltered = v_meas;
+        reg->i_meas.unfiltered = i_meas;
+        reg->b_meas.unfiltered = b_meas;
     }
     else
     {
         // Simulate voltage, current and field using appropriate delays and noise
 
-        regDelayCalc(&reg->v_meas_delay, reg->sim_load_vars.voltage, &reg->v_meas.raw);
+        regDelayCalc(&reg->v_meas_delay, reg->sim_load_vars.voltage, &reg->v_meas.unfiltered);
 
         if(reg->v_meas_noise > 0.0)
         {
-            reg->v_meas.raw += regSimNoise(reg->v_meas_noise);
+            reg->v_meas.unfiltered += regSimNoise(reg->v_meas_noise);
         }
 
-        regDelayCalc(&reg->i_meas_delay, reg->sim_load_vars.current, &reg->i_meas.raw);
+        regDelayCalc(&reg->i_meas_delay, reg->sim_load_vars.current, &reg->i_meas.unfiltered);
 
         if(reg->i_meas_noise > 0.0)
         {
-            reg->i_meas.raw += regSimNoise(reg->i_meas_noise);
+            reg->i_meas.unfiltered += regSimNoise(reg->i_meas_noise);
         }
 
-        regDelayCalc(&reg->b_meas_delay, reg->sim_load_vars.field, &reg->b_meas.raw);
+        regDelayCalc(&reg->b_meas_delay, reg->sim_load_vars.field, &reg->b_meas.unfiltered);
 
         if(reg->b_meas_noise > 0.0)
         {
-            reg->b_meas.raw += regSimNoise(reg->b_meas_noise);
+            reg->b_meas.unfiltered += regSimNoise(reg->b_meas_noise);
         }
     }
 }
@@ -379,7 +491,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 
         // Calculate magnet saturation compensation
 
-        reg->v_ref_sat = regLoadVrefSat(&reg_pars->load_pars, reg->i_meas.raw, reg->v_ref);
+        reg->v_ref_sat = regLoadVrefSat(&reg_pars->load_pars, reg->i_meas.unfiltered, reg->v_ref);
 
         // Apply voltage reference clip and rate limits
 
@@ -418,7 +530,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 
         // Calculate v_ref with saturation compensation applied
 
-        reg->v_ref_sat = regLoadVrefSat(&reg_pars->load_pars, reg->i_meas.raw, feedforward_v_ref);
+        reg->v_ref_sat = regLoadVrefSat(&reg_pars->load_pars, reg->i_meas.unfiltered, feedforward_v_ref);
 
         // Apply voltage reference limits
 
@@ -428,7 +540,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 
         if(reg->lim_v_ref.flags.clip || reg->lim_v_ref.flags.rate)
         {
-            v_ref = regLoadInverseVrefSat(&reg_pars->load_pars, reg->i_meas.raw, reg->v_ref_limited);
+            v_ref = regLoadInverseVrefSat(&reg_pars->load_pars, reg->i_meas.unfiltered, reg->v_ref_limited);
             reg->flags.ref_rate = 1;
         }
         else
@@ -460,18 +572,18 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
     // Check current measurement limits
 
-    regLimMeas(&reg->lim_i_meas, reg->i_meas.raw);
+    regLimMeas(&reg->lim_i_meas, reg->i_meas.unfiltered);
 
     // Check field measurment limits only when regulating field
 
     if(reg->mode == REG_FIELD)
     {
-        regLimMeas(&reg->lim_b_meas, reg->b_meas.raw);
+        regLimMeas(&reg->lim_b_meas, reg->b_meas.unfiltered);
     }
 
     // Calculate voltage reference limits for the measured current (V limits can depend on current)
 
-    regLimVrefCalc(&reg->lim_v_ref, reg->i_meas.raw);
+    regLimVrefCalc(&reg->lim_v_ref, reg->i_meas.unfiltered);
 
     // If open-loop (voltage regulation) mode - apply voltage ref limits
 
@@ -500,16 +612,22 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
             reg->b_err.flags.fault   = 0;
         }    
 
-        regErrCalc(&reg->v_err, 1, 1, reg->v_ref_limited, reg->v_meas.raw);
+        regErrCalc(&reg->v_err, 1, 1, reg->v_ref_limited, reg->v_meas.unfiltered);
         reg_flag = 1;
     }
     else  // else closed-loop on current or field
     {
-        // Decimate measurements if required
+        // Filter the measurements
 
-        regDecimateMeas(reg, &reg->b_meas, (reg->mode == REG_FIELD   && reg_pars->b_rst_pars.decimate_flag));
+        regMeasFilter(&reg_pars->v_meas, &reg->v_meas);
+        regMeasFilter(&reg_pars->i_meas, &reg->i_meas);
+        regMeasFilter(&reg_pars->b_meas, &reg->b_meas);
+
+        // Decimate the filtered measurements if required
+
+        regDecimateMeas(reg, &reg->v_meas, 0);
         regDecimateMeas(reg, &reg->i_meas, (reg->mode == REG_CURRENT && reg_pars->i_rst_pars.decimate_flag));
-        regDecimateMeas(reg, &reg->v_meas, 1);
+        regDecimateMeas(reg, &reg->b_meas, (reg->mode == REG_FIELD   && reg_pars->b_rst_pars.decimate_flag));
 
         // Regulate current or field at the regulation period
 
@@ -545,7 +663,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
         if(reg->mode == REG_CURRENT)
         {
             regErrCalc(&reg->i_err, !feedforward_control, max_abs_err_control,
-                        reg->ref_interpolated, reg->i_meas.raw);
+                        reg->ref_interpolated, reg->i_meas.unfiltered);
 
             reg->err         = reg->i_err.err;
             reg->max_abs_err = reg->i_err.max_abs_err;
@@ -553,7 +671,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
         else
         {
             regErrCalc(&reg->b_err, !feedforward_control, max_abs_err_control,
-                        reg->ref_interpolated, reg->b_meas.raw);
+                        reg->ref_interpolated, reg->b_meas.unfiltered);
 
             reg->err         = reg->b_err.err;
             reg->max_abs_err = reg->b_err.max_abs_err;

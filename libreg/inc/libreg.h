@@ -44,6 +44,31 @@
 #include <libreg/rst.h>
 #include <libreg/sim.h>
 
+// Constants
+
+#define REG_N_IIR_COEFFS        11                              // Number of Voltage Source simulation coefficients...
+                                                                // ...if this is changed, the code in reg.c must be modified
+// Measurement structures
+
+struct reg_meas_pars                                            // Measurement filter parameters
+{
+    float                       num  [REG_N_IIR_COEFFS];        // Numerator coefficients b0, b1, b2, ...
+    float                       den  [REG_N_IIR_COEFFS];        // Denominator coefficients a0, a2, a2, ...
+    float                       num0_correction;                // Sum(den) - Sum(num) to compensate single precision floats
+    uint32_t                    order;                          // Filter order (number of coefficients - 1)
+};
+
+struct reg_meas_vars                                            // Measurement filter variables
+{
+    uint32_t                    iir_latest_index;               // Index in IIR history of latest sample
+    float                       unfiltered;                     // Unfiltered measurement at iteration period
+    float                       iir_in [REG_N_IIR_COEFFS];      // IIR filtered measurement at iteration period
+    float                       iir_out[REG_N_IIR_COEFFS];      // IIR filtered measurement at iteration period
+    float                       filtered;                       // IIR filtered measurement at iteration period
+    float                       accumulator;                    // Accumulator used to produce decimated value
+    float                       regulated;                      // Measurement used for closed-loop regulation (raw or decimated)
+};
+
 // Global power converter regulation structure
 
 struct reg_converter                                            // Global converter regulation structure
@@ -55,11 +80,11 @@ struct reg_converter                                            // Global conver
     uint32_t                    cl_period_iters;                // Closed loop regulation period (in iterations)
     uint32_t                    iteration_counter;              // Iteration counter
 
-    // Measurement values - real or simulated
+    // Measured values - real or simulated
 
-    struct reg_meas             v_meas;                         // Voltage measurement
-    struct reg_meas             i_meas;                         // Current measurement
-    struct reg_meas             b_meas;                         // Field measurement
+    struct reg_meas_vars        v_meas;                         // Voltage measurement
+    struct reg_meas_vars        i_meas;                         // Current measurement
+    struct reg_meas_vars        b_meas;                         // Field measurement
 
     // Reference and regulation variables
 
@@ -127,6 +152,9 @@ struct reg_converter_pars                                       // Global conver
     struct reg_sim_vs_pars      sim_vs_pars;                    // Voltage source simulation parameters
     struct reg_load_pars        load_pars;                      // Circuit load model for regulation
     struct reg_sim_load_pars    sim_load_pars;                  // Circuit load model for simulation
+    struct reg_meas_pars        v_meas;
+    struct reg_meas_pars        i_meas;
+    struct reg_meas_pars        b_meas;
 };
 
 #ifdef __cplusplus
@@ -135,22 +163,24 @@ extern "C" {
 
 // Converter regulation functions
 
-float    regCalcErrDelay        (struct reg_rst_pars *rst_pars);
-void     regSetSimLoad          (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
-                                 enum reg_mode reg_mode, float sim_load_tc_error);
-void     regSetLoad             (float ohms_ser, float ohms_par, float ohms_mag, float henrys,
-                                 float gauss_per_amp, float sim_load_tc_error);
-void     regSetMeasNoise        (struct reg_converter *reg, float v_meas_noise, float b_meas_noise, float i_meas_noise);
-void     regSetMeas             (struct reg_converter *reg,  struct reg_converter_pars *reg_pars,
-                                 float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
-void     regSetVoltageMode      (struct reg_converter *reg, struct reg_converter_pars *reg_pars);
-void     regSetMode             (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
-                                 enum reg_mode mode, float meas, float rate);
-uint32_t regConverter           (struct reg_converter *reg, struct reg_converter_pars *reg_pars, float ref,
-                                 float feedforward_v_ref, uint32_t feedforward_control,
-                                 uint32_t max_abs_err_control);
-void     regSimulate            (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
-                                 float v_perturbation);
+void     regMeasFilterInit       (struct reg_meas_pars *pars, struct reg_meas_vars *vars, float  num[REG_N_IIR_COEFFS], float den[REG_N_IIR_COEFFS]);
+void     regMeasFilterInitHistory(struct reg_meas_vars *vars, float init_meas);
+float    regCalcErrDelay         (struct reg_rst_pars *rst_pars);
+void     regSetSimLoad           (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
+                                  enum reg_mode reg_mode, float sim_load_tc_error);
+void     regSetLoad              (float ohms_ser, float ohms_par, float ohms_mag, float henrys,
+                                  float gauss_per_amp, float sim_load_tc_error);
+void     regSetMeasNoise         (struct reg_converter *reg, float v_meas_noise, float b_meas_noise, float i_meas_noise);
+void     regSetMeas              (struct reg_converter *reg,  struct reg_converter_pars *reg_pars,
+                                  float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
+void     regSetVoltageMode       (struct reg_converter *reg, struct reg_converter_pars *reg_pars);
+void     regSetMode              (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
+                                  enum reg_mode mode, float meas, float rate);
+uint32_t regConverter            (struct reg_converter *reg, struct reg_converter_pars *reg_pars, float ref,
+                                  float feedforward_v_ref, uint32_t feedforward_control,
+                                  uint32_t max_abs_err_control);
+void     regSimulate             (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
+                                  float v_perturbation);
 
 #ifdef __cplusplus
 }

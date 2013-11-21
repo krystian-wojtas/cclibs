@@ -92,13 +92,6 @@ struct reg_rst_vars                                             // RST algorithm
     float                       act [REG_N_RST_COEFFS];         // RST actuation history
 };
 
-struct reg_meas
-{
-    float                       raw;                            // Raw measurement at iteration period
-    float                       accumulator;                    // Accumulator used to produce decimated value
-    float                       regulated;                      // Measurement used for closed-loop regulation (raw or decimated)
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif
