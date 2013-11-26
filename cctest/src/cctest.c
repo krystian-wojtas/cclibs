@@ -306,8 +306,9 @@ static void PrepareRegulation(void)
 
                 status = regRstInit(&reg_pars.b_rst_pars,
                                     reg.iter_period, ccpars_reg.period_iters, &reg_pars.load_pars,
-                                    ccpars_reg.clbw, ccpars_reg.clbw2, ccpars_reg.z, ccpars_reg.clbw3,
-                                    ccpars_reg.pure_delay, REG_FIELD, ccpars_reg.decimate, &ccpars_reg.rst);
+                                    ccpars_reg.clbw, ccpars_reg.clbw2, ccpars_reg.z,
+                                    ccpars_reg.clbw3, ccpars_reg.clbw4, ccpars_reg.pure_delay,
+                                    REG_FIELD, ccpars_reg.decimate, &ccpars_reg.rst);
 
                 delay_in_iterations = reg_pars.b_rst_pars.rst.track_delay / reg.iter_period;
 
@@ -324,8 +325,9 @@ static void PrepareRegulation(void)
 
                 status = regRstInit(&reg_pars.i_rst_pars,
                                     reg.iter_period, ccpars_reg.period_iters, &reg_pars.load_pars,
-                                    ccpars_reg.clbw, ccpars_reg.clbw2, ccpars_reg.z, ccpars_reg.clbw3,
-                                    ccpars_reg.pure_delay, REG_CURRENT, ccpars_reg.decimate, &ccpars_reg.rst);
+                                    ccpars_reg.clbw, ccpars_reg.clbw2, ccpars_reg.z,
+                                    ccpars_reg.clbw3, ccpars_reg.clbw4, ccpars_reg.pure_delay,
+                                    REG_CURRENT, ccpars_reg.decimate, &ccpars_reg.rst);
 
                 delay_in_iterations = reg_pars.i_rst_pars.rst.track_delay / reg.iter_period;
 

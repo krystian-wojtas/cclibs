@@ -46,6 +46,7 @@ struct ccpars_reg
     float               clbw2;                     // Regulation closed loop bandwidth (conjugate poles)
     float               z;                         // Regulation conjugate poles damping factor (0.5-0.8)
     float               clbw3;                     // Regulation closed loop bandwidth (second real pole)
+    float               clbw4;                     // Regulation closed loop bandwidth (third real pole)
     float               pure_delay;                // Regulation pure loop delay
     struct reg_rst      rst;                       // Regulation RST coefficient
     float               ol_time;                   // Open loop time
@@ -78,6 +79,7 @@ CCPARS_REG_EXT struct ccpars reg_pars_list[]
     { "CLBW2",       PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw2           }, 1 },
     { "Z",           PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.z               }, 1 },
     { "CLBW3",       PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw3           }, 1 },
+    { "CLBW4",       PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw4           }, 1 },
     { "PURE_DELAY",  PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.pure_delay      }, 1 },
     { "R",           PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.r           }, 0 },
     { "S",           PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.s           }, 0 },
