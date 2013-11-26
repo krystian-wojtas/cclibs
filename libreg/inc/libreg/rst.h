@@ -99,7 +99,7 @@ extern "C" {
 // RST regulation functions
 
 uint32_t regRstInit             (struct reg_rst_pars *pars, float iter_period, uint32_t period_iters,
-                                 struct reg_load_pars *load, float clbw, float clbw2, float z, float clbw3,
+                                 struct reg_load_pars *load, float clbw, float clbw2, float z, float clbw3, float clbw4,
                                  float pure_delay, enum reg_mode reg_mode, uint32_t decimate_flag, struct reg_rst *manual);
 float    regRstCalcAct          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas);
 float    regRstCalcRef          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas);
