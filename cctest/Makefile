@@ -16,6 +16,7 @@ inc_path        = inc
 obj_path        = $(os)/$(cpu)/obj
 src_path        = src
 install_path    = /c/cctest
+sd_path         = /sdcard/projects/webplots
 
 # Libraries
 
@@ -109,6 +110,11 @@ test:
 install:
 	cp $(exec) $(install_path)
 
-.PHONY: all clean reference test flot sandbox install
+sdrefresh:
+	cp -r results/webplots/flot      $(sd_path)
+	cp -r results/webplots/colorbox  $(sd_path)
+	cp -r results/webplots/modernizr $(sd_path)
+
+.PHONY: all clean reference test flot sandbox install sdrefresh
 
 # EOF
