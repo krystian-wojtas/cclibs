@@ -15,7 +15,7 @@ dep_path        = $(os)/$(cpu)/dep
 inc_path        = inc
 obj_path        = $(os)/$(cpu)/obj
 src_path        = src
-install_path    = /c/cctest
+dropbox_path    = /c/Dropbox/cctest
 sd_path         = /sdcard/projects/webplots
 
 # Libraries
@@ -105,16 +105,24 @@ test:
 	done ;\
 	exit $$status
 
-# Install to /c/cctest
+# Install to dropbox
 
-install:
-	cp $(exec) $(install_path)
+dropbox:
+	cp $(exec) $(dropbox_path)
+	rsync -av scripts/sandbox/RSTtests $(dropbox_path)/scripts --exclude=*.sh
+	rsync -av --delete --delete-excluded results/webplots/flot      $(dropbox_path)/results/webplots/ --exclude=.git
+	rsync -av --delete --delete-excluded results/webplots/colorbox  $(dropbox_path)/results/webplots/ --exclude=.git
+	rsync -av --delete --delete-excluded results/webplots/modernizr $(dropbox_path)/results/webplots/ --exclude=.git
+
+# Refresh flot related files to sdcard projects folder (for debian on Nexus 10)
 
 sdrefresh:
-	cp -r results/webplots/flot      $(sd_path)
-	cp -r results/webplots/colorbox  $(sd_path)
-	cp -r results/webplots/modernizr $(sd_path)
+	rsync -av --delete --delete-excluded results/webplots/flot      $(sd_path)/results/webplots/ --exclude=.git
+	rsync -av --delete --delete-excluded results/webplots/colorbox  $(sd_path)/results/webplots/ --exclude=.git
+	rsync -av --delete --delete-excluded results/webplots/modernizr $(sd_path)/results/webplots/ --exclude=.git
 
-.PHONY: all clean reference test flot sandbox install sdrefresh
+# List targets
+
+.PHONY: all clean reference test flot sandbox dropbox sdrefresh
 
 # EOF
