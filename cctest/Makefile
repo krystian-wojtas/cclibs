@@ -117,9 +117,9 @@ dropbox:
 # Refresh flot related files to sdcard projects folder (for debian on Nexus 10)
 
 sdrefresh:
-	rsync -av --delete --delete-excluded results/webplots/flot      $(sd_path)/results/webplots/ --exclude=.git
-	rsync -av --delete --delete-excluded results/webplots/colorbox  $(sd_path)/results/webplots/ --exclude=.git
-	rsync -av --delete --delete-excluded results/webplots/modernizr $(sd_path)/results/webplots/ --exclude=.git
+	cp -r results/webplots/flot      $(sd_path)
+	cp -r results/webplots/colorbox  $(sd_path)
+	cp -r results/webplots/modernizr $(sd_path)
 
 # List targets
 
