@@ -264,11 +264,20 @@ float regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_load_pars *s
         sum_den += pars->den[i];
     }
 
-    pars->gain = sum_num / sum_den;
+    // Protect gain against NaN if the denominator is zero
 
-    // Mark voltage source simulation as undersampled if step response reaches 95% in 1 period
+    if(sum_den != 0.0)
+    {
+       pars->gain = sum_num / sum_den;
 
-    sim_load_pars->vs_undersampled_flag = (pars->num[0] / pars->den[0]) >= 0.95;
+        // Mark voltage source simulation as undersampled if step response reaches 95% in 1 period
+
+        sim_load_pars->vs_undersampled_flag = (pars->num[0] / pars->den[0]) >= 0.95;
+    }
+    else
+    {
+        pars->gain = 1.0;
+    }
 
     return(pars->gain);
 }
