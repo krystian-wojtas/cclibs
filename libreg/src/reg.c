@@ -30,50 +30,28 @@ void regMeasFilterInit(struct reg_meas_pars *pars, struct reg_meas_vars *vars,
   saves the filter coefficients in the filter parameter structure.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t        i;
+    double           num0_correction = 0.0;
+    uint32_t        i = REG_N_IIR_COEFFS;
 
-    // Calculate the num[0] correction due to single precision floating point coefficients
-    // For the gain of the filter to be unity, sum(num) must equal sum(den):
-
-    pars->num0_correction = ( (double)den[10] +
-                              (double)den[ 9] +
-                              (double)den[ 8] +
-                              (double)den[ 7] +
-                              (double)den[ 6] +
-                              (double)den[ 5] +
-                              (double)den[ 4] +
-                              (double)den[ 3] +
-                              (double)den[ 2] +
-                              (double)den[ 1] +
-                              (double)den[ 0] ) -
-                            ( (double)num[10] +
-                              (double)num[ 9] +
-                              (double)num[ 8] +
-                              (double)num[ 7] +
-                              (double)num[ 6] +
-                              (double)num[ 5] +
-                              (double)num[ 4] +
-                              (double)num[ 3] +
-                              (double)num[ 2] +
-                              (double)num[ 1] +
-                              (double)num[ 0] );
-
-// Analyse filter coefficients to derive the filter order and save filter coefficients
-
-    i = REG_N_IIR_COEFFS;
-
-    while(i > 0)
+    while(i-- > 0)
     {
-        i--;
+        // Calculate the num[0] correction due to single precision floating point coefficients
+        // For the gain of the filter to be unity, sum(num) must equal sum(den).
+
+        num0_correction += (double)den[i] - num[i];
 
         pars->num[i] = num[i];
         pars->den[i] = den[i];
+
+        // Analyse filter coefficients to derive the filter order and save filter coefficients.
 
         if(pars->order == 0 && (num[i] != 0.0 || den[i] != 0.0))
         {
             pars->order = i;
         }
     }
+
+    pars->num0_correction = num0_correction;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regMeasFilterInitHistory(struct reg_meas_vars *vars, float init_meas)
