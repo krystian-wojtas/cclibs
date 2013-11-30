@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     libreg.h                                                                    Copyright CERN 2014
+  File:     librst.h                                                                    Copyright CERN 2014
 
   License:  This file is part of libreg.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Converter Control Regulation library regulation header file
+  Purpose:  Converter Control Regulation library RST functions header file
 
   Contact:  cclibs-devs@cern.ch
 
@@ -41,10 +41,7 @@
 
 // Constants
 
-// REG_N_RST_COEFFS: Maximum number of RST coefficients. That number is hardcoded in several functions, which
-// must be reworked when changing the number of RST coefficients: regRstInit(), regRstCalcAct(), regRstCalcRef().
-
-#define REG_N_RST_COEFFS        10
+#define REG_N_RST_COEFFS        10                              // RST order + 1
 
 // Regulation RST algorithm structures
 
@@ -87,6 +84,7 @@ struct reg_rst_pars                                             // RST algorithm
 
 struct reg_rst_vars                                             // RST algorithm variables
 {
+    uint32_t                    history_index;                  // Index to latest entry in the history
     float                       ref [REG_N_RST_COEFFS];         // RST calculated reference history
     float                       meas[REG_N_RST_COEFFS];         // RST measurement history
     float                       act [REG_N_RST_COEFFS];         // RST actuation history

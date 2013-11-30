@@ -496,65 +496,61 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
 float regRstCalcAct(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function returns the actuation based on the supplied reference and measurement using the RST
-  parameters.  The function regRstHistory() must be called at the end of the iteration to shift the
-  RST history.  If the actuation is clipped then regRstCalcRef must be called to re-calculate the
+  parameters.  If the actuation is clipped then regRstCalcRef must be called to re-calculate the
   reference to put in the history.
 
   Implementation notes:
         Computing the actuation requires a better precision than 32-bit floating point for
         the intermediate results. This is achieved by using the type double for the local variable act.
         On TI C32 DSP, 'double' is simply an alias for 'float' i.e. 32-bit FP. However that DSP can take
-        advantage of the extended 40-bit FP precision of its ALU, providing the code is written in such
-        a way that the C32 compiler produces the most efficient assembly code. That usually implies to
-        write formulas on a single line, not relying on loops.
+        advantage of the extended 40-bit FP precision of its FPU, by defining double to be long double.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    double       act;
+    double      act;
+    uint32_t    var_idx;
+    uint32_t    par_idx;
 
-    vars->ref [0] = ref;
-    vars->meas[0] = meas;
+    // Return zero immediately if parameters are invalid
 
-    /*--- Calculate actuation using RST algorithm ---*/
-
-    if(pars->status == REG_OK)
+    if(pars->status != REG_OK)
     {
-        act =  ((double)pars->t0_correction * ref      +
-                (double)pars->rst.t[0] * vars->ref [0] +
-                (double)pars->rst.t[1] * vars->ref [1] +
-                (double)pars->rst.t[2] * vars->ref [2] +
-                (double)pars->rst.t[3] * vars->ref [3] +
-                (double)pars->rst.t[4] * vars->ref [4] +
-                (double)pars->rst.t[5] * vars->ref [5] +
-                (double)pars->rst.t[6] * vars->ref [6] +
-                (double)pars->rst.t[7] * vars->ref [7] +
-                (double)pars->rst.t[8] * vars->ref [8] +
-                (double)pars->rst.t[9] * vars->ref [9] -
-                (double)pars->rst.r[0] * vars->meas[0] -
-                (double)pars->rst.r[1] * vars->meas[1] -
-                (double)pars->rst.r[2] * vars->meas[2] -
-                (double)pars->rst.r[3] * vars->meas[3] -
-                (double)pars->rst.r[4] * vars->meas[4] -
-                (double)pars->rst.r[5] * vars->meas[5] -
-                (double)pars->rst.r[6] * vars->meas[6] -
-                (double)pars->rst.r[7] * vars->meas[7] -
-                (double)pars->rst.r[8] * vars->meas[8] -
-                (double)pars->rst.r[9] * vars->meas[9] -
-                (double)pars->rst.s[1] * vars->act [1] -                 // Skip index 0 for S[] coefficients
-                (double)pars->rst.s[2] * vars->act [2] -
-                (double)pars->rst.s[3] * vars->act [3] -
-                (double)pars->rst.s[4] * vars->act [4] -
-                (double)pars->rst.s[5] * vars->act [5] -
-                (double)pars->rst.s[6] * vars->act [6] -
-                (double)pars->rst.s[7] * vars->act [7] -
-                (double)pars->rst.s[8] * vars->act [8] -
-                (double)pars->rst.s[9] * vars->act [9]) * pars->inv_s0;
-    }
-    else
-    {
-        act = 0.0;
+        return(0.0);
     }
 
-    return(vars->act[0] = act);
+    // Use RST coefficients to calculate new actuation from reference
+
+    var_idx = vars->history_index;
+    act     = (double)pars->t0_correction * ref + 
+              (double)pars->rst.t[0] * ref - 
+              (double)pars->rst.r[0] * meas;
+
+    for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+    {
+        if(var_idx == 0)
+        {
+            var_idx = REG_N_RST_COEFFS-1;
+        }
+        else
+        {
+            var_idx--;
+        }
+
+        act += (double)pars->rst.t[par_idx] * vars->ref [var_idx] +
+               (double)pars->rst.r[par_idx] * vars->meas[var_idx] -
+               (double)pars->rst.s[par_idx] * vars->act [var_idx];
+    }
+    
+    act *= pars->inv_s0;
+
+    // Save latest act, meas and ref in history
+
+    var_idx = vars->history_index;
+
+    vars->ref [var_idx] = ref;
+    vars->meas[var_idx] = meas;
+    vars->act [var_idx] = act;
+
+    return(act);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas)
@@ -568,59 +564,55 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
   The function saves the new actuation in the RST history and re-calculates the reference which is returned.
 
   Implementation notes:
-        Computing the reference requires a better precision than 32-bit floating point for
+        Computing the actuation requires a better precision than 32-bit floating point for
         the intermediate results. This is achieved by using the type double for the local variable ref.
         On TI C32 DSP, 'double' is simply an alias for 'float' i.e. 32-bit FP. However that DSP can take
-        advantage of the extended 40-bit FP precision of its ALU, providing the code is written in such
-        a way that the C32 compiler produces the most efficient assembly code. That usually implies to
-        write formulas on a single line, not relying on loops.
+        advantage of the extended 40-bit FP precision of its FPU, by defining double to be long double.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    double       ref;
+    double      ref;
+    uint32_t    var_idx;
+    uint32_t    par_idx;
 
-    vars->act [0] = act;
-    vars->meas[0] = meas;
+    // Return zero immediately if parameters are invalid
 
-    /*--- Recalculate the reference for the new actuation ---*/
-
-    if(pars->status == REG_OK)
+    if(pars->status != REG_OK)
     {
-        ref =  ((double)pars->rst.s[0] * vars->act [0] +
-                (double)pars->rst.s[1] * vars->act [1] +
-                (double)pars->rst.s[2] * vars->act [2] +
-                (double)pars->rst.s[3] * vars->act [3] +
-                (double)pars->rst.s[4] * vars->act [4] +
-                (double)pars->rst.s[5] * vars->act [5] +
-                (double)pars->rst.s[6] * vars->act [6] +
-                (double)pars->rst.s[7] * vars->act [7] +
-                (double)pars->rst.s[8] * vars->act [8] +
-                (double)pars->rst.s[9] * vars->act [9] +
-                (double)pars->rst.r[0] * vars->meas[0] +
-                (double)pars->rst.r[1] * vars->meas[1] +
-                (double)pars->rst.r[2] * vars->meas[2] +
-                (double)pars->rst.r[3] * vars->meas[3] +
-                (double)pars->rst.r[4] * vars->meas[4] +
-                (double)pars->rst.r[5] * vars->meas[5] +
-                (double)pars->rst.r[6] * vars->meas[6] +
-                (double)pars->rst.r[7] * vars->meas[7] +
-                (double)pars->rst.r[8] * vars->meas[8] +
-                (double)pars->rst.r[9] * vars->meas[9] -
-                (double)pars->rst.t[1] * vars->ref [1] -             // Skip index 0 for T[] coefficients
-                (double)pars->rst.t[2] * vars->ref [2] -
-                (double)pars->rst.t[3] * vars->ref [3] -
-                (double)pars->rst.t[4] * vars->ref [4] -
-                (double)pars->rst.t[5] * vars->ref [5] -
-                (double)pars->rst.t[6] * vars->ref [6] -
-                (double)pars->rst.t[7] * vars->ref [7] -
-                (double)pars->rst.t[8] * vars->ref [8] -
-                (double)pars->rst.t[9] * vars->ref [9]) * pars->inv_corrected_t0;
-    }
-    else
-    {
-        ref = 0.0;
+        return(0.0);
     }
 
-    return(vars->ref[0] = ref);
+    // Use RST coefficients to calculate new actuation from reference
+
+    var_idx = vars->history_index;
+    ref     = (double)pars->rst.s[0] * act + (double)pars->rst.r[0] * meas;
+
+    for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+    {
+        if(var_idx == 0)
+        {
+            var_idx = REG_N_RST_COEFFS-1;
+        }
+        else
+        {
+            var_idx--;
+        }
+
+        act += (double)pars->rst.s[par_idx] * vars->act [var_idx] +
+               (double)pars->rst.r[par_idx] * vars->meas[var_idx] -
+               (double)pars->rst.t[par_idx] * vars->ref [var_idx];
+    }
+    
+    ref *= pars->inv_corrected_t0;
+
+    // Save latest act, meas and ref in history
+
+    var_idx = vars->history_index;
+
+    vars->act [var_idx] = act;
+    vars->meas[var_idx] = meas;
+    vars->ref [var_idx] = ref;
+
+    return(ref);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regRstHistory(struct reg_rst_vars *vars)
@@ -630,20 +622,23 @@ float regRstHistory(struct reg_rst_vars *vars)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t	i;
-    uint32_t	j;
-    float       sum_act = vars->act[REG_N_RST_COEFFS-1];
+    float       act_accumulator = 0.0;
 
-    for(i = REG_N_RST_COEFFS-2, j = REG_N_RST_COEFFS-1 ; j ; i--,j--)
+    // Adjust var_idx to next free record in the history
+
+    if(++vars->history_index >= REG_N_RST_COEFFS)
     {
-	vars->ref [j] = vars->ref [i];
-	vars->meas[j] = vars->meas[i];
-	vars->act [j] = vars->act [i];
-
-        sum_act += vars->act [j];
+        vars->history_index = 0;
     }
 
-    return(sum_act * (1.0 / REG_N_RST_COEFFS));
+    // Calculate the average actuation from the history
+
+    for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+    {
+        act_accumulator += vars->act[i];
+    }
+
+    return(act_accumulator * (1.0 / REG_N_RST_COEFFS));
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: rst.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
+
