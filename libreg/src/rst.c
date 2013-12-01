@@ -460,29 +460,11 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
         pars->inv_s0 = 1.0 / pars->rst.s[0];
 
         // Calculate floating point math correction for T coefficients to ensure that Sum(T) == Sum(R)
-        // This must be unrolled to use 40-bit floating point registers in the TI TMS320C32
-        // and uses double precision on other processors.
 
-        t0_correction =  ((double)pars->rst.r[0] -
-                                  pars->rst.t[0] +
-                                  pars->rst.r[1] -
-                                  pars->rst.t[1] +
-                                  pars->rst.r[2] -
-                                  pars->rst.t[2] +
-                                  pars->rst.r[3] -
-                                  pars->rst.t[3] +
-                                  pars->rst.r[4] -
-                                  pars->rst.t[4] +
-                                  pars->rst.r[5] -
-                                  pars->rst.t[5] +
-                                  pars->rst.r[6] -
-                                  pars->rst.t[6] +
-                                  pars->rst.r[7] -
-                                  pars->rst.t[7] +
-                                  pars->rst.r[8] -
-                                  pars->rst.t[8] +
-                                  pars->rst.r[9] -
-                                  pars->rst.t[9]);
+        for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+        {
+            t0_correction += (double)pars->rst.r[0] - pars->rst.t[0];
+        }
 
         pars->t0_correction    = t0_correction;
         pars->inv_corrected_t0 = 1.0 / (pars->rst.t[0] + t0_correction);
