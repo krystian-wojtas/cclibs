@@ -599,8 +599,8 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
 /*---------------------------------------------------------------------------------------------------------*/
 float regRstHistory(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function must be called after calling regRstCalcAct() to shift the RST history.  It returns the
-  average actuation value over the length of the RST history.
+  This function must be called after calling regRstCalcAct() to adjust the RST history index.  It returns 
+  the average actuation value over the length of the RST history.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t	i;
