@@ -517,7 +517,7 @@ float regRstCalcAct(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
             var_idx--;
         }
 
-        act += (double)pars->rst.t[par_idx] * vars->ref [var_idx] +
+        act += (double)pars->rst.t[par_idx] * vars->ref [var_idx] -
                (double)pars->rst.r[par_idx] * vars->meas[var_idx] -
                (double)pars->rst.s[par_idx] * vars->act [var_idx];
     }
