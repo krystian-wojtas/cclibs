@@ -38,6 +38,7 @@
 #include "func/start.h"
 #include "func/table.h"
 #include "func/plep.h"
+#include "func/pp.h"
 #include "func/pppl.h"
 #include "func/test.h"
 #include "func/trim.h"
@@ -144,6 +145,27 @@ void ccrefInitPLEP(void)
     if(fg_error != FG_OK)
     {
         fprintf(stderr,"Error : Failed to initialise PLEP (segment %u) : %s\n",
+                fg_meta.error.index,ccrefErrMsg(fg_error));
+        exit(EXIT_FAILURE);
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void ccrefInitPP(void)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    enum fg_error fg_error;
+
+    // Try to initialise the PP
+
+    fg_error = fgPpInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_pp.config,
+                        ccpars_global.run_delay, ccpars_pp.initial_ref,
+                        &ccpars_pp.pp_pars, &fg_meta);
+
+    // Report error if initialisation fails
+
+    if(fg_error != FG_OK)
+    {
+        fprintf(stderr,"Error : Failed to initialise PP (segment %u) : %s\n",
                 fg_meta.error.index,ccrefErrMsg(fg_error));
         exit(EXIT_FAILURE);
     }

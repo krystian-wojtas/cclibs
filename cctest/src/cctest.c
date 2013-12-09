@@ -33,6 +33,7 @@
 // Include libfg and libreg header files
 
 #include "libfg/plep.h"
+#include "libfg/pp.h"
 #include "libfg/pppl.h"
 #include "libfg/spline.h"
 #include "libfg/table.h"
@@ -52,6 +53,7 @@
 
 #include "func/table.h"
 #include "func/plep.h"
+#include "func/pp.h"
 #include "func/pppl.h"
 #include "func/test.h"
 #include "func/trim.h"
