@@ -235,7 +235,7 @@ void fgPpCalc(struct fg_pp_config *config,
     pp_ratio = pars->deceleration / (pars->acceleration + pars->deceleration);
 
     pars->time[0] = 0.0;
-    pars->time[2] = sqrt(2.0 * pars->acceleration * delta_ref / pp_ratio);
+    pars->time[2] = sqrt(2.0 * delta_ref / (pp_ratio * pars->acceleration));
     pars->time[1] = pars->time[2] * pp_ratio;
 
     pars->ref[0]  = init_ref;
