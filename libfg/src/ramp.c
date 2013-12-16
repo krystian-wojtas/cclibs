@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pp.c                                                                      Copyright CERN 2014
+  File:     ramp.c                                                                     Copyright CERN 2014
 
   License:  This file is part of libfg.
 
@@ -16,29 +16,29 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Generate Parabola - Parabola (PP) function with time shift when limited
+  Purpose:  Generate RAMP function based on Parabola - Parabola with time shift when limited
 
-  Notes:    This is a special function that responds if the reference is rate limited by the calling
-            application by adjusting a time shift. This effectively slows the reference time so that
+  Notes:    This is a special function that responds by adjusting a time shift if the reference is 
+            rate limited by the calling application. This effectively slows the reference time so that
             the function will continue smoothly when the reference is no longer limited.
 \*---------------------------------------------------------------------------------------------------------*/
 
-#include "libfg/pp.h"
+#include "libfg/ramp.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-enum fg_error fgPpInit(struct fg_limits        *limits,
-                       enum fg_limits_polarity  limits_polarity,
-                       struct fg_pp_config     *config,
-                       float                    delay,
-                       float                    ref,
-                       struct fg_pp_pars       *pars,
-                       struct fg_meta          *meta)          // NULL if not required
+enum fg_error fgRampInit(struct fg_limits          *limits,
+                         enum   fg_limits_polarity  limits_polarity,
+                         struct fg_ramp_config     *config,
+                         float                      delay,
+                         float                      ref,
+                         struct fg_ramp_pars       *pars,
+                         struct fg_meta            *meta)          // NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    enum fg_error fg_error;                     // Limits status
-    uint32_t      negative_flag;                // Flag to limits check function that part of ref is negative
+    enum fg_error fg_error;                 // Limits status
+    uint32_t      negative_flag;            // Flag to limits check function that part of ref is negative
 
-    fgResetMeta(meta);                          // Reset meta structure
+    fgResetMeta(meta);                      // Reset meta structure
 
     // Check parameters are valid
 
@@ -47,9 +47,9 @@ enum fg_error fgPpInit(struct fg_limits        *limits,
         return(FG_BAD_PARAMETER);
     }
 
-    // Calculate pp parameters 
+    // Calculate ramp parameters 
 
-    fgPpCalc(config, pars, delay, ref, meta);
+    fgRampCalc(config, pars, delay, ref, meta);
 
     // Check limits if supplied
 
@@ -70,18 +70,19 @@ enum fg_error fgPpInit(struct fg_limits        *limits,
     return(FG_OK);                              // Report success
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t fgPpGen(struct fg_pp_pars *pars, const double *time, float *ref)
+uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function derives the reference for the previously initialised pp function at the given time.
+  This function derives the reference for the previously initialised ramp function at the given time.
   It returns zero if time is beyond the end of the function, and 1 otherwise.
 
   The input pars structure contains the coordinates of the transition points between the segments of the
-  pp function.  The coordinates are defined for a normalised, descending, pp function. The reference must be
-  adjusted (de-normalised) in fgPpGen if the PP is ascending, namely if pars->pos_ramp_flag == TRUE.
+  ramp function.  The coordinates are defined for a normalised, descending, ramp function. The reference
+  must be adjusted (de-normalised) in fgRampGen if the RAMP is ascending, namely if 
+  pars->pos_ramp_flag == TRUE.
 
    - pars->time[0], pars->ref[0]: Start of the first (accelerating) parabola
    - pars->time[1], pars->ref[1]: Connection between acceleating and decelerating parabolas;
-   - pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also the end of the pp function.
+   - pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also the end of the ramp function.
   
   Unlike the other functions, time must not go backwards.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -99,7 +100,7 @@ uint32_t fgPpGen(struct fg_pp_pars *pars, const double *time, float *ref)
     {
         // If reference received from previous iteration was changed, but isn't blocked
 
-        if(*ref != pars->prev_pp_ref && *ref != pars->prev_returned_ref)
+        if(*ref != pars->prev_ramp_ref && *ref != pars->prev_returned_ref)
         {
             // Normalise reference received for previous iteration
 
@@ -159,7 +160,7 @@ uint32_t fgPpGen(struct fg_pp_pars *pars, const double *time, float *ref)
  
             *ref = pars->ref[2];
 
-            pars->prev_pp_ref = *ref;
+            pars->prev_ramp_ref = *ref;
             pars->prev_time   = *time;
            
             return(0);                       // Report that function has finished
@@ -181,48 +182,48 @@ uint32_t fgPpGen(struct fg_pp_pars *pars, const double *time, float *ref)
 
     // Keep time and ref for next iteration
 
-    pars->prev_pp_ref = *ref;
+    pars->prev_ramp_ref = *ref;
     pars->prev_time   = *time;
 
     return(1);                  // Report that function is still running
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void fgPpCalc(struct fg_pp_config *config,
-              struct fg_pp_pars   *pars,
+void fgRampCalc(struct fg_ramp_config *config,
+              struct fg_ramp_pars   *pars,
               float                delay,
               float                init_ref,
               struct fg_meta       *meta)            // can be NULL if not required
 /*---------------------------------------------------------------------------------------------------------*\
-  This function calculates pp parameters.  This function must be re-entrant because it can be called
-  to calculate the pp coefficients for an already moving reference.
+  This function calculates ramp parameters.  This function must be re-entrant because it can be called
+  to calculate the ramp coefficients for an already moving reference.
 
-  The reference scale is normalised if the pp is ascending.  This reflects the curve about the final
-  reference value (pp->ref[2]) to make the calculated pp always descending.
+  The reference scale is normalised if the ramp is ascending.  This reflects the curve about the final
+  reference value (ramp->ref[2]) to make the calculated ramp always descending.
 
-  Please refer to the comments in function fgPpGen for information regarding the contents of the output
+  Please refer to the comments in function fgRampGen for information regarding the contents of the output
   pars structure, and in particular the usage of pars->time[i], pars->ref[i] for all indexes 0 to 2.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float       delta_ref;              // Initial ref minus final ref
-    float       pp_ratio;               // Ratio between the two segments
+    float       seg_ratio;               // Ratio between the two segments
 
     // Prepare variables
 
-    pars->acceleration = config->acceleration;
-    pars->deceleration = config->acceleration;  // For now, the deceleration equals acceleration
-    pars->delay        = delay;
-    pars->time_shift   = 0.0;
-    pars->prev_pp_ref  = pars->prev_returned_ref = init_ref;
+    pars->acceleration  = config->acceleration;
+    pars->deceleration  = config->acceleration;  // For now, the deceleration equals acceleration
+    pars->delay         = delay;
+    pars->time_shift    = 0.0;
+    pars->prev_ramp_ref = pars->prev_returned_ref = init_ref;
 
     delta_ref = init_ref - config->final;       // Total reference change
 
-    // Normalise if pp is ascending
+    // Normalise if ramp is ascending
 
-    if(delta_ref >= 0.0)                       // Descending pp
+    if(delta_ref >= 0.0)                       // Descending ramp
     {
         pars->pos_ramp_flag = 0;
     }
-    else                                        // Ascending pp
+    else                                        // Ascending ramp
     {
         pars->pos_ramp_flag = 1;
         pars->offset        = 2.0 * config->final;
@@ -230,26 +231,26 @@ void fgPpCalc(struct fg_pp_config *config,
         delta_ref           = -delta_ref;                       // Normalised delta
     }
 
-    // Calculate pp parameters
+    // Calculate ramp parameters
 
-    pp_ratio = pars->deceleration / (pars->acceleration + pars->deceleration);
+    seg_ratio = pars->deceleration / (pars->acceleration + pars->deceleration);
 
     pars->time[0] = 0.0;
-    pars->time[2] = sqrt(2.0 * delta_ref / (pp_ratio * pars->acceleration));
-    pars->time[1] = pars->time[2] * pp_ratio;
+    pars->time[2] = sqrt(2.0 * delta_ref / (seg_ratio * pars->acceleration));
+    pars->time[1] = pars->time[2] * seg_ratio;
 
     pars->ref[0]  = init_ref;
-    pars->ref[1]  = init_ref - delta_ref * pp_ratio;
+    pars->ref[1]  = init_ref - delta_ref * seg_ratio;
     pars->ref[2]  = config->final;
 
     // Return meta data
 
     if(meta != NULL)
     {
-        meta->duration  = pars->time[2];  // Duration if rate limit never reached
+        meta->duration  = pars->time[2] + delay;    // Duration if rate limit never reached
         meta->range.end = config->final;
 
-        if(pars->pos_ramp_flag)              // If final reference is greater than initial reference
+        if(pars->pos_ramp_flag)                     // If final reference is greater than initial reference
         {
             meta->range.min = meta->range.start = pars->offset - init_ref;      // De-normalise to retrieve the initial reference
             meta->range.max = meta->range.end;
