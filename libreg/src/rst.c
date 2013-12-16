@@ -54,7 +54,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
   coefficients themselves are stored as single precision.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t alg_index;         // Algorithm index - selected according to pure delay fraction
+    uint32_t alg_index;          // Algorithm index - selected according to pure delay fraction
     double delay_fraction;       // pure delay as a fraction of the period
     double t1;                   // -period / load_Tc
     double a1;                   // -exp(t1)
@@ -405,7 +405,6 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
     pars->period_iters  = period_iters;
     pars->period        = iter_period * period_iters;
     pars->freq          = 1.0 / pars->period;
-    pars->status        = REG_OK;
 
     // if CLBW = 0.0 -> MANUAL RST coefficients
 
@@ -449,6 +448,8 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
 
     if(fabs(pars->rst.s[0]) < 1.0E-10)
     {
+        // RST coefficients are invalid and cannot be used
+
         pars->status = REG_FAULT;
 
         pars->inv_s0           = 0.0;
@@ -457,17 +458,22 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
     }
     else
     {
-        pars->inv_s0 = 1.0 / pars->rst.s[0];
+        // RST coefficients are valid and can be used
+
+        pars->status = REG_OK;
 
         // Calculate floating point math correction for T coefficients to ensure that Sum(T) == Sum(R)
 
+        t0_correction = 0.0;
+
         for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
         {
-            t0_correction += (double)pars->rst.r[0] - pars->rst.t[0];
+            t0_correction += (double)pars->rst.r[i] - pars->rst.t[i];
         }
 
         pars->t0_correction    = t0_correction;
         pars->inv_corrected_t0 = 1.0 / (pars->rst.t[0] + t0_correction);
+        pars->inv_s0           = 1.0 /  pars->rst.s[0];
     }
 
     // Return the status
