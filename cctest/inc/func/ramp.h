@@ -43,11 +43,11 @@ struct ccpars_ramp
     // RAMP file data
 
     float                       initial_ref;
-    struct fg_ramp_config       config;                 // Libfg config struct for RAMP
+    struct fg_ramp_config       config;                     // Libfg config struct for RAMP
 
     // Libfg RAMP variables
 
-    struct fg_ramp_pars         ramp_pars;                // Libfg parameters for RAMP
+    struct fg_ramp_pars         ramp_pars;                  // Libfg parameters for RAMP
 };
 
 CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp;
@@ -60,6 +60,7 @@ CCPARS_RAMP_EXT struct ccpars   ramp_pars[]
     { "INITIAL_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.initial_ref         }, 0 },
     { "FINAL_REF",    PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.final        }, 0 },
     { "ACCELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.acceleration }, 0 },
+    { "DECELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.deceleration }, 0 },
     { NULL }
 }
 #endif

@@ -42,7 +42,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     // Check parameters are valid
 
-    if(config->acceleration <= 0.0)
+    if(config->acceleration <= 0.0 || config->deceleration <= 0.0)
     {
         return(FG_BAD_PARAMETER);
     }
@@ -210,7 +210,7 @@ void fgRampCalc(struct fg_ramp_config *config,
     // Prepare variables
 
     pars->acceleration  = config->acceleration;
-    pars->deceleration  = config->acceleration;  // For now, the deceleration equals acceleration
+    pars->deceleration  = config->deceleration;  // For now, the deceleration equals acceleration
     pars->delay         = delay;
     pars->time_shift    = 0.0;
     pars->prev_ramp_ref = pars->prev_returned_ref = init_ref;

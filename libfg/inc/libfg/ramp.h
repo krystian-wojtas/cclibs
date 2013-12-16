@@ -47,7 +47,8 @@
 struct fg_ramp_config                       // RAMP function configuration
 {
     float       final;                      // Final reference
-    float       acceleration;               // Absolute acceleration of the parabolic segments (must be strictly positive)
+    float       acceleration;               // Absolute acceleration of the frist parabolic segment (must be strictly positive)
+    float       deceleration;               // Absolute deceleration of the last parabolic segment (must be strictly positive)
 };
 
 struct fg_ramp_pars                         // RAMP function parameters
@@ -55,7 +56,7 @@ struct fg_ramp_pars                         // RAMP function parameters
     uint32_t    pos_ramp_flag;              // Positive ramp flag (RAMP must be inverted for positive ramps)
     float       delay;                      // Time before start of function
     float       acceleration;               // Parabolic acceleration
-    float       deceleration;               // Parabolic deceleration (for now this equals acceleration)
+    float       deceleration;               // Parabolic deceleration
     float       ref[FG_RAMP_N_SEGS+1];      // End of segment normalised references
     float       time[FG_RAMP_N_SEGS+1];     // End of segment times
     float       offset;                     // Reference offset = 2.ref[2]
