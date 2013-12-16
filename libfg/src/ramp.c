@@ -122,7 +122,7 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
             else if(r >= pars->ref[1])
             {
                  pars->time_shift = pars->prev_time - pars->delay -
-                                    sqrt(2.0 * (r - pars->ref[1]) / pars->acceleration); // acceleration always +ve
+                                    sqrt(2.0 * (pars->ref[0] - r) / pars->acceleration); // acceleration always +ve
             }
             else if(r >= pars->ref[2])
             {

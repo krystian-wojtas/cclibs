@@ -536,7 +536,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t regConverter(struct reg_converter      *reg,                 // Regulation structure
                       struct reg_converter_pars *reg_pars,            // Regulation parameters structure
-                      float                      ref,                 // Ref for voltage, current or field
+                      float                     *ref,                 // Ref for voltage, current or field
                       float                      feedforward_v_ref,   // Feedforward voltage reference
                       uint32_t                   feedforward_control, // Feedforward enable/disable control
                       uint32_t                   max_abs_err_control) // Max abs error calc enable/disable
@@ -567,12 +567,14 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
     if(reg->mode == REG_VOLTAGE)
     {
-        reg->v_ref = reg->v_ref_sat = ref;              // Don't apply magnet saturation compensation
+        reg->v_ref = reg->v_ref_sat = *ref;              // Don't apply magnet saturation compensation
 
-        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->iter_period, ref, reg->v_ref_limited);
+        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->iter_period, reg->v_ref, reg->v_ref_limited);
 
         reg->flags.ref_clip = reg->lim_v_ref.flags.clip;
         reg->flags.ref_rate = reg->lim_v_ref.flags.rate;
+
+        *ref = reg->v_ref_limited;
 
         // Clear current/field regulation error
 
@@ -612,7 +614,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
         if(reg->iteration_counter == 0)
         {
             reg_flag = 1;
-            reg->ref = ref;
+            reg->ref = *ref;
             reg->iteration_counter = reg->cl_period_iters;
 
             if(reg->mode == REG_FIELD)
@@ -628,6 +630,8 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
             reg->ref_rate = (reg->ref_limited - reg->ref_prev) / (float)reg->cl_period_iters;
             reg->ref_prev =  reg->ref_limited;
+
+            *ref = reg->ref_rst;
 
             // Calculate the voltage source regulation error
 

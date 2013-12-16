@@ -226,7 +226,7 @@ void ccrunSimulation(uint32_t ref_function_type)
 
         if(regConverter(&reg,
                         &reg_pars,
-                        ref,                            // V_REF, I_REF or B_REF according to reg.mode
+                        &ref,                           // V_REF, I_REF or B_REF according to reg.mode
                         ccpars_reg.feedforward_v_ref,   // V_REF when feedforward_control is 1
                         ccpars_reg.feedforward_control, // 1=Feedforward  0=Feedback
                         1                               // max_abs_err_control (always enabled)

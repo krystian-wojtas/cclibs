@@ -176,7 +176,7 @@ void     regSetMeas              (struct reg_converter *reg,  struct reg_convert
 void     regSetVoltageMode       (struct reg_converter *reg, struct reg_converter_pars *reg_pars);
 void     regSetMode              (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
                                   enum reg_mode mode, float meas, float rate);
-uint32_t regConverter            (struct reg_converter *reg, struct reg_converter_pars *reg_pars, float ref,
+uint32_t regConverter            (struct reg_converter *reg, struct reg_converter_pars *reg_pars, float *ref,
                                   float feedforward_v_ref, uint32_t feedforward_control,
                                   uint32_t max_abs_err_control);
 void     regSimulate             (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
