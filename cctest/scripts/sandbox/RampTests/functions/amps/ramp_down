@@ -1,0 +1,8 @@
+# CCTEST RAMP file for negative ramp
+
+INITIAL_REF     10.0
+FINAL_REF       -5.0
+ACCELERATION    500.0
+DECELERATION    200.0
+
+# EOF
