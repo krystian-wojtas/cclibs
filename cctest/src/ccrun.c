@@ -178,13 +178,19 @@ void ccrunSimulation(uint32_t ref_function_type)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    abort_f       = 0;    // Abort function flag
+    uint32_t    func_run_f;           // Function running flag
     uint32_t    iteration_idx = 0;    // Iteration index
     float       perturb_volts = 0.0;  // Voltage perturbation to apply to circuit
     double      time;                 // Function generator time
+    double      end_time = 0.0;       // Simulation end time
     float       ref;                  // Function generator reference value
 
-    while((time = reg.iter_period * iteration_idx++) <= (fg_meta.duration + ccpars_global.stop_delay))
+    while(end_time == 0.0 || time < end_time)
     {
+        // Calculate iteration time
+
+        time = reg.iter_period * iteration_idx++;
+
         // Set measurements to simulated values
 
         regSetMeas(&reg, &reg_pars,
@@ -205,7 +211,7 @@ void ccrunSimulation(uint32_t ref_function_type)
 
         // Generate reference value using libfg function
 
-        func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &time, &ref);
+        func_run_f = func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &time, &ref);
 
         // If converter has tripped than cancel the reference
 
@@ -248,6 +254,13 @@ void ccrunSimulation(uint32_t ref_function_type)
         {
             perturb_volts = ccpars_load.perturb_volts;
             ccsigsStoreCursor(CSR_LOAD,"Perturbation");
+        }
+
+        // Set end of simulation time when function stops running
+
+        if(func_run_f == 0 && end_time == 0.0)
+        {
+            end_time = time + ccpars_global.stop_delay;
         }
 
         // Simulate voltage source and load response (with voltage perturbation added)
