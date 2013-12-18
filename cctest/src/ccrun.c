@@ -148,7 +148,7 @@ static float ccrunTestOpeningLoop(float time, float ref)
     return(ref);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccrunTestForConverterTrip(void)
+static float ccrunTestForConverterTrip(float ref)
 /*---------------------------------------------------------------------------------------------------------*\
   This function checks the limit fault flags and sets the converter trip flag if any critical limit has
   been exceeded.
@@ -167,8 +167,10 @@ static void ccrunTestForConverterTrip(void)
 
         regSetVoltageMode(&reg, &reg_pars);
 
-        reg.ref = reg.ref_limited = reg.ref_rst = reg.v_ref = reg.v_ref_sat = reg.v_ref_limited = 0.0;
+        ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v_ref = reg.v_ref_sat = reg.v_ref_limited = 0.0;
     }
+
+    return(ref);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ccrunSimulation(uint32_t ref_function_type)
@@ -178,7 +180,7 @@ void ccrunSimulation(uint32_t ref_function_type)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    abort_f       = 0;    // Abort function flag
-    uint32_t    func_run_f;           // Function running flag
+    uint32_t    func_run_f    = 1;;   // Function running flag
     uint32_t    iteration_idx = 0;    // Iteration index
     float       perturb_volts = 0.0;  // Voltage perturbation to apply to circuit
     double      time;                 // Function generator time
@@ -209,22 +211,18 @@ void ccrunSimulation(uint32_t ref_function_type)
             ref_function_type = FG_PLEP;
         }
 
-        // Generate reference value using libfg function
+        // If converter has not tripped then generate reference value using libfg function
 
-        func_run_f = func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &time, &ref);
-
-        // If converter has tripped than cancel the reference
-
-        if(ccpars_vs.trip_flag == 1)
+        if(ccpars_vs.trip_flag == 0)
         {
-            ref = 0.0;
-        }
+            func_run_f = func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &time, &ref);
 
-        // else if regulating current or field then open the loop at the specified time for the specified duration
+            // if regulating current or field then open the loop at the specified time for the specified duration
 
-        else if(ccpars_global.units != REG_VOLTAGE)
-        {
-            ref = ccrunTestOpeningLoop(time, ref);
+            if(ccpars_global.units != REG_VOLTAGE)
+            {
+                ref = ccrunTestOpeningLoop(time, ref);
+            }
         }
 
         // Regulate converter - this returns 1 on iterations when the current or field regulation
@@ -244,10 +242,6 @@ void ccrunSimulation(uint32_t ref_function_type)
             ccpars_reg.time = time;
         }
 
-        // Check if measurement or regulation limits are exceeded that require a converter to be tripped off
-
-        ccrunTestForConverterTrip();
-
         // Apply voltage perturbation from the specified time
 
         if(time >= ccpars_load.perturb_time && perturb_volts == 0.0)
@@ -258,7 +252,7 @@ void ccrunSimulation(uint32_t ref_function_type)
 
         // Set end of simulation time when function stops running
 
-        if(func_run_f == 0 && end_time == 0.0)
+        if(end_time == 0.0 && (func_run_f == 0 || ccpars_vs.trip_flag == 1))
         {
             end_time = time + ccpars_global.stop_delay;
         }
@@ -270,6 +264,11 @@ void ccrunSimulation(uint32_t ref_function_type)
         // Store and print enabled signals to stdout
 
         ccsigsStore(time);
+
+        // Check if measurement or regulation limits are exceeded that require a converter to be tripped off
+
+        ref = ccrunTestForConverterTrip(ref);
+
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
