@@ -3,8 +3,8 @@
 OHMS_SER        6.25E-2
 OHMS_PAR        1.0E8
 OHMS_MAG        0.0
-HENRYS          0E-8
-HENRYS_SAT      0E-8
+HENRYS          1
+HENRYS_SAT      1
 I_SAT_START     0.0
 I_SAT_END       0.0
 GAUSS_PER_AMP   1.0
