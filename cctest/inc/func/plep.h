@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     func/plep.h                                                                 Copyright CERN 2011
+  File:     func/plep.h                                                                 Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -61,6 +61,7 @@ CCPARS_PLEP_EXT struct ccpars   plep_pars[]
     { "FINAL_REF",    PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.config.final        }, 0 },
     { "ACCELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.config.acceleration }, 0 },
     { "LINEAR_RATE",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.config.linear_rate  }, 0 },
+    { "FINAL_RATE",   PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_plep.config.final_rate   }, 1 },  // Default = 0.0
     { "EXP_TC",       PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_plep.config.exp_tc       }, 1 },  // Default = 0.0
     { "EXP_FINAL",    PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_plep.config.exp_final    }, 1 },  // Default = 0.0
     { NULL }
@@ -69,7 +70,5 @@ CCPARS_PLEP_EXT struct ccpars   plep_pars[]
 ;
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: func/plep.h
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
 
