@@ -11,7 +11,7 @@ I_QUADRANTS41   0.0,0.0
 
 V_POS           10.0
 V_NEG           -10.0
-V_RATE          5000
+V_RATE          250
 V_ACCELERATION  0.0
 V_ERR_WARNING   0.0
 V_ERR_FAULT     0.0
