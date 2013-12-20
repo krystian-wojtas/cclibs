@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     lim.c                                                                       Copyright CERN 2011
+  File:     lim.c                                                                       Copyright CERN 2014
 
   License:  This file is part of libreg.
 
@@ -250,6 +250,23 @@ float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev
     float       delta_ref;
     float       rate_lim_ref;
 
+    // Clip current reference to absolute limits
+
+    if(ref < lim_ref->min_clip)
+    {
+	ref = lim_ref->min_clip;
+	lim_ref->flags.clip = 1;
+    }
+    else if(ref > lim_ref->max_clip)
+    {
+	ref = lim_ref->max_clip;
+	lim_ref->flags.clip = 1;
+    }
+    else
+    {
+	lim_ref->flags.clip = 0;
+    }
+
     // Clip reference to rate of change limits
 
     lim_ref->flags.rate = 0;
@@ -280,25 +297,7 @@ float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev
         }
     }
 
-    // Clip current reference to absolute limits
-
-    if(ref < lim_ref->min_clip)
-    {
-	ref = lim_ref->min_clip;
-	lim_ref->flags.clip = 1;
-    }
-    else if(ref > lim_ref->max_clip)
-    {
-	ref = lim_ref->max_clip;
-	lim_ref->flags.clip = 1;
-    }
-    else
-    {
-	lim_ref->flags.clip = 0;
-    }
-
     return(ref);
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: lim.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
+
