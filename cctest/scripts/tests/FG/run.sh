@@ -8,6 +8,10 @@ source ../../run_header.sh
 
 (
 "$cctest" -o $output_format -g pars/global_10ms        -f PLEP   -d functions/plep                             > "$outpath/plep.$file_type" &&
+"$cctest" -o $output_format -g pars/global_10ms        -f PLEP   -d functions/plep1                            > "$outpath/plep1.$file_type" &&
+"$cctest" -o $output_format -g pars/global_10ms        -f PLEP   -d functions/plep2                            > "$outpath/plep2.$file_type" &&
+"$cctest" -o $output_format -g pars/global_10ms        -f PLEP   -d functions/plep3                            > "$outpath/plep3.$file_type" &&
+"$cctest" -o $output_format -g pars/global_10ms        -f PLEP   -d functions/plep4                            > "$outpath/plep4.$file_type" &&
 "$cctest" -o $output_format -g pars/global_10ms        -f PPPL   -d functions/pppl                             > "$outpath/pppl.$file_type" &&
 "$cctest" -o $output_format -g pars/global_10ms        -f SQUARE -d functions/test                             > "$outpath/square.$file_type" &&
 "$cctest" -o $output_format -g pars/global_10ms        -f STEPS  -d functions/test                             > "$outpath/steps.$file_type" &&
