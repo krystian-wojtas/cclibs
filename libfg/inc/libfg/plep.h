@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     libfg/plep.h                                                                Copyright CERN 2011
+  File:     libfg/plep.h                                                                Copyright CERN 2014
 
   License:  This file is part of libfg.
 
@@ -24,12 +24,9 @@
 
             The PLEP function is special amongst all the functions in libfg because it can be initialised
             with a non-zero initial rate of change.  To do this it has the function fgPlepCalc() which
-            accepts an initial ref and rate of change of ref.
-
-            The fgPlepGen function receives time as a pointer to constant float rather than as a float value.
-            This allows the user to initialise an array of pointers to functions with the pointer to the
-            fgPlepGen function.  If time is passed by value then the compiler promotes the float to double
-            and prevents the correct initialisation.
+            accepts an initial ref and initial and final rate of change of ref. If the final rate of
+            change is not zero, then this adds a fifth parabolic segment.  This can be an extension of
+            the fourth parabola, or it can have the opposite acceleration.
 \*---------------------------------------------------------------------------------------------------------*/
 
 #ifndef LIBFG_PLEP_H
@@ -39,7 +36,7 @@
 
 // Constants
 
-#define FG_PLEP_N_SEGS          4           // Number of segments: P-L-E-P -> 4
+#define FG_PLEP_N_SEGS          5           // Number of segments: P-L-E-P-P -> 5
 
 // Types
 
@@ -48,6 +45,7 @@ struct fg_plep_config                       // PLEP function configuration
     float       final;                      // Final reference
     float       acceleration;               // Absolute acceleration of the parabolic segments   (must be strictly positive)
     float       linear_rate;                // Maximum absolute linear rate of the PLEP segments (must be strictly positive)
+    float       final_rate;                 // Final rate of change
     float       exp_tc;                     // Exponential time constant
     float       exp_final;                  // End reference of exponential segment
 };
@@ -57,7 +55,9 @@ struct fg_plep_pars                         // PLEP function parameters
     uint32_t    pos_ramp_flag;              // Positive ramp flag (PLEP must be inverted for positive ramps)
     float       delay;                      // Time before start of function (s)
     float       acceleration;               // Parabolic acceleration/deceleration
+    float       final_acc;                  // Normalised final parabolic acceleration
     float       linear_rate;                // Linear rate of change (always negative)
+    float       final_rate;                 // Normalised final linear rate of change
     float       ref_exp;                    // Initial reference for exponential segment
     float       inv_exp_tc;                 // Time constant for exponential segment
     float       exp_final;                  // End reference of exponential segment
@@ -72,8 +72,8 @@ extern "C" {
 
 // External functions
 
-void            fgPlepCalc(struct fg_plep_config *config, struct fg_plep_pars *pars,
-                           float delay, float init_ref, float init_rate, struct fg_meta *meta);
+void            fgPlepCalc(struct fg_plep_config *config, struct fg_plep_pars *pars, float delay,
+                           float init_ref, float init_rate, struct fg_meta *meta);
 uint32_t        fgPlepGen (struct fg_plep_pars *pars, const double *time, float *ref);
 enum fg_error   fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
                            struct fg_plep_config *config, float delay, float ref,
@@ -84,6 +84,5 @@ enum fg_error   fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity lim
 #endif
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: libfg/plep.h
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
+
