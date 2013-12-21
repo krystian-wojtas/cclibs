@@ -57,6 +57,14 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
     {
         negative_flag = ref < 0.0 || config->final < 0.0;
 
+        // Check limits at the end of the parabolic acceleration (segment 1)
+
+        if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, ref,
+                                 0.0, pars->acceleration, meta)))
+        {
+            meta->error.index = 1;
+            return(fg_error);
+        }
         // Check limits at the end of the parabolic deceleration (segment 2)
 
         if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, config->final,
