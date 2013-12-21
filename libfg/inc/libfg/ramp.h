@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     libfg/ramp.h                                                               Copyright CERN 2014
+  File:     inc/libfg/ramp.h                                                            Copyright CERN 2014
 
   License:  This file is part of libfg.
 
@@ -22,15 +22,10 @@
 
   Notes:    Parabolic - Parabolic function with time shift when rate limited
 
-            The RAMP function is special amongst all the functions in libfg because it can
-            uses the ref passed by reference for the previous iteration to adjust the function
+            The RAMP function is special amongst all the functions in libfg because it 
+            uses the ref passed by pointer from the previous iteration to adjust the function
             time. This allows a smooth parabolic end to the function, even if the function
             was rate limited by the calling application.
-
-            The fgRampGen function receives time as a pointer to constant double rather than as a double value.
-            This allows the user to initialise an array of pointers to functions with the pointer to the
-            fgRampGen function.  If time is passed by value then the compiler promotes the float to double
-            and prevents the correct initialisation.
 \*---------------------------------------------------------------------------------------------------------*/
 
 #ifndef LIBFG_RAMP_H
@@ -53,13 +48,12 @@ struct fg_ramp_config                       // RAMP function configuration
 
 struct fg_ramp_pars                         // RAMP function parameters
 {
-    uint32_t    pos_ramp_flag;              // Positive ramp flag (RAMP must be inverted for positive ramps)
+    uint32_t    pos_ramp_flag;              // Positive ramp flag
     float       delay;                      // Time before start of function
     float       acceleration;               // Parabolic acceleration
     float       deceleration;               // Parabolic deceleration
     float       ref[FG_RAMP_N_SEGS+1];      // End of segment normalised references
     float       time[FG_RAMP_N_SEGS+1];     // End of segment times
-    float       offset;                     // Reference offset = 2.ref[2]
     float       prev_ramp_ref;              // Function ref from previous iteration
     float       prev_returned_ref;          // Returned ref from previous iteration
     double      prev_time;                  // Time from previous iteration
@@ -85,3 +79,4 @@ enum fg_error   fgRampInit(struct fg_limits *limits, enum fg_limits_polarity lim
 
 #endif
 // EOF
+
