@@ -35,7 +35,6 @@
 #include "libfg/plep.h"
 #include "libfg/ramp.h"
 #include "libfg/pppl.h"
-#include "libfg/spline.h"
 #include "libfg/table.h"
 #include "libfg/test.h"
 #include "libfg/trim.h"

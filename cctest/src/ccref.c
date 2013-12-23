@@ -202,34 +202,6 @@ void ccrefInitPPPL(void)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccrefInitSPLINE(void)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    enum fg_error fg_error;
-
-    // Link table data to table config structure
-
-    ccpars_table.config.ref             = ccpars_table.ref;
-    ccpars_table.config.time            = ccpars_table.time;
-    ccpars_table.config.ref_n_elements  = table_pars[0].num_values;
-    ccpars_table.config.time_n_elements = table_pars[1].num_values;
-
-    // Try to initialise the SPLINE using the table config
-
-    fg_error = fgSplineInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_table.config,
-                            ccpars_global.run_delay, reg.iter_period,
-                            &ccpars_table.spline_pars, &fg_meta);
-
-    // Report error if initialisation fails
-
-    if(fg_error != FG_OK)
-    {
-        fprintf(stderr,"Error : Failed to initialise SPLINE (point %u) : %s\n",
-                fg_meta.error.index,ccrefErrMsg(fg_error));
-        exit(EXIT_FAILURE);
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
 void ccrefInitTABLE(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {

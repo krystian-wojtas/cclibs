@@ -25,7 +25,6 @@
 #define CCPARS_TABLE_H
 
 #include "ccpars.h"
-#include "libfg/spline.h"
 #include "libfg/table.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -47,12 +46,11 @@ struct ccpars_table
     float       ref [TABLE_LEN];
     float       time[TABLE_LEN];
 
-    // Libfg table/spline variables
+    // Libfg table variables
 
-    struct fg_table_config      config;                 // Libfg config struct for TABLE or SPLINE
+    struct fg_table_config      config;                 // Libfg config struct for TABLE
 
     struct fg_table_pars        table_pars;             // Libfg parameters for TABLE
-    struct fg_spline_pars       spline_pars;            // Libfg parameters for SPLINE
 };
 
 CCPARS_TABLE_EXT struct ccpars_table ccpars_table;

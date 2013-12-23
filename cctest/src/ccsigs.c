@@ -458,7 +458,6 @@ void ccsigsFlot(void)
         // Print table, pppl or plep data if selected and use points instead of lines
 
         if(ccpars_global.function == FG_TABLE ||
-           ccpars_global.function == FG_SPLINE ||
            ccpars_global.function == FG_PPPL ||
            ccpars_global.function == FG_PLEP)
         {
@@ -472,7 +471,6 @@ void ccsigsFlot(void)
             default: break;     // Suppress gcc warning
 
             case FG_TABLE:
-            case FG_SPLINE:
 
                 for(iteration_idx = 0 ; iteration_idx < table_pars[0].num_values &&
                                         (time = ccpars_table.time[iteration_idx] + ccpars_global.run_delay) < end_time ; iteration_idx++)

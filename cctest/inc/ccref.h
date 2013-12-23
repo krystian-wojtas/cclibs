@@ -30,7 +30,6 @@
 #include "libfg/plep.h"
 #include "libfg/ramp.h"
 #include "libfg/pppl.h"
-#include "libfg/spline.h"
 #include "libfg/table.h"
 #include "libfg/test.h"
 #include "libfg/trim.h"
@@ -54,7 +53,6 @@ void            ccrefInitSTART          (void);
 void            ccrefInitPLEP           (void);
 void            ccrefInitRAMP           (void);
 void            ccrefInitPPPL           (void);
-void            ccrefInitSPLINE         (void);
 void            ccrefInitTABLE          (void);
 void            ccrefInitSTEPS          (void);
 void            ccrefInitSQUARE         (void);
@@ -90,7 +88,6 @@ FGREF_EXT struct fgfunc func[]  // Must be in enum fg_types order!
     {   plep_pars,    &ccpars_plep.plep_pars,      ccrefInitPLEP,      fgPlepGen     },
     {   ramp_pars,    &ccpars_ramp.ramp_pars,      ccrefInitRAMP,      fgRampGen     },
     {   pppl_pars,    &ccpars_pppl.pppl_pars,      ccrefInitPPPL,      fgPpplGen     },
-    {   table_pars,   &ccpars_table.spline_pars,   ccrefInitSPLINE,    fgSplineGen   },
     {   table_pars,   &ccpars_table.table_pars,    ccrefInitTABLE,     fgTableGen    },
     {   test_pars,    &ccpars_test.test_pars,      ccrefInitSTEPS,     fgTestGen     },
     {   test_pars,    &ccpars_test.test_pars,      ccrefInitSQUARE,    fgTestGen     },
