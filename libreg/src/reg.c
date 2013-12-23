@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     reg.c                                                                       Copyright CERN 2011
+  File:     reg.c                                                                       Copyright CERN 2014
 
   License:  This file is part of libreg.
 
@@ -683,6 +683,5 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
 
     regSimLoad(&reg_pars->sim_load_pars, &reg->sim_load_vars, sim_v_load + v_perturbation);
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: reg.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
+

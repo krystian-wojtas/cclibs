@@ -187,5 +187,5 @@ void     regSimulate             (struct reg_converter *reg, struct reg_converte
 #endif
 
 #endif // LIBREG_H
-
 // EOF
+

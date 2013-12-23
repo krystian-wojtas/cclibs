@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     delay.c                                                                     Copyright CERN 2011
+  File:     delay.c                                                                     Copyright CERN 2014
 
   License:  This file is part of libreg.
 
@@ -146,6 +146,5 @@ uint32_t regDelayCalc(struct reg_delay *delay, float signal, float *delayed_sign
     delay->iteration_counter++;
     return(0);                          // delayed_signal is not yet valid
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: delay.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
+

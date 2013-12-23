@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     rst.c                                                                       Copyright CERN 2013
+  File:     rst.c                                                                       Copyright CERN 2014
 
   License:  This file is part of libreg.
 
