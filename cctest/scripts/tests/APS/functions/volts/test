@@ -1,9 +1,0 @@
-# FGTEST TEST file
-
-INITIAL_REF     1.0
-AMPLITUDE_PP    1.0
-NUM_CYCLES      10
-PERIOD          0.1
-WINDOW          ENABLED
-
-# EOF
