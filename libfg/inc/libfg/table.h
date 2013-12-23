@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     libfg/table.h                                                               Copyright CERN 2011
+  File:     libfg/table.h                                                               Copyright CERN 2014
 
   License:  This file is part of libfg.
 
@@ -72,6 +72,5 @@ enum fg_error   fgTableInit(struct fg_limits *limits, enum fg_limits_polarity li
 #endif
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: libfg/table.h
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
+

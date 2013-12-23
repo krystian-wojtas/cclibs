@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     libfg/trim.h                                                                Copyright CERN 2011
+  File:     libfg/trim.h                                                                Copyright CERN 2014
 
   License:  This file is part of libfg.
 
@@ -76,6 +76,5 @@ enum fg_error   fgTrimInit(struct fg_limits *limits, enum fg_limits_polarity lim
 #endif
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: libfg/trim.h
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
+

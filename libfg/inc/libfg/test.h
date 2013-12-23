@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     libfg/test.h                                                                Copyright CERN 2011
+  File:     libfg/test.h                                                                Copyright CERN 2014
 
   License:  This file is part of libfg.
 
@@ -82,6 +82,4 @@ enum fg_error   fgTestInit(struct fg_limits *limits, enum fg_limits_polarity lim
 #endif
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: libfg/test.h
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
