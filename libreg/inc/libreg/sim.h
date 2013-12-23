@@ -80,7 +80,7 @@ void     regSimLoadSetField     (struct reg_sim_load_pars *pars, struct reg_sim_
 void     regSimLoadSetCurrent   (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float i_init);
 void     regSimLoadSetVoltage   (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init);
 float    regSimLoad             (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float voltage);
-void     regSimVsInit           (struct reg_sim_vs_pars *pars, float sim_period, float natural_freq,
+void     regSimVsInit           (struct reg_sim_vs_pars *pars, float sim_period, float bandwidth,
                                  float z, float tau_zero);
 float    regSimVsInitGain       (struct reg_sim_vs_pars   *pars, struct reg_sim_load_pars *sim_load_pars);
 float    regSimVsInitHistory    (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);

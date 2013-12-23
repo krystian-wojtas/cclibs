@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     sim.c                                                                       Copyright CERN 2011
+  File:     sim.c                                                                       Copyright CERN 2014
 
   License:  This file is part of libreg.
 
@@ -193,14 +193,17 @@ float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
     return(vars->current);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float natural_freq,
+void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidth,
                   float z, float tau_zero)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates the z-transform using the Tustin algorithm for a voltage source with a
-  second order s-transform with one real zero.
+  second order s-transform with one optional real zero with time constant tau_zero (0 if not used),
+  damping z and bandwidth (-3dB) given by bandwidth.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    float       natural_freq;
     float       f_pw;
+    float       z2;
     float       w;
     float       b;
     float       d;
@@ -208,20 +211,28 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float natural_
 
     // If voltage source model is too undersampled then do not attempt Tustin algorithm
 
-    if(natural_freq > 0.501 / sim_period)
+    if(bandwidth > 0.501 / sim_period)
     {
+        pars->den[0] = pars->num[0] = 1.0;
+        pars->den[1] = pars->den[2] = pars->den[3] = pars->num[1] = pars->num[2] = pars->num[3] = 0.0;
         return;
     }
 
+    // Calculate the natural frequency from the bandwidth and damping
+
+    z2 = z * z;
+
+    natural_freq = bandwidth / sqrt(1.0 - 2.0 * z2 + sqrt(2.0 - 4.0 * z2 + 4 * z2 * z2));
+
     // Tustin will match z-transform and s-transform at frequency f_pw
 
-    if(z < 0.7)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
+    if(z < 0.6)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
     {
-        f_pw = natural_freq * sqrt(1.0 - 2.0 * z * z);
+        f_pw = natural_freq * sqrt(1.0 - 2.0 * z2);
     }
-    else              // else heavily damped, there is no resonance peak: f_pw = frequency of -3dB bandwidth
+    else              // else heavily damped, there is no resonance peak: f_pw = bandwidth
     {
-        f_pw = natural_freq * sqrt(1.0 - 2.0 * z * z + sqrt(4.0 * z * z * (z * z - 1.0) + 2.0));
+        f_pw = bandwidth;
     }
 
     // Calculate intermediate variables
