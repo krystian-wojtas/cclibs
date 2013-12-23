@@ -178,12 +178,12 @@ static void PrepareSimulation(void)
 
         reg_pars.sim_vs_pars = ccpars_vs.sim_vs_pars;
 
-        // If natural frequency defined the try to initialise voltage source simulation model coefficients
-        // using Tustin algorithm.  if nat_freq > nyquist then z-transform is not changed
+        // If VS bandwidth defined the try to initialise voltage source simulation model coefficients
+        // using Tustin algorithm.
 
-        if(ccpars_vs.natural_freq > 0.0)
+        if(ccpars_vs.bandwidth > 0.0)
         {
-            regSimVsInit(&reg_pars.sim_vs_pars, reg.iter_period, ccpars_vs.natural_freq,
+            regSimVsInit(&reg_pars.sim_vs_pars, reg.iter_period, ccpars_vs.bandwidth,
                          ccpars_vs.z, ccpars_vs.tau_zero);
         }
 

@@ -44,9 +44,9 @@ struct ccpars_vs
     float                       v_ref_delay;      // Voltage source control delay
     float                       v_meas_delay;     // Voltage measurement delay
     float                       v_meas_noise;     // Voltage measurement noise level
-    struct reg_meas_pars        v_meas_pars;        // Voltage measurement IIR filter parameters
+    struct reg_meas_pars        v_meas_pars;      // Voltage measurement IIR filter parameters
     float                       track_delay;      // Voltage source track delay
-    float                       natural_freq;     // Natural frequency
+    float                       bandwidth;        // Voltage source bandwidth
     float                       z;                // Damping factor
     float                       tau_zero;         // Time constant of zero
     struct reg_sim_vs_pars      sim_vs_pars;      // Voltage source simulation model
@@ -84,7 +84,7 @@ CCPARS_VS_EXT struct ccpars vs_pars_list[]
     { "V_MEAS_NUM",    PAR_FLOAT, REG_N_IIR_COEFFS,    0, NULL,  { .f =  ccpars_vs.v_meas_pars.num  }, 1 },
     { "V_MEAS_DEN",    PAR_FLOAT, REG_N_IIR_COEFFS,    0, NULL,  { .f =  ccpars_vs.v_meas_pars.den  }, 1 },
     { "TRACK_DELAY",   PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.track_delay      }, 1 },
-    { "NATURAL_FREQ",  PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.natural_freq     }, 1 },
+    { "BANDWIDTH",     PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.bandwidth        }, 1 },
     { "Z",             PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.z                }, 1 },
     { "TAU_ZERO",      PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.tau_zero         }, 1 },
     { "SIM_NUM",       PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.num  }, 1 },
