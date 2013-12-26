@@ -26,6 +26,7 @@
 \*---------------------------------------------------------------------------------------------------------*/
 
 #include "libfg/ramp.h"
+#include <stdio.h>
 
 /*---------------------------------------------------------------------------------------------------------*/
 enum fg_error fgRampInit(struct fg_limits          *limits,
@@ -49,9 +50,9 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
         return(FG_BAD_PARAMETER);
     }
 
-    // Calculate ramp parameters 
+    // Calculate ramp parameters always with zero initial ramp rate
 
-    fgRampCalc(config, pars, delay, ref, meta);
+    fgRampCalc(config, pars, delay, ref, 0.0, meta);
 
     // Check limits if supplied
 
@@ -59,7 +60,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
     {
         negative_flag = ref < 0.0 || config->final < 0.0;
 
-        // Check limits at the end of the parabolic acceleration (segment 1)
+        // Check limits at the start of the parabolic acceleration (segment 1)
 
         if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, ref,
                                  0.0, pars->acceleration, meta)))
@@ -67,6 +68,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
             meta->error.index = 1;
             return(fg_error);
         }
+
         // Check limits at the end of the parabolic deceleration (segment 2)
 
         if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, config->final,
@@ -89,7 +91,7 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
   The input pars structure contains the coordinates of the transition points between the segments of the
   ramp function: 
 
-   - pars->time[0], pars->ref[0]: Start of the first (accelerating) parabola;
+   - pars->time[0], pars->ref[0]: Max/min of first (accelerating) parabola;
    - pars->time[1], pars->ref[1]: Connection between acceleating and decelerating parabolas;
    - pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also end of the ramp function.
   
@@ -97,10 +99,14 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    func_running_flag = 1;      // Returned value
+    uint32_t    time_shift_alg    = 0;      // Time shift adjustment algorithm index
     float       r;
+    float       ref_rate_limit;             // Limit on ref due to rate limit
     double      ref_time;                   // Time within the segment in seconds
 
-    // Pre-acceleration coast
+    // NB: In the common case where time == 0.0, pars->delay == 0.0 and the initial rate is != 0.0 then the
+    //     reference must be calculated based on the 1st parabola and not the plateau below. This is the
+    //     reason why a strict comparison operator is used.
 
     if(*time < pars->delay)
     {
@@ -112,43 +118,64 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 
         if(*ref != pars->prev_ramp_ref && *ref != pars->prev_returned_ref)
         {
-            // Calculate new time shift according to ramp direction
+            // Identify time shift adjustment algorithm according to ramp direction
 
             if(pars->pos_ramp_flag)
             {
                 // Positive (rising) ramp 
 
-                if(*ref <= pars->ref[0])
+                if(*ref > pars->ref[0])
                 {
-                    pars->time_shift = 0.0;
-                }
-                else if(*ref <= pars->ref[1])
-                {
-                     pars->time_shift = pars->prev_time - pars->delay -
-                                        sqrt(2.0 * (*ref - pars->ref[0]) / pars->acceleration); // acceleration always +ve
-                }
-                else if(*ref <= pars->ref[2])
-                {
-                     pars->time_shift = pars->prev_time - pars->delay -
-                                        (pars->time[2] - sqrt(2.0 * (*ref - pars->ref[2]) / pars->deceleration)); // deceleration always -ve
+                    if(pars->pre_ramp_flag)
+                    {
+                         time_shift_alg = 1;
+                    }
+                    else if(*ref <= pars->ref[1])
+                    {
+                         time_shift_alg = 2;
+                    }
+                    else if(*ref <= pars->ref[2])
+                    {
+                         time_shift_alg = 3;
+                    }
                 }
             }
             else // Negative (falling) ramp
             {
-                if(*ref >= pars->ref[0])
+                if(*ref < pars->ref[0])
                 {
-                    pars->time_shift = 0.0;
+                    if(pars->pre_ramp_flag)
+                    {
+                         time_shift_alg = 1;
+                    }
+                    else if(*ref >= pars->ref[1])
+                    {
+                         time_shift_alg = 2;
+                    }
+                    else if(*ref >= pars->ref[2])
+                    {
+                         time_shift_alg = 3;
+                    }
                 }
-                else if(*ref >= pars->ref[1])
-                {
-                     pars->time_shift = pars->prev_time - pars->delay -
-                                        sqrt(2.0 * (*ref - pars->ref[0]) / pars->acceleration); // acceleration always -ve
-                }
-                else if(*ref >= pars->ref[2])
-                {
-                     pars->time_shift = pars->prev_time - pars->delay -
-                                        (pars->time[2] - sqrt(2.0 * (*ref - pars->ref[2]) / pars->deceleration)); // deceleration always +ve
-                }
+            }
+
+            // Adjust time shift using appropriate algorithm
+
+            switch(time_shift_alg)
+            {
+                case 1: pars->time_shift = pars->prev_time - pars->delay +
+                                           sqrt(2.0 * (*ref - pars->ref[0]) / pars->acceleration);
+                        break;
+
+                case 2: pars->time_shift = pars->prev_time - pars->delay -
+                                           sqrt(2.0 * (*ref - pars->ref[0]) / pars->acceleration);
+                        break;
+
+                case 3: pars->time_shift = pars->prev_time - pars->delay -
+                                           (pars->time[2] - sqrt(2.0 * (*ref - pars->ref[2]) / pars->deceleration)); // deceleration always +ve
+                        break;
+
+                default:break;
             }
         }
 
@@ -161,6 +188,13 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
         if(ref_time <= pars->time[1])
         {
             r = pars->ref[0] + 0.5 * pars->acceleration * ref_time * ref_time;
+
+            // Clear pre_ramp_flag once the main part of the ramp is started
+
+            if(ref_time >= 0.0)
+            {
+                pars->pre_ramp_flag = 0;
+            }
         }
 
         // Parabolic deceleration
@@ -183,23 +217,85 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
         }
     }
 
-    // Keep returned reference for next iteration
+    // Keep ramp reference for next iteration (before rate limiter)
+
+    pars->prev_ramp_ref = r;
+
+    // Apply rate limit if active
+
+    if(pars->linear_rate > 0.0)
+    {
+        if(++pars->iteration_idx == 2)
+        {
+            pars->period = *time - pars->prev_time;
+        }
+        else if(pars->iteration_idx > 2)
+        {
+            if(r > pars->prev_returned_ref)
+            {
+                // Positive rate of change
+
+                ref_rate_limit = *ref + pars->linear_rate * pars->period;
+
+                if(r > ref_rate_limit)
+                {
+                    r = ref_rate_limit;
+                }
+            }
+            else if(r < pars->prev_returned_ref)
+            {
+                // Negative rate of change
+
+                ref_rate_limit = *ref - pars->linear_rate * pars->period;
+
+                if(r < ref_rate_limit)
+                {
+                    r = ref_rate_limit;
+                }
+            }
+        }
+    }
+
+    // Keep returned reference and time for next iteration
 
     pars->prev_returned_ref = *ref;
+    pars->prev_time         = *time;
 
-    // Keep time and new ramp reference for next iteration
+    // Return new reference after rate limit
 
-    pars->prev_time     = *time;
-    pars->prev_ramp_ref = *ref = r;
+    *ref = r;
 
     return(func_running_flag);
 }
 /*---------------------------------------------------------------------------------------------------------*/
+static void fgRampSetMinMax(struct fg_meta *meta, float ref)
+/*---------------------------------------------------------------------------------------------------------*\
+  This helper function is used by fgRampCalc() to set the meta min and max fields
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    if(meta->range.min == 0.0 && meta->range.max == 0.0)
+    {
+        meta->range.min = meta->range.max = ref;
+    }
+    else
+    {
+        if(ref > meta->range.max)
+        {
+            meta->range.max = ref;
+        }
+        else if(ref < meta->range.min)
+        {
+            meta->range.min = ref;
+        }
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
 void fgRampCalc(struct fg_ramp_config *config,
-              struct fg_ramp_pars     *pars,
-              float                    delay,
-              float                    init_ref,
-              struct fg_meta          *meta)            // can be NULL if not required
+                struct fg_ramp_pars   *pars,
+                float                  delay,
+                float                  init_ref,
+                float                  init_rate,
+                struct fg_meta        *meta)            // can be NULL if not required
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates ramp parameters. 
 
@@ -208,33 +304,74 @@ void fgRampCalc(struct fg_ramp_config *config,
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float       delta_ref;              // Initial ref minus final ref
+    float       ref0;                   // Ref at t=0 for first parabola
+    float       overshoot_rate_limit;   // Limiting initial rate of change before overshoot occurs
     float       seg_ratio;              // Ratio between the two segments
+
+    // Prevent non-zero delay and init_rate - this would imply a bug in calling program
+
+    if(delay != 0.0 && init_rate != 0.0)
+    {
+        delay = 0.0;
+    }
 
     // Prepare variables
 
-    pars->time_shift    = 0.0;
-    pars->delay         = delay;
-    pars->prev_ramp_ref = pars->prev_returned_ref = init_ref;
-    delta_ref           = config->final - init_ref;
+    pars->delay          = delay;
+    pars->linear_rate    = config->linear_rate;
+    pars->prev_ramp_ref  = pars->prev_returned_ref = init_ref;
+    pars->iteration_idx  = 0;
+    delta_ref            = config->final - init_ref;
+    overshoot_rate_limit = sqrt(2.0 * config->deceleration * fabs(delta_ref));
 
     // Set up accelerations according to ramp direction
 
     if(delta_ref >= 0.0)
     {
         // Positive (rising) ramp
-        
-        pars->pos_ramp_flag = 1;
-        pars->acceleration  =  config->acceleration;
-        pars->deceleration  = -config->deceleration;
+
+        if(init_rate > overshoot_rate_limit)
+        {
+            // Positive ramp overshoots so becomes negative
+
+            pars->pos_ramp_flag =  0;
+            pars->acceleration  = -config->deceleration;
+            pars->deceleration  =  config->deceleration;
+        }
+        else
+        {
+            pars->pos_ramp_flag =  1;
+            pars->acceleration  =  config->acceleration;
+            pars->deceleration  = -config->deceleration;
+        }
     }
     else
     {                                        
         // Negative (falling) ramp
         
-        pars->pos_ramp_flag = 0;
-        pars->acceleration  = -config->acceleration;
-        pars->deceleration  =  config->deceleration;
+        if(init_rate < -overshoot_rate_limit)
+        {
+            // Negative ramp overshoots so becomes positive
+
+            pars->pos_ramp_flag =  1;
+            pars->acceleration  =  config->deceleration;
+            pars->deceleration  = -config->deceleration;
+        }
+        else
+        {
+            pars->pos_ramp_flag =  0;
+            pars->acceleration  = -config->acceleration;
+            pars->deceleration  =  config->deceleration;
+        }
     }
+
+    // Set time_shift and ref0 and delta_ref to take into account the initial rate of change
+
+    pars->time_shift    = -init_rate / pars->acceleration;
+    pars->pre_ramp_flag = (pars->time_shift > 0.0);
+
+    ref0      = init_ref + 0.5 * init_rate * pars->time_shift;
+    delta_ref = config->final - ref0;
 
     // Calculate ramp parameters
 
@@ -244,27 +381,31 @@ void fgRampCalc(struct fg_ramp_config *config,
     pars->time[2] = sqrt(2.0 * delta_ref / (seg_ratio * pars->acceleration));
     pars->time[1] = pars->time[2] * seg_ratio;
 
-    pars->ref[0]  = init_ref;
-    pars->ref[1]  = init_ref + delta_ref * seg_ratio;
+    pars->ref[0]  = ref0;
+    pars->ref[1]  = ref0 + delta_ref * seg_ratio;
     pars->ref[2]  = config->final;
 
     // Return meta data
 
     if(meta != NULL)
     {
-        meta->duration    = pars->time[2] + delay;  // Duration if rate limit never reached
         meta->range.start = init_ref;
         meta->range.end   = config->final;
 
-        if(pars->pos_ramp_flag)                     // Set min/max according to positive/negative ramp
+        // Set duration if rate limit never reached
+
+        meta->duration = pars->time[2] + delay + pars->time_shift;  
+
+        // Set min/max 
+
+        fgRampSetMinMax(meta,init_ref);
+        fgRampSetMinMax(meta,config->final);
+
+        // If time_shift is positive then include point of inflexion of first parabola in min/max check
+
+        if(pars->time_shift > 0.0)
         {
-            meta->range.min = meta->range.start;
-            meta->range.max = meta->range.end;
-        }
-        else
-        {
-            meta->range.min = meta->range.end;
-            meta->range.max = meta->range.start;
+            fgRampSetMinMax(meta,ref0);
         }
     }
 }

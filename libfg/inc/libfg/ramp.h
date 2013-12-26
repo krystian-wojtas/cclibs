@@ -42,17 +42,22 @@
 struct fg_ramp_config                       // RAMP function configuration
 {
     float       final;                      // Final reference
-    float       acceleration;               // Absolute acceleration of the frist parabolic segment (must be strictly positive)
-    float       deceleration;               // Absolute deceleration of the last parabolic segment (must be strictly positive)
+    float       linear_rate;                // Linear rate limit
+    float       acceleration;               // Absolute acceleration of the 1st parabolic segment (must be positive)
+    float       deceleration;               // Absolute deceleration of the 2nd parabolic segment (must be positive)
 };
 
 struct fg_ramp_pars                         // RAMP function parameters
 {
     uint32_t    pos_ramp_flag;              // Positive ramp flag
+    uint32_t    pre_ramp_flag;              // Pre-ramp flag. Set if before point of inflexion of 1st parabola
+    uint32_t    iteration_idx;              // Iteration index - used to suppress rate limiter for 2 iterations
+    float       period;                     // Iteration period
     float       delay;                      // Time before start of function
     float       acceleration;               // Parabolic acceleration
     float       deceleration;               // Parabolic deceleration
-    float       ref[FG_RAMP_N_SEGS+1];      // End of segment normalised references
+    float       linear_rate;                // Linear rate limit
+    float       ref[FG_RAMP_N_SEGS+1];      // End of segment references
     float       time[FG_RAMP_N_SEGS+1];     // End of segment times
     float       prev_ramp_ref;              // Function ref from previous iteration
     float       prev_returned_ref;          // Returned ref from previous iteration
@@ -67,7 +72,7 @@ extern "C" {
 // External functions
 
 void            fgRampCalc(struct fg_ramp_config *config, struct fg_ramp_pars *pars,
-                           float delay, float init_ref, struct fg_meta *meta);
+                           float delay, float init_ref, float init_rate, struct fg_meta *meta);
 uint32_t        fgRampGen (struct fg_ramp_pars *pars, const double *time, float *ref);
 enum fg_error   fgRampInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
                            struct fg_ramp_config *config, float delay, float ref,

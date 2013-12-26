@@ -61,6 +61,7 @@ CCPARS_RAMP_EXT struct ccpars   ramp_pars[]
     { "FINAL_REF",    PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.final        }, 0 },
     { "ACCELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.acceleration }, 0 },
     { "DECELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.deceleration }, 0 },
+    { "LINEAR_RATE",  PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_ramp.config.linear_rate  }, 1 },
     { NULL }
 }
 #endif
