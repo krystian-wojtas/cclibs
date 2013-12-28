@@ -6,5 +6,6 @@ ITER_PERIOD     1.0E-4
 UNITS           AMPS
 FG_LIMITS       ENABLED
 SIM_LOAD        ENABLED
+ABORT_TIME      0.44
 
 # EOF

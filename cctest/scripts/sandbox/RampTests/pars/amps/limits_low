@@ -4,7 +4,7 @@ I_POS           10.0
 I_MIN           0.0
 I_NEG           -10.0
 I_RATE          10.0
-I_ACCELERATION  0.0
+I_ACCELERATION  700.0
 I_ERR_WARNING   0.0
 I_ERR_FAULT     0.0
 I_QUADRANTS41   0.0,0.0

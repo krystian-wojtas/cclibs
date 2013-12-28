@@ -17,4 +17,11 @@ source ../../run_header.sh
 "$cctest" -o $output_format -g pars/amps/global  -f RAMP -d functions/amps/ramp_down  -m pars/amps/limits_low  -l pars/load -r pars/amps/reg -s pars/vs > "$outpath/amps-ramp_down_low.$file_type" 
 ) || exit 1
 
+# RAMP abort tests
+
+(
+"$cctest" -o $output_format -g pars/amps/global_abort1  -f RAMP -d functions/amps/ramp_up    -m pars/amps/limits_abort -l pars/load -r pars/amps/reg -s pars/vs > "$outpath/amps-ramp_up_abort1.$file_type"    &&
+"$cctest" -o $output_format -g pars/amps/global_abort1  -f RAMP -d functions/amps/ramp_down  -m pars/amps/limits_abort -l pars/load -r pars/amps/reg -s pars/vs > "$outpath/amps-ramp_down_abort1.$file_type"  
+) || exit 1
+
 # EOF
