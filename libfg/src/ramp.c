@@ -26,7 +26,6 @@
 \*---------------------------------------------------------------------------------------------------------*/
 
 #include "libfg/ramp.h"
-#include <stdio.h>
 
 /*---------------------------------------------------------------------------------------------------------*/
 enum fg_error fgRampInit(struct fg_limits          *limits,
@@ -104,9 +103,7 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
     float       ref_rate_limit;             // Limit on ref due to rate limit
     double      ref_time;                   // Time within the segment in seconds
 
-    // NB: In the common case where time == 0.0, pars->delay == 0.0 and the initial rate is != 0.0 then the
-    //     reference must be calculated based on the 1st parabola and not the plateau below. This is the
-    //     reason why a strict comparison operator is used.
+    // Pre-function coast
 
     if(*time < pars->delay)
     {
@@ -225,11 +222,11 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 
     if(pars->linear_rate > 0.0)
     {
-        if(++pars->iteration_idx == 2)
+        if(pars->iteration_idx == 1)
         {
             pars->period = *time - pars->prev_time;
         }
-        else if(pars->iteration_idx > 2)
+        else if(pars->iteration_idx > 1)
         {
             if(r > pars->prev_returned_ref)
             {
@@ -255,6 +252,8 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
             }
         }
     }
+
+    pars->iteration_idx++;
 
     // Keep returned reference and time for next iteration
 
@@ -307,13 +306,6 @@ void fgRampCalc(struct fg_ramp_config *config,
     float       ref0;                   // Ref at t=0 for first parabola
     float       overshoot_rate_limit;   // Limiting initial rate of change before overshoot occurs
     float       seg_ratio;              // Ratio between the two segments
-
-    // Prevent non-zero delay and init_rate - this would imply a bug in calling program
-
-    if(delay != 0.0 && init_rate != 0.0)
-    {
-        delay = 0.0;
-    }
 
     // Prepare variables
 
