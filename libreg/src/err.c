@@ -68,6 +68,8 @@ float regErrCalc(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_a
   enable_max_abs_err to be non-zero, otherwise max_abs_err is zeroed.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    float   delayed_ref;
+
     // If reg_err structure not initialised then return immediately
 
     if(err->delay.buf == 0)
@@ -77,12 +79,12 @@ float regErrCalc(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_a
 
     // Calculate delayed reference and return if it's not yet valid or err calculation is not enabled
 
-    if(regDelayCalc(&err->delay, ref, &err->delayed_ref) == 0)
+    if(regDelayCalc(&err->delay, ref, &delayed_ref) == 0)
     {
         enable_err = 0;
     }
 
-    return(regErrCheckLimits(&err->limits, enable_err, enable_max_abs_err, err->delayed_ref - meas));
+    return(regErrCheckLimits(&err->limits, enable_err, enable_max_abs_err, delayed_ref, meas));
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regErrInitLimits(struct reg_err_limits *err_limits,
@@ -159,7 +161,8 @@ static void regErrLimit(struct reg_err_limit *err_limit, float abs_err)
 float regErrCheckLimits(struct reg_err_limits *err_limits,
                         uint32_t enable_err,
                         uint32_t enable_max_abs_err,
-                        float err)
+                        float    delayed_ref,
+                        float    meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function can be called to calculate the regulation error and to check the error limits (if supplied).
   The calculation of the max_abs_err can be enabled by setting enable_max_abs_err to be non-zero,
@@ -167,6 +170,10 @@ float regErrCheckLimits(struct reg_err_limits *err_limits,
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float       abs_error;
+
+    // Store delayed_ref so it can be logged if required
+
+    err_limits->delayed_ref = delayed_ref;
 
     // If err check is not enabled then reset limit variables
 
@@ -187,7 +194,7 @@ float regErrCheckLimits(struct reg_err_limits *err_limits,
 
     // Calculate regulation error
 
-    err_limits->err = err;
+    err_limits->err = delayed_ref - meas;
 
     abs_error = fabs(err_limits->err);
 

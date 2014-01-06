@@ -187,24 +187,24 @@ void regSetSimLoad(struct reg_converter *reg, struct reg_converter_pars *reg_par
     reg->i_meas.regulated = reg->i_meas.unfiltered = reg->sim_load_vars.current;
     reg->b_meas.regulated = reg->b_meas.unfiltered = reg->sim_load_vars.field;
 }
-
 /*---------------------------------------------------------------------------------------------------------*/
-void regSetMeasNoise(struct reg_converter *reg, float v_meas_noise, float b_meas_noise, float i_meas_noise)
+void regSetMeasNoise(struct reg_converter *reg, float v_sim_noise, float i_sim_noise, float b_sim_noise)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will set the measured values in the reg structure based on the sim_meas_control.  When
   active, the measurements will be based on the voltage source and load simulation
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    reg->v_meas_noise = v_meas_noise;
-    reg->b_meas_noise = b_meas_noise;
-    reg->i_meas_noise = i_meas_noise;
+    reg->v_sim.noise = v_sim_noise;
+    reg->i_sim.noise = i_sim_noise;
+    reg->b_sim.noise = b_sim_noise;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSetMeas(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
                 float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will set the measured values in the reg structure based on the sim_meas_control.  When
-  active, the measurements will be based on the voltage source and load simulation
+  This function will set the unfiltered measured values in the reg structure based on the sim_meas_control.
+  When active, the measurements will be based on the voltage source and load simulation calculated by
+  regSimulate().
 \*---------------------------------------------------------------------------------------------------------*/
 {
     if(sim_meas_control == 0)
@@ -217,28 +217,11 @@ void regSetMeas(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
     }
     else
     {
-        // Simulate voltage, current and field using appropriate delays and noise
+        // Use simulated measurements
 
-        regDelayCalc(&reg->v_meas_delay, reg->sim_load_vars.voltage, &reg->v_meas.unfiltered);
-
-        if(reg->v_meas_noise > 0.0)
-        {
-            reg->v_meas.unfiltered += regSimNoise(reg->v_meas_noise);
-        }
-
-        regDelayCalc(&reg->i_meas_delay, reg->sim_load_vars.current, &reg->i_meas.unfiltered);
-
-        if(reg->i_meas_noise > 0.0)
-        {
-            reg->i_meas.unfiltered += regSimNoise(reg->i_meas_noise);
-        }
-
-        regDelayCalc(&reg->b_meas_delay, reg->sim_load_vars.field, &reg->b_meas.unfiltered);
-
-        if(reg->b_meas_noise > 0.0)
-        {
-            reg->b_meas.unfiltered += regSimNoise(reg->b_meas_noise);
-        }
+        reg->v_meas.unfiltered = reg->v_sim.meas;
+        reg->i_meas.unfiltered = reg->i_sim.meas;
+        reg->b_meas.unfiltered = reg->b_sim.meas;
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -283,8 +266,6 @@ void regSetVoltageMode(struct reg_converter *reg, struct reg_converter_pars *reg
             }
 
             reg->v_ref_limited = reg->v_ref_sat;
-
-            regErrInitDelay(&reg->v_err, 0, 0.0, reg->iter_period);
         }
 
         // Switch to voltage regulation mode
@@ -364,10 +345,6 @@ void regSetMode(struct reg_converter      *reg,
                 reg->rst_vars.ref [idx] = reg->rst_vars.meas[idx] + ref_offset;
             }
             reg->ref = reg->ref_prev = reg->rst_vars.ref[0];
-
-            // Reinitialise voltage regulation error period
-
-            regErrInitDelay(&reg->v_err, 0, 0.0, reg->cl_period);
 
             reg->mode = mode;
         }
@@ -548,6 +525,10 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 {
     uint32_t reg_flag = 0;      // Returned flag indicating iterations when regulation is active
 
+    // Calculate and check the voltage regulation limits
+
+    regErrCheckLimits(&reg->v_err, 1, 1, reg->v_err.delayed_ref, reg->v_meas.unfiltered);
+
     // Check current measurement limits
 
     regLimMeas(&reg->lim_i_meas, reg->i_meas.unfiltered);
@@ -578,21 +559,20 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
         // Clear current/field regulation error
 
-        if(reg->i_err.err > 0.0)
+        if(reg->i_err.limits.err > 0.0)
         {
-            reg->i_err.err           = 0.0;
-            reg->i_err.flags.warning = 0;
-            reg->i_err.flags.fault   = 0;
+            reg->i_err.limits.err          = 0.0;
+            reg->i_err.limits.warning.flag = 0;
+            reg->i_err.limits.fault.flag   = 0;
         }    
 
-        if(reg->b_err.err > 0.0)
+        if(reg->b_err.limits.err > 0.0)
         {
-            reg->b_err.err           = 0.0;
-            reg->b_err.flags.warning = 0;
-            reg->b_err.flags.fault   = 0;
+            reg->b_err.limits.err          = 0.0;
+            reg->b_err.limits.warning.flag = 0;
+            reg->b_err.limits.fault.flag   = 0;
         }    
 
-        regErrCalc(&reg->v_err, 1, 1, reg->v_ref_limited, reg->v_meas.unfiltered);
         reg_flag = 1;
     }
     else  // else closed-loop on current or field
@@ -632,10 +612,6 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
             reg->ref_prev =  reg->ref_limited;
 
             *ref = reg->ref_rst;
-
-            // Calculate the voltage source regulation error
-
-            regErrCalc(&reg->v_err, 1, 1, reg->v_ref_limited, reg->v_meas.regulated);
         }
 
         // Monitor regulation error using interpolation on the reference
@@ -647,16 +623,16 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
             regErrCalc(&reg->i_err, !feedforward_control, max_abs_err_control,
                         reg->ref_interpolated, reg->i_meas.unfiltered);
 
-            reg->err         = reg->i_err.err;
-            reg->max_abs_err = reg->i_err.max_abs_err;
+            reg->err         = reg->i_err.limits.err;
+            reg->max_abs_err = reg->i_err.limits.max_abs_err;
         }
         else
         {
             regErrCalc(&reg->b_err, !feedforward_control, max_abs_err_control,
                         reg->ref_interpolated, reg->b_meas.unfiltered);
 
-            reg->err         = reg->b_err.err;
-            reg->max_abs_err = reg->b_err.max_abs_err;
+            reg->err         = reg->b_err.limits.err;
+            reg->max_abs_err = reg->b_err.limits.max_abs_err;
         }
 
         reg->iteration_counter--;
@@ -668,9 +644,9 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 /*---------------------------------------------------------------------------------------------------------*/
 void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars, float v_perturbation)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will simulate the voltage source and load.  The voltage reference comes from
-  reg->v_ref_limited which is calcualted by calling regConverter().  A voltage perturbation can be included
-  in the simulation via the v_perturbation parameter.
+  This function will simulate the voltage source and load and the measurements of the voltage, current
+  and field. The voltage reference comes from reg->v_ref_limited which is calcualted by calling
+  regConverter().  A voltage perturbation can be included in the simulation via the v_perturbation parameter.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float sim_v_load;
@@ -682,6 +658,39 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
     // Simulate load current and field in response to sim_v_load plus the perturbation
 
     regSimLoad(&reg_pars->sim_load_pars, &reg->sim_load_vars, sim_v_load + v_perturbation);
+
+    // Simulate voltage measurements using appropriate delay
+
+    regDelayCalc(&reg->v_sim.delay, reg->sim_load_vars.voltage, &reg->v_sim.meas);
+
+    // Store simulated voltage measurement without noise as the delayed ref for the v_err calculation
+
+    reg->v_err.delayed_ref = reg->v_sim.meas;
+
+    // Simulate noise on voltage measurement
+
+    if(reg->v_sim.noise > 0.0)
+    {
+        reg->v_sim.meas += regSimNoise(reg->v_sim.noise);
+    }
+
+    // Apply delay and noise to simulated current measurement
+
+    regDelayCalc(&reg->i_sim.delay, reg->sim_load_vars.current, &reg->i_sim.meas);
+
+    if(reg->i_sim.noise > 0.0)
+    {
+        reg->i_sim.meas += regSimNoise(reg->i_sim.noise);
+    }
+
+    // Apply delay and noise to simulated field measurement
+
+    regDelayCalc(&reg->b_sim.delay, reg->sim_load_vars.field, &reg->b_sim.meas);
+
+    if(reg->b_sim.noise > 0.0)
+    {
+        reg->b_sim.meas += regSimNoise(reg->b_sim.noise);
+    }
 }
 // EOF
 
