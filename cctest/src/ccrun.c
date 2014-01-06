@@ -154,12 +154,12 @@ static float ccrunTestForConverterTrip(float ref)
   been exceeded.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    if(ccpars_vs.trip_flag       == 0 &&
-      (reg.lim_b_meas.flags.trip == 1 ||
-       reg.lim_i_meas.flags.trip == 1 ||
-       reg.b_err.flags.fault     == 1 ||
-       reg.i_err.flags.fault     == 1 ||
-       reg.v_err.flags.fault     == 1))
+    if(ccpars_vs.trip_flag         == 0 &&
+      (reg.lim_b_meas.flags.trip   == 1 ||
+       reg.lim_i_meas.flags.trip   == 1 ||
+       reg.b_err.limits.fault.flag == 1 ||
+       reg.i_err.limits.fault.flag == 1 ||
+       reg.v_err.fault.flag        == 1))
     {
         // Simulate converter trip - switch to voltage regulation mode and set v_ref to zero
 
