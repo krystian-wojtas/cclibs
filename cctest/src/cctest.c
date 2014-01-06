@@ -204,7 +204,7 @@ static void PrepareSimulation(void)
 
         regSetSimLoad(&reg, &reg_pars, ccpars_global.units, ccpars_load.sim_tc_error);
 
-        regSetMeasNoise(&reg, ccpars_vs.v_meas_noise, ccpars_load.b_meas_noise, ccpars_load.i_meas_noise);
+        regSetMeasNoise(&reg, ccpars_vs.v_sim_noise, ccpars_load.i_sim_noise, ccpars_load.b_sim_noise);
 
         // Initialise voltage source model history to allow simulation to start with a non-zero voltage
         // This is not needed in a real converter controller because the voltage always starts at zero
@@ -222,21 +222,21 @@ static void PrepareSimulation(void)
 
         delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_vs.v_meas_delay) / reg.iter_period  - 1.0;
 
-        regDelayInitPars(&reg.v_meas_delay,
+        regDelayInitPars(&reg.v_sim.delay,
                          calloc(1+(size_t)delay_in_iterations, sizeof(float)),
                          delay_in_iterations,
                          reg_pars.sim_load_pars.vs_undersampled_flag);
 
         delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_load.i_meas_delay) / reg.iter_period - 1.0;
 
-        regDelayInitPars(&reg.i_meas_delay,
+        regDelayInitPars(&reg.i_sim.delay,
                          calloc(1+(size_t)delay_in_iterations, sizeof(float)),
                          delay_in_iterations,
                          reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag);
 
         delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_load.b_meas_delay)/ reg.iter_period - 1.0;
 
-        regDelayInitPars(&reg.b_meas_delay,
+        regDelayInitPars(&reg.b_sim.delay,
                          calloc(1+(size_t)delay_in_iterations,
                          sizeof(float)),
                          delay_in_iterations,
@@ -252,11 +252,11 @@ static void PrepareSimulation(void)
         regMeasFilterInitHistory(&reg.i_meas, reg.i_meas.unfiltered);
         regMeasFilterInitHistory(&reg.b_meas, reg.b_meas.unfiltered);
 
-        // Initialise measurement delay histories
+        // Initialise simulated measurement delay histories
 
-        regDelayInitVars(&reg.v_meas_delay, reg.v_meas.unfiltered);
-        regDelayInitVars(&reg.i_meas_delay, reg.i_meas.unfiltered);
-        regDelayInitVars(&reg.b_meas_delay, reg.b_meas.unfiltered);
+        regDelayInitVars(&reg.v_sim.delay, reg.v_meas.unfiltered);
+        regDelayInitVars(&reg.i_sim.delay, reg.i_meas.unfiltered);
+        regDelayInitVars(&reg.b_sim.delay, reg.b_meas.unfiltered);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
