@@ -52,17 +52,17 @@ struct ccpars_load
 
     float                   gauss_per_amp;    // Field to current ratio (G/A)
 
-    float                   b_meas_delay;     // Field measurement delay
-    float                   b_meas_noise;     // Field measurement noise level
-    struct reg_meas_pars    b_meas_pars;      // Field measurement IIR filter parameters
-
     float                   i_meas_delay;     // Current measurement delay
-    float                   i_meas_noise;     // Current measurement noise level
     struct reg_meas_pars    i_meas_pars;      // Current measurement IIR filter parameters
+
+    float                   b_meas_delay;     // Field measurement delay
+    struct reg_meas_pars    b_meas_pars;      // Field measurement IIR filter parameters
 
     float                   perturb_volts;    // Open loop voltage perturbation
     float                   perturb_time;     // Time for open loop voltage perturbation
 
+    float                   i_sim_noise;      // Current measurement noise level
+    float                   b_sim_noise;      // Field measurement noise level
     float                   sim_tc_error;     // Error factor for simulation
 
     // Load related variables
@@ -83,14 +83,14 @@ CCPARS_LOAD_EXT struct ccpars_load ccpars_load
     0.0,                            // I_SAT_START
     0.0,                            // I_SAT_END
     1.0,                            // GAUSS_PER_AMP
-    0.0,                            // B_MEAS_DELAY
-    0.0,                            // B_MEAS_NOISE
-    {  { 1.0 }, { 1.0 }  },         // B_MEAS_NUM, B_MEAS_DEN: Default field measurement IIR filter
     0.0,                            // I_MEAS_DELAY
-    0.0,                            // I_MEAS_NOISE
     {  { 1.0 }, { 1.0 }  },         // I_MEAS_NUM, I_MEAS_DEN: Default current measurement IIR filter
+    0.0,                            // B_MEAS_DELAY
+    {  { 1.0 }, { 1.0 }  },         // B_MEAS_NUM, B_MEAS_DEN: Default field measurement IIR filter
     0.0,                            // PERTURB_VOLTS
     0.0,                            // PERTURB_TIME
+    0.0,                            // I_SIM_NOISE
+    0.0,                            // B_SIM_NOISE
     0.0,                            // SIM_TC_ERROR
 }
 #endif
@@ -109,16 +109,16 @@ CCPARS_LOAD_EXT struct ccpars load_pars_list[]
     { "I_SAT_START",     PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sat_start     }, 1 },
     { "I_SAT_END",       PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sat_end       }, 1 },
     { "GAUSS_PER_AMP",   PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.gauss_per_amp   }, 1 },
-    { "B_MEAS_DELAY",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_meas_delay    }, 1 },
-    { "B_MEAS_NOISE",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_meas_noise    }, 1 },
-    { "B_MEAS_NUM",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.b_meas_pars.num }, 1 },
-    { "B_MEAS_DEN",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.b_meas_pars.den }, 1 },
     { "I_MEAS_DELAY",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_meas_delay    }, 1 },
-    { "I_MEAS_NOISE",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_meas_noise    }, 1 },
     { "I_MEAS_NUM",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.i_meas_pars.num }, 1 },
     { "I_MEAS_DEN",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.i_meas_pars.den }, 1 },
+    { "B_MEAS_DELAY",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_meas_delay    }, 1 },
+    { "B_MEAS_NUM",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.b_meas_pars.num }, 1 },
+    { "B_MEAS_DEN",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.b_meas_pars.den }, 1 },
     { "PERTURB_VOLTS",   PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.perturb_volts   }, 1 },
     { "PERTURB_TIME",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.perturb_time    }, 1 },
+    { "I_SIM_NOISE",     PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sim_noise     }, 1 },
+    { "B_SIM_NOISE",     PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_sim_noise     }, 1 },
     { "SIM_TC_ERROR",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.sim_tc_error    }, 1 },
     { NULL }
 }
@@ -126,7 +126,5 @@ CCPARS_LOAD_EXT struct ccpars load_pars_list[]
 ;
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: pars/load.h
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
 
