@@ -26,29 +26,33 @@
 #include <stdint.h>
 #include <libreg/delay.h>
 
-// Regulation error structure (Error between unclipped reference and measurement)
+// Regulation error structures
+
+struct reg_err_limit
+{
+    float                       threshold;                      // Limit threshold
+    float                       filter;                         // Threshold exceeded flag filter
+    uint32_t                    flag;                           // Limit exceeded flag
+};
+
+
+struct reg_err_limits
+{
+    float                       err;                            // Regulation error (reference-measurement)
+    float                       max_abs_err;                    // Max absolute error
+    struct reg_err_limit        warning;                        // Warning limit structure
+    struct reg_err_limit        fault;                          // Fault limit structure
+};
 
 struct reg_err
 {
-    struct reg_delay            delay;                          // Signal delay structure
     float                       track_delay;                    // Regulation tracking delay
     float                       iter_period;                    // Regulation iteration period
     float                       delayed_ref;                    // Delayed reference
-    float                       err;                            // Regulation error
-    float                       max_abs_err;                    // Max absolute error
-    float                       warning_limit;                  // Error warning limit
-    float                       fault_limit;                    // Error fault limit
-    float                       warning_filter;                 // Warning limit exceeded flag filter
-    float                       fault_filter;                   // Fault limit exceeded flag filter
 
-    struct
-    {
-        uint32_t                warning;                        // Warning level flag
-        uint32_t                fault;                          // Fault level flag
-    } flags;
+    struct reg_delay            delay;                          // Signal delay structure
+    struct reg_err_limits       limits;                         // Regulation error limits
 };
-
-// Signal delay functions
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,10 +60,14 @@ extern "C" {
 
 // Regulation error functions
 
-void     regErrInitLimits       (struct reg_err *err, float err_warning_limit, float err_fault_limit);
 void     regErrInitDelay        (struct reg_err *err, float *buf, float track_delay, float iter_period);
-void     regErrInitVars         (struct reg_err *err);
 float    regErrCalc             (struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err, float ref, float meas);
+
+void     regErrInitLimits       (struct reg_err_limits *err_limits, float err_warning_threshold,
+                                 float err_fault_threshold);
+void     regErrResetLimitsVars  (struct reg_err_limits *err_limits);
+float    regErrCheckLimits      (struct reg_err_limits *err_limits, uint32_t enable_err,
+                                 uint32_t enable_max_abs_err, float err);
 
 #ifdef __cplusplus
 }

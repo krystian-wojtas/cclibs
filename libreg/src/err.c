@@ -25,39 +25,15 @@
 
 #include <math.h>
 #include "libreg/err.h"
-#include "libreg/lim.h"
+//#include "libreg/lim.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
-void regErrInitLimits(struct reg_err *err, float err_warning_limit, float err_fault_limit)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function can be called to initialise the warning and fault limits of the reg_err structure.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    // Set the new fault and warning limits
-
-    err->warning_limit = err_warning_limit;
-    err->fault_limit   = err_fault_limit;
-
-    // If the fault or warning is disabled (set to zero), then reset the corresponding flag and counter.
-
-    if(err->warning_limit == 0.0)
-    {
-        err->flags.warning  = 0;
-        err->warning_filter = 0.0;
-    }
-
-    if(err->fault_limit == 0.0)
-    {
-        err->flags.fault  = 0;
-        err->fault_filter = 0.0;
-    }
-}
 /*---------------------------------------------------------------------------------------------------------*/
 void regErrInitDelay(struct reg_err *err, float *buf, float track_delay, float iter_period)
 /*---------------------------------------------------------------------------------------------------------*\
   This function can be called to initialise the reg_err delay structure. The buf pointer should be to a
   float array of length 1+(int)delay_in_iters.  If the function is called again then buf can be NULL and the
-  old pointer to buf will be preserved.
+  old pointer to buf will be preserved. Similarly, if iter_period and track_delay are zero, the old 
+  value will be preserved.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     // Save track_delay and iter_period if set, otherwise keep old value
@@ -76,64 +52,22 @@ void regErrInitDelay(struct reg_err *err, float *buf, float track_delay, float i
 
     regDelayInitPars(&err->delay, buf, 1.0 + (err->track_delay / err->iter_period), 0);
 
-    // Keep filter period and re-initialise counter limit and reset error variables
+    // Reset error limits and delay variables
 
-    regErrInitVars(err);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void regErrInitVars(struct reg_err *err)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function can be called to initialise the reg_err structure variables.
-\*---------------------------------------------------------------------------------------------------------*/
-{
     regDelayInitVars(&err->delay, 0.0);
 
-    err->err              = 0.0;
-    err->max_abs_err      = 0.0;
-    err->fault_filter     = 0.0;
-    err->warning_filter   = 0.0;
-    err->flags.warning    = 0;
-    err->flags.fault      = 0;
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static void regErrLimit(float abs_err, float limit, float *filter, uint32_t *flag)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function manages the limits by applying hysteresis to a first order filter of the limit exceeded
-  flag.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    // Apply hysteresis to the limit by dividing by 2 when the flag is set
-
-    if(*flag)
-    {
-        limit *= 0.5;
-    }
-
-    // Use first order filter on limit_exceeded flag
-    
-    *filter *= 0.9;
-
-    if(abs_err > limit)
-    {
-        *filter += 0.1;
-    }
-
-    // Set flag if the filtered limit flag is more than 30%
-
-    *flag = *filter > 0.3;
+    regErrResetLimitsVars(&err->limits);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regErrCalc(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err,
                  float ref, float meas)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function can be called to calculate the regulation error and to check the error limits (if supplied).
-  The calculation isn't started until the history buffer is full (since the last time regErrInitVars() was
-  called).  The calculation of the max_abs_err can be enabled by setting enable_max_abs_err to be non-zero,
-  otherwise max_abs_err is zeroed.
+  This function can be called to calculate the regulation error and to check the error thresholds
+  (if supplied).  The calculation isn't started until the delay history buffer is full (since the last time
+  regErrInitDelay() was called).  The calculation of the max_abs_err can be enabled by setting
+  enable_max_abs_err to be non-zero, otherwise max_abs_err is zeroed.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float       abs_error;
-
     // If reg_err structure not initialised then return immediately
 
     if(err->delay.buf == 0)
@@ -141,48 +75,149 @@ float regErrCalc(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_a
         return(0.0);
     }
 
-    // Calculate delayed reference and return if it's not yet valid or err calculation is not enab
+    // Calculate delayed reference and return if it's not yet valid or err calculation is not enabled
 
-    if(regDelayCalc(&err->delay, ref, &err->delayed_ref) == 0 || enable_err == 0)
+    if(regDelayCalc(&err->delay, ref, &err->delayed_ref) == 0)
     {
-        err->err = err->warning_filter = err->fault_filter = 0.0;
-        err->flags.warning = err->flags.fault  = 0;
+        enable_err = 0;
+    }
+
+    return(regErrCheckLimits(&err->limits, enable_err, enable_max_abs_err, err->delayed_ref - meas));
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void regErrInitLimits(struct reg_err_limits *err_limits,
+                      float err_warning_threshold,
+                      float err_fault_threshold)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function can be called to initialise the warning and fault limits of the reg_err_limits structure.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    // Set the new fault and warning limits
+
+    err_limits->warning.threshold = err_warning_threshold;
+    err_limits->fault.threshold   = err_fault_threshold;
+
+    // If the fault or warning is disabled (set to zero), then reset the corresponding flag and counter.
+
+    if(err_limits->warning.threshold == 0.0)
+    {
+        err_limits->warning.flag   = 0;
+        err_limits->warning.filter = 0.0;
+    }
+
+    if(err_limits->fault.threshold == 0.0)
+    {
+        err_limits->fault.flag   = 0;
+        err_limits->fault.filter = 0.0;
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void regErrResetLimitsVars(struct reg_err_limits *err_limits)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function can be called to reset the reg_err_limits structure variables.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    err_limits->err            = 0.0;
+    err_limits->max_abs_err    = 0.0;
+
+    err_limits->warning.filter = 0.0;
+    err_limits->warning.flag   = 0;
+
+    err_limits->fault.filter   = 0.0;
+    err_limits->fault.flag     = 0;
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static void regErrLimit(struct reg_err_limit *err_limit, float abs_err)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function manages the warning and fault limits by applying hysteresis to a first order filter of the
+  limit exceeded flag.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float threshold = err_limit->threshold;
+
+    // Apply hysteresis to the limit by dividing by 2 when the flag is set
+
+    if(err_limit->flag)
+    {
+        threshold *= 0.5;
+    }
+
+    // Use first order filter on the threshold exceeded flag
+    
+    err_limit->filter *= 0.9;
+
+    if(abs_err > threshold)
+    {
+        err_limit->filter += 0.1;
+    }
+
+    // Set flag if the filtered threshold exceeded flag is more than 30%
+
+    err_limit->flag = err_limit->filter > 0.3;
+}
+/*---------------------------------------------------------------------------------------------------------*/
+float regErrCheckLimits(struct reg_err_limits *err_limits,
+                        uint32_t enable_err,
+                        uint32_t enable_max_abs_err,
+                        float err)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function can be called to calculate the regulation error and to check the error limits (if supplied).
+  The calculation of the max_abs_err can be enabled by setting enable_max_abs_err to be non-zero,
+  otherwise max_abs_err is zeroed.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float       abs_error;
+
+    // If err check is not enabled then reset limit variables
+
+    if(enable_err == 0)
+    {
+        // Cannot call regErrResetLimitVars because it also zeros max_abs_err
+
+        err_limits->err            = 0.0;
+
+        err_limits->warning.filter = 0.0;
+        err_limits->warning.flag   = 0;
+
+        err_limits->fault.filter   = 0.0;
+        err_limits->fault.flag     = 0;
+
         return(0.0);
     }
 
     // Calculate regulation error
 
-    err->err = err->delayed_ref - meas;
+    err_limits->err = err;
 
-    abs_error = fabs(err->err);
+    abs_error = fabs(err_limits->err);
 
     // Calculate or reset max abs err
 
-    if(enable_max_abs_err)
+    if(enable_max_abs_err != 0)
     {
-        if(abs_error > err->max_abs_err)
+        if(abs_error > err_limits->max_abs_err)
         {
-            err->max_abs_err = abs_error;
+            err_limits->max_abs_err = abs_error;
         }
     }
     else
     {
-        err->max_abs_err = 0.0;
+        err_limits->max_abs_err = 0.0;
     }
 
-    // Check error warning and fault limits only if the limit level is non-zero
+    // Check error warning and fault thresholds only if the threshold level is non-zero
 
-    if(err->warning_limit > 0.0)
+    if(err_limits->warning.threshold > 0.0)
     {
-        regErrLimit(abs_error, err->warning_limit, &err->warning_filter, &err->flags.warning);
+        regErrLimit(&err_limits->warning, abs_error);
     }
 
-    if(err->fault_limit > 0.0)
+    if(err_limits->fault.threshold > 0.0)
     {
-        regErrLimit(abs_error, err->fault_limit, &err->fault_filter, &err->flags.fault);
+        regErrLimit(&err_limits->fault, abs_error);
     }
 
-    return(err->err);
+    return(err_limits->err);
 }
 // EOF
 
