@@ -366,8 +366,8 @@ void ccsigsStore(float time)
         ccsigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
         ccsigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v_err.max_abs_err);
 
-        ccsigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v_err.flags.fault);
-        ccsigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v_err.flags.warning);
+        ccsigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v_err.fault.flag);
+        ccsigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v_err.warning.flag);
         ccsigsStoreDigital(DIG_V_REF_CLIP,     reg.lim_v_ref.flags.clip);
         ccsigsStoreDigital(DIG_V_REF_RATE_CLIP,reg.lim_v_ref.flags.rate);
 
@@ -393,8 +393,8 @@ void ccsigsStore(float time)
             ccsigsStoreDigital(DIG_B_MEAS_ZERO,    reg.lim_b_meas.flags.zero);
             ccsigsStoreDigital(DIG_B_REF_CLIP,     reg.lim_b_ref.flags.clip);
             ccsigsStoreDigital(DIG_B_REF_RATE_CLIP,reg.lim_b_ref.flags.rate);
-            ccsigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b_err.flags.fault);
-            ccsigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b_err.flags.warning);
+            ccsigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b_err.limits.fault.flag);
+            ccsigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b_err.limits.warning.flag);
             break;
 
         case REG_CURRENT:
@@ -411,8 +411,8 @@ void ccsigsStore(float time)
 
             ccsigsStoreDigital(DIG_I_REF_CLIP,     reg.lim_i_ref.flags.clip);
             ccsigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.lim_i_ref.flags.rate);
-            ccsigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i_err.flags.fault);
-            ccsigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i_err.flags.warning);
+            ccsigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i_err.limits.fault.flag);
+            ccsigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i_err.limits.warning.flag);
             break;
         }
 

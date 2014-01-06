@@ -124,11 +124,11 @@ static void PrepareLimits(void)
         regLimVrefInit(&reg.lim_v_ref, ccpars_limits.v.pos, ccpars_limits.v.neg, ccpars_limits.v.rate,
                        ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41);
 
-        // Initialise field, current and voltage regulation error warning/fault limits
+        // Initialise field, current and voltage regulation error warning/fault thresholds
 
-        regErrInitLimits(&reg.b_err, ccpars_limits.b_err_warning, ccpars_limits.b_err_fault);
+        regErrInitLimits(&reg.b_err.limits, ccpars_limits.b_err_warning, ccpars_limits.b_err_fault);
 
-        regErrInitLimits(&reg.i_err, ccpars_limits.i_err_warning, ccpars_limits.i_err_fault);
+        regErrInitLimits(&reg.i_err.limits, ccpars_limits.i_err_warning, ccpars_limits.i_err_fault);
 
         regErrInitLimits(&reg.v_err, ccpars_limits.v_err_warning, ccpars_limits.v_err_fault);
     }
@@ -270,24 +270,9 @@ static void PrepareRegulation(void)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        // Initialise voltage source error calculation variables
-
-        if(ccpars_vs.track_delay > reg.iter_period)
-        {
-            delay_in_iterations = ccpars_vs.track_delay / reg.iter_period;
-        }
-        else
-        {
-            delay_in_iterations = 1.0;
-        }
-
-        regErrInitDelay(&reg.v_err, calloc(1+(size_t)delay_in_iterations, sizeof(float)),
-                         ccpars_vs.track_delay, reg.iter_period);
-
-        // If voltage regulation enabled
-
         reg.mode = REG_NONE;                    // Reset reg.mode since regSetMode & regSetVoltageMode are
                                                 // change sensitive
+        // If voltage regulation enabled
 
         if(ccpars_global.units == REG_VOLTAGE)
         {
