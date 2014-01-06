@@ -628,5 +628,49 @@ float regRstHistory(struct reg_rst_vars *vars)
 
     return(act_accumulator * (1.0 / REG_N_RST_COEFFS));
 }
+/*---------------------------------------------------------------------------------------------------------*/
+float regRstPrevRef(struct reg_rst_vars *vars)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will return the reference for the previous iteration.  It should be called after
+  regRstHistory() has been called.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t    index = vars->history_index;
+
+    // Use if() instead of modulus (%) operator as % can be slow on some older DSPs (e.g. TMS320C32)
+
+    if(index == 0)
+    {
+        index = REG_N_RST_COEFFS - 1;
+    }
+    else
+    {
+        index--;
+    }
+
+    // Return the previous reference
+
+    return(vars->ref[index]);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+float regRstDeltaRef(struct reg_rst_vars *vars)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will return the change of reference for the previous iteration.  It should be called after
+  regRstHistory() has been called.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    int32_t    index2 = vars->history_index - 2;
+
+    // Use if() instead of modulus (%) operator as % can be slow on some older DSPs (e.g. TMS320C32)
+
+    if(index2 < 0)
+    {
+        index2 += REG_N_RST_COEFFS;
+    }
+
+    // Return the change in reference
+
+    return(regRstPrevRef(vars) - vars->ref[index2]);
+}
 // EOF
 

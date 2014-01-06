@@ -27,10 +27,9 @@
 #include <stdio.h>
 //#include <stdlib.h>
 
-// Include PLEP header files
+// Include RAMP header files
 
-#include "func/start.h"
-#include "func/plep.h"
+#include "func/ramp.h"
 
 // Include cctest parameter header files
 
@@ -49,14 +48,14 @@
 /*---------------------------------------------------------------------------------------------------------*/
 static void ccrunAbort(float time)
 /*---------------------------------------------------------------------------------------------------------*\
-  This will initialise a PLEP function that will take over the from the running function and will smoothly
+  This will initialise a RAMP function that will take over the from the running function and will smoothly
   ramp to the minimum reference value given in the limits. This is only supported when regulating current
   or field.  In this example, the rate of change is calculated from the ref values in the RST history.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    struct fg_plep_config  config;
+    struct fg_ramp_config  config;
 
-    // Set up PLEP configuration from limits (either current or field according to mode)
+    // Set up RAMP configuration from limits (either current or field according to mode)
 
     config.final        = ccpars_limits.fg->min;
     config.linear_rate  = ccpars_limits.fg->rate;
@@ -69,27 +68,18 @@ static void ccrunAbort(float time)
         config.acceleration = 10.0 * config.linear_rate / reg.cl_period;
     }
 
-    // If regulating current on a 1-quadrant converter (i.e. if it is unipolar in current and voltage)
+    // Make ramp symmetric with deceleration = acceleration
 
-    if(reg.mode == REG_CURRENT && reg.lim_i_ref.flags.unipolar && reg.lim_v_ref.flags.unipolar)
-    {
-        config.exp_tc    = reg_pars.load_pars.tc;          // Set exponential decay time constant to load Tc
-        config.exp_final = 0.5 * ccpars_limits.i.min;      // Set exp decay final value to 50% of I_MIN
-    }                                                      // Note that I_MIN should be greater than zero!
-    else
-    {
-        config.exp_final = 0.0;
-        config.exp_tc    = 0.0;
-    }
+    config.deceleration = config.acceleration;
 
-    // Initialise a PLEP to take over the running function.  This will update fg_meta.duration which
+    // Initialise a RAMP to take over the running function.  This will update fg_meta.duration which
     // controls the length of the run in ccrunSimulation()
 
-    fgPlepCalc(&config,
-               &ccpars_plep.plep_pars,
+    fgRampCalc(&config,
+               &ccpars_ramp.ramp_pars,
                 ccpars_reg.time,                                              // time of last RST calculation
-                reg.rst_vars.ref[1],                                          // last reference value
-               (reg.rst_vars.ref[1] - reg.rst_vars.ref[2]) / reg.cl_period,   // rate of change
+                regRstPrevRef(&reg.rst_vars),                                 // last reference value
+                regRstDeltaRef(&reg.rst_vars) / reg.cl_period,                // last reference rate
                &fg_meta);
 
     // Check that abort duration is not too large (limit to 50000 iterations)
@@ -208,7 +198,7 @@ void ccrunSimulation(uint32_t ref_function_type)
             ccrunAbort(time);
 
             abort_f = 1;
-            ref_function_type = FG_PLEP;
+            ref_function_type = FG_RAMP;
         }
 
         // If converter has not tripped then generate reference value using libfg function

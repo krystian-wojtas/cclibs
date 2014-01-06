@@ -102,6 +102,8 @@ uint32_t regRstInit             (struct reg_rst_pars *pars, float iter_period, u
 float    regRstCalcAct          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas);
 float    regRstCalcRef          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas);
 float    regRstHistory          (struct reg_rst_vars *vars);
+float    regRstPrevRef          (struct reg_rst_vars *vars);
+float    regRstDeltaRef         (struct reg_rst_vars *vars);
 
 #ifdef __cplusplus
 }
