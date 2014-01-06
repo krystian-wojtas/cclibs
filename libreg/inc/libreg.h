@@ -69,6 +69,13 @@ struct reg_meas_vars                                            // Measurement f
     float                       regulated;                      // Measurement used for closed-loop regulation (raw or decimated)
 };
 
+struct reg_sim_meas                                             // Measurement simulation structure
+{
+    struct reg_delay            delay;                          // Simulated measurement delay parameters
+    float                       noise;                          // Simulated measurement Noise amplitude
+    float                       meas;                           // Simulated measurement
+};
+
 // Global power converter regulation structure
 
 struct reg_converter                                            // Global converter regulation structure
@@ -132,13 +139,9 @@ struct reg_converter                                            // Global conver
     struct reg_sim_load_vars    sim_load_vars;                  // Load simulation variables
     float                       sim_v_load;                     // Simulated load voltage
 
-    struct reg_delay            v_meas_delay;                   // Voltage measurement delay parameters
-    struct reg_delay            i_meas_delay;                   // Current measurement delay parameters
-    struct reg_delay            b_meas_delay;                   // Field measurement delay parameters
-
-    float                       v_meas_noise;                   // Noise amplitude for simulated voltage measurement
-    float                       b_meas_noise;                   // Noise amplitude for simulated field measurement
-    float                       i_meas_noise;                   // Noise amplitude for simulated current measurement
+    struct reg_sim_meas         v_sim;                          // Simulated voltage measurement
+    struct reg_sim_meas         i_sim;                          // Simulated current measurement
+    struct reg_sim_meas         b_sim;                          // Simulated field measurement
 };
 
 // The parameter structures that are time consuming to calculate are included in the following structure
@@ -152,9 +155,9 @@ struct reg_converter_pars                                       // Global conver
     struct reg_sim_vs_pars      sim_vs_pars;                    // Voltage source simulation parameters
     struct reg_load_pars        load_pars;                      // Circuit load model for regulation
     struct reg_sim_load_pars    sim_load_pars;                  // Circuit load model for simulation
-    struct reg_meas_pars        v_meas;
-    struct reg_meas_pars        i_meas;
-    struct reg_meas_pars        b_meas;
+    struct reg_meas_pars        v_meas;                         // Voltage measurement parameters
+    struct reg_meas_pars        i_meas;                         // Current measurement parameters
+    struct reg_meas_pars        b_meas;                         // Field measurement parameters
 };
 
 #ifdef __cplusplus
@@ -170,7 +173,7 @@ void     regSetSimLoad           (struct reg_converter *reg, struct reg_converte
                                   enum reg_mode reg_mode, float sim_load_tc_error);
 void     regSetLoad              (float ohms_ser, float ohms_par, float ohms_mag, float henrys,
                                   float gauss_per_amp, float sim_load_tc_error);
-void     regSetMeasNoise         (struct reg_converter *reg, float v_meas_noise, float b_meas_noise, float i_meas_noise);
+void     regSetMeasNoise         (struct reg_converter *reg, float v_sim_noise, float i_sim_noise, float b_sim_noise);
 void     regSetMeas              (struct reg_converter *reg,  struct reg_converter_pars *reg_pars,
                                   float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
 void     regSetVoltageMode       (struct reg_converter *reg, struct reg_converter_pars *reg_pars);
