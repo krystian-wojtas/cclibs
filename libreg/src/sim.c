@@ -226,19 +226,20 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
 
     // Tustin will match z-transform and s-transform at frequency f_pw
 
-    if(z < 0.6)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
+    if(z < 0.7)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
     {
         f_pw = natural_freq * sqrt(1.0 - 2.0 * z2);
+        w  = PI * sim_period * f_pw;
+        b  = tan(w) / w;
     }
-    else              // else heavily damped, there is no resonance peak: f_pw = bandwidth
+    else              // else heavily damped, there is no resonance peak: f_pw = 0 (minimises approximation error)
     {
-        f_pw = bandwidth;
+        w  = 0.0;
+        b  = 1.0;
     }
 
     // Calculate intermediate variables
 
-    w  = PI * sim_period * f_pw;
-    b  = tan(w) / w;
     d  = 2.0 * tau_zero / (sim_period * b);
     y  = PI * sim_period * b * natural_freq;
 
