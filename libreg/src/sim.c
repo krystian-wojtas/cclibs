@@ -363,7 +363,7 @@ float regSimNoise(float noise_amplitude)
     noise_random_generator = (noise_random_generator << 16) +
                            (((noise_random_generator >> 12) ^ (noise_random_generator >> 15)) & 0x0000FFFF);
 
-    return(noise_amplitude * (float)((int32_t)(noise_random_generator ^ 0x8000000)) / 2147483648.0);
+    return(noise_amplitude * (float)((int32_t)noise_random_generator) / 2147483648.0);
 }
 // EOF
 
