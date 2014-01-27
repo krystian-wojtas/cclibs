@@ -56,6 +56,7 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
 {
     float   pos;
     float   neg;
+    float   limit;
 
     // Do nothing if limits are NULL
 
@@ -98,12 +99,12 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
     // Check rate of change
 
     if(limits->rate >  0.0 &&
-       fabs(rate)   > (1.0 + FG_CLIP_LIMIT_FACTOR) * limits->rate)
+       fabs(rate)   > (limit =((1.0 + FG_CLIP_LIMIT_FACTOR) * limits->rate)))
     {
         if(meta != NULL)
         {
             meta->error.data[0] = limits->rate;
-            meta->error.data[1] = (1.0 + FG_CLIP_LIMIT_FACTOR) * limits->rate;
+            meta->error.data[1] = limit;
             meta->error.data[2] = rate;
         }
 
@@ -113,12 +114,12 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
     // Check acceleration
 
     if(limits->acceleration >  0.0 &&
-       fabs(acceleration)   > (1.0 + FG_CLIP_LIMIT_FACTOR) * limits->acceleration)
+       fabs(acceleration)   > (limit = ((1.0 + FG_CLIP_LIMIT_FACTOR) * limits->acceleration)))
     {
         if(meta != NULL)
         {
             meta->error.data[0] = limits->acceleration;
-            meta->error.data[1] = (1.0 + FG_CLIP_LIMIT_FACTOR) * limits->acceleration;
+            meta->error.data[1] = limit;
             meta->error.data[2] = acceleration;
         }
 
