@@ -44,6 +44,7 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
     uint32_t      i;                            // Loop variable
     uint32_t      negative_flag;                // Flag to limits check function that part of ref is negative
     float         inv;                          // Ramp direction factor: +/-1.0
+    float         min;                          // Minimum reference value
     float         abs_ref[FG_PLEP_N_SEGS];      // Absolute reference values (i.e. not normalised)
 
     fgResetMeta(meta);                          // Reset meta structure
@@ -56,15 +57,15 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
         return(FG_BAD_PARAMETER);
     }
 
-    // Calculate PLEP parameters with zero initial and final rate of change
+    // Calculate PLEP parameters with zero initial and final rate of change - returns minimum value of PLEP
 
-    fgPlepCalc(config, pars, delay, ref, 0.0, meta);
+    min = fgPlepCalc(config, pars, delay, ref, 0.0, meta);
 
     // Check limits if supplied
 
     if(limits)
     {
-        negative_flag = ref < 0.0 || config->final < 0.0;
+        negative_flag = min < 0.0;
         inv           = (pars->pos_ramp_flag ? -1.0 : 1.0);
 
         // Calculate unnormalised reference values for all segments
@@ -234,12 +235,12 @@ uint32_t fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
     return(ref_running_f);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void fgPlepCalc(struct fg_plep_config *config,
-                struct fg_plep_pars   *pars,
-                float                  delay,
-                float                  init_ref,
-                float                  init_rate,
-                struct fg_meta        *meta)            // can be NULL if not required
+float fgPlepCalc(struct fg_plep_config *config,
+                 struct fg_plep_pars   *pars,
+                 float                  delay,
+                 float                  init_ref,
+                 float                  init_rate,
+                 struct fg_meta        *meta)            // can be NULL if not required
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates PLEP parameters.  This function must be re-entrant because it can be called
   to calculate the PLEP coefficients for an already moving reference.
@@ -251,6 +252,8 @@ void fgPlepCalc(struct fg_plep_config *config,
   pars structure, and in particular the usage of pars->time[i], pars->ref[i] for all indexes.
 
   Note that if delay is non-zero then init_rate should be zero.
+
+  The function returns the minimum value of the function.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    i;                      // Loop variable
@@ -268,6 +271,8 @@ void fgPlepCalc(struct fg_plep_config *config,
     float       delta_time1_exp;        // Time until exponential segment
     float       ref_time;               // Segment time accumulator
     float       inv_acc;                // 1 / pars->acceleration
+    float       min;                    // Minimum value of any segment
+    float       max;                    // Maximum value of any segment
     float       delta_time[FG_PLEP_N_SEGS+1]; // Segment durations
 
     // Prepare variables
@@ -470,7 +475,7 @@ void fgPlepCalc(struct fg_plep_config *config,
 
     end:        // From goto end;
 
-    meta->range.max = meta->range.min = init_ref;
+    max = min = init_ref;
     ref_time = pars->delay;
 
     for(i = 0 ; i <= FG_PLEP_N_SEGS ; i++)
@@ -478,36 +483,39 @@ void fgPlepCalc(struct fg_plep_config *config,
         ref_time += delta_time[i];
         pars->time[i] = ref_time;
 
-        if(meta != NULL)
+        if(pars->pos_ramp_flag)
         {
-            if(pars->pos_ramp_flag)
-            {
-                ref = pars->offset - pars->ref[i];
-            }
-            else
-            {
-                ref = pars->ref[i];
-            }
-            
-            if(ref > meta->range.max)
-            {
-                meta->range.max = ref;
-            }
-            else if(ref < meta->range.min)
-            {
-                meta->range.min = ref;
-            }
+            ref = pars->offset - pars->ref[i];
+        }
+        else
+        {
+            ref = pars->ref[i];
+        }
+
+        if(ref > max)
+        {
+            max = ref;
+        }
+        else if(ref < min)
+        {
+            min = ref;
         }
     }
 
-    // Return meta data
+    // Return meta data if meta is defined
 
     if(meta != NULL)
     {
         meta->duration    = pars->time[5];
         meta->range.start = init_ref;
         meta->range.end   = config->final;
+        meta->range.max   = max;
+        meta->range.min   = min;
     }
+
+    // Return minimum function value
+
+    return(min);
 }
 // EOF
 
