@@ -72,7 +72,7 @@ extern "C" {
 
 // External functions
 
-void            fgPlepCalc(struct fg_plep_config *config, struct fg_plep_pars *pars, float delay,
+float           fgPlepCalc(struct fg_plep_config *config, struct fg_plep_pars *pars, float delay,
                            float init_ref, float init_rate, struct fg_meta *meta);
 uint32_t        fgPlepGen (struct fg_plep_pars *pars, const double *time, float *ref);
 enum fg_error   fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
