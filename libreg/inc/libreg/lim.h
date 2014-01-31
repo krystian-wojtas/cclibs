@@ -45,6 +45,7 @@
 
 struct reg_lim_meas                                             // Measurement limits
 {
+    uint32_t                    invert_limits;                  // Invert the limits before use flag (e.g. polarity switch is negative)
     float                       pos_trip;                       // Positive measurement trip limit
     float                       neg_trip;                       // Negative measurement trip limit
     float                       low;                            // Low measurement threshold
@@ -88,11 +89,12 @@ extern "C" {
 // Limits functions
 
 void     regLimMeasInit         (struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
-                                 float low_lim, float zero_lim);
+                                 float low_lim, float zero_lim, uint32_t invert_limits);
 void     regLimMeas             (struct reg_lim_meas *lim_meas, float meas);
-void     regLimRefInit          (struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim);
+void     regLimRefInit          (struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim, 
+                                 uint32_t invert_limits);
 void     regLimVrefInit         (struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
-                                 float i_quadrants41[2], float v_quadrants41[2]);
+                                 float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits);
 void     regLimVrefCalc         (struct reg_lim_ref *lim_v_ref, float i_meas);
 float    regLimRef              (struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref);
 
