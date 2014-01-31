@@ -22,23 +22,23 @@
 #include "libfg/test.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-enum fg_error fgTestInit(struct fg_limits        *limits,
-                         enum fg_limits_polarity  limits_polarity,
-                         struct fg_test_config   *config,
-                         float                    delay,
-                         float                    ref,
-                         struct fg_test_pars     *pars,
-                         struct fg_meta          *meta)
+enum fg_error fgTestInit(struct fg_limits          *limits,
+                         enum   fg_limits_polarity  limits_polarity,
+                         struct fg_test_config     *config,
+                         float                      delay,
+                         float                      ref,
+                         struct fg_test_pars       *pars,
+                         struct fg_meta            *meta)          // NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    enum fg_error fg_error;       // Limits status
-    uint32_t      n_cyc;          // int(num_cycles)
-    uint32_t      negative_flag;  // Flag to indicate to limits check that part of reference is negative
-    float         inv_n_cyc;      // 1.0 / n_cyc
-    float         end;            // Final reference value
-    float         range[2];       // Range of reference value
+    enum fg_error  fg_error;       // Limits status
+    uint32_t       n_cyc;          // int(num_cycles)
+    float          inv_n_cyc;      // 1.0 / n_cyc
+    float          end;            // Final reference value
+    float          range[2];       // Range of reference value
+    struct fg_meta local_meta;     // Local meta data in case user meta is NULL
 
-    fgResetMeta(meta);            // Reset meta structure
+    meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Prepare parameter structure
 
@@ -57,10 +57,7 @@ enum fg_error fgTestInit(struct fg_limits        *limits,
 
     if(pars->duration > 1.0E5)                          // If total time is too long
     {
-        if(meta != NULL)
-        {
-            meta->error.data[0]=pars->duration;
-        }
+        meta->error.data[0]=pars->duration;
 
         return(FG_INVALID_TIME);                                // Report INVALID TIME
     }
@@ -82,11 +79,11 @@ enum fg_error fgTestInit(struct fg_limits        *limits,
             range[0] = pars->ref_initial;
             range[1] = pars->ref_final;
 
-            if(limits)
-            {
-                negative_flag = range[0] < 0.0 || range[1] < 0.0;
+            fgSetMinMax(meta, range[1]);
 
-                if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, pars->ref_final, 0.0, 0.0, meta)))
+            if(limits != NULL)  // Check clip limits only if supplied
+            {
+                if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_final, 0.0, 0.0, meta)))
                 {
                     return(fg_error);
                 }
@@ -99,12 +96,11 @@ enum fg_error fgTestInit(struct fg_limits        *limits,
             range[0] = pars->ref_initial;
             range[1] = pars->ref_initial + pars->ref_amp;
 
-            if(limits)
-            {
-                negative_flag = range[0] < 0.0 || range[1] < 0.0;
+            fgSetMinMax(meta, range[1]);
 
-                if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag,
-                                         pars->ref_initial + pars->ref_amp, 0, 0, meta)))
+            if(limits != NULL)  // Check clip limits only if supplied
+            {
+                if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial + pars->ref_amp, 0.0, 0.0, meta)))
                 {
                     return(fg_error);
                 }
@@ -119,12 +115,12 @@ enum fg_error fgTestInit(struct fg_limits        *limits,
             range[0]       = pars->ref_initial - pars->ref_amp;
             range[1]       = pars->ref_initial + pars->ref_amp;
 
-            if(limits)
-            {
-                negative_flag = range[0] < 0.0 || range[1] < 0.0;
+            fgSetMinMax(meta, range[1]);
 
-                if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, pars->ref_initial + pars->ref_amp, 0.0, 0.0, meta)) ||
-                   (fg_error = fgCheckRef(limits, limits_polarity, negative_flag, pars->ref_initial - pars->ref_amp, 0.0, 0.0, meta)))
+            if(limits != NULL)  // Check clip limits only if supplied
+            {
+                if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial + pars->ref_amp, 0.0, 0.0, meta)) ||
+                   (fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial - pars->ref_amp, 0.0, 0.0, meta)))
                 {
                     return(fg_error);
                 }
@@ -134,36 +130,19 @@ enum fg_error fgTestInit(struct fg_limits        *limits,
 
         default:                                            // Invalid function type requested
 
-            if(meta != NULL)
-            {
-                meta->error.data[0] = config->type;
-            }
+            meta->error.data[0] = config->type;
+
             return(FG_BAD_PARAMETER);
     }
 
     pars->end_time = pars->duration + pars->delay;
 
-// Return meta data
+    // Complete meta data
 
-    if(meta != NULL)
-    {
-        meta->duration    = pars->end_time;
-        meta->range.start = pars->ref_initial;
-        meta->range.end   = end;
+    meta->duration  = pars->end_time;
+    meta->range.end = end;
 
-        if(range[0] < range[1])
-        {
-            meta->range.min = range[0];
-            meta->range.max = range[1];
-        }
-        else
-        {
-            meta->range.min = range[1];
-            meta->range.max = range[0];
-        }
-    }
-
-    return(FG_OK);                      // Report success
+    return(FG_OK);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)

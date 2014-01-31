@@ -22,35 +22,33 @@
 #include "libfg/pppl.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-enum fg_error fgPpplInit(struct fg_limits       *limits,
-                         enum fg_limits_polarity limits_polarity,
-                         struct fg_pppl_config  *config,
-                         float                   delay,
-                         float                   ref,
-                         struct fg_pppl_pars    *pars,
-                         struct fg_meta         *meta)
+enum fg_error fgPpplInit(struct fg_limits          *limits,
+                         enum   fg_limits_polarity  limits_polarity,
+                         struct fg_pppl_config     *config,
+                         float                      delay,
+                         float                      ref,
+                         struct fg_pppl_pars       *pars,
+                         struct fg_meta            *meta)          // NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    enum fg_error fg_error;                     // Status from limits checking
-    uint32_t      n_pppls;                      // Number of PPPLs
-    uint32_t      pppl_idx;                     // PPPL index (0-(FG_MAX_PPPLS-1))
-    uint32_t      seg_idx;                      // Segment index (0-(4*FG_MAX_PPPLS-1))
-    uint32_t      negative_flag;                // Flag for limits check that part of function is negative
-    uint32_t      num_segs;                     // Total number of segments (4, 8, 12, ...)
-    float         time;                         // End of segment times
-    float         min;                          // Minimim value
-    float         max;                          // Maximum value
-    float         acc_pow2;                     // Square of acceleration
-    float         delta_time[FG_PPPL_N_SEGS];   // Segment durations
-    float         r[FG_PPPL_N_SEGS];            // Reference at start of segment
-    float         rate[FG_PPPL_N_SEGS];         // Rate of change of at start of segment
-    float         acceleration[FG_PPPL_N_SEGS]; // Acceleration of each segment
-    float *       segs_t;                       // Pointer to pars->t
-    float *       segs_a0;                      // Pointer to pars->a0
-    float *       segs_a1;                      // Pointer to pars->a1
-    float *       segs_a2;                      // Pointer to pars->a2
+    enum fg_error  fg_error;                     // Status from limits checking
+    uint32_t       n_pppls;                      // Number of PPPLs
+    uint32_t       pppl_idx;                     // PPPL index (0-(FG_MAX_PPPLS-1))
+    uint32_t       seg_idx;                      // Segment index (0-(4*FG_MAX_PPPLS-1))
+    uint32_t       num_segs;                     // Total number of segments (4, 8, 12, ...)
+    float          time;                         // End of segment times
+    float          acc_pow2;                     // Square of acceleration
+    float          delta_time[FG_PPPL_N_SEGS];   // Segment durations
+    float          r[FG_PPPL_N_SEGS];            // Reference at start of segment
+    float          rate[FG_PPPL_N_SEGS];         // Rate of change of at start of segment
+    float          acceleration[FG_PPPL_N_SEGS]; // Acceleration of each segment
+    float *        segs_t;                       // Pointer to pars->t
+    float *        segs_a0;                      // Pointer to pars->a0
+    float *        segs_a1;                      // Pointer to pars->a1
+    float *        segs_a2;                      // Pointer to pars->a2
+    struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
 
-    fgResetMeta(meta);                          // Reset meta structure
+    meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Check that number of PPPLs is the same for all seven parameters
 
@@ -77,8 +75,6 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
     r[0]    = ref;
     rate[0] = 0.0;
     time    = delay;
-    max     = ref;
-    min     = ref;
 
     segs_t  = &pars->time[0];
     segs_a0 = &pars->a0[0];
@@ -103,14 +99,12 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
            acceleration[2] == acceleration[1]   ||
            rate[1]         == rate[0])
         {
-            if(meta != NULL)
-            {
-                meta->error.index     = 100 + pppl_idx;
-                meta->error.data[0] = rate[0];
-                meta->error.data[1] = rate[1];
-                meta->error.data[2] = acceleration[0];
-                meta->error.data[3] = acceleration[2];
-            }
+            meta->error.index   = 100 + pppl_idx;
+            meta->error.data[0] = rate[0];
+            meta->error.data[1] = rate[1];
+            meta->error.data[2] = acceleration[0];
+            meta->error.data[3] = acceleration[2];
+
             return(FG_BAD_PARAMETER);
         }
 
@@ -128,14 +122,12 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
 
         if(acc_pow2 < 0.0)
         {
-            if(meta != NULL)
-            {
-                meta->error.index     = 200 + pppl_idx;
-                meta->error.data[0] = acc_pow2;
-                meta->error.data[1] = r[1];
-                meta->error.data[2] = r[3];
-                meta->error.data[3] = delta_time[0];
-            }
+            meta->error.index   = 200 + pppl_idx;
+            meta->error.data[0] = acc_pow2;
+            meta->error.data[1] = r[1];
+            meta->error.data[2] = r[3];
+            meta->error.data[3] = delta_time[0];
+
             return(FG_BAD_PARAMETER);
         }
 
@@ -145,14 +137,12 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
 
         if((rate[1] + rate[2]) == 0.0)
         {
-            if(meta != NULL)
-            {
-                meta->error.index     = 300 + pppl_idx;
-                meta->error.data[0] = rate[1];
-                meta->error.data[1] = rate[2];
-                meta->error.data[2] = rate[1] + rate[2];
-                meta->error.data[3] = acc_pow2;
-            }
+            meta->error.index   = 300 + pppl_idx;
+            meta->error.data[0] = rate[1];
+            meta->error.data[1] = rate[2];
+            meta->error.data[2] = rate[1] + rate[2];
+            meta->error.data[3] = acc_pow2;
+
             return(FG_BAD_PARAMETER);
         }
 
@@ -174,14 +164,12 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
 
             if(acc_pow2 < 0.0)
             {
-                if(meta != NULL)
-                {
-                    meta->error.index     = 400 + pppl_idx;
-                    meta->error.data[0] = acc_pow2;
-                    meta->error.data[1] = r[1];
-                    meta->error.data[2] = r[3];
-                    meta->error.data[3] = delta_time[1];
-                }
+                meta->error.index   = 400 + pppl_idx;
+                meta->error.data[0] = acc_pow2;
+                meta->error.data[1] = r[1];
+                meta->error.data[2] = r[3];
+                meta->error.data[3] = delta_time[1];
+
                 return(FG_BAD_PARAMETER);
             }
 
@@ -191,14 +179,12 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
 
             if((rate[0] + rate[2]) == 0.0)
             {
-                if(meta != NULL)
-                {
-                    meta->error.index     = 500 + pppl_idx;
-                    meta->error.data[0] = rate[0];
-                    meta->error.data[1] = rate[2];
-                    meta->error.data[2] = rate[0] + rate[2];
-                    meta->error.data[3] = acc_pow2;
-                }
+                meta->error.index   = 500 + pppl_idx;
+                meta->error.data[0] = rate[0];
+                meta->error.data[1] = rate[2];
+                meta->error.data[2] = rate[0] + rate[2];
+                meta->error.data[3] = acc_pow2;
+
                 return(FG_BAD_PARAMETER);
             }
 
@@ -214,13 +200,11 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
 
         if(delta_time[0] < 0.0 || delta_time[1] < 0.0 || delta_time[2] < 0.0)
         {
-            if(meta != NULL)
-            {
-                meta->error.index     = pppl_idx;
-                meta->error.data[0] = delta_time[0];
-                meta->error.data[1] = delta_time[1];
-                meta->error.data[2] = delta_time[2];
-            }
+            meta->error.index   = pppl_idx;
+            meta->error.data[0] = delta_time[0];
+            meta->error.data[1] = delta_time[1];
+            meta->error.data[2] = delta_time[2];
+
             return(FG_INVALID_TIME);
         }
 
@@ -244,15 +228,7 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
         segs_a1[seg_idx] = rate[3];
         segs_a2[seg_idx] = 0.5 * acceleration[2];
 
-        if(segs_a0[seg_idx] > max)
-        {
-            max = segs_a0[seg_idx];
-        }
-
-        if(segs_a0[seg_idx] < min)
-        {
-            min = segs_a0[seg_idx];
-        }
+        fgSetMinMax(meta, segs_a0[seg_idx]);
 
         seg_idx++;
         time += delta_time[3];
@@ -264,36 +240,21 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
         r[0]    = segs_a0[seg_idx];
         rate[0] = rate[3];
 
-        if(segs_a0[seg_idx] > max)
-        {
-            max = segs_a0[seg_idx];
-        }
-
-        if(segs_a0[seg_idx] < min)
-        {
-            min = segs_a0[seg_idx];
-        }
+        fgSetMinMax(meta, segs_a0[seg_idx]);
 
         seg_idx++;
     }
 
     num_segs = seg_idx;
 
-    // Prepare negative flag based on min/max of PPPLs
-
-    negative_flag = min < 0.0 || max < 0.0;
-
     // Check the segments against the limits
 
     for(seg_idx=0 ; seg_idx < num_segs ; seg_idx++)
     {
-        if(limits != NULL && (fg_error = fgCheckRef(limits, limits_polarity, negative_flag,
+        if(limits != NULL && (fg_error = fgCheckRef(limits, limits_polarity,
                                            segs_a0[seg_idx], segs_a1[seg_idx], segs_a2[seg_idx], meta)))
         {
-            if(meta != NULL)
-            {
-                meta->error.index = seg_idx + 1;
-            }
+            meta->error.index = seg_idx + 1;
             return(fg_error);
         }
     }
@@ -301,16 +262,10 @@ enum fg_error fgPpplInit(struct fg_limits       *limits,
     pars->num_segs = num_segs;
     pars->seg_idx  = 0;
 
-    // Return meta data
+    // Complete meta data
 
-    if(meta != NULL)
-    {
-        meta->duration    = segs_t[num_segs-1];
-        meta->range.start = ref;
-        meta->range.end   = segs_a0[num_segs-1];
-        meta->range.min   = min;
-        meta->range.max   = max;
-    }
+    meta->duration  = segs_t[num_segs-1];
+    meta->range.end = segs_a0[num_segs-1];
 
     return(FG_OK);
 }

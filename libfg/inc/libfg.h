@@ -69,8 +69,8 @@ struct fg_limits
 
     // User callback for checking reference
 
-    enum fg_error (*user_check_limits)(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                                       uint32_t negative_flag, float ref, float rate, float acceleration);
+    enum fg_error (*user_check_limits)(struct fg_limits *limits, uint32_t invert_limits,
+                                       float ref, float rate, float acceleration);
 };
 
 // Reference meta data structure
@@ -101,11 +101,10 @@ struct fg_meta
 extern "C" {
 #endif
 
-void            fgResetMeta (struct fg_meta *meta);
-
+struct fg_meta *fgResetMeta (struct fg_meta *meta, struct fg_meta *local_meta, float init_ref);
+void            fgSetMinMax (struct fg_meta *meta, float ref);
 enum fg_error   fgCheckRef  (struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                             uint32_t negative_flag, float ref, float rate, float acceleration,
-                             struct fg_meta *meta);
+                             float ref, float rate, float acceleration, struct fg_meta *meta);
 
 #ifdef __cplusplus
 }

@@ -22,23 +22,21 @@
 #include "libfg/table.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-enum fg_error fgTableInit(struct fg_limits       *limits,
-                          enum fg_limits_polarity limits_polarity,
-                          struct fg_table_config *config,
-                          float                   delay,
-                          float                   min_time_step,
-                          struct fg_table_pars   *pars,
-                          struct fg_meta         *meta)
+enum fg_error fgTableInit(struct fg_limits         *limits,
+                          enum   fg_limits_polarity limits_polarity,
+                          struct fg_table_config   *config,
+                          float                     delay,
+                          float                     min_time_step,
+                          struct fg_table_pars     *pars,
+                          struct fg_meta           *meta)          // NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    enum fg_error fg_error;       // Limit checking status
-    uint32_t      i;              // loop variable
-    uint32_t      negative_flag;  // Flag to indicate to limits check that part of reference is negative
-    float         grad;           // Segment gradient
-    float         min;            // Minimum value
-    float         max;            // Maximum value
+    enum fg_error  fg_error;       // Limit checking status
+    uint32_t       i;              // loop variable
+    float          grad;           // Segment gradient
+    struct fg_meta local_meta;     // Local meta data in case user meta is NULL
 
-    fgResetMeta(meta);            // Reset meta structure
+    meta = fgResetMeta(meta, &local_meta, config->ref[0]);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Initial checks of data integrity
 
@@ -65,7 +63,6 @@ enum fg_error fgTableInit(struct fg_limits       *limits,
     pars->time         = config->time;                      // Reference time array
     pars->seg_idx      = 0;                                 // Reset segment index
     pars->prev_seg_idx = 0;                                 // Reset previous segment index
-    min = max          = config->ref[0];                    // Initialise min/max
     min_time_step     *= (1.0 - FG_CLIP_LIMIT_FACTOR);      // Adjust min time step to avoid rounding errs
 
     // Check time vector and calculate min/max for table
@@ -74,59 +71,38 @@ enum fg_error fgTableInit(struct fg_limits       *limits,
     {
         if(pars->time[i] < (pars->time[i - 1] + min_time_step))        // Check time values
         {
-            if(meta != NULL)
-            {
-                meta->error.index     = i;
-                meta->error.data[0] = pars->time[i];
-                meta->error.data[1] = pars->time[i - 1] + min_time_step;
-                meta->error.data[2] = min_time_step;
-            }
+            meta->error.index     = i;
+            meta->error.data[0] = pars->time[i];
+            meta->error.data[1] = pars->time[i - 1] + min_time_step;
+            meta->error.data[2] = min_time_step;
+
             return(FG_INVALID_TIME);                                // Report INVALID TIME
         }
 
-        if(pars->ref[i] > max)
-        {
-            max = pars->ref[i];
-        }
-
-        if(pars->ref[i] < max)
-        {
-            min = pars->ref[i];
-        }
+        fgSetMinMax(meta, pars->ref[i]);
     }
 
     // Check reference function limits
 
     if(limits != NULL)
     {
-        negative_flag = min < 0.0 || max < 0.0;
-
         for(i = 1 ; i < pars->n_elements ; i++)
         {
             grad = (pars->ref[i] - pars->ref[i - 1]) / (pars->time[i] - pars->time[i - 1]);
 
-            if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, pars->ref[i],     grad, 0.0, meta)) ||
-               (fg_error = fgCheckRef(limits, limits_polarity, negative_flag, pars->ref[i - 1], grad, 0.0, meta)))
+            if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref[i],     grad, 0.0, meta)) ||
+               (fg_error = fgCheckRef(limits, limits_polarity, pars->ref[i - 1], grad, 0.0, meta)))
             {
-                if(meta != NULL)
-                {
-                    meta->error.index = i;
-                }
+                meta->error.index = i;
                 return(fg_error);
             }
         }
     }
 
-    // Return meta data
+    // Complete meta data
 
-    if(meta != NULL)
-    {
-        meta->duration    = pars->time[i - 1] + pars->delay;
-        meta->range.start = pars->ref[0];
-        meta->range.end   = pars->ref[i - 1];
-        meta->range.min   = min;
-        meta->range.max   = max;
-    }
+    meta->duration  = pars->time[i - 1] + pars->delay;
+    meta->range.end = pars->ref[i - 1];
 
     return(FG_OK);
 }

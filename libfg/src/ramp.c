@@ -37,10 +37,10 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
                          struct fg_meta            *meta)          // NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    enum fg_error fg_error;                 // Reference limits status
-    uint32_t      negative_flag;            // Flag to limits check function that part of ref is negative
+    enum fg_error  fg_error;                     // Reference limits status
+    struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
 
-    fgResetMeta(meta);                      // Reset meta structure
+    meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Check that parameters are valid
 
@@ -55,14 +55,11 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     // Check limits if supplied
 
-    if(limits)
+    if(limits != NULL)
     {
-        negative_flag = ref < 0.0 || config->final < 0.0;
-
         // Check limits at the start of the parabolic acceleration (segment 1)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, ref,
-                                 0.0, pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, ref, 0.0, pars->acceleration, meta)))
         {
             meta->error.index = 1;
             return(fg_error);
@@ -70,15 +67,14 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
         // Check limits at the end of the parabolic deceleration (segment 2)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, config->final,
-                                 0.0, pars->deceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, config->final, 0.0, pars->deceleration, meta)))
         {
             meta->error.index = 2;
             return(fg_error);
         }
     }
 
-    return(FG_OK);                              // Report success
+    return(FG_OK);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
@@ -267,34 +263,12 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
     return(func_running_flag);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void fgRampSetMinMax(struct fg_meta *meta, float ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This helper function is used by fgRampCalc() to set the meta min and max fields
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    if(meta->range.min == 0.0 && meta->range.max == 0.0)
-    {
-        meta->range.min = meta->range.max = ref;
-    }
-    else
-    {
-        if(ref > meta->range.max)
-        {
-            meta->range.max = ref;
-        }
-        else if(ref < meta->range.min)
-        {
-            meta->range.min = ref;
-        }
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
 void fgRampCalc(struct fg_ramp_config *config,
                 struct fg_ramp_pars   *pars,
                 float                  delay,
                 float                  init_ref,
                 float                  init_rate,
-                struct fg_meta        *meta)            // can be NULL if not required
+                struct fg_meta        *meta)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates ramp parameters. 
 
@@ -315,6 +289,8 @@ void fgRampCalc(struct fg_ramp_config *config,
     pars->iteration_idx  = 0;
     delta_ref            = config->final - init_ref;
     overshoot_rate_limit = sqrt(2.0 * config->deceleration * fabs(delta_ref));
+
+    meta->range.min = meta->range.max = init_ref;
 
     // Set up accelerations according to ramp direction
 
@@ -377,29 +353,25 @@ void fgRampCalc(struct fg_ramp_config *config,
     pars->ref[1]  = ref0 + delta_ref * seg_ratio;
     pars->ref[2]  = config->final;
 
-    // Return meta data
+    // Set duration if rate limit is never reached
 
-    if(meta != NULL)
+    meta->duration = pars->time[2] + delay + pars->time_shift;
+
+    // Set min/max
+
+    fgSetMinMax(meta,init_ref);
+    fgSetMinMax(meta,config->final);
+
+    // If time_shift is positive then include point of inflexion of first parabola in min/max check
+
+    if(pars->time_shift > 0.0)
     {
-        meta->range.start = init_ref;
-        meta->range.end   = config->final;
-
-        // Set duration if rate limit never reached
-
-        meta->duration = pars->time[2] + delay + pars->time_shift;  
-
-        // Set min/max 
-
-        fgRampSetMinMax(meta,init_ref);
-        fgRampSetMinMax(meta,config->final);
-
-        // If time_shift is positive then include point of inflexion of first parabola in min/max check
-
-        if(pars->time_shift > 0.0)
-        {
-            fgRampSetMinMax(meta,ref0);
-        }
+        fgSetMinMax(meta,ref0);
     }
+
+    // Complete meta data
+
+    meta->range.end = config->final;
 }
 // EOF
 

@@ -31,23 +31,22 @@
 #include "libfg/plep.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-enum fg_error fgPlepInit(struct fg_limits       *limits,
-                         enum fg_limits_polarity limits_polarity,
-                         struct fg_plep_config  *config,
-                         float                   delay,
-                         float                   ref,
-                         struct fg_plep_pars    *pars,
-                         struct fg_meta         *meta)          // NULL if not required
+enum fg_error fgPlepInit(struct fg_limits          *limits,
+                         enum   fg_limits_polarity  limits_polarity,
+                         struct fg_plep_config     *config,
+                         float                      delay,
+                         float                      ref,
+                         struct fg_plep_pars       *pars,
+                         struct fg_meta            *meta)          // NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    enum fg_error fg_error;                     // Limits status
-    uint32_t      i;                            // Loop variable
-    uint32_t      negative_flag;                // Flag to limits check function that part of ref is negative
-    float         inv;                          // Ramp direction factor: +/-1.0
-    float         min;                          // Minimum reference value
-    float         abs_ref[FG_PLEP_N_SEGS];      // Absolute reference values (i.e. not normalised)
+    enum fg_error  fg_error;                     // Limits status
+    uint32_t       i;                            // Loop variable
+    float          inv;                          // Ramp direction factor: +/-1.0
+    float          abs_ref[FG_PLEP_N_SEGS];      // Absolute reference values (i.e. not normalised)
+    struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
 
-    fgResetMeta(meta);                          // Reset meta structure
+    meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Check parameters are valid
 
@@ -59,14 +58,13 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
 
     // Calculate PLEP parameters with zero initial and final rate of change - returns minimum value of PLEP
 
-    min = fgPlepCalc(config, pars, delay, ref, 0.0, meta);
+    fgPlepCalc(config, pars, delay, ref, 0.0, meta);
 
     // Check limits if supplied
 
-    if(limits)
+    if(limits != NULL)
     {
-        negative_flag = min < 0.0;
-        inv           = (pars->pos_ramp_flag ? -1.0 : 1.0);
+        inv = (pars->pos_ramp_flag ? -1.0 : 1.0);
 
         // Calculate unnormalised reference values for all segments
 
@@ -84,7 +82,7 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
 
         // Check limits at the end of the parabolic acceleration (segment 1)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, abs_ref[0],
+        if((fg_error = fgCheckRef(limits, limits_polarity, abs_ref[0],
                                  (inv * pars->acceleration * (pars->time[1] - pars->time[0])),
                                  pars->acceleration, meta)))
         {
@@ -95,7 +93,7 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
         // Check limits at the end of the linear segment (segment 2)
 
         if(pars->time[2] > pars->time[1] &&
-           (fg_error = fgCheckRef(limits, limits_polarity, negative_flag, abs_ref[1],
+           (fg_error = fgCheckRef(limits, limits_polarity, abs_ref[1],
                                  inv * pars->linear_rate,
                                  pars->acceleration, meta)))
         {
@@ -105,7 +103,7 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
 
         // Check limits at the end of the exponential decay (segment 3)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, abs_ref[2],
+        if((fg_error = fgCheckRef(limits, limits_polarity, abs_ref[2],
                                  (inv * pars->acceleration * (pars->time[4] - pars->time[3])),
                                  pars->acceleration, meta)))
         {
@@ -115,7 +113,7 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
 
         // Check limits at the end of the parabolic deceleration (segment 4)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, abs_ref[3],
+        if((fg_error = fgCheckRef(limits, limits_polarity, abs_ref[3],
                                  0.0, pars->acceleration, meta)))
         {
             meta->error.index = 4;
@@ -124,7 +122,7 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
 
         // Check limits at the end of the parabolic acceleration (segment 5)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, negative_flag, abs_ref[4],
+        if((fg_error = fgCheckRef(limits, limits_polarity, abs_ref[4],
                                  config->final_rate, pars->acceleration, meta)))
         {
             meta->error.index = 5;
@@ -132,7 +130,7 @@ enum fg_error fgPlepInit(struct fg_limits       *limits,
         }
     }
 
-    return(FG_OK);                              // Report success
+    return(FG_OK);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
@@ -235,12 +233,12 @@ uint32_t fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
     return(ref_running_f);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float fgPlepCalc(struct fg_plep_config *config,
+void  fgPlepCalc(struct fg_plep_config *config,
                  struct fg_plep_pars   *pars,
                  float                  delay,
                  float                  init_ref,
                  float                  init_rate,
-                 struct fg_meta        *meta)            // can be NULL if not required
+                 struct fg_meta        *meta)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates PLEP parameters.  This function must be re-entrant because it can be called
   to calculate the PLEP coefficients for an already moving reference.
@@ -271,8 +269,6 @@ float fgPlepCalc(struct fg_plep_config *config,
     float       delta_time1_exp;        // Time until exponential segment
     float       ref_time;               // Segment time accumulator
     float       inv_acc;                // 1 / pars->acceleration
-    float       min;                    // Minimum value of any segment
-    float       max;                    // Maximum value of any segment
     float       delta_time[FG_PLEP_N_SEGS+1]; // Segment durations
 
     // Prepare variables
@@ -281,12 +277,13 @@ float fgPlepCalc(struct fg_plep_config *config,
     pars->linear_rate  = config->linear_rate;
     pars->final_rate   = config->final_rate;
     pars->delay        = delay;
+
     delta_ref = init_ref - config->final;       // Total reference change
     inv_acc   = 1.0 / pars->acceleration;       // Inverse acceleration
 
     delta_time[1] = delta_time[2] = delta_time[3] = 0.0;        // Clear segment times
 
-    // Calculate final accerlerating parabola
+    // Calculate final accelerating parabola
 
     if(pars->final_rate >= 0.0)
     {
@@ -295,7 +292,6 @@ float fgPlepCalc(struct fg_plep_config *config,
     else
     {
         pars->final_acc = -pars->acceleration;
-
     }
 
     delta_time[5] = pars->final_rate / pars->final_acc;
@@ -475,7 +471,7 @@ float fgPlepCalc(struct fg_plep_config *config,
 
     end:        // From goto end;
 
-    max = min = init_ref;
+    meta->range.max = meta->range.min = init_ref;
     ref_time = pars->delay;
 
     for(i = 0 ; i <= FG_PLEP_N_SEGS ; i++)
@@ -492,30 +488,13 @@ float fgPlepCalc(struct fg_plep_config *config,
             ref = pars->ref[i];
         }
 
-        if(ref > max)
-        {
-            max = ref;
-        }
-        else if(ref < min)
-        {
-            min = ref;
-        }
+        fgSetMinMax(meta, ref);
     }
 
-    // Return meta data if meta is defined
+    // Complete meta data
 
-    if(meta != NULL)
-    {
-        meta->duration    = pars->time[5];
-        meta->range.start = init_ref;
-        meta->range.end   = config->final;
-        meta->range.max   = max;
-        meta->range.min   = min;
-    }
-
-    // Return minimum function value
-
-    return(min);
+    meta->duration  = pars->time[5];
+    meta->range.end = config->final;
 }
 // EOF
 
