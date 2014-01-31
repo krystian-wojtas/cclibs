@@ -53,11 +53,12 @@
 
 /*---------------------------------------------------------------------------------------------------------*/
 void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
-                    float low_lim, float zero_lim)
+                    float low_lim, float zero_lim, uint32_t invert_limits)
 /*---------------------------------------------------------------------------------------------------------*\
  This function will initialise the measurement limits based on the pos/neg, zero and low limits supplied.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    lim_meas->invert_limits   = invert_limits;
     lim_meas->pos_trip        = pos_lim  * (1.0 + REG_LIM_TRIP);
     lim_meas->neg_trip        = neg_lim  * (1.0 + REG_LIM_TRIP);
     lim_meas->low             = low_lim;
@@ -78,57 +79,76 @@ void regLimMeas(struct reg_lim_meas *lim_meas, float meas)
 {
     float abs_meas = fabs(meas);
 
-    // Trip level - negative limit is only active if less than zero
-
-    if((meas > lim_meas->pos_trip) || (lim_meas->neg_trip < 0.0 && meas < lim_meas->neg_trip))
+    if(lim_meas->invert_limits == 0)
     {
-        lim_meas->flags.trip = 1;
-    }
-    else
-    {
-        lim_meas->flags.trip = 0;
-    }
+        // Trip level - negative limit is only active if less than zero
 
+        if((meas > lim_meas->pos_trip) || (lim_meas->neg_trip < 0.0 && meas < lim_meas->neg_trip))
+        {
+            lim_meas->flags.trip = 1;
+        }
+        else
+        {
+            lim_meas->flags.trip = 0;
+        }
+    }
+    else    // Invert limits before use - this may be necessary if a polarity switch is in the negative position
+    {
+        // Trip level - negative limit is only active if less than zero
+
+        if((meas < -lim_meas->pos_trip) || (lim_meas->neg_trip < 0.0 && meas > -lim_meas->neg_trip))
+        {
+            lim_meas->flags.trip = 1;
+        }
+        else
+        {
+            lim_meas->flags.trip = 0;
+        }
+    }
+    
     // Zero flag
 
     if(lim_meas->flags.zero)
     {
-	if(abs_meas > lim_meas->zero)
-	{
-	    lim_meas->flags.zero = 0;
-	}
+        if(abs_meas > lim_meas->zero)
+        {
+            lim_meas->flags.zero = 0;
+        }
     }
     else
     {
-	if(abs_meas < lim_meas->zero_hysteresis)
-	{
-	    lim_meas->flags.zero = 1;
-	}
+        if(abs_meas < lim_meas->zero_hysteresis)
+        {
+            lim_meas->flags.zero = 1;
+        }
     }
 
     // Low flag
 
     if(lim_meas->flags.low)
     {
-	if(abs_meas > lim_meas->low)
-	{
-	    lim_meas->flags.low = 0;
-	}
+        if(abs_meas > lim_meas->low)
+        {
+            lim_meas->flags.low = 0;
+        }
     }
     else
     {
-	if(abs_meas < lim_meas->low_hysteresis)
-	{
-	    lim_meas->flags.low = 1;
-	}
+        if(abs_meas < lim_meas->low_hysteresis)
+        {
+            lim_meas->flags.low = 1;
+        }
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim)
+void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim, 
+                   uint32_t invert_limits)
 /*---------------------------------------------------------------------------------------------------------*\
  This function will initialise the field/current reference limits.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    float temp_lim;
+    
     lim_ref->rate_clip = rate_lim * (1.0 + REG_LIM_CLIP);
     lim_ref->max_clip  = pos_lim  * (1.0 + REG_LIM_CLIP);
 
@@ -144,10 +164,19 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, fl
         lim_ref->flags.unipolar = 1;
         lim_ref->min_clip       = 0.0;
     }
+    
+    // If invert_limits flag is set then swap max and min clip limits
+    
+    if(invert_limits != 0)
+    {
+        temp_lim          = lim_ref->max_clip;
+        lim_ref->max_clip = lim_ref->min_clip;
+        lim_ref->min_clip = temp_lim;
+    }   
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
-                    float i_quadrants41[2], float v_quadrants41[2])
+                    float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits)
 /*---------------------------------------------------------------------------------------------------------*\
  This function will initialise the voltage reference limits.  Voltage reference limits use the same
  structure as field/current limits but have different behaviour.
@@ -155,25 +184,35 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
 {
     float delta_i_quadrants41;
 
-    lim_v_ref->flags.unipolar = (neg_lim > REG_LIM_V_DIODE);	// Set unipolar flag allowing diode voltage
+    lim_v_ref->flags.unipolar = (neg_lim > REG_LIM_V_DIODE);    // Set unipolar flag allowing diode voltage
+    lim_v_ref->rate_clip      = rate_lim * (1.0 + REG_LIM_CLIP);
 
-    lim_v_ref->max_clip_user = pos_lim  * (1.0 + REG_LIM_CLIP);
-    lim_v_ref->min_clip_user = neg_lim  * (1.0 + REG_LIM_CLIP);
-    lim_v_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
-
+    // Set max/min user clip limits taking into account the invert_limits flag
+    
+    if(invert_limits == 0)
+    {
+        lim_v_ref->max_clip_user = pos_lim * (1.0 + REG_LIM_CLIP);
+        lim_v_ref->min_clip_user = neg_lim * (1.0 + REG_LIM_CLIP);
+    }
+    else
+    {    
+        lim_v_ref->max_clip_user = -neg_lim * (1.0 + REG_LIM_CLIP);
+        lim_v_ref->min_clip_user = -pos_lim * (1.0 + REG_LIM_CLIP);
+    }
+    
     // Quadrants 41 exclusion zone: At least a 1A spread is needed to activate Q41 limiter
 
     delta_i_quadrants41 = i_quadrants41[1] - i_quadrants41[0];
 
     if(delta_i_quadrants41 >= 1.0)
     {
-	lim_v_ref->i_quadrants41_max = i_quadrants41[1];
-	lim_v_ref->dvdi = (v_quadrants41[1] - v_quadrants41[0]) / delta_i_quadrants41;
-	lim_v_ref->v0   = (v_quadrants41[0] - lim_v_ref->dvdi * i_quadrants41[0]) * (1.0 + REG_LIM_CLIP);
+        lim_v_ref->i_quadrants41_max = i_quadrants41[1];
+        lim_v_ref->dvdi = (v_quadrants41[1] - v_quadrants41[0]) / delta_i_quadrants41;
+        lim_v_ref->v0   = (v_quadrants41[0] - lim_v_ref->dvdi * i_quadrants41[0]) * (1.0 + REG_LIM_CLIP);
     }
     else
     {
-	lim_v_ref->i_quadrants41_max = -1.0E10;			// Disable Q41 exclusion zone
+        lim_v_ref->i_quadrants41_max = -1.0E10;         // Disable Q41 exclusion zone
     }
 
     // Initialise Vref limits for zero current
@@ -188,7 +227,7 @@ void regLimVrefCalc(struct reg_lim_ref *lim_v_ref, float i_meas)
   and the function rotates the zone to calculate the exclusion zone for negative voltages in quadrants 32.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float	v_lim;
+    float   v_lim;
 
     // Calculate max positive voltage (Quadrants 41)
 
@@ -196,17 +235,17 @@ void regLimVrefCalc(struct reg_lim_ref *lim_v_ref, float i_meas)
 
     if(i_meas < lim_v_ref->i_quadrants41_max)
     {
-	v_lim = lim_v_ref->v0 + lim_v_ref->dvdi * i_meas;
+        v_lim = lim_v_ref->v0 + lim_v_ref->dvdi * i_meas;
 
         if(v_lim < 0.0)
         {
             v_lim = 0.0;
         }
 
-	if(v_lim < lim_v_ref->max_clip)
-	{
-	    lim_v_ref->max_clip = v_lim;
-	}
+        if(v_lim < lim_v_ref->max_clip)
+        {
+            lim_v_ref->max_clip = v_lim;
+        }
     }
 
     // Calculate min negative voltage (Quadrants 32 uses the Q41 limits rotated by 180 degrees)
@@ -215,7 +254,7 @@ void regLimVrefCalc(struct reg_lim_ref *lim_v_ref, float i_meas)
 
     if(i_meas > -lim_v_ref->i_quadrants41_max)
     {
-	v_lim = -lim_v_ref->v0 + lim_v_ref->dvdi * i_meas;
+        v_lim = -lim_v_ref->v0 + lim_v_ref->dvdi * i_meas;
 
         if(v_lim > 0.0)
         {
@@ -223,9 +262,9 @@ void regLimVrefCalc(struct reg_lim_ref *lim_v_ref, float i_meas)
         }
 
         if(v_lim > lim_v_ref->min_clip)
-	{
-	    lim_v_ref->min_clip = v_lim;
-	}
+        {
+            lim_v_ref->min_clip = v_lim;
+        }
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -254,17 +293,17 @@ float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev
 
     if(ref < lim_ref->min_clip)
     {
-	ref = lim_ref->min_clip;
-	lim_ref->flags.clip = 1;
+        ref = lim_ref->min_clip;
+        lim_ref->flags.clip = 1;
     }
     else if(ref > lim_ref->max_clip)
     {
-	ref = lim_ref->max_clip;
-	lim_ref->flags.clip = 1;
+        ref = lim_ref->max_clip;
+        lim_ref->flags.clip = 1;
     }
     else
     {
-	lim_ref->flags.clip = 0;
+        lim_ref->flags.clip = 0;
     }
 
     // Clip reference to rate of change limits
@@ -273,9 +312,9 @@ float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev
 
     if(lim_ref->rate_clip > 0.0)
     {
-        delta_ref = ref - prev_ref;	// Requested change in reference
+        delta_ref = ref - prev_ref; // Requested change in reference
 
-        if(delta_ref > 0.0)			// If change is positive
+        if(delta_ref > 0.0)         // If change is positive
         {
             rate_lim_ref = prev_ref * (1.0 + REG_LIM_FP32_MARGIN) + lim_ref->rate_clip * period;
 
@@ -285,7 +324,7 @@ float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev
                 lim_ref->flags.rate = 1;
             }
         }
-        else if(delta_ref < 0.0)	        // else if change is negative
+        else if(delta_ref < 0.0)            // else if change is negative
         {
             rate_lim_ref = prev_ref * (1.0 - REG_LIM_FP32_MARGIN) - lim_ref->rate_clip * period;
 
