@@ -56,6 +56,8 @@ struct ccpars_limits
     float               v_err_fault;            // Current regulation error fault limit
     float               v_quadrants41[2];
 
+    uint32_t            invert_limits;          // Invert real-time limits (switch is negative)
+
     // Limits related variables
 
     uint32_t                    status;         // Limits parameter group status
@@ -66,10 +68,11 @@ struct ccpars_limits
 
 CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 #ifdef GLOBALS
-= {//  POS   MIN    NEG    RATE   ACC   ERR_WRN ERR_FLT  Quadrant41
-    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,                   // Field limits   (G)
-    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,  { 0.0, 0.0 },    // Current limits (A)
-    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,  { 0.0, 0.0 }     // Voltage limits (V)
+= {//  POS   MIN    NEG    RATE   ACC   ERR_WRN ERR_FLT  Quadrant41 
+    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,                 // Field limits   (G)
+    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,  { 0.0, 0.0 },  // Current limits (A)
+    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,  { 0.0, 0.0 },  // Voltage limits (V)
+    CC_DISABLED                                                       // Invert Limits 
 }
 #endif
 ;
@@ -78,29 +81,30 @@ CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 
 CCPARS_LIMITS_EXT struct ccpars limit_pars_list[]
 #ifdef GLOBALS
-= {// "Signal name"     TYPE,    max_vals,min_vals,*enum, *value,                       num_defaults
-    { "B_POS",          PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.b.pos          }, 1 },
-    { "B_MIN",          PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.b.min          }, 1 },
-    { "B_NEG",          PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.b.neg          }, 1 },
-    { "B_RATE",         PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.b.rate         }, 1 },
-    { "B_ACCELERATION", PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.b.acceleration }, 1 },
-    { "B_ERR_WARNING",  PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.b_err_warning  }, 1 },
-    { "B_ERR_FAULT",    PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.b_err_fault    }, 1 },
-    { "I_POS",          PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.i.pos          }, 1 },
-    { "I_MIN",          PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.i.min          }, 1 },
-    { "I_NEG",          PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.i.neg          }, 1 },
-    { "I_RATE",         PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.i.rate         }, 1 },
-    { "I_ACCELERATION", PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.i.acceleration }, 1 },
-    { "I_ERR_WARNING",  PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.i_err_warning  }, 1 },
-    { "I_ERR_FAULT",    PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.i_err_fault    }, 1 },
-    { "I_QUADRANTS41",  PAR_FLOAT,      2, 0, NULL,  { .f =  ccpars_limits.i_quadrants41  }, 2 },
-    { "V_POS",          PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.v.pos          }, 1 },
-    { "V_NEG",          PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.v.neg          }, 1 },
-    { "V_RATE",         PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.v.rate         }, 1 },
-    { "V_ACCELERATION", PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.v.acceleration }, 1 },
-    { "V_ERR_WARNING",  PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.v_err_warning  }, 1 },
-    { "V_ERR_FAULT",    PAR_FLOAT,      1, 0, NULL,  { .f = &ccpars_limits.v_err_fault    }, 1 },
-    { "V_QUADRANTS41",  PAR_FLOAT,      2, 0, NULL,  { .f =  ccpars_limits.v_quadrants41  }, 2 },
+= {// "Signal name"     TYPE,   max_vals,min_vals,*enum,        *value,                   num_defaults
+    { "B_POS",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.pos          }, 1 },
+    { "B_MIN",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.min          }, 1 },
+    { "B_NEG",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.neg          }, 1 },
+    { "B_RATE",         PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.rate         }, 1 },
+    { "B_ACCELERATION", PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.acceleration }, 1 },
+    { "B_ERR_WARNING",  PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b_err_warning  }, 1 },
+    { "B_ERR_FAULT",    PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b_err_fault    }, 1 },
+    { "I_POS",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.i.pos          }, 1 },
+    { "I_MIN",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.i.min          }, 1 },
+    { "I_NEG",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.i.neg          }, 1 },
+    { "I_RATE",         PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.i.rate         }, 1 },
+    { "I_ACCELERATION", PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.i.acceleration }, 1 },
+    { "I_ERR_WARNING",  PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.i_err_warning  }, 1 },
+    { "I_ERR_FAULT",    PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.i_err_fault    }, 1 },
+    { "I_QUADRANTS41",  PAR_FLOAT, 2, 0, NULL,             { .f =  ccpars_limits.i_quadrants41  }, 2 },
+    { "V_POS",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.v.pos          }, 1 },
+    { "V_NEG",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.v.neg          }, 1 },
+    { "V_RATE",         PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.v.rate         }, 1 },
+    { "V_ACCELERATION", PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.v.acceleration }, 1 },
+    { "V_ERR_WARNING",  PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.v_err_warning  }, 1 },
+    { "V_ERR_FAULT",    PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.v_err_fault    }, 1 },
+    { "V_QUADRANTS41",  PAR_FLOAT, 2, 0, NULL,             { .f =  ccpars_limits.v_quadrants41  }, 2 },
+    { "INVERT_LIMITS",  PAR_ENUM,  1, 0, enabled_disabled, { .i = &ccpars_limits.invert_limits  }, 1 },
     { NULL }
 }
 #endif

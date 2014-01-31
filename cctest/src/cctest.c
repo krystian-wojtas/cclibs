@@ -108,21 +108,25 @@ static void PrepareLimits(void)
         regLimMeasInit(&reg.lim_b_meas,
                        ccpars_limits.b.pos, ccpars_limits.b.neg,
                        ccpars_limits.b.pos * LOW_MEAS_FACTOR,
-                       ccpars_limits.b.pos * ZERO_MEAS_FACTOR);
+                       ccpars_limits.b.pos * ZERO_MEAS_FACTOR,
+                       ccpars_limits.invert_limits);
 
         regLimMeasInit(&reg.lim_i_meas,
                        ccpars_limits.i.pos, ccpars_limits.i.neg,
                        ccpars_limits.i.pos * LOW_MEAS_FACTOR,
-                       ccpars_limits.i.pos * ZERO_MEAS_FACTOR);
+                       ccpars_limits.i.pos * ZERO_MEAS_FACTOR,
+                       ccpars_limits.invert_limits);
 
         // Initialise field, current and voltage reference pos/min/neg/rate limits
 
-        regLimRefInit (&reg.lim_b_ref, ccpars_limits.b.pos, ccpars_limits.b.neg, ccpars_limits.b.rate);
+        regLimRefInit (&reg.lim_b_ref, ccpars_limits.b.pos, ccpars_limits.b.neg, ccpars_limits.b.rate,
+                       ccpars_limits.invert_limits);
 
-        regLimRefInit (&reg.lim_i_ref, ccpars_limits.i.pos, ccpars_limits.i.neg, ccpars_limits.i.rate);
+        regLimRefInit (&reg.lim_i_ref, ccpars_limits.i.pos, ccpars_limits.i.neg, ccpars_limits.i.rate,
+                       ccpars_limits.invert_limits);
 
         regLimVrefInit(&reg.lim_v_ref, ccpars_limits.v.pos, ccpars_limits.v.neg, ccpars_limits.v.rate,
-                       ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41);
+                       ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41, ccpars_limits.invert_limits);
 
         // Initialise field, current and voltage regulation error warning/fault thresholds
 
@@ -157,7 +161,8 @@ static void PrepareFunction(void)
             ccpars_limits.fg->user_check_limits = ccrefCheckConverterLimits;
 
             regLimVrefInit(&ccpars_limits.fg_v_ref, ccpars_limits.v.pos, ccpars_limits.v.neg,
-                           ccpars_limits.v.rate, ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41);
+                           ccpars_limits.v.rate, ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41, 
+                           ccpars_limits.invert_limits);
         }
     }
 

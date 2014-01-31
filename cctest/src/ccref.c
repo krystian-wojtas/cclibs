@@ -90,6 +90,21 @@ void ccrefFuncType(char *arg)
     ccpars_global.function = par_enum->value;
 }
 /*---------------------------------------------------------------------------------------------------------*/
+static enum fg_limits_polarity ccrefLimitsPolarity(uint32_t invert_limits, uint32_t pol_swi_auto)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    if(pol_swi_auto == CC_ENABLED)
+    {
+        return(FG_LIMITS_POL_AUTO);        // Limits should be tested based upon the polarity of the function
+    }
+    else if(invert_limits == CC_ENABLED)
+    {
+        return(FG_LIMITS_POL_NEGATIVE);    // Limits should be inverted
+    }
+
+    return(FG_LIMITS_POL_NORMAL);          // Normal limits with no manipulation
+}
+/*---------------------------------------------------------------------------------------------------------*/
 void ccrefInitSTART(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
@@ -100,9 +115,12 @@ void ccrefInitSTART(void)
 
     ccpars_start.config.linear_rate = ccpars_limits.fg->rate;
 
-    fg_error = fgPlepInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_start.config,
-                         ccpars_global.run_delay, 0.0,
-                         &ccpars_start.plep_pars, &fg_meta);
+
+    fg_error = fgPlepInit(ccpars_limits.fg,
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_start.config,
+                          ccpars_global.run_delay, 0.0,
+                          &ccpars_start.plep_pars, &fg_meta);
 
     // Report error if initialisation fails
 
@@ -136,9 +154,11 @@ void ccrefInitPLEP(void)
 
     // Try to initialise the PLEP
 
-    fg_error = fgPlepInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_plep.config,
-                         ccpars_global.run_delay, ccpars_plep.initial_ref,
-                         &ccpars_plep.plep_pars, &fg_meta);
+    fg_error = fgPlepInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_plep.config,
+                          ccpars_global.run_delay, ccpars_plep.initial_ref,
+                          &ccpars_plep.plep_pars, &fg_meta);
 
     // Report error if initialisation fails
 
@@ -157,7 +177,9 @@ void ccrefInitRAMP(void)
 
     // Try to initialise the RAMP
 
-    fg_error = fgRampInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_ramp.config,
+    fg_error = fgRampInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_ramp.config,
                           ccpars_global.run_delay, ccpars_ramp.initial_ref,
                           &ccpars_ramp.ramp_pars, &fg_meta);
 
@@ -188,7 +210,9 @@ void ccrefInitPPPL(void)
 
     // Try to initialise the PPPL
 
-    fg_error = fgPpplInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_pppl.config,
+    fg_error = fgPpplInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_pppl.config,
                           ccpars_global.run_delay, ccpars_pppl.initial_ref,
                           &ccpars_pppl.pppl_pars, &fg_meta);
 
@@ -216,7 +240,9 @@ void ccrefInitTABLE(void)
 
     // Try to initialise the TABLE
 
-    fg_error = fgTableInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_table.config,
+    fg_error = fgTableInit(ccpars_limits.fg, 
+                           ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                           &ccpars_table.config,
                            ccpars_global.run_delay, reg.iter_period,
                            &ccpars_table.table_pars, &fg_meta);
 
@@ -241,7 +267,9 @@ void ccrefInitSTEPS(void)
 
     // Try to initialise the STEPS
 
-    fg_error = fgTestInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_test.config,
+    fg_error = fgTestInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_test.config,
                           ccpars_global.run_delay, ccpars_test.initial_ref,
                           &ccpars_test.test_pars, &fg_meta);
 
@@ -265,7 +293,9 @@ void ccrefInitSQUARE(void)
 
     // Try to initialise the SQUARE
 
-    fg_error = fgTestInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_test.config,
+    fg_error = fgTestInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_test.config,
                           ccpars_global.run_delay, ccpars_test.initial_ref,
                           &ccpars_test.test_pars, &fg_meta);
 
@@ -289,7 +319,9 @@ void ccrefInitSINE(void)
 
     // Try to initialise the SINE
 
-    fg_error = fgTestInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_test.config,
+    fg_error = fgTestInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_test.config,
                           ccpars_global.run_delay, ccpars_test.initial_ref,
                           &ccpars_test.test_pars, &fg_meta);
 
@@ -313,7 +345,9 @@ void ccrefInitCOSINE(void)
 
     // Try to initialise the COSINE
 
-    fg_error = fgTestInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_test.config,
+    fg_error = fgTestInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_test.config,
                           ccpars_global.run_delay, ccpars_test.initial_ref,
                           &ccpars_test.test_pars, &fg_meta);
 
@@ -337,7 +371,9 @@ void ccrefInitLTRIM(void)
 
     // Try to initialise the LTRIM
 
-    fg_error = fgTrimInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_trim.config,
+    fg_error = fgTrimInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_trim.config,
                           ccpars_global.run_delay, ccpars_trim.initial_ref,
                           &ccpars_trim.trim_pars, &fg_meta);
 
@@ -361,7 +397,9 @@ void ccrefInitCTRIM(void)
 
     // Try to initialise the CTRIM
 
-    fg_error = fgTrimInit(ccpars_limits.fg, FG_LIMITS_POL_NORMAL, &ccpars_trim.config,
+    fg_error = fgTrimInit(ccpars_limits.fg, 
+                          ccrefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto), 
+                          &ccpars_trim.config,
                           ccpars_global.run_delay, ccpars_trim.initial_ref,
                           &ccpars_trim.trim_pars, &fg_meta);
 
@@ -431,8 +469,8 @@ uint32_t ccrefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
     return(fgPlepGen(pars,time,ref));
 }
 /*---------------------------------------------------------------------------------------------------------*/
-enum fg_error ccrefCheckConverterLimits(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                                        uint32_t negative_flag, float ref, float rate, float acceleration)
+enum fg_error ccrefCheckConverterLimits(struct fg_limits *limits, uint32_t invert_limits, 
+                                        float ref, float rate, float acceleration)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     float v_ref;
@@ -468,7 +506,5 @@ enum fg_error ccrefCheckConverterLimits(struct fg_limits *limits, enum fg_limits
 
     return(FG_OK);
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: ccref.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
 

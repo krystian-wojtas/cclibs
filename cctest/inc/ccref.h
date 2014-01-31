@@ -63,8 +63,8 @@ void            ccrefInitCTRIM          (void);
 
 uint32_t        ccrefStartGen           (struct fg_plep_pars *pars, const double *time, float *ref);
 
-enum fg_error   ccrefCheckConverterLimits (struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                                           uint32_t negative_flag, float ref, float rate, float acceleration);
+enum fg_error   ccrefCheckConverterLimits (struct fg_limits *limits, uint32_t invert_limits, 
+                                           float ref, float rate, float acceleration);
 
 // Function meta data
 

@@ -65,6 +65,8 @@ struct ccpars_load
     float                   b_sim_noise;      // Field measurement noise level
     float                   sim_tc_error;     // Error factor for simulation
 
+    uint32_t                pol_swi_auto;     // Auto polarity switch will follow function
+
     // Load related variables
 
     uint32_t    status;                         // Load parameter group status
@@ -92,6 +94,7 @@ CCPARS_LOAD_EXT struct ccpars_load ccpars_load
     0.0,                            // I_SIM_NOISE
     0.0,                            // B_SIM_NOISE
     0.0,                            // SIM_TC_ERROR
+    CC_DISABLED,                    // POL_SWI_AUTO
 }
 #endif
 ;
@@ -120,6 +123,7 @@ CCPARS_LOAD_EXT struct ccpars load_pars_list[]
     { "I_SIM_NOISE",     PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sim_noise     }, 1 },
     { "B_SIM_NOISE",     PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_sim_noise     }, 1 },
     { "SIM_TC_ERROR",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.sim_tc_error    }, 1 },
+    { "POL_SWI_AUTO",    PAR_ENUM,   1, 0, enabled_disabled,   { .i = &ccpars_load.pol_swi_auto    }, 1 },
     { NULL }
 }
 #endif
