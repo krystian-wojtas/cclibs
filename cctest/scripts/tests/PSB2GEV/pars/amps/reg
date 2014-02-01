@@ -1,0 +1,11 @@
+# FGTEST regulation file: PSB2GEV
+
+PERIOD_ITERS      100
+DECIMATE          DISABLED
+CLBW              20
+CLBW2             20
+Z                 0.7
+CLBW3             20
+PURE_DELAY        5.13E-3
+
+# EOF
