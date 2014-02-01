@@ -5,6 +5,9 @@ TRACK_DELAY       80E-3
 CLBW              1.0
 CLBW2             1.0
 Z                 0.5
-PURE_DELAY        20.0E-3
+CLBW3             1.0
+CLBW4             1.0
+PURE_DELAY        35.8E-3
+DECIMATE          ENABLED
 
 # EOF
