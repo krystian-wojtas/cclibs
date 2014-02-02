@@ -493,15 +493,33 @@ enum fg_error ccrefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
     v_ref = i_ref * reg_pars.load_pars.ohms +
             rate  * reg_pars.load_pars.henrys * regLoadCalcSatFactor(&reg_pars.load_pars, i_ref);
 
-    // Calculate converter voltage limits for this current
+    // Check v_ref against voltage limits, inverted if required
 
-    regLimVrefCalc(&ccpars_limits.fg_v_ref, i_ref);
-
-    // Check estimated voltage required against estimated voltage available
-
-    if(v_ref < ccpars_limits.fg_v_ref.min_clip || v_ref > ccpars_limits.fg_v_ref.max_clip)
+    if(invert_limits == 0)
     {
-        return(FG_OUT_OF_VOLTAGE_LIMITS);
+        // Calculate converter voltage limits for this current
+
+        regLimVrefCalc(&ccpars_limits.fg_v_ref, i_ref);
+
+        // Check estimated voltage required against estimated voltage available
+
+        if(v_ref < ccpars_limits.fg_v_ref.min_clip || v_ref > ccpars_limits.fg_v_ref.max_clip)
+        {
+            return(FG_OUT_OF_VOLTAGE_LIMITS);
+        }
+    }
+    else
+    {
+        // Calculate converter voltage limits for the inverted current
+
+        regLimVrefCalc(&ccpars_limits.fg_v_ref, -i_ref);
+
+        // Check estimated voltage required against estimated voltage available using inverted limits
+
+        if(v_ref < -ccpars_limits.fg_v_ref.max_clip || v_ref > -ccpars_limits.fg_v_ref.min_clip)
+        {
+            return(FG_OUT_OF_VOLTAGE_LIMITS);
+        }
     }
 
     return(FG_OK);

@@ -160,9 +160,12 @@ static void PrepareFunction(void)
         {
             ccpars_limits.fg->user_check_limits = ccrefCheckConverterLimits;
 
+            // Initialise v_ref limits for ccrefCheckConverterLimits() which is called when
+            // arming a function to check the voltage available is sufficient
+
             regLimVrefInit(&ccpars_limits.fg_v_ref, ccpars_limits.v.pos, ccpars_limits.v.neg,
                            ccpars_limits.v.rate, ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41, 
-                           ccpars_limits.invert_limits);
+                           CC_DISABLED);
         }
     }
 
