@@ -1,0 +1,6 @@
+# FGTEST TABLE file
+
+TIME    0.0,5.0,20.0
+REF     -100.0, -100.0, -700.0
+
+# EOF
