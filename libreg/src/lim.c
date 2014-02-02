@@ -147,10 +147,9 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, fl
  This function will initialise the field/current reference limits.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float temp_lim;
-    
-    lim_ref->rate_clip = rate_lim * (1.0 + REG_LIM_CLIP);
-    lim_ref->max_clip  = pos_lim  * (1.0 + REG_LIM_CLIP);
+    lim_ref->invert_limits = invert_limits;
+    lim_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
+    lim_ref->max_clip      = pos_lim  * (1.0 + REG_LIM_CLIP);
 
     // Determine if converter is unipolar or bipolar
 
@@ -164,15 +163,6 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, fl
         lim_ref->flags.unipolar = 1;
         lim_ref->min_clip       = 0.0;
     }
-    
-    // If invert_limits flag is set then swap max and min clip limits
-    
-    if(invert_limits != 0)
-    {
-        temp_lim          = lim_ref->max_clip;
-        lim_ref->max_clip = lim_ref->min_clip;
-        lim_ref->min_clip = temp_lim;
-    }   
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
@@ -184,21 +174,14 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
 {
     float delta_i_quadrants41;
 
+    lim_v_ref->invert_limits  = invert_limits;
     lim_v_ref->flags.unipolar = (neg_lim > REG_LIM_V_DIODE);    // Set unipolar flag allowing diode voltage
     lim_v_ref->rate_clip      = rate_lim * (1.0 + REG_LIM_CLIP);
 
-    // Set max/min user clip limits taking into account the invert_limits flag
+    // Set max/min user clip limits
     
-    if(invert_limits == 0)
-    {
-        lim_v_ref->max_clip_user = pos_lim * (1.0 + REG_LIM_CLIP);
-        lim_v_ref->min_clip_user = neg_lim * (1.0 + REG_LIM_CLIP);
-    }
-    else
-    {    
-        lim_v_ref->max_clip_user = -neg_lim * (1.0 + REG_LIM_CLIP);
-        lim_v_ref->min_clip_user = -pos_lim * (1.0 + REG_LIM_CLIP);
-    }
+    lim_v_ref->max_clip_user = pos_lim * (1.0 + REG_LIM_CLIP);
+    lim_v_ref->min_clip_user = neg_lim * (1.0 + REG_LIM_CLIP);
     
     // Quadrants 41 exclusion zone: At least a 1A spread is needed to activate Q41 limiter
 
@@ -288,27 +271,46 @@ float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev
 {
     float       delta_ref;
     float       rate_lim_ref;
+    uint32_t    rate_lim_flag = 0;
 
-    // Clip current reference to absolute limits
+    // Clip reference to absolute limits taking into account the invert flag
 
-    if(ref < lim_ref->min_clip)
+    if(lim_ref->invert_limits == 0)
     {
-        ref = lim_ref->min_clip;
-        lim_ref->flags.clip = 1;
-    }
-    else if(ref > lim_ref->max_clip)
-    {
-        ref = lim_ref->max_clip;
-        lim_ref->flags.clip = 1;
+        if(ref < lim_ref->min_clip)
+        {
+            ref = lim_ref->min_clip;
+            lim_ref->flags.clip = 1;
+        }
+        else if(ref > lim_ref->max_clip)
+        {
+            ref = lim_ref->max_clip;
+            lim_ref->flags.clip = 1;
+        }
+        else
+        {
+            lim_ref->flags.clip = 0;
+        }
     }
     else
     {
-        lim_ref->flags.clip = 0;
+        if(ref > -lim_ref->min_clip)
+        {
+            ref = -lim_ref->min_clip;
+            lim_ref->flags.clip = 1;
+        }
+        else if(ref < -lim_ref->max_clip)
+        {
+            ref = -lim_ref->max_clip;
+            lim_ref->flags.clip = 1;
+        }
+        else
+        {
+            lim_ref->flags.clip = 0;
+        }
     }
 
-    // Clip reference to rate of change limits
-
-    lim_ref->flags.rate = 0;
+    // Clip reference to rate of change limits if rate limit is non-zero
 
     if(lim_ref->rate_clip > 0.0)
     {
@@ -321,7 +323,7 @@ float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev
             if(ref > rate_lim_ref)
             {
                 ref = rate_lim_ref;
-                lim_ref->flags.rate = 1;
+                rate_lim_flag = 1;
             }
         }
         else if(delta_ref < 0.0)            // else if change is negative
@@ -331,10 +333,12 @@ float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev
             if(ref < rate_lim_ref)
             {
                 ref = rate_lim_ref;
-                lim_ref->flags.rate = 1;
+                rate_lim_flag = 1;
             }
         }
     }
+
+    lim_ref->flags.rate = rate_lim_flag;
 
     return(ref);
 }

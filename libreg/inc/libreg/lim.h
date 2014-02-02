@@ -63,6 +63,7 @@ struct reg_lim_meas                                             // Measurement l
 
 struct reg_lim_ref                                              // Reference limits
 {
+    uint32_t                    invert_limits;                  // Invert the limits before use flag (e.g. polarity switch is negative)
     float                       max_clip;                       // Max ref clip limit from max_clip_user or Q41 limit
     float                       min_clip;                       // Min ref clip limit from min_clip_user or Q41 limit
     float                       rate_clip;                      // Abs ref rate clip limit
