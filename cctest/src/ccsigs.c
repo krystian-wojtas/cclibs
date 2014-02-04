@@ -501,9 +501,7 @@ void ccsigsFlot(void)
                 {
                     printf("[%.6f,%.7E],",
                             ccpars_plep.plep_pars.time[iteration_idx],
-                            (ccpars_plep.plep_pars.pos_ramp_flag ?
-                               ccpars_plep.plep_pars.offset - ccpars_plep.plep_pars.ref[iteration_idx] :
-                               ccpars_plep.plep_pars.ref[iteration_idx]));
+                            ccpars_plep.plep_pars.normalisation * ccpars_plep.plep_pars.ref[iteration_idx]);
                 }
                 break;
             }
