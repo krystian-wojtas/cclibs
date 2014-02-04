@@ -92,7 +92,7 @@ extern "C" {
 void     regLimMeasInit         (struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
                                  float low_lim, float zero_lim, uint32_t invert_limits);
 void     regLimMeas             (struct reg_lim_meas *lim_meas, float meas);
-void     regLimRefInit          (struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim, 
+void     regLimRefInit          (struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim,
                                  uint32_t invert_limits);
 void     regLimVrefInit         (struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
                                  float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits);
@@ -102,6 +102,13 @@ float    regLimRef              (struct reg_lim_ref *lim_ref, float period, floa
 #ifdef __cplusplus
 }
 #endif
+
+// inline function definitions
+
+static inline void regLimRefSetInvertLimits(struct reg_lim_ref *lim_ref, uint32_t invert_limits)
+{
+    lim_ref->invert_limits = invert_limits;
+}
 
 #endif // LIBREG_LIM_H
 
