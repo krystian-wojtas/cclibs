@@ -1,10 +1,10 @@
 # FGTEST PPPL file
 
 INITIAL_REF     150.0
-ACCELERATION1    1.0E4,    1.0E3,    -1.0E4
-ACCELERATION2        0,     -100,       0.0
-ACCELERATION3   -1.0E4,   -1.0E4,     1.0E4
-RATE2              1E3,     10E3,    -3.5E3
+ACCELERATION1    1.2E4,    1.2E3,    -1.0E5
+ACCELERATION2        0,    -700,       0.0
+ACCELERATION3   -1.2E4,   -1.0E5,     1.0E5
+RATE2              2E3,    2.3E3,    -4.0E3
 RATE4                0,        0,       0.0
 REF4             350.0,   5800.0,     150.0
 DURATION4          1.0,      0.6,       0.5

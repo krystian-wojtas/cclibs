@@ -2,11 +2,12 @@
 
 PERIOD_ITERS      10
 DECIMATE          DISABLED
-CLBW              100
-CLBW2             100
+TRACK_DELAY       1e-3
+CLBW              50
+CLBW2             50
 Z                 0.7
-CLBW3             100
-CLBW4             100
+CLBW3             50
+CLBW4             50
 PURE_DELAY        2.3E-4
 
 # EOF
