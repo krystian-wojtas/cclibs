@@ -21,7 +21,7 @@
   Notes:    A PLEP can have up to five segments: Parabola - Linear - Expential - Parabola - Parabola
             The exponential is only required when ramping down a 1-quadrant converter.
             The normalised PLEP is always calculated as a negative going function.  If the PLEP is
-            positive then it is reflected around the ref[4] value.  The PLEP can start and end with a
+            positive then it is reflected around zero.  The PLEP can start and end with a
             non-zero rate of change.  The function is defined by ref[] and time[] arrays
             in the parameters structure.  These contain the segment times and normalised values.
 
@@ -41,9 +41,6 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 /*---------------------------------------------------------------------------------------------------------*/
 {
     enum fg_error  fg_error;                     // Limits status
-    uint32_t       i;                            // Loop variable
-    float          inv;                          // Ramp direction factor: +/-1.0
-    float          abs_ref[FG_PLEP_N_SEGS];      // Absolute reference values (i.e. not normalised)
     struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
 
     meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
@@ -51,12 +48,13 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
     // Check parameters are valid
 
     if(config->acceleration <= 0.0 || config->linear_rate <= 0.0 ||
-       (config->exp_tc > 0.0 && config->exp_final >= config->final))
+       (config->exp_tc > 0.0 &&
+       (config->exp_final >= fabs(config->final) || config->final == 0.0 || config->final_rate != 0.0)))
     {
         return(FG_BAD_PARAMETER);
     }
 
-    // Calculate PLEP parameters with zero initial and final rate of change - returns minimum value of PLEP
+    // Calculate PLEP parameters with zero initial rate of change
 
     fgPlepCalc(config, pars, delay, ref, 0.0, meta);
 
@@ -64,27 +62,11 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
     if(limits != NULL)
     {
-        inv = (pars->pos_ramp_flag ? -1.0 : 1.0);
-
-        // Calculate unnormalised reference values for all segments
-
-        for(i = 0 ; i < FG_PLEP_N_SEGS ; i++)
-        {
-            if(pars->pos_ramp_flag)
-            {
-                abs_ref[i] = pars->offset - pars->ref[i + 1];
-            }
-            else
-            {
-                abs_ref[i] = pars->ref[i + 1];
-            }
-        }
-
         // Check limits at the end of the parabolic acceleration (segment 1)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, abs_ref[0],
-                                 (inv * pars->acceleration * (pars->time[1] - pars->time[0])),
-                                 pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[1],
+                                 (pars->normalisation * pars->acceleration * (pars->time[1] - pars->time[0])),
+                                  pars->acceleration, meta)))
         {
             meta->error.index = 1;
             return(fg_error);
@@ -93,9 +75,9 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
         // Check limits at the end of the linear segment (segment 2)
 
         if(pars->time[2] > pars->time[1] &&
-           (fg_error = fgCheckRef(limits, limits_polarity, abs_ref[1],
-                                 inv * pars->linear_rate,
-                                 pars->acceleration, meta)))
+           (fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[2],
+                                  pars->normalisation * pars->linear_rate,
+                                  pars->acceleration, meta)))
         {
             meta->error.index = 2;
             return(fg_error);
@@ -103,9 +85,9 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
         // Check limits at the end of the exponential decay (segment 3)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, abs_ref[2],
-                                 (inv * pars->acceleration * (pars->time[4] - pars->time[3])),
-                                 pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[3],
+                                 (pars->normalisation * pars->acceleration * (pars->time[4] - pars->time[3])),
+                                  pars->acceleration, meta)))
         {
             meta->error.index = 3;
             return(fg_error);
@@ -113,8 +95,8 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
         // Check limits at the end of the parabolic deceleration (segment 4)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, abs_ref[3],
-                                 0.0, pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[4],
+                                  0.0, pars->acceleration, meta)))
         {
             meta->error.index = 4;
             return(fg_error);
@@ -122,7 +104,7 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
         // Check limits at the end of the parabolic acceleration (segment 5)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, abs_ref[4],
+        if((fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[5],
                                  config->final_rate, pars->acceleration, meta)))
         {
             meta->error.index = 5;
@@ -142,7 +124,7 @@ uint32_t fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
   PLEP function, except for the point at index 0 which is used slightly differently (see details below).
 
   Finally, the coordinates are defined for a normalised, descending, PLEP function. The reference must be
-  adjusted (de-normalised) in fgPlepGen if the PLEP is ascending, namely if pars->pos_ramp_flag == TRUE.
+  adjusted (de-normalised) in fgPlepGen if the PLEP is ascending - this simply involves flipping the sign.
 
    - pars->time[0], pars->ref[0]: TOP of the first parabola (NOT the beginning of the first parabola);
    - pars->time[1], pars->ref[1]: End of the first parabola;
@@ -153,15 +135,11 @@ uint32_t fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
 
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t    ref_running_f = 1;         // reference runing flag is the return value
+    uint32_t    ref_running_f = 1;         // reference running flag is the return value
     float       r;
     double      ref_time;                  // Time within the segment in seconds
 
     // Pre-acceleration coast - only possible if initial rate is zero
-
-    // NB: In the common case where time == 0.0, pars->delay == 0.0 and the initial rate is != 0.0 then the
-    //     reference must be calculated based on the 1st parabola and not the plateau below. This is the
-    //     reason why a strict comparison operator is used.
 
     if(*time < pars->delay)
     {
@@ -219,16 +197,9 @@ uint32_t fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
         ref_running_f = 0;
     }
 
-    // Invert if ramp is positive
+    // De-normalise the result (reflect about zero for ascending PLEPs)
 
-    if(!pars->pos_ramp_flag)
-    {
-        *ref = r;
-    }
-    else
-    {
-        *ref = pars->offset - r;
-    }
+    *ref = pars->normalisation * r;
 
     return(ref_running_f);
 }
@@ -244,7 +215,7 @@ void  fgPlepCalc(struct fg_plep_config *config,
   to calculate the PLEP coefficients for an already moving reference.
 
   The reference scale is normalised if the PLEP is ascending.  This reflects the function about the 
-  ref[4] reference value to make the calculated PLEP always descending.
+  zero to make the calculated PLEP always descending.
 
   Please refer to the comments in function fgPlepGen for information regarding the contents of the output
   pars structure, and in particular the usage of pars->time[i], pars->ref[i] for all indexes.
@@ -259,8 +230,6 @@ void  fgPlepCalc(struct fg_plep_config *config,
     uint32_t    par_b4_exp_flag;        // Decelerating parabola before Exponential flag
     uint32_t    exp_b4_lin_flag;        // Exponential before Linear flag
     uint32_t    exp_f;                  // Exponential segment present flag
-    float       ref;                    // Unnormalised reference
-    float       norm_init_ref;          // Normalised initial reference
     float       delta_ref;              // Initial ref minus final ref
     float       min_exp_final;          // Minimum allowable exp_final
     float       exp_rate;               // Initial rate of change for exponential segment
@@ -297,29 +266,33 @@ void  fgPlepCalc(struct fg_plep_config *config,
     delta_time[5] = pars->final_rate / pars->final_acc;
     pars->ref[4]  = config->final - 0.5 * pars->final_rate * delta_time[5];
 
-    // Normalise if PLEP is ascending
+    // Allow exponential segment if all conditions are satisfied :
+
+    exp_f = (pars->final_rate == 0.0              &&     // The final rate is zero
+             init_ref * config->final >= 0.0      &&     // The PLEP doesn't cross zero
+             fabs(init_ref) > fabs(config->final) &&     // The magnitude of the current is decreasing
+             config->exp_tc > 0.0);                      // The exponential time constant is greater than zero
+
+    // Normalise if PLEP is ascending by reflecting across ref = 0
 
     if(delta_ref >= 0.0)                       // Descending PLEP
     {
-        exp_f               = (config->exp_tc > 0.0);   // Exponential segment enabled if exp_tc > 0
-        pars->pos_ramp_flag = 0;
-        norm_init_ref       = init_ref;                         // Normalised initial reference
-        pars->ref[5]        = config->final;                    // Normalised final reference
+        pars->normalisation = 1.0;
+        pars->ref[5]        = config->final;             // Normalised final reference
     }
     else                                        // Ascending PLEP
     {
-        exp_f               = 0;                        // No exponential allowed for ascending PLEP
-        pars->pos_ramp_flag = 1;
-        pars->offset        = 2.0 * pars->ref[4];
-        norm_init_ref       = pars->offset - init_ref;          // Normalised initial reference
-        pars->ref[5]        = pars->offset - config->final;     // Normalised final reference
-        init_rate           = -init_rate;                       // Normalised initial rate
-        delta_ref           = -delta_ref;                       // Normalised delta
-        pars->final_rate    = -pars->final_rate;                // Normalised final rate
-        pars->final_acc     = -pars->final_acc;                 // Normalised final acceleration
+        pars->normalisation = -1.0;
+        init_ref            = -init_ref;                 // Normalised initial reference
+        init_rate           = -init_rate;                // Normalised initial rate
+        delta_ref           = -delta_ref;                // Normalised delta
+        pars->ref[4]        = -pars->ref[4];             // Normalised penultimate reference
+        pars->ref[5]        = -config->final;            // Normalised final reference
+        pars->final_rate    = -pars->final_rate;         // Normalised final rate
+        pars->final_acc     = -pars->final_acc;          // Normalised final acceleration
     }
 
-    // Prepare for exponential segment
+    // Prepare for exponential section if required
 
     if(exp_f)
     {
@@ -336,9 +309,13 @@ void  fgPlepCalc(struct fg_plep_config *config,
             pars->exp_final = config->exp_final;
         }
 
-        exp_rate = (pars->exp_final - norm_init_ref) * pars->inv_exp_tc;  // Calc rate at start of exp segment
+        // Calculate rate at start of exp segment
 
-        if(exp_rate < pars->linear_rate)                // Clip linear rate of change to exp limit
+        exp_rate = (pars->exp_final - init_ref) * pars->inv_exp_tc;
+
+        // Clip linear rate of change to exp limit
+
+        if(exp_rate < pars->linear_rate)
         {
             pars->linear_rate = exp_rate;
         }
@@ -346,7 +323,7 @@ void  fgPlepCalc(struct fg_plep_config *config,
 
     // Clip actual rate of change to rate limit (just in case)
 
-    if(init_rate < -pars->linear_rate)                          // Clip initial rate to maximum value
+    if(init_rate < -pars->linear_rate)
     {
         init_rate = -pars->linear_rate;
     }
@@ -361,7 +338,7 @@ void  fgPlepCalc(struct fg_plep_config *config,
 
         delta_time[0] = -init_rate * inv_acc;
 
-        pars->ref[0] = norm_init_ref - 0.5 * init_rate * init_rate * inv_acc;
+        pars->ref[0] = init_ref - 0.5 * init_rate * init_rate * inv_acc;
 
         dt1_squared = inv_acc * (pars->ref[4] - pars->ref[0]);
 
@@ -386,7 +363,7 @@ void  fgPlepCalc(struct fg_plep_config *config,
     // Delta time and reference of the TOP of the first parabola (NB: the delta time can be negative)
 
     delta_time[0] = -init_rate * inv_acc;
-    pars->ref[0]  = norm_init_ref - 0.5 * init_rate * init_rate * inv_acc;
+    pars->ref[0]  = init_ref - 0.5 * init_rate * init_rate * inv_acc;
 
     // Delta times between the TOP of the first parabola and either the start of the second parabola (P-P, P-E-P cases)
     // or the start of the linear segment (P-L-P, P-L-E-P cases)
@@ -471,24 +448,14 @@ void  fgPlepCalc(struct fg_plep_config *config,
 
     end:        // From goto end;
 
-    meta->range.max = meta->range.min = init_ref;
     ref_time = pars->delay;
 
     for(i = 0 ; i <= FG_PLEP_N_SEGS ; i++)
     {
-        ref_time += delta_time[i];
+        ref_time     += delta_time[i];
         pars->time[i] = ref_time;
 
-        if(pars->pos_ramp_flag)
-        {
-            ref = pars->offset - pars->ref[i];
-        }
-        else
-        {
-            ref = pars->ref[i];
-        }
-
-        fgSetMinMax(meta, ref);
+        fgSetMinMax(meta, pars->normalisation * pars->ref[i]);
     }
 
     // Complete meta data
