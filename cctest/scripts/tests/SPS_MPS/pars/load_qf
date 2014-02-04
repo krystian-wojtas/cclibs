@@ -1,0 +1,10 @@
+# FGTEST load file: PSB main focussing quads
+
+OHMS_SER        0.00
+OHMS_PAR        1.0E8
+OHMS_MAG        0.086
+HENRYS          0.009
+I_MEAS_DELAY    1.3E-4
+SIM_TC_ERROR    0.1
+
+# EOF
