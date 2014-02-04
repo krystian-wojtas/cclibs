@@ -22,11 +22,11 @@
 
   Notes:    PLEP = Parabolic - Linear - Exponential - Parabolic function
 
-            The PLEP function is special amongst all the functions in libfg because it can be initialised
-            with a non-zero initial rate of change.  To do this it has the function fgPlepCalc() which
-            accepts an initial ref and initial and final rate of change of ref. If the final rate of
-            change is not zero, then this adds a fifth parabolic segment.  This can be an extension of
-            the fourth parabola, or it can have the opposite acceleration.
+            The PLEP function is special because it can be initialised with a non-zero initial rate of
+            change.  To do this it has the function fgPlepCalc() which accepts an initial ref and initial
+            rate of change of ref. The final ref can also have a non-zero rate of change. If the final
+            rate of change is not zero, then this adds a fifth parabolic segment.  This can be an
+            extension of the fourth parabola, or it can have the opposite acceleration.
 \*---------------------------------------------------------------------------------------------------------*/
 
 #ifndef LIBFG_PLEP_H
@@ -47,12 +47,12 @@ struct fg_plep_config                       // PLEP function configuration
     float       linear_rate;                // Maximum absolute linear rate of the PLEP segments (must be strictly positive)
     float       final_rate;                 // Final rate of change
     float       exp_tc;                     // Exponential time constant
-    float       exp_final;                  // End reference of exponential segment
+    float       exp_final;                  // End reference of exponential segment (can be zero)
 };
 
 struct fg_plep_pars                         // PLEP function parameters
 {
-    uint32_t    pos_ramp_flag;              // Positive ramp flag (PLEP must be inverted for positive ramps)
+    float       normalisation;              // 1.0 for descending ramps, -1.0 for ascending ramps
     float       delay;                      // Time before start of function (s)
     float       acceleration;               // Parabolic acceleration/deceleration
     float       final_acc;                  // Normalised final parabolic acceleration
@@ -63,7 +63,6 @@ struct fg_plep_pars                         // PLEP function parameters
     float       exp_final;                  // End reference of exponential segment
     float       ref[FG_PLEP_N_SEGS+1];      // End of segment normalised references
     float       time[FG_PLEP_N_SEGS+1];     // End of segment times
-    float       offset;                     // Reference offset = 2.ref[4]
 };
 
 #ifdef __cplusplus
