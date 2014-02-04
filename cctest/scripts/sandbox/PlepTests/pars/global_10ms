@@ -1,0 +1,8 @@
+# FGTEST global control file for function generation tests with normal time
+
+RUN_DELAY       1.0
+STOP_DELAY      1.0
+ITER_PERIOD     1.0E-2
+UNITS           VOLTS
+
+# EOF
