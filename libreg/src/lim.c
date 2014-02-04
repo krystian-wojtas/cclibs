@@ -212,6 +212,13 @@ void regLimVrefCalc(struct reg_lim_ref *lim_v_ref, float i_meas)
 {
     float   v_lim;
 
+    // Invert i_meas when limits are inverted
+
+    if(lim_v_ref->invert_limits != 0)
+    {
+        i_meas = -i_meas;
+    }
+
     // Calculate max positive voltage (Quadrants 41)
 
     lim_v_ref->max_clip = lim_v_ref->max_clip_user;
