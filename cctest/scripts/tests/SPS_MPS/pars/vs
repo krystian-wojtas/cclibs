@@ -1,9 +1,9 @@
 # FGTEST voltage source model file : PSB2GEV
 
-V_REF_DELAY   1.0E-4
-V_MEAS_DELAY  1.3E-4
+V_REF_DELAY   1.0E-3
+V_MEAS_DELAY  1.3E-3
 
-BANDWIDTH     1000
+BANDWIDTH     10000
 TAU_ZERO      0.0
 Z             0.9
 
