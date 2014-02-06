@@ -265,6 +265,10 @@ static void PrepareSimulation(void)
         regDelayInitVars(&reg.v_sim.delay, reg.v_meas.unfiltered);
         regDelayInitVars(&reg.i_sim.delay, reg.i_meas.unfiltered);
         regDelayInitVars(&reg.b_sim.delay, reg.b_meas.unfiltered);
+
+        // Run first simulation to initialise measurement variables
+
+        regSimulate(&reg, &reg_pars, 0.0);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
