@@ -44,7 +44,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     // Check that parameters are valid
 
-    if(config->acceleration <= 0.0 || config->deceleration <= 0.0)
+    if(config->acceleration == 0.0 || config->deceleration == 0.0)
     {
         return(FG_BAD_PARAMETER);
     }
@@ -281,56 +281,28 @@ void fgRampCalc(struct fg_ramp_config *config,
     float       overshoot_rate_limit;   // Limiting initial rate of change before overshoot occurs
     float       seg_ratio;              // Ratio between the two segments
 
-    // Prepare variables
+    // Prepare variables assuming ascending (positive) ramp
 
     pars->delay          = delay;
-    pars->linear_rate    = config->linear_rate;
+    pars->pos_ramp_flag =  1;
+    pars->acceleration  =  fabs(config->acceleration);
+    pars->deceleration  = -fabs(config->deceleration);
+    pars->linear_rate    = fabs(config->linear_rate);
     pars->prev_ramp_ref  = pars->prev_returned_ref = init_ref;
     pars->iteration_idx  = 0;
     delta_ref            = config->final - init_ref;
     overshoot_rate_limit = sqrt(2.0 * config->deceleration * fabs(delta_ref));
 
-    meta->range.min = meta->range.max = init_ref;
+    // Set up accelerations according to ramp direction and possible overshoot
 
-    // Set up accelerations according to ramp direction
-
-    if(delta_ref >= 0.0)
+    if((delta_ref >= 0.0 && init_rate >   overshoot_rate_limit) ||
+       (delta_ref <  0.0 && init_rate >= -overshoot_rate_limit))
     {
-        // Positive (rising) ramp
-
-        if(init_rate > overshoot_rate_limit)
-        {
-            // Positive ramp overshoots so becomes negative
-
-            pars->pos_ramp_flag =  0;
-            pars->acceleration  = -config->deceleration;
-            pars->deceleration  =  config->deceleration;
-        }
-        else
-        {
-            pars->pos_ramp_flag =  1;
-            pars->acceleration  =  config->acceleration;
-            pars->deceleration  = -config->deceleration;
-        }
-    }
-    else
-    {                                        
-        // Negative (falling) ramp
+        // Descending (negative) ramp
         
-        if(init_rate < -overshoot_rate_limit)
-        {
-            // Negative ramp overshoots so becomes positive
-
-            pars->pos_ramp_flag =  1;
-            pars->acceleration  =  config->deceleration;
-            pars->deceleration  = -config->deceleration;
-        }
-        else
-        {
             pars->pos_ramp_flag =  0;
-            pars->acceleration  = -config->acceleration;
-            pars->deceleration  =  config->deceleration;
-        }
+            pars->acceleration  = -pars->acceleration;
+            pars->deceleration  = -pars->deceleration;
     }
 
     // Set time_shift and ref0 and delta_ref to take into account the initial rate of change

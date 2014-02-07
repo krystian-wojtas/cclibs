@@ -47,9 +47,8 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
     // Check parameters are valid
 
-    if(config->acceleration <= 0.0 || config->linear_rate <= 0.0 ||
-       (config->exp_tc > 0.0 &&
-       (config->exp_final >= fabs(config->final) || config->final == 0.0 || config->final_rate != 0.0)))
+    if(config->acceleration == 0.0 || config->linear_rate == 0.0 || (config->exp_tc > 0.0 &&
+       (config->final == 0.0 || config->final_rate != 0.0 || fabs(config->exp_final) >= fabs(config->final))))
     {
         return(FG_BAD_PARAMETER);
     }
@@ -242,8 +241,8 @@ void  fgPlepCalc(struct fg_plep_config *config,
 
     // Prepare variables
 
-    pars->acceleration = config->acceleration;
-    pars->linear_rate  = config->linear_rate;
+    pars->acceleration = fabs(config->acceleration);
+    pars->linear_rate  = fabs(config->linear_rate);
     pars->final_rate   = config->final_rate;
     pars->delay        = delay;
 
