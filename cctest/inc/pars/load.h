@@ -61,8 +61,8 @@ struct ccpars_load
     float                   perturb_volts;    // Open loop voltage perturbation
     float                   perturb_time;     // Time for open loop voltage perturbation
 
-    float                   i_sim_noise;      // Current measurement noise level
-    float                   b_sim_noise;      // Field measurement noise level
+    float                   i_sim_noise_pp;   // Current measurement noise level
+    float                   b_sim_noise_pp;   // Field measurement noise level
     float                   sim_tc_error;     // Error factor for simulation
 
     uint32_t                pol_swi_auto;     // Auto polarity switch will follow function
@@ -91,8 +91,8 @@ CCPARS_LOAD_EXT struct ccpars_load ccpars_load
     {  { 1.0 }, { 1.0 }  },         // B_MEAS_NUM, B_MEAS_DEN: Default field measurement IIR filter
     0.0,                            // PERTURB_VOLTS
     0.0,                            // PERTURB_TIME
-    0.0,                            // I_SIM_NOISE
-    0.0,                            // B_SIM_NOISE
+    0.0,                            // I_SIM_NOISE_PP
+    0.0,                            // B_SIM_NOISE_PP
     0.0,                            // SIM_TC_ERROR
     CC_DISABLED,                    // POL_SWI_AUTO
 }
@@ -120,8 +120,8 @@ CCPARS_LOAD_EXT struct ccpars load_pars_list[]
     { "B_MEAS_DEN",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.b_meas_pars.den }, 1 },
     { "PERTURB_VOLTS",   PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.perturb_volts   }, 1 },
     { "PERTURB_TIME",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.perturb_time    }, 1 },
-    { "I_SIM_NOISE",     PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sim_noise     }, 1 },
-    { "B_SIM_NOISE",     PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_sim_noise     }, 1 },
+    { "I_SIM_NOISE_PP",  PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sim_noise_pp  }, 1 },
+    { "B_SIM_NOISE_PP",  PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_sim_noise_pp  }, 1 },
     { "SIM_TC_ERROR",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.sim_tc_error    }, 1 },
     { "POL_SWI_AUTO",    PAR_ENUM,   1, 0, enabled_disabled,   { .i = &ccpars_load.pol_swi_auto    }, 1 },
     { NULL }

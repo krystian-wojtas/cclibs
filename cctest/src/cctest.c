@@ -212,7 +212,7 @@ static void PrepareSimulation(void)
 
         regSetSimLoad(&reg, &reg_pars, ccpars_global.units, ccpars_load.sim_tc_error);
 
-        regSetMeasNoise(&reg, ccpars_vs.v_sim_noise, ccpars_load.i_sim_noise, ccpars_load.b_sim_noise);
+        regSetMeasNoise(&reg, ccpars_vs.v_sim_noise_pp, ccpars_load.i_sim_noise_pp, ccpars_load.b_sim_noise_pp);
 
         // Initialise voltage source model history to allow simulation to start with a non-zero voltage
         // This is not needed in a real converter controller because the voltage always starts at zero
