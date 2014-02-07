@@ -353,9 +353,10 @@ float regSimVs(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float
     return(v_load);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regSimNoise(float noise_amplitude)
+float regSimNoise(float noise_pp)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function uses a simple pseudo random number generator to generate a simple noise signal.
+  This function uses a simple pseudo random number generator to generate a simple noise signal with 
+  peak-peak amplitude specifed by noise_pp.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     static uint32_t  noise_random_generator = 0x8E35B19C;    // Use fixed initial seed
@@ -363,7 +364,7 @@ float regSimNoise(float noise_amplitude)
     noise_random_generator = (noise_random_generator << 16) +
                            (((noise_random_generator >> 12) ^ (noise_random_generator >> 15)) & 0x0000FFFF);
 
-    return(noise_amplitude * (float)((int32_t)noise_random_generator) / 2147483648.0);
+    return(noise_pp * (float)((int32_t)noise_random_generator) / 4294967296.0);
 }
 // EOF
 
