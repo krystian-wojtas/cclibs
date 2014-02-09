@@ -544,6 +544,18 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
     regLimVrefCalc(&reg->lim_v_ref, reg->i_meas.unfiltered);
 
+    // Filter the measurements
+
+    regMeasFilter(&reg_pars->v_meas, &reg->v_meas);
+    regMeasFilter(&reg_pars->i_meas, &reg->i_meas);
+    regMeasFilter(&reg_pars->b_meas, &reg->b_meas);
+
+    // Decimate the filtered measurements if required
+
+    regDecimateMeas(reg, &reg->v_meas, 0);
+    regDecimateMeas(reg, &reg->i_meas, (reg->mode == REG_CURRENT && reg_pars->i_rst_pars.decimate_flag));
+    regDecimateMeas(reg, &reg->b_meas, (reg->mode == REG_FIELD   && reg_pars->b_rst_pars.decimate_flag));
+
     // If open-loop (voltage regulation) mode - apply voltage ref limits
 
     if(reg->mode == REG_VOLTAGE)
@@ -577,18 +589,6 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
     }
     else  // else closed-loop on current or field
     {
-        // Filter the measurements
-
-        regMeasFilter(&reg_pars->v_meas, &reg->v_meas);
-        regMeasFilter(&reg_pars->i_meas, &reg->i_meas);
-        regMeasFilter(&reg_pars->b_meas, &reg->b_meas);
-
-        // Decimate the filtered measurements if required
-
-        regDecimateMeas(reg, &reg->v_meas, 0);
-        regDecimateMeas(reg, &reg->i_meas, (reg->mode == REG_CURRENT && reg_pars->i_rst_pars.decimate_flag));
-        regDecimateMeas(reg, &reg->b_meas, (reg->mode == REG_FIELD   && reg_pars->b_rst_pars.decimate_flag));
-
         // Regulate current or field at the regulation period
 
         if(reg->iteration_counter == 0)
