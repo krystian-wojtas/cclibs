@@ -17,6 +17,12 @@ source ../../run_header.sh
 "$cctest" -o $output_format -g pars/amps/global  -f RAMP -d functions/amps/ramp_down  -m pars/amps/limits_low  -l pars/load -r pars/amps/reg -s pars/vs > "$outpath/amps-ramp_down_low.$file_type" 
 ) || exit 1
 
+# Filter Tests
+
+(
+"$cctest" -o $output_format -g pars/volts/global_heading -f RAMP -d functions/volts/ramp_heading -m pars/volts/limits_high -l pars/load -s pars/vs_filter > "$outpath/volts-ramp_up_filter.$file_type"   
+) || exit 1
+
 # RAMP abort tests
 
 (

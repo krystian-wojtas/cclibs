@@ -1,0 +1,9 @@
+# CCTEST RAMP file for positive ramp
+
+INITIAL_REF     1.0
+FINAL_REF       2.0
+ACCELERATION    100.0
+DECELERATION    100.0
+LINEAR_RATE      10.0
+
+# EOF
