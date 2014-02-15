@@ -654,11 +654,11 @@ void ccparsGenerateReport(void)
 
         ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:i_meas.num0_correction",
                      reg_pars.i_meas.num0_correction);
-        ccparsPrintf("%-*s% u\n",     PARS_INDENT, "LOAD:i_meas.order",
+        ccparsPrintf("%-*s% d\n",     PARS_INDENT, "LOAD:i_meas.order",
                      reg_pars.i_meas.order);
         ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:b_meas.num0_correction",
                      reg_pars.b_meas.num0_correction);
-        ccparsPrintf("%-*s% u\n\n",   PARS_INDENT, "LOAD:b_meas.order",
+        ccparsPrintf("%-*s% d\n\n",   PARS_INDENT, "LOAD:b_meas.order",
                      reg_pars.b_meas.order);
 
         // Report internally calculated load parameters
@@ -754,7 +754,7 @@ void ccparsGenerateReport(void)
 
         ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "VS:v_meas.num0_correction",
                      reg_pars.v_meas.num0_correction);
-        ccparsPrintf("%-*s% u\n\n",   PARS_INDENT, "VS:v_meas.order",
+        ccparsPrintf("%-*s% d\n\n",   PARS_INDENT, "VS:v_meas.order",
                      reg_pars.v_meas.order);
 
         // Report internally calculated parameters
