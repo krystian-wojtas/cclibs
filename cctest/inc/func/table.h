@@ -37,7 +37,7 @@
 
 // Table data structure
 
-#define TABLE_LEN       1000
+#define TABLE_LEN       10000
 
 struct ccpars_table
 {
