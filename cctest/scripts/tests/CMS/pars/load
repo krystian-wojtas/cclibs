@@ -1,0 +1,14 @@
+# FGTEST load file: SPS Main dipoles
+
+OHMS_SER        1.0E-4
+OHMS_PAR        4.4
+OHMS_MAG        0.0
+HENRYS          14.0
+HENRYS_SAT      14.0
+#I_SAT_START     4000.0
+#I_SAT_END       6000.0
+I_MEAS_DELAY    0.0
+I_SIM_NOISE_PP  0.0
+SIM_TC_ERROR    0.1
+
+# EOF
