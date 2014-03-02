@@ -3,10 +3,10 @@
 PERIOD_ITERS      3
 DECIMATE          ENABLED
 TRACK_DELAY       1e-3
-CLBW              50
-CLBW2             50
-Z                 0.7
-CLBW3             50
+CLBW              40
+CLBW2             40
+Z                 0.5
+CLBW3             40
 PURE_DELAY        2.3E-3
 
 # EOF
