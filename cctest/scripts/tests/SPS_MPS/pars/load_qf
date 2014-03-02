@@ -2,9 +2,13 @@
 
 OHMS_SER        0.00
 OHMS_PAR        1.0E8
-OHMS_MAG        0.086
-HENRYS          0.009
-I_MEAS_DELAY    1.3E-4
+OHMS_MAG        1.6
+HENRYS          1.93
+HENRYS_SAT      1.00
+I_SAT_START     1250.0
+I_SAT_END       2500.0
+I_MEAS_DELAY    1.3E-3
+I_SIM_NOISE_PP  0.025
 SIM_TC_ERROR    0.1
 
 # EOF
