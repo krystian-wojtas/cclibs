@@ -50,23 +50,19 @@
                                                                 // ...if this is changed, the code in reg.c must be modified
 // Measurement structures
 
-struct reg_meas_pars                                            // Measurement filter parameters
+struct reg_meas_filter                                          // Measurement filter parameters and variables
 {
-    float                       num  [REG_N_IIR_COEFFS];        // Numerator coefficients b0, b1, b2, ...
-    float                       den  [REG_N_IIR_COEFFS];        // Denominator coefficients a0, a2, a2, ...
-    float                       num0_correction;                // Sum(den) - Sum(num) to compensate single precision floats
-    uint32_t                    order;                          // Filter order (number of coefficients - 1)
-};
-
-struct reg_meas_vars                                            // Measurement filter variables
-{
-    uint32_t                    iir_latest_index;               // Index in IIR history of latest sample
+    uint32_t                    run_flag;                       // Filter running flag - can block filter when being modified
+    uint32_t                    fir_order[2];                   // Filter order for two cascaded stages
+    uint32_t                    fir_index[2];                   // Index to oldest sample in buffer
+    int32_t                     accumulator[2];                 // Filter accumulator for two cascaded stages
+    int32_t                    *buf[2];                         // Pointer to circular buffers for two cascaded stages
     float                       unfiltered;                     // Unfiltered measurement at iteration period
-    float                       iir_in [REG_N_IIR_COEFFS];      // IIR filtered measurement at iteration period
-    float                       iir_out[REG_N_IIR_COEFFS];      // IIR filtered measurement at iteration period
-    float                       filtered;                       // IIR filtered measurement at iteration period
-    float                       accumulator;                    // Accumulator used to produce decimated value
-    float                       regulated;                      // Measurement used for closed-loop regulation (raw or decimated)
+    float                       filtered;                       // Filtered measurement at iteration period
+    float                       max_value;                      // Maximum 
+    float                       float_to_integer;               // Factor to convert unfiltered measurement to integer
+    float                       integer_to_float;               // Factor to converter integer to filtered measurement
+    float                       delay_iters;                    // Filter delay in iterations
 };
 
 struct reg_sim_meas                                             // Measurement simulation structure
@@ -87,11 +83,14 @@ struct reg_converter                                            // Global conver
     uint32_t                    cl_period_iters;                // Closed loop regulation period (in iterations)
     uint32_t                    iteration_counter;              // Iteration counter
 
-    // Measured values - real or simulated
+    // Unfiltered measurements - real or simulated
+    
+    float                       v_meas;                         // Voltage measurement
+    
+    // Filtered measurements - real or simulated
 
-    struct reg_meas_vars        v_meas;                         // Voltage measurement
-    struct reg_meas_vars        i_meas;                         // Current measurement
-    struct reg_meas_vars        b_meas;                         // Field measurement
+    struct reg_meas_filter      i_meas;                         // Current measurement
+    struct reg_meas_filter      b_meas;                         // Field measurement
 
     // Reference and regulation variables
 
@@ -155,9 +154,6 @@ struct reg_converter_pars                                       // Global conver
     struct reg_sim_vs_pars      sim_vs_pars;                    // Voltage source simulation parameters
     struct reg_load_pars        load_pars;                      // Circuit load model for regulation
     struct reg_sim_load_pars    sim_load_pars;                  // Circuit load model for simulation
-    struct reg_meas_pars        v_meas;                         // Voltage measurement parameters
-    struct reg_meas_pars        i_meas;                         // Current measurement parameters
-    struct reg_meas_pars        b_meas;                         // Field measurement parameters
 };
 
 #ifdef __cplusplus
@@ -166,9 +162,10 @@ extern "C" {
 
 // Converter regulation functions
 
-void     regMeasFilterInit       (struct reg_meas_pars *pars, struct reg_meas_vars *vars, float  num[REG_N_IIR_COEFFS], float den[REG_N_IIR_COEFFS]);
-void     regMeasFilterInitHistory(struct reg_meas_vars *vars, float init_meas);
-float    regCalcErrDelay         (struct reg_rst_pars *rst_pars);
+void     regMeasFilterInitBuffer (struct reg_meas_filter *filter, int32_t *buf);
+void     regMeasFilterInitOrders (struct reg_meas_filter *filter, uint32_t fir_order[2]);
+void     regMeasFilterInitMax    (struct reg_meas_filter *filter, float pos, float neg);
+void     regMeasFilterInitHistory(struct reg_meas_filter *filter);
 void     regSetSimLoad           (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
                                   enum reg_mode reg_mode, float sim_load_tc_error);
 void     regSetLoad              (float ohms_ser, float ohms_par, float ohms_mag, float henrys,
