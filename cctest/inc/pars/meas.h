@@ -40,29 +40,29 @@ struct ccpars_meas
 {
     // Meas parameters
 
-    float                   v_meas_delay;     // Voltage measurement delay
-    float                   i_meas_delay;     // Current measurement delay
-    float                   b_meas_delay;     // Field measurement delay
+    float                   v_delay_iters;    // Voltage measurement delay in iterations
+    float                   i_delay_iters;    // Current measurement delay in iterations
+    float                   b_delay_iters;    // Field   measurement delay in iterations
 
     struct reg_meas_pars    i_meas_pars;      // Current measurement IIR filter parameters
     struct reg_meas_pars    b_meas_pars;      // Field measurement IIR filter parameters
 
-    float                   v_sim_noise_pp;   // Simulated voltage measurement noise level
-    float                   i_sim_noise_pp;   // Current measurement noise level
-    float                   b_sim_noise_pp;   // Field measurement noise level
+    float                   v_sim_noise_pp;   // Simulated voltage measurement peak-peak noise level
+    float                   i_sim_noise_pp;   // Simulated current measurement peak-peak noise level
+    float                   b_sim_noise_pp;   // Simulated field   measurement peak-peak noise level
 };
 
 CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
 #ifdef GLOBALS
 = {
-    0.0,                            // V_MEAS_DELAY
-    0.0,                            // I_MEAS_DELAY
-    0.0,                            // B_MEAS_DELAY
-    {  { 1.0 }, { 1.0 }  },         // I_MEAS_NUM, I_MEAS_DEN: Default current measurement IIR filter
-    {  { 1.0 }, { 1.0 }  },         // B_MEAS_NUM, B_MEAS_DEN: Default field measurement IIR filter
-    0.0,                            // I_SIM_NOISE_PP
-    0.0,                            // I_SIM_NOISE_PP
-    0.0,                            // B_SIM_NOISE_PP
+    0.0,                                      // V_DELAY_ITERS
+    0.0,                                      // I_DELAY_ITERS
+    0.0,                                      // B_DELAY_ITERS
+    {  { 1.0 }, { 1.0 }  },                   // I_MEAS_NUM, I_MEAS_DEN: Default current measurement IIR filter
+    {  { 1.0 }, { 1.0 }  },                   // B_MEAS_NUM, B_MEAS_DEN: Default field measurement IIR filter
+    0.0,                                      // I_SIM_NOISE_PP
+    0.0,                                      // I_SIM_NOISE_PP
+    0.0,                                      // B_SIM_NOISE_PP
 }
 #endif
 ;
@@ -72,9 +72,9 @@ CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
 CCPARS_MEAS_EXT struct ccpars meas_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"      TYPE,max_vals,min_vals,*enum,  *value,                       num_defaults
-    { "V_MEAS_DELAY",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_meas.v_meas_delay    }, 1 },
-    { "I_MEAS_DELAY",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_meas.i_meas_delay    }, 1 },
-    { "B_MEAS_DELAY",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_meas.b_meas_delay    }, 1 },
+    { "V_DELAY_ITERS",   PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_meas.v_delay_iters   }, 1 },
+    { "I_DELAY_ITERS",   PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_meas.i_delay_iters   }, 1 },
+    { "B_DELAY_ITERS",   PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_meas.b_delay_iters   }, 1 },
     { "I_MEAS_NUM",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_meas.i_meas_pars.num }, 1 },
     { "I_MEAS_DEN",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_meas.i_meas_pars.den }, 1 },
     { "B_MEAS_NUM",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_meas.b_meas_pars.num }, 1 },

@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the voltage source parameters file (-s vs_file)
+  Purpose:  Structure for the voltage source parameters group
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -41,25 +41,25 @@ struct ccpars_vs
 {
     // Voltage source file parameter
 
-    float                       v_ref_delay;      // Voltage source control delay
-    float                       bandwidth;        // Voltage source bandwidth
-    float                       z;                // Damping factor
-    float                       tau_zero;         // Time constant of zero
-    struct reg_sim_vs_pars      sim_vs_pars;      // Voltage source simulation model
+    float                       v_ref_delay_iters;  // Voltage source control delay in iterations
+    float                       bandwidth;          // Voltage source bandwidth
+    float                       z;                  // Damping factor
+    float                       tau_zero;           // Time constant of zero
+    struct reg_sim_vs_pars      sim_vs_pars;        // Voltage source simulation model
 
     // Voltage source related variables
 
-    uint32_t                    trip_flag;        // Voltage source tripped by measurement limit
+    uint32_t                    trip_flag;          // Voltage source tripped by measurement limit
 };
 
 CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 #ifdef GLOBALS
 = {
-    1.0,                                        // V_REF_DELAY
-    0.0,                                        // BANDWIDTH
-    0.5,                                        // Z
-    0.0,                                        // TAU_ZERO
-    {  { 1.0 }, { 1.0 }  },                     // SIM_NUM, SIM_DEN: Default VS response is no delay
+    1.0,                                            // V_REF_DELAY_ITERS
+    0.0,                                            // BANDWIDTH
+    0.9,                                            // Z
+    0.0,                                            // TAU_ZERO
+    {  { 1.0 }, { 1.0 }  },                         // SIM_NUM, SIM_DEN: Default VS response is no delay
 }
 #endif
 ;
@@ -68,13 +68,13 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 
 CCPARS_VS_EXT struct ccpars vs_pars_list[]
 #ifdef GLOBALS
-= {// "Signal name"    TYPE,   max_vals,        min_vals,*enum,     *value,                     num_defaults
-    { "V_REF_DELAY",   PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.v_ref_delay      }, 1 },
-    { "BANDWIDTH",     PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.bandwidth        }, 1 },
-    { "Z",             PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.z                }, 1 },
-    { "TAU_ZERO",      PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.tau_zero         }, 1 },
-    { "SIM_NUM",       PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.num  }, 1 },
-    { "SIM_DEN",       PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.den  }, 1 },
+= {// "Signal name"       TYPE,   max_vals,        min_vals,*enum,     *value,                     num_defaults
+    { "V_REF_DELAY_ITERS",PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.v_ref_delay_iters }, 1 },
+    { "BANDWIDTH",        PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.bandwidth         }, 1 },
+    { "Z",                PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.z                 }, 1 },
+    { "TAU_ZERO",         PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.tau_zero          }, 1 },
+    { "SIM_NUM",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.num   }, 1 },
+    { "SIM_DEN",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.den   }, 1 },
     { NULL }
 }
 #endif

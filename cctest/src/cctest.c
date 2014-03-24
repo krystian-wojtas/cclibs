@@ -203,21 +203,21 @@ static void PrepareSimulation(void)
         // previous iteration.  So a delay of 1 iteration period is always present.  This means that the
         // voltage reference delay must be a minimum of one iteration period.
 
-        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_meas.v_meas_delay) / reg.iter_period  - 1.0;
+        delay_in_iterations = ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0;
 
         regDelayInitPars(&reg.v_sim.delay,
                          calloc(1+(size_t)delay_in_iterations, sizeof(float)),
                          delay_in_iterations,
                          reg_pars.sim_load_pars.vs_undersampled_flag);
 
-        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_meas.i_meas_delay) / reg.iter_period - 1.0;
+        delay_in_iterations = ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0;
 
         regDelayInitPars(&reg.i_sim.delay,
                          calloc(1+(size_t)delay_in_iterations, sizeof(float)),
                          delay_in_iterations,
                          reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag);
 
-        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_meas.b_meas_delay)/ reg.iter_period - 1.0;
+        delay_in_iterations = ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters - 1.0;
 
         regDelayInitPars(&reg.b_sim.delay,
                          calloc(1+(size_t)delay_in_iterations,

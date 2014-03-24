@@ -453,7 +453,7 @@ void ccparsGet(int argc, char **argv)
         }
     }
 
-    // If simulation is enabled then ensure that open loop time/duration are coherent and v_ref_delay >= 1
+    // If simulation is enabled then ensure that open loop time/duration are coherent and v_ref_delay_iters >= 1
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
@@ -466,10 +466,9 @@ void ccparsGet(int argc, char **argv)
             ccpars_reg.cl_time = ccpars_reg.ol_time + ccpars_reg.ol_duration;
         }
 
-        if(ccpars_vs.v_ref_delay < ccpars_global.iter_period)
+        if(ccpars_vs.v_ref_delay_iters < 1.0)
         {
-            fprintf(stderr,"Error : VS.V_REF_DELAY (%g) must be >= GLOBAL.ITER_PERIOD (%g)\n",
-                    ccpars_vs.v_ref_delay, ccpars_global.iter_period);
+            fprintf(stderr,"Error : VS.V_REF_DELAY_ITERS (%g) must be >= 1.0\n",ccpars_vs.v_ref_delay_iters);
             exit(EXIT_FAILURE);
         }
     }
