@@ -1,7 +1,7 @@
 # CCTEST regulation file: SPS-MPS
 
 REG.PERIOD_ITERS            3
-REG.TRACK_DELAY_REGPERS     1
+REG.TRACK_DELAY_PERIODS     1
 REG.CLBW                    40
 REG.CLBW2                   40
 REG.Z                       0.5

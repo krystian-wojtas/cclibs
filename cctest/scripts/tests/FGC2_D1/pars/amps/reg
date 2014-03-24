@@ -1,10 +1,11 @@
 # CCTEST regulation file: RPTG D1
 
 REG.PERIOD_ITERS            20
-REG.EXTRAPOLATE_MEAS        ENABLED
-REG.TRACK_DELAY_REGPERS     2
+REG.TRACK_DELAY_PERIODS     2
 REG.CLBW                    5
 REG.CLBW2                   5
 REG.Z                       0.5
+
+MEAS.I_EXTRAPOLATE          ENABLED
 
 # EOF

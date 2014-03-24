@@ -1,7 +1,7 @@
 # CCTEST regulation file: ACAPULCO with FGC2 in PSB
 
 REG.PERIOD_ITERS            5
-REG.TRACK_DELAY_REGPERS     1
+REG.TRACK_DELAY_PERIODS     1
 REG.CLBW                    10
 REG.CLBW2                   10
 REG.Z                       .5

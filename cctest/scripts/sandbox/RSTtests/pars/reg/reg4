@@ -1,7 +1,7 @@
 # CCTEST regulation file: Current regulation
 
 REG.PERIOD_ITERS            10
-REG.TRACK_DELAY_REGPERS     2.0
+REG.TRACK_DELAY_PERIODS     2.0
 REG.CLBW                    100
 REG.CLBW2                   100
 REG.Z                       0.9

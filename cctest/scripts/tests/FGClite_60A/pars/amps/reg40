@@ -1,7 +1,7 @@
 # CCTEST regulation file: LHC 60A
 
 REG.PERIOD_ITERS            40
-REG.TRACK_DELAY_REGPERS     1
+REG.TRACK_DELAY_PERIODS     1
 REG.CLBW                    1.0
 REG.CLBW2                   1.0
 REG.Z                       0.5

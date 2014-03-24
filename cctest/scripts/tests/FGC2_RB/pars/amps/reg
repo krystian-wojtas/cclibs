@@ -1,10 +1,11 @@
 # CCTEST regulation file: LHC RB
 
 REG.PERIOD_ITERS            100
-REG.EXTRAPOLATE_MEAS        ENABLED
-REG.TRACK_DELAY_REGPERS     1
+REG.TRACK_DELAY_PERIODS     1
 REG.CLBW                    0.4
 REG.CLBW2                   0.4
 REG.Z                       0.5
+
+MEAS.I_EXTRAPOLATE          ENABLED
 
 # EOF
