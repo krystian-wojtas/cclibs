@@ -55,9 +55,9 @@ struct ccpars_meas
 CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
 #ifdef GLOBALS
 = {
-    0.0,                                      // V_DELAY_ITERS
-    0.0,                                      // I_DELAY_ITERS
-    0.0,                                      // B_DELAY_ITERS
+    1.3,                                      // V_DELAY_ITERS
+    1.3,                                      // I_DELAY_ITERS
+    1.3,                                      // B_DELAY_ITERS
     {  { 1.0 }, { 1.0 }  },                   // I_MEAS_NUM, I_MEAS_DEN: Default current measurement IIR filter
     {  { 1.0 }, { 1.0 }  },                   // B_MEAS_NUM, B_MEAS_DEN: Default field measurement IIR filter
     0.0,                                      // I_SIM_NOISE_PP
