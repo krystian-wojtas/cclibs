@@ -24,7 +24,6 @@
 #ifndef CCPARS_TEST_H
 #define CCPARS_TEST_H
 
-#include "ccpars.h"
 #include "libfg/test.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -53,7 +52,7 @@ CCPARS_TEST_EXT struct ccpars_test ccpars_test;         // Default window is dis
 
 // Test data description structure
 
-CCPARS_TEST_EXT struct ccpars   test_pars[]
+CCPARS_TEST_EXT struct ccpars   test_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"   TYPE, max_vals,min_vals,*enum,         *value,                           num_defaults
     { "INITIAL_REF",  PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.initial_ref         }, 0 },

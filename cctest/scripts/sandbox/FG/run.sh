@@ -7,7 +7,7 @@ source ../../run_header.sh
 # Normal time tests
 
 (
-"$cctest" -o $output_format -g pars/global        -f SINE   -d functions/test                             > "$outpath/sine.$file_type" 
+cat pars/global functions/test | "$cctest"  "GLOBAL.OUTPUT_FORMAT $output_format" "GLOBAL.FUNCTION SINE" > "$outpath/sine.$file_type" 
 ) || exit 1
 
 

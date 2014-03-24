@@ -41,7 +41,15 @@
 #define PARS_MAX_PRINT_LINE_LEN (PARS_MAX_FILE_LINE_LEN*8)      // Allow for longest print line for table
 #define PARS_MAX_REPORT_LINES   1000
 
-// Parameter table structure
+// Enums
+
+enum ccpars_group_required
+{
+    GROUP_EXCLUDED,
+    GROUP_OPTIONAL,
+    GROUP_REQUIRED,
+};
+
 
 enum ccpars_type
 {
@@ -50,6 +58,8 @@ enum ccpars_type
     PAR_STRING,
     PAR_ENUM
 };
+
+// Structures
 
 struct ccpars
 {
@@ -67,6 +77,15 @@ struct ccpars
 
     uint32_t            default_values;
     uint32_t            num_values;
+};
+
+struct ccpars_group
+{
+    char                *name;
+    struct ccpars       *pars;
+    uint32_t            n_pars_read;
+    uint32_t            n_pars_missing;
+    uint32_t            enabled;
 };
 
 struct ccpars_enum
@@ -97,6 +116,72 @@ CCPARS_EXT struct ccpars_enum enabled_disabled[]
     { CC_DISABLED,      "DISABLED"      },
     { CC_ENABLED,       "ENABLED"       },
     { 0,                NULL            },
+}
+#endif
+;
+
+// Parameter groups - the enum ccpars_groups_enum order must match the ccpars_groups array below
+
+enum ccpars_groups_enum
+{
+    GROUP_GLOBAL,
+    GROUP_LIMITS,
+    GROUP_LOAD,
+    GROUP_MEAS,
+    GROUP_REG,
+    GROUP_VS,
+    GROUP_START,
+    GROUP_PLEP,
+    GROUP_RAMP,
+    GROUP_PPPL,
+    GROUP_TABLE,
+    GROUP_TRIM,
+    GROUP_TEST,
+    N_GROUPS
+};
+
+// Include libfg and libreg header files - required by ccpars_groups[]
+
+#include "libreg.h"
+
+// Include cctest function data header files
+
+#include "func/start.h"
+#include "func/plep.h"
+#include "func/ramp.h"
+#include "func/pppl.h"
+#include "func/table.h"
+#include "func/trim.h"
+#include "func/test.h"
+
+// Include cctest parameter header files - required by ccpars_groups[]
+
+#include "pars/global.h"
+#include "pars/limits.h"
+#include "pars/load.h"
+#include "pars/meas.h"
+#include "pars/reg.h"
+#include "pars/vs.h"
+
+// Define array of parameter groups
+
+struct ccpars_group ccpars_groups[N_GROUPS+1] // Must be in enum ccpars_groups_enum order!
+#ifdef GLOBALS
+= {
+    { "GLOBAL", global_pars_list },
+    { "LIMITS", limits_pars_list },
+    { "LOAD",   load_pars_list   },
+    { "MEAS",   meas_pars_list   },
+    { "REG",    reg_pars_list    },
+    { "VS",     vs_pars_list     },
+    { "START",  start_pars_list  },
+    { "PLEP",   plep_pars_list   },
+    { "RAMP",   ramp_pars_list   },
+    { "PPPL",   pppl_pars_list   },
+    { "TABLE",  table_pars_list  },
+    { "TRIM",   trim_pars_list   },
+    { "TEST",   test_pars_list   },
+    { NULL }
 }
 #endif
 ;

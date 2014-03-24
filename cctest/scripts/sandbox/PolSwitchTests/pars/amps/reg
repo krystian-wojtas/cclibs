@@ -1,10 +1,10 @@
-# FGTEST regulation file: RPTG D1
+# CCTEST regulation file: RPTG D1
 
-PERIOD_ITERS      20
-TRACK_DELAY       20E-3
-CLBW              5
-CLBW2             5
-Z                 0.5
-PURE_DELAY        2.3E-3
+REG.PERIOD_ITERS      20
+REG.TRACK_DELAY       20E-3
+REG.CLBW              5
+REG.CLBW2             5
+REG.Z                 0.5
+REG.PURE_DELAY        2.3E-3
 
 # EOF

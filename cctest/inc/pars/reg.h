@@ -54,8 +54,6 @@ struct ccpars_reg
 
     // Regulation related variables
 
-    uint32_t            status;                    // Reg parameter group status
-
     float               time;                      // Time of last iteration when regulation algorithm ran
     float               cl_time;                   // Close loop time = Open loop time + open loop duration
     float               feedforward_v_ref;         // Feedforward reference for START function

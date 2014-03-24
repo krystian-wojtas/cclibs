@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/load.h                                                                 Copyright CERN 2011
+  File:     pars/load.h                                                                 Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the load parameters file (-l load_file)
+  Purpose:  Structure for the load parameters group
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -52,26 +52,12 @@ struct ccpars_load
 
     float                   gauss_per_amp;    // Field to current ratio (G/A)
 
-    float                   i_meas_delay;     // Current measurement delay
-    struct reg_meas_pars    i_meas_pars;      // Current measurement IIR filter parameters
-
-    float                   b_meas_delay;     // Field measurement delay
-    struct reg_meas_pars    b_meas_pars;      // Field measurement IIR filter parameters
-
     float                   perturb_volts;    // Open loop voltage perturbation
     float                   perturb_time;     // Time for open loop voltage perturbation
 
-    float                   i_sim_noise_pp;   // Current measurement noise level
-    float                   b_sim_noise_pp;   // Field measurement noise level
     float                   sim_tc_error;     // Error factor for simulation
 
     uint32_t                pol_swi_auto;     // Auto polarity switch will follow function
-
-    // Load related variables
-
-    uint32_t    status;                         // Load parameter group status
-
-    float       sim_i_load;                     // Simulated load current
 };
 
 CCPARS_LOAD_EXT struct ccpars_load ccpars_load
@@ -85,14 +71,8 @@ CCPARS_LOAD_EXT struct ccpars_load ccpars_load
     0.0,                            // I_SAT_START
     0.0,                            // I_SAT_END
     1.0,                            // GAUSS_PER_AMP
-    0.0,                            // I_MEAS_DELAY
-    {  { 1.0 }, { 1.0 }  },         // I_MEAS_NUM, I_MEAS_DEN: Default current measurement IIR filter
-    0.0,                            // B_MEAS_DELAY
-    {  { 1.0 }, { 1.0 }  },         // B_MEAS_NUM, B_MEAS_DEN: Default field measurement IIR filter
     0.0,                            // PERTURB_VOLTS
     0.0,                            // PERTURB_TIME
-    0.0,                            // I_SIM_NOISE_PP
-    0.0,                            // B_SIM_NOISE_PP
     0.0,                            // SIM_TC_ERROR
     CC_DISABLED,                    // POL_SWI_AUTO
 }
@@ -112,16 +92,8 @@ CCPARS_LOAD_EXT struct ccpars load_pars_list[]
     { "I_SAT_START",     PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sat_start     }, 1 },
     { "I_SAT_END",       PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sat_end       }, 1 },
     { "GAUSS_PER_AMP",   PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.gauss_per_amp   }, 1 },
-    { "I_MEAS_DELAY",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_meas_delay    }, 1 },
-    { "I_MEAS_NUM",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.i_meas_pars.num }, 1 },
-    { "I_MEAS_DEN",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.i_meas_pars.den }, 1 },
-    { "B_MEAS_DELAY",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_meas_delay    }, 1 },
-    { "B_MEAS_NUM",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.b_meas_pars.num }, 1 },
-    { "B_MEAS_DEN",      PAR_FLOAT, REG_N_IIR_COEFFS, 0, NULL, { .f =  ccpars_load.b_meas_pars.den }, 1 },
     { "PERTURB_VOLTS",   PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.perturb_volts   }, 1 },
     { "PERTURB_TIME",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.perturb_time    }, 1 },
-    { "I_SIM_NOISE_PP",  PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.i_sim_noise_pp  }, 1 },
-    { "B_SIM_NOISE_PP",  PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.b_sim_noise_pp  }, 1 },
     { "SIM_TC_ERROR",    PAR_FLOAT,  1,               0, NULL, { .f = &ccpars_load.sim_tc_error    }, 1 },
     { "POL_SWI_AUTO",    PAR_ENUM,   1, 0, enabled_disabled,   { .i = &ccpars_load.pol_swi_auto    }, 1 },
     { NULL }

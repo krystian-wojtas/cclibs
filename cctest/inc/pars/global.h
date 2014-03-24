@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/global.h                                                               Copyright CERN 2011
+  File:     pars/global.h                                                               Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,15 +16,13 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the global parameter file (-g global_file)
+  Purpose:  Structure for the global parameter group
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
 
 #ifndef CCPARS_GLOBAL_H
 #define CCPARS_GLOBAL_H
-
-#include "ccpars.h"
 
 // GLOBALS should be defined in the source file where global variables should be defined
 
@@ -132,7 +130,6 @@ struct ccpars_global
 
     // Global related variables
 
-    uint32_t            status;           // Global parameter group status
     uint32_t            func_data_status; // Function data status
     uint32_t            verbose_flag;     // -v option : Verbose enabled
     uint32_t            output_format_opt;// -o option : Output format (overrides global parameter file)
@@ -141,12 +138,18 @@ struct ccpars_global
 
 CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
 #ifdef GLOBALS
-= {
-    1.0,1.0,0.0,0.0,                    // No default for FG_PERIOD
-    CC_DISABLED, REG_VOLTAGE, 0,        // No default for FUNCTION
-    CC_DISABLED, CC_DISABLED,
-    CC_FLOT,                            // Default output format
-    "../.."                             // Default FLOT path
+= {//   Default value           Parameter
+        1.0,                 // RUN_DELAY
+        1.0,                 // STOP_DELAY
+        1.0E-3,              // ITER_PERIOD
+        0.0,                 // ABORT_TIME
+        CC_DISABLED,         // REVERSE_TIME
+        REG_VOLTAGE,         // UNITS
+        0,                   // FUNCTION
+        CC_DISABLED,         // FG_LIMITS
+        CC_DISABLED,         // SIM_LOAD
+        CC_STANDARD,         // OUTPUT_FORMAT
+        "../.."              // FLOT_PATH
 }
 #endif
 ;
@@ -158,7 +161,7 @@ CCPARS_GLOBAL_EXT struct ccpars global_pars_list[]
 = {// "Signal name"      TYPE,    max_vals, min_vals,*enum,        *value,                        num_defaults
     { "RUN_DELAY",       PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.run_delay       }, 1 },
     { "STOP_DELAY",      PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.stop_delay      }, 1 },
-    { "ITER_PERIOD",     PAR_FLOAT,      1, 1, NULL,             { .f = &ccpars_global.iter_period     }, 0 },
+    { "ITER_PERIOD",     PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.iter_period     }, 1 },
     { "ABORT_TIME",      PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.abort_time      }, 1 },
     { "REVERSE_TIME",    PAR_ENUM,       1, 0, enabled_disabled, { .i = &ccpars_global.reverse_time    }, 1 },
     { "UNITS",           PAR_ENUM,       1, 0, function_units,   { .i = &ccpars_global.units           }, 1 },
@@ -173,7 +176,4 @@ CCPARS_GLOBAL_EXT struct ccpars global_pars_list[]
 ;
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: pars/global.h
-\*---------------------------------------------------------------------------------------------------------*/
-
+// EOF

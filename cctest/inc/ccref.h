@@ -74,27 +74,27 @@ FGREF_EXT struct fg_meta fg_meta;
 
 struct fgfunc
 {
-    struct ccpars       *pars;
-    void                *fg_pars;
-    void                (*init_func)(void);
-    uint32_t            (*fgen_func)();
+    enum ccpars_groups_enum group_idx;
+    void                    *fg_pars;
+    void                    (*init_func)(void);
+    uint32_t                (*fgen_func)();
 };
 
-FGREF_EXT struct fgfunc func[]  // Must be in enum fg_types order!
+FGREF_EXT struct fgfunc func[]  // Must be in enum fg_types order (in global.h)!
 #ifdef GLOBALS
 = {
-    {   NULL,         NULL,                        NULL,               NULL          },
-    {   start_pars,   &ccpars_start.plep_pars,     ccrefInitSTART,     ccrefStartGen },
-    {   plep_pars,    &ccpars_plep.plep_pars,      ccrefInitPLEP,      fgPlepGen     },
-    {   ramp_pars,    &ccpars_ramp.ramp_pars,      ccrefInitRAMP,      fgRampGen     },
-    {   pppl_pars,    &ccpars_pppl.pppl_pars,      ccrefInitPPPL,      fgPpplGen     },
-    {   table_pars,   &ccpars_table.table_pars,    ccrefInitTABLE,     fgTableGen    },
-    {   test_pars,    &ccpars_test.test_pars,      ccrefInitSTEPS,     fgTestGen     },
-    {   test_pars,    &ccpars_test.test_pars,      ccrefInitSQUARE,    fgTestGen     },
-    {   test_pars,    &ccpars_test.test_pars,      ccrefInitSINE,      fgTestGen     },
-    {   test_pars,    &ccpars_test.test_pars,      ccrefInitCOSINE,    fgTestGen     },
-    {   trim_pars,    &ccpars_trim.trim_pars,      ccrefInitLTRIM,     fgTrimGen     },
-    {   trim_pars,    &ccpars_trim.trim_pars,      ccrefInitCTRIM,     fgTrimGen     },
+    {   0,           NULL,                     NULL,               NULL          },
+    {   GROUP_START, &ccpars_start.plep_pars,  ccrefInitSTART,     ccrefStartGen },
+    {   GROUP_PLEP,  &ccpars_plep.plep_pars,   ccrefInitPLEP,      fgPlepGen     },
+    {   GROUP_RAMP,  &ccpars_ramp.ramp_pars,   ccrefInitRAMP,      fgRampGen     },
+    {   GROUP_PPPL,  &ccpars_pppl.pppl_pars,   ccrefInitPPPL,      fgPpplGen     },
+    {   GROUP_TABLE, &ccpars_table.table_pars, ccrefInitTABLE,     fgTableGen    },
+    {   GROUP_TEST,  &ccpars_test.test_pars,   ccrefInitSTEPS,     fgTestGen     },
+    {   GROUP_TEST,  &ccpars_test.test_pars,   ccrefInitSQUARE,    fgTestGen     },
+    {   GROUP_TEST,  &ccpars_test.test_pars,   ccrefInitSINE,      fgTestGen     },
+    {   GROUP_TEST,  &ccpars_test.test_pars,   ccrefInitCOSINE,    fgTestGen     },
+    {   GROUP_TRIM,  &ccpars_trim.trim_pars,   ccrefInitLTRIM,     fgTrimGen     },
+    {   GROUP_TRIM,  &ccpars_trim.trim_pars,   ccrefInitCTRIM,     fgTrimGen     },
 }
 #endif
 ;

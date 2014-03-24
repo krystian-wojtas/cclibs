@@ -24,8 +24,6 @@
 #ifndef CCPARS_PPPL_H
 #define CCPARS_PPPL_H
 
-#include "ccpars.h"
-#include "libfg.h"
 #include "libfg/pppl.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -54,7 +52,7 @@ CCPARS_PPPL_EXT struct ccpars_pppl ccpars_pppl;
 
 // PPPL data description structure
 
-CCPARS_PPPL_EXT struct ccpars   pppl_pars[]
+CCPARS_PPPL_EXT struct ccpars   pppl_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"    TYPE,   max_vals,   min_vals, *enum, *value,                           num_defaults
     { "INITIAL_REF",   PAR_FLOAT, 1,            1, NULL, { .f = &ccpars_pppl.initial_ref          }, 0 },

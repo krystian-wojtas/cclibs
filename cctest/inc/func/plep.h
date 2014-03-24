@@ -24,8 +24,6 @@
 #ifndef CCPARS_PLEP_H
 #define CCPARS_PLEP_H
 
-#include "ccpars.h"
-#include "libfg.h"
 #include "libfg/plep.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -54,7 +52,7 @@ CCPARS_PLEP_EXT struct ccpars_plep ccpars_plep;
 
 // PLEP data description structure
 
-CCPARS_PLEP_EXT struct ccpars   plep_pars[]
+CCPARS_PLEP_EXT struct ccpars   plep_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"   TYPE, max_vals,min_vals,*enum, *value,                           num_defaults
     { "INITIAL_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.initial_ref         }, 0 },

@@ -60,9 +60,7 @@ struct ccpars_limits
 
     // Limits related variables
 
-    uint32_t                    status;         // Limits parameter group status
-
-    struct fg_limits	       *fg;             // Pointer to fg_limits (b/i/v)
+    struct fg_limits           *fg;             // Pointer to fg_limits (b/i/v)
     struct reg_lim_ref          fg_v_ref;       // Libreg voltage measurement limits structure
 };
 
@@ -79,7 +77,7 @@ CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 
 // Global parameters description structure
 
-CCPARS_LIMITS_EXT struct ccpars limit_pars_list[]
+CCPARS_LIMITS_EXT struct ccpars limits_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"     TYPE,   max_vals,min_vals,*enum,        *value,                   num_defaults
     { "B_POS",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.pos          }, 1 },

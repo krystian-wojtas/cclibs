@@ -25,26 +25,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Include general parameter header files
-
-#include "pars/global.h"
-#include "pars/limits.h"
-#include "pars/load.h"
-#include "pars/reg.h"
-#include "pars/vs.h"
-
-// Include reference function data header files
-
-#include "func/start.h"
-#include "func/table.h"
-#include "func/plep.h"
-#include "func/ramp.h"
-#include "func/pppl.h"
-#include "func/test.h"
-#include "func/trim.h"
-
 // Include cctest program header files
 
+#include "ccpars.h"
 #include "ccref.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
@@ -200,13 +183,13 @@ void ccrefInitPPPL(void)
 
     // Set up pppl array lengths
 
-    ccpars_pppl.config.numels_acceleration1 = pppl_pars[1].num_values;
-    ccpars_pppl.config.numels_acceleration2 = pppl_pars[2].num_values;
-    ccpars_pppl.config.numels_acceleration3 = pppl_pars[3].num_values;
-    ccpars_pppl.config.numels_rate2         = pppl_pars[4].num_values;
-    ccpars_pppl.config.numels_rate4         = pppl_pars[5].num_values;
-    ccpars_pppl.config.numels_ref4          = pppl_pars[6].num_values;
-    ccpars_pppl.config.numels_duration4     = pppl_pars[7].num_values;
+    ccpars_pppl.config.numels_acceleration1 = pppl_pars_list[1].num_values;
+    ccpars_pppl.config.numels_acceleration2 = pppl_pars_list[2].num_values;
+    ccpars_pppl.config.numels_acceleration3 = pppl_pars_list[3].num_values;
+    ccpars_pppl.config.numels_rate2         = pppl_pars_list[4].num_values;
+    ccpars_pppl.config.numels_rate4         = pppl_pars_list[5].num_values;
+    ccpars_pppl.config.numels_ref4          = pppl_pars_list[6].num_values;
+    ccpars_pppl.config.numels_duration4     = pppl_pars_list[7].num_values;
 
     // Try to initialise the PPPL
 
@@ -235,8 +218,8 @@ void ccrefInitTABLE(void)
 
     ccpars_table.config.ref             = ccpars_table.ref;
     ccpars_table.config.time            = ccpars_table.time;
-    ccpars_table.config.ref_n_elements  = table_pars[0].num_values;
-    ccpars_table.config.time_n_elements = table_pars[1].num_values;
+    ccpars_table.config.ref_n_elements  = table_pars_list[0].num_values;
+    ccpars_table.config.time_n_elements = table_pars_list[1].num_values;
 
     // Try to initialise the TABLE
 

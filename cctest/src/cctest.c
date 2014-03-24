@@ -31,35 +31,9 @@
 
 #define GLOBALS
 
-// Include libfg and libreg header files
-
-#include "libfg/plep.h"
-#include "libfg/ramp.h"
-#include "libfg/pppl.h"
-#include "libfg/table.h"
-#include "libfg/test.h"
-#include "libfg/trim.h"
-#include "libreg.h"
-
-// Include cctest parameter header files
-
-#include "pars/global.h"
-#include "pars/limits.h"
-#include "pars/load.h"
-#include "pars/reg.h"
-#include "pars/vs.h"
-
-// Include cctest function data header files
-
-#include "func/table.h"
-#include "func/plep.h"
-#include "func/ramp.h"
-#include "func/pppl.h"
-#include "func/test.h"
-#include "func/trim.h"
-
 // Include cctest program header files
 
+#include "ccpars.h"
 #include "ccref.h"
 #include "ccsigs.h"
 #include "ccrun.h"
@@ -70,7 +44,7 @@ static void PrepareLoad(void)
 {
     // If load parameters supplied
 
-    if(ccpars_load.status == 1)
+    if(ccpars_groups[GROUP_LOAD].enabled == 1)
     {
         // Initialise load model structure
 
@@ -92,8 +66,8 @@ static void PrepareLoad(void)
 
         // Initialise measurement filters
 
-        regMeasFilterInit(&reg_pars.i_meas, &reg.i_meas, ccpars_load.i_meas_pars.num, ccpars_load.i_meas_pars.den);
-        regMeasFilterInit(&reg_pars.b_meas, &reg.b_meas, ccpars_load.b_meas_pars.num, ccpars_load.b_meas_pars.den);
+        regMeasFilterInit(&reg_pars.i_meas, &reg.i_meas, ccpars_meas.i_meas_pars.num, ccpars_meas.i_meas_pars.den);
+        regMeasFilterInit(&reg_pars.b_meas, &reg.b_meas, ccpars_meas.b_meas_pars.num, ccpars_meas.b_meas_pars.den);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -213,7 +187,7 @@ static void PrepareSimulation(void)
 
         regSetSimLoad(&reg, &reg_pars, ccpars_global.units, ccpars_load.sim_tc_error);
 
-        regSetMeasNoise(&reg, ccpars_vs.v_sim_noise_pp, ccpars_load.i_sim_noise_pp, ccpars_load.b_sim_noise_pp);
+        regSetMeasNoise(&reg, ccpars_meas.v_sim_noise_pp, ccpars_meas.i_sim_noise_pp, ccpars_meas.b_sim_noise_pp);
 
         // Initialise voltage source model history to allow simulation to start with a non-zero voltage
         // This is not needed in a real converter controller because the voltage always starts at zero
@@ -229,31 +203,27 @@ static void PrepareSimulation(void)
         // previous iteration.  So a delay of 1 iteration period is always present.  This means that the
         // voltage reference delay must be a minimum of one iteration period.
 
-        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_vs.v_meas_delay) / reg.iter_period  - 1.0;
+        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_meas.v_meas_delay) / reg.iter_period  - 1.0;
 
         regDelayInitPars(&reg.v_sim.delay,
                          calloc(1+(size_t)delay_in_iterations, sizeof(float)),
                          delay_in_iterations,
                          reg_pars.sim_load_pars.vs_undersampled_flag);
 
-        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_load.i_meas_delay) / reg.iter_period - 1.0;
+        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_meas.i_meas_delay) / reg.iter_period - 1.0;
 
         regDelayInitPars(&reg.i_sim.delay,
                          calloc(1+(size_t)delay_in_iterations, sizeof(float)),
                          delay_in_iterations,
                          reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag);
 
-        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_load.b_meas_delay)/ reg.iter_period - 1.0;
+        delay_in_iterations = (ccpars_vs.v_ref_delay + ccpars_meas.b_meas_delay)/ reg.iter_period - 1.0;
 
         regDelayInitPars(&reg.b_sim.delay,
                          calloc(1+(size_t)delay_in_iterations,
                          sizeof(float)),
                          delay_in_iterations,
                          reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag);
-
-        // Initialise voltage measurement filter
-
-        regMeasFilterInit(&reg_pars.v_meas, &reg.v_meas, ccpars_vs.v_meas_pars.num, ccpars_vs.v_meas_pars.den);
 
         // Initialise measurement filter histories
 

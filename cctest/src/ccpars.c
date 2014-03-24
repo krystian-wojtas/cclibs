@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     ccpars.c                                                                    Copyright CERN 2011
+  File:     ccpars.c                                                                    Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Fg/Reg library test program parameter file parsing functions
+  Purpose:  Converter controls libraries test program parameter parsing functions
 
   Author:   Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -29,213 +29,159 @@
 #include <string.h>
 #include <errno.h>
 
-// Include libfg and libreg header files
-
-#include "libfg/plep.h"
-#include "libfg/ramp.h"
-#include "libfg/pppl.h"
-#include "libfg/table.h"
-#include "libfg/test.h"
-#include "libfg/trim.h"
-#include "libreg.h"
-
-// Include cctest parameter header files
-
-#include "pars/global.h"
-#include "pars/limits.h"
-#include "pars/load.h"
-#include "pars/reg.h"
-#include "pars/vs.h"
-
-// Include cctest function data header files
-
-#include "func/start.h"
-#include "func/plep.h"
-#include "func/ramp.h"
-#include "func/pppl.h"
-#include "func/table.h"
-#include "func/trim.h"
-#include "func/test.h"
-
 // Include cctest program header files
 
+#include "ccpars.h"
 #include "ccref.h"
 #include "ccsigs.h"
 #include "ccrun.h"
 
-// External for command line options (this is a gcc library extension)
-
-extern char *optarg;
-
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccparsReadFile(char option, struct ccpars *ccpars, char *filename, uint32_t *status)
+static void ccparsGetPar(char *line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will try to read the parameters from the specified filename.
+  This function will try to interpret one line of input.  Blank lines and comment (#) lines are ignored.
+  All other lines must have the format: GROUP.PARAMETER VALUE(S)
+  Where VALUES are comma separated.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t            line_number;
-    FILE                *f;
     char                remains;
     char                *ch_p;
-    char                line[PARS_MAX_FILE_LINE_LEN];
     char                par_string[PARS_MAX_FILE_LINE_LEN];
+    struct ccpars_group *group;
     struct ccpars       *par;
     struct ccpars_enum  *par_enum;
 
-    // Check if this command line option file was already read
+    // Check if line exceeds maximum length
 
-    if(*status != 0)
+    if(strlen(line) >= (PARS_MAX_FILE_LINE_LEN-1))
     {
-        fprintf(stderr,"Error : option -%c already processed\n",option);
+        line[20] = '\0';
+        fprintf(stderr,"Error: Line starting \"%s...\" is too long (%u max)\n",
+                       line,PARS_MAX_FILE_LINE_LEN-2);
         exit(EXIT_FAILURE);
     }
 
-    // Open parameter file
+    // Skip leading white space
 
-    if((f = fopen(filename, "rt")) == NULL)
+    ch_p = line;
+
+    while(isspace(*ch_p))
     {
-        fprintf(stderr,"Error : Failed to open %s: %s\n",filename,strerror(errno));
+        ch_p++;
+    }
+
+    // Skip blank lines and comment lines
+
+    if(*ch_p == '\0' || *ch_p == '#')
+    {
+        return;
+    }
+
+    // Try to identify the parameter group name
+
+    ch_p = strtok( ch_p, ".\n" );
+
+    for(group = ccpars_groups ; group->name != NULL && strcasecmp(group->name,ch_p) != 0; group++);
+
+    if(group->name == NULL)
+    {
+        ch_p[20] = '\0';       // Protect against long strings
+        fprintf(stderr,"Error: Unknown parameter group: \"%s\"\n", ch_p);
         exit(EXIT_FAILURE);
     }
 
-    // Read parameter file
+    // Try to identify the parameter name within the group
 
-    line_number = 0;
+    ch_p = strtok( NULL, " \t\n" );
 
-    while(fgets(line, PARS_MAX_FILE_LINE_LEN, f) != NULL)
+    for(par = group->pars ; par->name != NULL && strcasecmp(par->name,ch_p) != 0; par++);
+
+    if(par->name == NULL)
     {
-        line_number++;
+        ch_p[20] = '\0';       // Protect against long strings
+        fprintf(stderr,"Error: Unknown parameter: \"%s.%s\"\n",group->name,ch_p);
+        exit(EXIT_FAILURE);
+    }
 
-        if(strlen(line) >= (PARS_MAX_FILE_LINE_LEN-1))
+    // Try to parse values for the parameter
+
+    par->num_values = 0;
+
+    while((ch_p = strtok( NULL, ",\n" )) != NULL)
+    {
+        if(par->num_values >= par->max_values)
         {
-            fprintf(stderr,"Error in %s: Line %u is too long (%u max)\n",
-                           filename,line_number,PARS_MAX_FILE_LINE_LEN-2);
+            fprintf(stderr,"Error: Too many values for %s.%s (%u max)\n",
+                    group->name,par->name,par->max_values);
             exit(EXIT_FAILURE);
         }
 
-        // Skip leading white space
-
-        ch_p = line;
-
-        while(isspace(*ch_p))
+        switch(par->type)
         {
-            ch_p++;
-        }
+        case PAR_UNSIGNED:
 
-        // Skip blank lines and comment lines
-
-        if(*ch_p == '\0' || *ch_p == '#')
-        {
-            continue;
-        }
-
-        // Try to identify the parameter name
-
-        ch_p = strtok( ch_p, " \t\n" );
-
-        for(par = ccpars ; par->name != NULL && strcasecmp(par->name,ch_p) != 0; par++);
-
-        if(par->name == NULL)
-        {
-            fprintf(stderr,"Error in %s at line %u: Unknown parameter: \"%s\"\n",filename,line_number,ch_p);
-            exit(EXIT_FAILURE);
-        }
-
-        // Try to parse values
-
-        while((ch_p = strtok( NULL, ",\n" )) != NULL)
-        {
-            if(par->num_values >= par->max_values)
+            if(sscanf(ch_p," %u %c",&par->value_p.i[par->num_values],&remains) != 1)
             {
-                fprintf(stderr,"Error in %s at line %u: Too many values for %s (%u max)\n",
-                        filename,line_number,par->name,par->max_values);
+                fprintf(stderr,"Error: Invalid integer for %s.%s: %s\n",
+                        group->name,par->name,ch_p);
+                exit(EXIT_FAILURE);
+            }
+            break;
+
+        case PAR_FLOAT:
+
+            if(sscanf(ch_p," %e %c",&par->value_p.f[par->num_values],&remains) != 1)
+            {
+                fprintf(stderr,"Error: Invalid float for %s.%s: %s\n",
+                        group->name,par->name,ch_p);
+                exit(EXIT_FAILURE);
+            }
+            break;
+
+        case PAR_STRING:
+
+            if(sscanf(ch_p," %s %c",par_string,&remains) != 1)
+            {
+                fprintf(stderr,"Error: Invalid token for %s.%s: %s\n",
+                        group->name,par->name,ch_p);
                 exit(EXIT_FAILURE);
             }
 
-            switch(par->type)
+            par->value_p.s[par->num_values] = strcpy(malloc(strlen(par_string)),par_string);
+            break;
+
+        case PAR_ENUM:
+
+            if(sscanf(ch_p," %s %c",par_string,&remains) != 1)
             {
-            case PAR_UNSIGNED:
-
-                if(sscanf(ch_p," %u %c",&par->value_p.i[par->num_values],&remains) != 1)
-                {
-                    fprintf(stderr,"Error in %s at line %u: Invalid integer for %s: \"%s\"\n",
-                            filename,line_number,par->name,ch_p);
-                    exit(EXIT_FAILURE);
-                }
-                break;
-
-            case PAR_FLOAT:
-
-                if(sscanf(ch_p," %e %c",&par->value_p.f[par->num_values],&remains) != 1)
-                {
-                    fprintf(stderr,"Error in %s at line %u: Invalid float for %s: %s\n",
-                            filename,line_number,par->name,ch_p);
-                    exit(EXIT_FAILURE);
-                }
-                break;
-
-            case PAR_STRING:
-
-                if(sscanf(ch_p," %s %c",par_string,&remains) != 1)
-                {
-                    fprintf(stderr,"Error in %s at line %u: Invalid token for %s: %s\n",
-                            filename,line_number,par->name,ch_p);
-                    exit(EXIT_FAILURE);
-                }
-
-                par->value_p.s[par->num_values] = strcpy(malloc(strlen(par_string)),par_string);
-                break;
-
-            case PAR_ENUM:
-
-                if(sscanf(ch_p," %s %c",par_string,&remains) != 1)
-                {
-                    fprintf(stderr,"Error in %s at line %u: Invalid token for %s: %s\n",
-                            filename,line_number,par->name,ch_p);
-                    exit(EXIT_FAILURE);
-                }
-
-                for(par_enum = par->ccpars_enum ; par_enum->string != NULL && strcasecmp(par_enum->string,par_string) != 0 ; par_enum++);
-
-                if(par_enum->string == NULL)
-                {
-                    fprintf(stderr,"Error in %s at line %u: Unknown value for %s: %s\n",
-                            filename,line_number,par->name,par_string);
-                    exit(EXIT_FAILURE);
-                }
-
-                par->value_p.i[par->num_values] = par_enum->value;
-                break;
+                ch_p[30] = '\0';       // Protect against long strings
+                fprintf(stderr,"Error: Invalid token for %s.%s: %s\n",
+                        group->name,par->name,ch_p);
+                exit(EXIT_FAILURE);
             }
 
-            par->num_values++;
+            for(par_enum = par->ccpars_enum ;
+                par_enum->string != NULL && strcasecmp(par_enum->string,par_string) != 0 ;
+                par_enum++);
+
+            if(par_enum->string == NULL)
+            {
+                ch_p[30] = '\0';       // Protect against long strings
+                fprintf(stderr,"Error: Unknown value for %s.%s: %s\n",
+                        group->name,par->name,par_string);
+                exit(EXIT_FAILURE);
+            }
+
+            par->value_p.i[par->num_values] = par_enum->value;
+            break;
         }
+
+        par->num_values++;
     }
 
-    // Close parameter file
+    // Increase parameters read for each group - this can count the same parameter multiple times
 
-    if(fclose(f))
-    {
-        fprintf(stderr,"Error : Failed to close %s: %s\n",filename,strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    // Check if any parameters values are missing
-
-    for(par = ccpars ; par->name ; par++)
-    {
-        if(par->num_values < par->min_values)
-        {
-            fprintf(stderr,"Error in %s: parameter %s: %u value%s required, %u read\n",
-                    filename,par->name,par->min_values,(par->min_values != 1 ? "s" : ""),par->num_values);
-
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // Flag that this parameter group has been read
-
-    *status = 1;
+    group->n_pars_read++;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 static void ccparsPrintf(char * format, ...)
@@ -323,22 +269,6 @@ static void ccparsReportPars(char * group_name, struct ccpars *par)
     ccparsPrintf("\n");
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccparsOutputFormat(char *arg)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    struct ccpars_enum  *par_enum;
-
-    for(par_enum = output_format ; par_enum->string != NULL && strcasecmp(par_enum->string,arg) != 0 ; par_enum++);
-
-    if(par_enum->string == NULL)
-    {
-        fprintf(stderr,"Error: %s is not a known output format\n",arg);
-        exit(EXIT_FAILURE);
-    }
-
-    ccpars_global.output_format_opt = par_enum->value;
-}
-/*---------------------------------------------------------------------------------------------------------*/
 char * ccparsEnumString(struct ccpars_enum *par_enum, uint32_t value)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will return the string corresponding to the enum
@@ -352,107 +282,98 @@ char * ccparsEnumString(struct ccpars_enum *par_enum, uint32_t value)
     return(par_enum->string != NULL ? par_enum->string : "invalid");
 }
 /*---------------------------------------------------------------------------------------------------------*/
+static uint32_t ccparsCheckMissingPars(enum ccpars_groups_enum group_idx, enum ccpars_group_required required)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    struct ccpars_group *group = &ccpars_groups[group_idx];
+    struct ccpars       *par;
+
+    switch(required)
+    {
+        case GROUP_REQUIRED:
+
+            // If any parameters of a requried group are missing, report the details
+
+            if(group->n_pars_missing > 0)
+            {
+                fprintf(stderr,"Error: Group %s requires all parameters to be fully defined:\n",group->name);
+
+                for(par = group->pars; par->name != NULL ; par++)
+                {
+                    if(par->num_values < par->min_values)
+                    {
+                        fprintf(stderr,"    %s.%s - %u of %u supplied\n",
+                                group->name,par->name,par->min_values,par->num_values);
+                    }
+                }
+                return(1);  // Return error code
+            }
+            else
+            {
+                group->enabled = 1;
+            }
+            break;
+
+        case GROUP_EXCLUDED:
+
+            // If any parameters of an excluded group are supplied then return error code
+
+            if(group->n_pars_read > 0)
+            {
+                return(1);      // Report error
+            }
+            break;
+
+        case GROUP_OPTIONAL:
+
+            group->enabled = 1;
+            break;
+    }
+
+    return(0);      // Return no error
+}
+/*---------------------------------------------------------------------------------------------------------*/
 void ccparsGet(int argc, char **argv)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    int c;
+    char    line[PARS_MAX_FILE_LINE_LEN];
+    struct ccpars_group *group;
+    struct ccpars       *par;
 
-    // Process command-line options using getopt (this is a gcc library extension)
+    // Process all lines from standard input
 
-    while((c = getopt(argc, argv, "vo:g:f:d:m:l:s:r:")) != -1)
+    while(fgets(line, PARS_MAX_FILE_LINE_LEN, stdin) != NULL)
     {
-        switch(c)
+        ccparsGetPar(line);
+    }
+
+    // Process all parameters from arguments
+
+    while(--argc > 0)
+    {
+        ccparsGetPar(*(++argv));
+    }
+
+    // Count how many parameters are missing values
+
+    for(group = ccpars_groups ; group->name != NULL ; group++)
+    {
+        for(par = group->pars ; par->name != NULL ; par++)
         {
-        default:
-
-            printf("\nUsage: %s [-v] [-o<OUTPUT_FORMAT>] -g<FILE> [-f FUNC] -d<FILE> [-m<FILE>] [-l<FILE>] [-s<FILE>] [-r<FILE>]\n\n%s\n", argv[0],
-                   "         -v                      Verbose: report all parameter values\n"
-                   "         -o<OUTPUT FORMAT>       STANDARD|FGCSPY|LVDV|FLOT\n"
-                   "         -g<GLOBAL PARS FILE>    Global parameters file\n"
-                   "         -f<FUNCTION>            Function type\n"
-                   "         -d<FUNCTION DATA FILE>  Function data file\n"
-                   "         -m<LIMIT PARS FILE>     Limit parameters file\n"
-                   "         -l<LOAD PARS FILE>      Load model parameters file\n"
-                   "         -s<VS PARS FILE>        Voltage source model parameters file\n"
-                   "         -r<REG PARS FILE>       Regulation parameters file\n"
-                  );
-            exit(EXIT_FAILURE);
-
-        case 'v':           // Enable verbose mode
-
-            ccpars_global.verbose_flag = 1;
-            break;
-
-        case 'o':           // Output format
-
-            ccparsOutputFormat(optarg);
-            break;
-
-        case 'g':           // Global parameters file
-
-            ccparsReadFile(c, global_pars_list, optarg, &ccpars_global.status);
-            break;
-
-        case 'm':           // Limit parameters file
-
-            ccparsReadFile(c, limit_pars_list, optarg, &ccpars_limits.status);
-            break;
-
-        case 'l':           // Load parameters file
-
-            ccparsReadFile(c, load_pars_list, optarg, &ccpars_load.status);
-            break;
-
-        case 's':           // Voltage source parameters file
-
-            ccparsReadFile(c, vs_pars_list, optarg, &ccpars_vs.status);
-            break;
-
-        case 'r':           // Regulation parameters file
-
-            ccparsReadFile(c, reg_pars_list, optarg, &ccpars_reg.status);
-            break;
-
-        case 'f':           // Function type
-
-            ccrefFuncType(optarg);
-            break;
-
-        case 'd':           // Function data file
-
-            if(ccpars_global.status == 0)
+            if(par->num_values < par->min_values)
             {
-                fputs("Error : global parameters (-g) must precede function data (-d)\n",stderr);
-                exit(EXIT_FAILURE);
+                group->n_pars_missing++;
             }
-
-            if(ccpars_global.function == FG_NONE)
-            {
-                fputs("Error : function type must be specifed in gobal parameters file (-g) or as an option (-f)\n",stderr);
-                exit(EXIT_FAILURE);
-            }
-
-            ccparsReadFile(c, func[ccpars_global.function].pars, optarg, &ccpars_global.func_data_status);
-            break;
         }
     }
 
-    // Check parameters are all coherent
+    // Global group must always be valid
 
-    // Output format (-o) takes presidence over GLOBAL.OUTPUT_FORMAT parameter if specified
+    ccparsCheckMissingPars(GROUP_GLOBAL, GROUP_REQUIRED);
 
-    if(ccpars_global.output_format_opt != FG_NONE)
-    {
-        ccpars_global.output_format = ccpars_global.output_format_opt;
-    }
+    // Function data must be defined for the specified function
 
-    // Function data (-d) must always be defined (which requires global parameters to be defined)
-
-    if(ccpars_global.func_data_status == 0)
-    {
-        fputs("Error : function data (-d) must be specified\n",stderr);
-        exit(EXIT_FAILURE);
-    }
+    ccparsCheckMissingPars(func[ccpars_global.function].group_idx, GROUP_REQUIRED);
 
     // REVERSE_TIME: FG_LIMITS and SIM_LOAD must be DISABLED
 
@@ -477,48 +398,37 @@ void ccparsGet(int argc, char **argv)
 
     if(ccpars_global.fg_limits == CC_DISABLED && ccpars_global.sim_load == CC_DISABLED)
     {
-        if(ccpars_limits.status == 1)
+        if(ccparsCheckMissingPars(GROUP_LIMITS, GROUP_EXCLUDED) == 1)
         {
-            fputs("Error : Limits parameters (-m) not required\n",stderr);
+            fputs("Error : LIMITS parameters not required\n",stderr);
             exit(EXIT_FAILURE);
         }
     }
     else
     {
-        if(ccpars_limits.status == 0)
-        {
-            fputs("Error : Limits parameters (-m) must be provided\n",stderr);
-            exit(EXIT_FAILURE);
-        }
+        ccparsCheckMissingPars(GROUP_LIMITS, GROUP_REQUIRED);
     }
 
     // Load (-l) and voltage source (-s) parameters requirements depend on SIM_LOAD
 
     if(ccpars_global.sim_load == CC_DISABLED)
     {
-        if(ccpars_load.status == 1)
+        if(ccparsCheckMissingPars(GROUP_LOAD, GROUP_EXCLUDED) == 1)
         {
-            fputs("Error : Load parameters (-l) are not required\n",stderr);
+            fputs("Error : SIM_LOAD is DISABLED so LOAD parameters are not required\n",stderr);
             exit(EXIT_FAILURE);
         }
 
-        if(ccpars_vs.status == 1)
+        if(ccparsCheckMissingPars(GROUP_VS, GROUP_EXCLUDED) == 1)
         {
-            fputs("Error : SIM_LOAD is DISABLED so voltage source parameters (-s) are not required\n",stderr);
+            fputs("Error : SIM_LOAD is DISABLED so VS parameters are not required\n",stderr);
             exit(EXIT_FAILURE);
         }
     }
     else
     {
-        if(ccpars_load.status == 0)
-        {
-            fputs("Error : Load parameters (-l) required\n",stderr);
-            exit(EXIT_FAILURE);
-        }
-
-        // SIM_LOAD ENABLED : Always enable VS parameters since default values are supplied
-
-        ccpars_vs.status = 1;
+        ccparsCheckMissingPars(GROUP_LOAD, GROUP_REQUIRED);
+        ccparsCheckMissingPars(GROUP_VS, GROUP_OPTIONAL);
 
         // If voltage perturbation is not required then set perturb_time to far beyond end of simulation
 
@@ -532,17 +442,13 @@ void ccparsGet(int argc, char **argv)
 
     if(ccpars_global.units != REG_VOLTAGE)
     {
-        if(ccpars_reg.status == 0)
-        {
-            fputs("Error : Regulation parameters (-r) must be provided\n",stderr);
-            exit(EXIT_FAILURE);
-        }
+        ccparsCheckMissingPars(GROUP_REG, GROUP_REQUIRED);
     }
     else
     {
-        if(ccpars_reg.status == 1)
+        if(ccparsCheckMissingPars(GROUP_REG, GROUP_EXCLUDED) == 1)
         {
-            fputs("Error : Regulation parameters (-r) not required\n",stderr);
+            fputs("Error : Regulation parameters not required\n",stderr);
             exit(EXIT_FAILURE);
         }
     }
@@ -605,50 +511,43 @@ void ccparsGet(int argc, char **argv)
 void ccparsGenerateReport(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    unsigned        i;
+    unsigned             i;
+    struct ccpars_group *group = ccpars_groups;
 
-    // Generate inline div for the Show pars pop-up
+    // For FLOT output, generate inline div for the Show pars pop-up
 
-    ccparsPrintf("<!-- Simulation parameters pop-up -->\n\n");
-    ccparsPrintf("    <div id='inline_pars' style='padding:10px; background:#fff;font-size:14px;'>\n");
-    ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Simulation Parameters:</p>\n      <p><pre>\n");
+    if(ccpars_global.output_format == CC_FLOT)
+    {
+        ccparsPrintf("<!-- Simulation parameters pop-up -->\n\n");
+        ccparsPrintf("    <div id='inline_pars' style='padding:10px; background:#fff;font-size:14px;'>\n");
+        ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Simulation Parameters:</p>\n      <p><pre>\n");
+    }
 
     // Generate report of parameter values if verbose option (-v) or FLOT output format selected
 
     if(ccpars_global.verbose_flag || ccpars_global.output_format == CC_FLOT)
     {
-        ccparsReportPars("GLOBAL",global_pars_list);
-
-        if(ccpars_limits.status == 1)
+        while(group->name)
         {
-            ccparsReportPars("LIMITS",limit_pars_list);
-        }
+            if(group->enabled == 1)
+            {
+                ccparsReportPars(group->name,group->pars);
+            }
 
-        if(ccpars_load.status == 1)
-        {
-            ccparsReportPars("LOAD",load_pars_list);
+            group++;
         }
-
-        if(ccpars_vs.status == 1)
-        {
-            ccparsReportPars("VS",vs_pars_list);
-        }
-
-        if(ccpars_reg.status == 1)
-        {
-            ccparsReportPars("REG",reg_pars_list);
-        }
-
-        ccparsReportPars("DATA",func[ccpars_global.function].pars);
     }
 
-    // Generate inline div for the Show debug pop-up
+    // For FLOT output, generate inline div for the Show debug pop-up
 
-    ccparsPrintf("      </pre></p>\n    </div>\n\n<!-- Debug parameters pop-up -->\n\n");
-    ccparsPrintf("    <div id='inline_debug' style='padding:10px; background:#fff;font-size:14px;'>\n");
-    ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Debug Information:</p>\n      <p><pre>\n");
+    if(ccpars_global.output_format == CC_FLOT)
+    {
+        ccparsPrintf("      </pre></p>\n    </div>\n\n<!-- Debug parameters pop-up -->\n\n");
+        ccparsPrintf("    <div id='inline_debug' style='padding:10px; background:#fff;font-size:14px;'>\n");
+        ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Debug Information:</p>\n      <p><pre>\n");
+    }
 
-    if(ccpars_load.status == 1)
+    if(ccpars_groups[GROUP_LOAD].enabled == 1)
     {
         // Report measurement filter information
 
@@ -748,7 +647,7 @@ void ccparsGenerateReport(void)
         }
     }
 
-    if(ccpars_vs.status == 1)
+    if(ccpars_groups[GROUP_VS].enabled == 1)
     {
         // Report voltage measurement filter information
 
@@ -774,7 +673,7 @@ void ccparsGenerateReport(void)
         ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMVS:gain",reg_pars.sim_vs_pars.gain);
     }
 
-    if(ccpars_reg.status == 1)
+    if(ccpars_groups[GROUP_REG].enabled == 1)
     {
         if(ccpars_global.units == REG_CURRENT)
         {

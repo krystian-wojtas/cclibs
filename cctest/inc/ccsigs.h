@@ -67,8 +67,7 @@ enum ccsig_idx
     ANA_V_REF,                  // Voltage reference
     ANA_V_REF_SAT,              // Voltage reference after magnet saturation compensation applied
     ANA_V_REF_LIMITED,          // Voltage reference after saturation compensation and limits applied
-    ANA_V_MEAS,                 // Unfiltered measured voltage
-    ANA_V_MEAS_FLTR,            // Filtered measured voltage
+    ANA_V_MEAS,                 // Measured voltage
     ANA_V_ERR,                  // Voltage regulation error
     ANA_MAX_ABS_B_ERR,          // Max absolute field regulation error
     ANA_MAX_ABS_I_ERR,          // Max absolute current regulation error
@@ -133,7 +132,6 @@ FGSIGS_EXT struct signals signals[]
     { "V_REF_SAT",              ANALOG,         "TRAIL_STEP" },
     { "V_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "V_MEAS",                 ANALOG,         ""           },
-    { "V_MEAS_FLTR",            ANALOG,         ""           },
     { "V_ERR",                  ANALOG,         "TRAIL_STEP" },
     { "MAX_ABS_B_ERR",          ANALOG,         "TRAIL_STEP" },
     { "MAX_ABS_I_ERR",          ANALOG,         "TRAIL_STEP" },

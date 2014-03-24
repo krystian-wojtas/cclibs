@@ -24,7 +24,6 @@
 #ifndef CCPARS_TRIM_H
 #define CCPARS_TRIM_H
 
-#include "ccpars.h"
 #include "libfg/trim.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -53,7 +52,7 @@ CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim;
 
 // Trim data description structure
 
-CCPARS_TRIM_EXT struct ccpars   trim_pars[]
+CCPARS_TRIM_EXT struct ccpars   trim_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"  TYPE,max_vals,min_vals,*enum, *value,                         num_defaults
     { "INITIAL_REF", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_trim.initial_ref     }, 0 },

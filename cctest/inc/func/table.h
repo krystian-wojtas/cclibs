@@ -24,7 +24,6 @@
 #ifndef CCPARS_TABLE_H
 #define CCPARS_TABLE_H
 
-#include "ccpars.h"
 #include "libfg/table.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -57,7 +56,7 @@ CCPARS_TABLE_EXT struct ccpars_table ccpars_table;
 
 // Table data description structure
 
-CCPARS_TABLE_EXT struct ccpars   table_pars[]
+CCPARS_TABLE_EXT struct ccpars   table_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name", TYPE,       max_vals, min_vals, *enum,  *value,             num_defaults
     { "REF",         PAR_FLOAT, TABLE_LEN, 2, NULL,        { .f = ccpars_table.ref  }, 0 },

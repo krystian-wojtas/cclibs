@@ -24,17 +24,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "libfg.h"
-#include "pars/global.h"
-#include "pars/limits.h"
-#include "pars/load.h"
-#include "pars/reg.h"
-#include "pars/vs.h"
-
+#include "ccpars.h"
 #include "ccsigs.h"
-#include "func/table.h"
-#include "func/pppl.h"
-#include "func/plep.h"
 #include "flot.h"
 
 #define DIG_STEP        0.5      // Digital signal step size
@@ -281,7 +272,6 @@ void ccsigsPrepare(void)
 
         ccsigsEnableSignal(ANA_V_REF_LIMITED);
         ccsigsEnableSignal(ANA_V_MEAS);
-        ccsigsEnableSignal(ANA_V_MEAS_FLTR);
         ccsigsEnableSignal(ANA_V_ERR);
         ccsigsEnableSignal(ANA_MAX_ABS_V_ERR);
         ccsigsEnableSignal(DIG_V_REF_CLIP);
@@ -360,7 +350,6 @@ void ccsigsStore(float time)
         // Store voltage reference signals
 
         ccsigsStoreAnalog (ANA_V_MEAS,         reg.v_meas.unfiltered);
-        ccsigsStoreAnalog (ANA_V_MEAS_FLTR,    reg.v_meas.filtered);
         ccsigsStoreAnalog (ANA_V_REF,          reg.v_ref);
         ccsigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
         ccsigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
@@ -472,7 +461,7 @@ void ccsigsFlot(void)
 
             case FG_TABLE:
 
-                for(iteration_idx = 0 ; iteration_idx < table_pars[0].num_values &&
+                for(iteration_idx = 0 ; iteration_idx < table_pars_list[0].num_values &&
                                         (time = ccpars_table.time[iteration_idx] + ccpars_global.run_delay) < end_time ; iteration_idx++)
                 {
                     printf("[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);

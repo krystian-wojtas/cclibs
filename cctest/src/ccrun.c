@@ -25,22 +25,10 @@
 \*---------------------------------------------------------------------------------------------------------*/
 
 #include <stdio.h>
-//#include <stdlib.h>
-
-// Include RAMP header files
-
-#include "func/ramp.h"
-
-// Include cctest parameter header files
-
-#include "pars/global.h"
-#include "pars/limits.h"
-#include "pars/load.h"
-#include "pars/reg.h"
-#include "pars/vs.h"
 
 // Include cctest program header files
 
+#include "ccpars.h"
 #include "ccref.h"
 #include "ccsigs.h"
 #include "ccrun.h"

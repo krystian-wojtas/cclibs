@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/vs.h                                                                   Copyright CERN 2011
+  File:     pars/vs.h                                                                   Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -42,17 +42,13 @@ struct ccpars_vs
     // Voltage source file parameter
 
     float                       v_ref_delay;      // Voltage source control delay
-    float                       v_meas_delay;     // Voltage measurement delay
-    struct reg_meas_pars        v_meas_pars;      // Voltage measurement IIR filter parameters
     float                       bandwidth;        // Voltage source bandwidth
     float                       z;                // Damping factor
     float                       tau_zero;         // Time constant of zero
-    float                       v_sim_noise_pp;   // Simulated voltage measurement noise level
     struct reg_sim_vs_pars      sim_vs_pars;      // Voltage source simulation model
 
-    // Vvoltage source related variables
+    // Voltage source related variables
 
-    uint32_t                    status;           // Voltage source parameter group status
     uint32_t                    trip_flag;        // Voltage source tripped by measurement limit
 };
 
@@ -60,12 +56,9 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 #ifdef GLOBALS
 = {
     1.0,                                        // V_REF_DELAY
-    0.0,                                        // V_MEAS_DELAY
-    {  { 1.0 }, { 1.0 }  },                     // V_MEAS_NUM, V_MEAS_DEN: Default VS measurement IIR filter
-    0.0,                                        // NATURAL_FREQ
+    0.0,                                        // BANDWIDTH
     0.5,                                        // Z
     0.0,                                        // TAU_ZERO
-    0.0,                                        // V_SIM_NOISE_PP
     {  { 1.0 }, { 1.0 }  },                     // SIM_NUM, SIM_DEN: Default VS response is no delay
 }
 #endif
@@ -77,13 +70,9 @@ CCPARS_VS_EXT struct ccpars vs_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"    TYPE,   max_vals,        min_vals,*enum,     *value,                     num_defaults
     { "V_REF_DELAY",   PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.v_ref_delay      }, 1 },
-    { "V_MEAS_DELAY",  PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.v_meas_delay     }, 1 },
-    { "V_MEAS_NUM",    PAR_FLOAT, REG_N_IIR_COEFFS,    0, NULL,  { .f =  ccpars_vs.v_meas_pars.num  }, 1 },
-    { "V_MEAS_DEN",    PAR_FLOAT, REG_N_IIR_COEFFS,    0, NULL,  { .f =  ccpars_vs.v_meas_pars.den  }, 1 },
     { "BANDWIDTH",     PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.bandwidth        }, 1 },
     { "Z",             PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.z                }, 1 },
     { "TAU_ZERO",      PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.tau_zero         }, 1 },
-    { "V_SIM_NOISE_PP",PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.v_sim_noise_pp   }, 1 },
     { "SIM_NUM",       PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.num  }, 1 },
     { "SIM_DEN",       PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.den  }, 1 },
     { NULL }

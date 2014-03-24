@@ -24,7 +24,6 @@
 #ifndef CCPARS_START_H
 #define CCPARS_START_H
 
-#include "ccpars.h"
 #include "libfg.h"
 #include "libfg/plep.h"
 
@@ -55,7 +54,7 @@ CCPARS_PLEP_EXT struct ccpars_start ccpars_start;
 
 // PLEP data description structure
 
-CCPARS_PLEP_EXT struct ccpars   start_pars[]
+CCPARS_PLEP_EXT struct ccpars   start_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"         TYPE, max_vals,min_vals,*enum, *value,                           num_defaults
     { "FEEDFORWARD_V_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.feedforward_v_ref   }, 0 },

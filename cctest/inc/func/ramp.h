@@ -24,8 +24,6 @@
 #ifndef CCPARS_RAMP_H
 #define CCPARS_RAMP_H
 
-#include "ccpars.h"
-#include "libfg.h"
 #include "libfg/ramp.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -54,7 +52,7 @@ CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp;
 
 // RAMP data description structure
 
-CCPARS_RAMP_EXT struct ccpars   ramp_pars[]
+CCPARS_RAMP_EXT struct ccpars   ramp_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"   TYPE, max_vals,min_vals,*enum, *value,                           num_defaults
     { "INITIAL_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.initial_ref         }, 0 },
