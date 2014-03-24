@@ -172,7 +172,9 @@ static void PrepareSimulation(void)
         // Initialise voltage source model gain and stop if gain error is more than 5%
         // This also calculates the vs_undersampled_flag in the sim_load_pars
 
-        if(fabs(regSimVsInitGain(&reg_pars.sim_vs_pars, &reg_pars.sim_load_pars) - 1.0) > 0.05)
+        reg_pars.sim_load_pars.vs_undersampled_flag = regSimVsInitGain(&reg_pars.sim_vs_pars, &reg.sim_vs_vars);
+
+        if(fabs(reg_pars.sim_vs_pars.gain - 1.0) > 0.05)
         {
             fprintf(stderr,"Error : Voltage source model gain (%.3f) has an error of more than 5%%\n",reg_pars.sim_vs_pars.gain);
             exit(EXIT_FAILURE);
