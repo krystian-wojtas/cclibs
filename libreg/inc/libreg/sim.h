@@ -86,7 +86,7 @@ void     regSimVsInit           (struct reg_sim_vs_pars *pars, float sim_period,
 uint32_t regSimVsInitGain       (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars);
 float    regSimVsInitHistory    (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
 float    regSimVs               (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
-float    regSimNoise            (float noise_amplitude);
+float    regSimNoiseAndTone     (float noise_amplitude, float tone_amp, uint32_t tone_half_period_iters);
 
 #ifdef __cplusplus
 }
