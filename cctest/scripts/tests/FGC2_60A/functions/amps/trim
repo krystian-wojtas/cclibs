@@ -1,6 +1,6 @@
-# FGTEST TRIM file
+# CCTEST TRIM file
 
-INITIAL_REF     -10.0
-FINAL_REF       10.0
+TRIM.INITIAL_REF     -10.0
+TRIM.FINAL_REF       10.0
 
 # EOF

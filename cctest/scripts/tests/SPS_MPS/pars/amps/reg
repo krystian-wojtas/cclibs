@@ -1,12 +1,10 @@
-# FGTEST regulation file: SPS-MPS
+# CCTEST regulation file: SPS-MPS
 
-PERIOD_ITERS      3
-DECIMATE          ENABLED
-TRACK_DELAY       1e-3
-CLBW              40
-CLBW2             40
-Z                 0.5
-CLBW3             40
-PURE_DELAY        2.3E-3
+REG.PERIOD_ITERS            3
+REG.TRACK_DELAY_REGPERS     1
+REG.CLBW                    40
+REG.CLBW2                   40
+REG.Z                       0.5
+REG.CLBW3                   40
 
 # EOF

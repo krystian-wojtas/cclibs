@@ -1,14 +1,14 @@
-# FGTEST load file: SPS Main dipoles
+# CCTEST load file: SPS Main dipoles
 
-OHMS_SER        0.00
-OHMS_PAR        1.0E8
-OHMS_MAG        3.42
-HENRYS          6.5
-HENRYS_SAT      3.00
-I_SAT_START     4000.0
-I_SAT_END       6000.0
-I_MEAS_DELAY    1.3E-3
-I_SIM_NOISE_PP  0.03
-SIM_TC_ERROR    0.1
+LOAD.OHMS_SER        0.00
+LOAD.OHMS_PAR        1.0E8
+LOAD.OHMS_MAG        3.42
+LOAD.HENRYS          6.5
+LOAD.HENRYS_SAT      3.00
+LOAD.I_SAT_START     4000.0
+LOAD.I_SAT_END       6000.0
+LOAD.SIM_TC_ERROR    0.1
+
+LOAD.I_SIM_NOISE_PP  0.03
 
 # EOF

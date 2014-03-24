@@ -1,10 +1,8 @@
-# FGTEST voltage source model file : ACAPULCO with FGC3 in PSB
+# CCTEST voltage source model file : ACAPULCO with FGC3 in PSB
 
-V_REF_DELAY   1.0E-4
-V_MEAS_DELAY  1.3E-4
-BANDWIDTH     2000
-TAU_ZERO      0.0
-Z             0.9
+VS.BANDWIDTH     2000
+VS.TAU_ZERO      0.0
+VS.Z             0.9
 
 # EOF
 

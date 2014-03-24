@@ -1,9 +1,7 @@
-# FGTEST voltage source model file : ACAPULCO with FGC3 in PSB
+# CCTEST voltage source model file : ACAPULCO with FGC3 in PSB
 
-V_REF_DELAY   1.0E-4
-V_MEAS_DELAY  1.3E-4
-SIM_NUM       0.3504, 0.7008, 0.3504
-SIM_DEN       1.0, 0.3646, 0.0370
+VS.SIM_NUM       0.3504, 0.7008, 0.3504
+VS.SIM_DEN       1.0, 0.3646, 0.0370
 
 # EOF
 

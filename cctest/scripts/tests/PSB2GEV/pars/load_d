@@ -1,13 +1,12 @@
-# FGTEST load file: PSB Main dipoles
+# CCTEST load file: PSB Main dipoles
 
-OHMS_SER        0.00
-OHMS_PAR        1.0E8
-OHMS_MAG        0.25
-HENRYS          0.09
-HENRYS_SAT      0.08
-I_SAT_START     4000.0
-I_SAT_END       5500.0
-I_MEAS_DELAY    1.3E-4
-SIM_TC_ERROR    0.1
+LOAD.OHMS_SER        0.00
+LOAD.OHMS_PAR        1.0E8
+LOAD.OHMS_MAG        0.25
+LOAD.HENRYS          0.09
+LOAD.HENRYS_SAT      0.08
+LOAD.I_SAT_START     4000.0
+LOAD.I_SAT_END       5500.0
+LOAD.SIM_TC_ERROR    0.1
 
 # EOF

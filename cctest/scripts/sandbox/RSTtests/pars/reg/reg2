@@ -1,12 +1,10 @@
 # CCTEST regulation file: Current regulation
 
-PERIOD_ITERS      10
-DECIMATE          DISABLED
-TRACK_DELAY       2.0E-3
-CLBW              100
-CLBW2             100
-Z                 0.7
-CLBW3             100
-PURE_DELAY        0.9E-3
+REG.PERIOD_ITERS            10
+REG.TRACK_DELAY_REGPERS     2.0
+REG.CLBW                    100
+REG.CLBW2                   100
+REG.Z                       0.7
+REG.CLBW3                   100
 
 # EOF

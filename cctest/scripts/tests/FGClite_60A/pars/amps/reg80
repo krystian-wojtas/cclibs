@@ -1,13 +1,11 @@
-# FGTEST regulation file: LHC 60A
+# CCTEST regulation file: LHC 60A
 
-PERIOD_ITERS      80
-TRACK_DELAY       80E-3
-CLBW              1.0
-CLBW2             1.0
-Z                 0.5
-CLBW3             1.0
-CLBW4             1.0
-PURE_DELAY        35.8E-3
-DECIMATE          ENABLED
+REG.PERIOD_ITERS            80
+REG.TRACK_DELAY_REGPERS     1
+REG.CLBW                    1.0
+REG.CLBW2                   1.0
+REG.Z                       0.5
+REG.CLBW3                   1.0
+REG.CLBW4                   1.0
 
 # EOF

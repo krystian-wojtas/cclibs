@@ -1,12 +1,12 @@
 # CCTEST PPPL file - ELENA main dipole function
 
-INITIAL_REF          0
-ACCELERATION1    25000,   -25000,    -25000,    -25000
-ACCELERATION2        0,        0,         0,         0
-ACCELERATION3   -25000,    25000,     25000,     25000
-RATE2              200,     -200,      -200,      -200
-RATE4                0,        0,         0,         0
-REF4               326,      114,      44.6,         0
-DURATION4          0.2,      1.0,       1.0,       0.2
+PPPL.INITIAL_REF          0
+PPPL.ACCELERATION1    25000,   -25000,    -25000,    -25000
+PPPL.ACCELERATION2        0,        0,         0,         0
+PPPL.ACCELERATION3   -25000,    25000,     25000,     25000
+PPPL.RATE2              200,     -200,      -200,      -200
+PPPL.RATE4                0,        0,         0,         0
+PPPL.REF4               326,      114,      44.6,         0
+PPPL.DURATION4          0.2,      1.0,       1.0,       0.2
 
 # EOF

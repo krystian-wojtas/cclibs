@@ -1,9 +1,9 @@
-# FGTEST global control file for function generation tests with normal time
+# CCTEST global control file for function generation tests with normal time
 
-RUN_DELAY       1.0
-STOP_DELAY      1.0
-ITER_PERIOD     1.0E-3
-UNITS           VOLTS
-FG_LIMITS       ENABLED
+GLOBAL.RUN_DELAY       1.0
+GLOBAL.STOP_DELAY      1.0
+GLOBAL.ITER_PERIOD     1.0E-3
+GLOBAL.UNITS           VOLTS
+GLOBAL.FG_LIMITS       ENABLED
 
 # EOF

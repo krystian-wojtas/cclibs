@@ -1,15 +1,11 @@
-# FGTEST load file: FGClite with LHC 60A
+# CCTEST load file: FGClite with LHC 60A
 
-OHMS_SER        6.25E-2
-OHMS_PAR        1.0E8
-OHMS_MAG        0.0
-HENRYS          6.02
-HENRYS_SAT      6.02
-I_SAT_START     0.0
-I_SAT_END       0.0
-GAUSS_PER_AMP   1.0
-I_MEAS_DELAY    1.3E-3
-I_SIM_NOISE_PP  0.002
-SIM_TC_ERROR    -0.1
+LOAD.OHMS_SER        6.25E-2
+LOAD.OHMS_PAR        1.0E8
+LOAD.OHMS_MAG        0.0
+LOAD.HENRYS          6.02
+LOAD.SIM_TC_ERROR    -0.1
+
+MEAS.I_SIM_NOISE_PP  0.002
 
 # EOF

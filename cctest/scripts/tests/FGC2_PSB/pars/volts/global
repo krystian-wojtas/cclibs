@@ -1,9 +1,9 @@
-# FGTEST global control file
+# CCTEST global control file
 
-RUN_DELAY       0.1
-STOP_DELAY      0.2
-ITER_PERIOD     1.0E-3
-UNITS           VOLTS
-SIM_LOAD        ENABLED
+GLOBAL.RUN_DELAY       0.1
+GLOBAL.STOP_DELAY      0.2
+GLOBAL.ITER_PERIOD     1.0E-3
+GLOBAL.UNITS           VOLTS
+GLOBAL.SIM_LOAD        ENABLED
 
 # EOF

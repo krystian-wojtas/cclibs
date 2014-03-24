@@ -1,12 +1,12 @@
-# FGTEST PPPL file
+# CCTEST PPPL file
 
-INITIAL_REF     10.0
-ACCELERATION1    1.0E5,    1.0E5,     1.0E5
-ACCELERATION2   -1.0E4,   -0.0E4,    -1.0E4
-ACCELERATION3   -1.0E5,   -1.0E5,    -1.0E5
-RATE2             20E3,     20E3,      20E3
-RATE4              1E2,     -1E2,       0.0
-REF4            5000.0,  10000.0,   12000.0
-DURATION4          1.0,      1.0,       1.0
+PPPL.INITIAL_REF     10.0
+PPPL.ACCELERATION1    1.0E5,    1.0E5,     1.0E5
+PPPL.ACCELERATION2   -1.0E4,   -0.0E4,    -1.0E4
+PPPL.ACCELERATION3   -1.0E5,   -1.0E5,    -1.0E5
+PPPL.RATE2             20E3,     20E3,      20E3
+PPPL.RATE4              1E2,     -1E2,       0.0
+PPPL.REF4            5000.0,  10000.0,   12000.0
+PPPL.DURATION4          1.0,      1.0,       1.0
 
 # EOF
