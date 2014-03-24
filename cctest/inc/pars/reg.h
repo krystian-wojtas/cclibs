@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/reg.h                                                                  Copyright CERN 2011
+  File:     pars/reg.h                                                                  Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the regulation parameters file (-r load_file)
+  Purpose:  Structure for the regulation parameters group
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -41,7 +41,7 @@ struct ccpars_reg
     // Regulation file parameters
 
     uint32_t            period_iters;              // Regulation period in iteration periods
-    uint32_t            extrapolate_meas;          // Extrapolate measurement to remove measurement delay
+    float               track_delay_periods;       // Regulation track delay in periods
     float               clbw;                      // Regulation closed loop bandwidth (real pole)
     float               clbw2;                     // Regulation closed loop bandwidth (conjugate poles)
     float               z;                         // Regulation conjugate poles damping factor (0.5-0.8)
@@ -63,8 +63,7 @@ CCPARS_REG_EXT struct ccpars_reg ccpars_reg
 #ifdef GLOBALS
 = {
     10,                                            // PERIOD_ITERS
-    CC_DISABLED,                                   // EXTRAPOLATE_MEAS
-    1.0,                                           // TRACK_DELAY_REGPERS
+    1.0,                                           // TRACK_DELAY_PERIODS
     1.0,                                           // CLBW
     1.0,                                           // CLBW2
     0.5,                                           // Z
@@ -89,26 +88,22 @@ CCPARS_REG_EXT struct reg_converter_pars reg_pars; // Libreg converter regulatio
 CCPARS_REG_EXT struct ccpars reg_pars_list[]
 #ifdef GLOBALS
 = {// "Signal name"         TYPE,         max_vals,    min_vals, *enum, *value,                       num_defaults
-    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                0, NULL,  { .i = &ccpars_reg.period_iters            }, 1 },
-    { "EXTRAPOLATE_MEAS",   PAR_ENUM,     1,      0, enabled_disabled,{ .i = &ccpars_reg.extrapolate_meas        }, 1 },
-    { "TRACK_DELAY_REGPERS",PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.rst.track_delay_regpers }, 1 },
-    { "CLBW",               PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw                    }, 1 },
-    { "CLBW2",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw2                   }, 1 },
-    { "Z",                  PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.z                       }, 1 },
-    { "CLBW3",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw3                   }, 1 },
-    { "CLBW4",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw4                   }, 1 },
-    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.r                   }, 0 },
-    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.s                   }, 0 },
-    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.t                   }, 0 },
-    { "OPEN_LOOP_TIME",     PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.open_loop_time          }, 1 },
-    { "OPEN_LOOP_DURATION", PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.open_loop_duration      }, 1 },
+    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                0, NULL,  { .i = &ccpars_reg.period_iters        }, 1 },
+    { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.track_delay_periods }, 1 },
+    { "CLBW",               PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw                }, 1 },
+    { "CLBW2",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw2               }, 1 },
+    { "Z",                  PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.z                   }, 1 },
+    { "CLBW3",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw3               }, 1 },
+    { "CLBW4",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw4               }, 1 },
+    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.r               }, 0 },
+    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.s               }, 0 },
+    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.t               }, 0 },
+    { "OPEN_LOOP_TIME",     PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.open_loop_time      }, 1 },
+    { "OPEN_LOOP_DURATION", PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.open_loop_duration  }, 1 },
     { NULL }
 }
 #endif
 ;
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: pars/reg.h
-\*---------------------------------------------------------------------------------------------------------*/
-
+# EOF
