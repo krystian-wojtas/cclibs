@@ -1,6 +1,0 @@
-# CCTEST meas parameters
-
-MEAS.I_MEAS_DELAY    1.3E-3
-MEAS.V_MEAS_DELAY    1.3E-3
-
-# EOF

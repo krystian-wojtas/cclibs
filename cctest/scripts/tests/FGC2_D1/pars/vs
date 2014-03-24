@@ -1,7 +1,0 @@
-# FGTEST voltage source model file : RPTG D1
-
-V_REF_DELAY   1.0E-3
-V_MEAS_DELAY  1.3E-3
-
-# EOF
-
