@@ -58,6 +58,7 @@ struct reg_sim_vs_pars                                          // Voltage sourc
 {                                                               // Note: the order of fields is significant in fgtest
     float                       num  [REG_N_VS_SIM_COEFFS];     // Numerator coefficients b0, b1, b2, ...
     float                       den  [REG_N_VS_SIM_COEFFS];     // Denominator coefficients a0, a2, a2, ...
+    float                       step_rsp_time_iters;            // Time for step response to cross 50%
     float                       gain;                           // Gain = Sum(den)/Sum(num)
 };
 
@@ -82,7 +83,7 @@ void     regSimLoadSetVoltage   (struct reg_sim_load_pars *pars, struct reg_sim_
 float    regSimLoad             (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float voltage);
 void     regSimVsInit           (struct reg_sim_vs_pars *pars, float sim_period, float bandwidth,
                                  float z, float tau_zero);
-float    regSimVsInitGain       (struct reg_sim_vs_pars   *pars, struct reg_sim_load_pars *sim_load_pars);
+uint32_t regSimVsInitGain       (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars);
 float    regSimVsInitHistory    (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
 float    regSimVs               (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
 float    regSimNoise            (float noise_amplitude);

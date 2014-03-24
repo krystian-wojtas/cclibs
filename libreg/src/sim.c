@@ -193,8 +193,7 @@ float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
     return(vars->current);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidth,
-                  float z, float tau_zero)
+void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidth, float z, float tau_zero)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates the z-transform using the Tustin algorithm for a voltage source with a
   second order s-transform with one optional real zero with time constant tau_zero (0 if not used),
@@ -258,15 +257,17 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
     pars->den[3] = 0.0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_load_pars *sim_load_pars)
+uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function calculates the gain and the bandwidth of the simulated voltage source.  If the simulation
-  is undersampled it sets a flag in the sim_load structure so that the load simulation can be more accurate.
+  This function calculates the gain and the 50% step response time of the simulated voltage source.
+  It returns 1 if the voltage source simulation is under-sampled.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t        i;
     float           sum_num  = 0.0;         // Sum(b)
     float           sum_den  = 0.0;         // Sum(a)
+    float           step_response;
+    float           prev_step_response;
 
     // Calculate gain of voltage source model
 
@@ -281,17 +282,30 @@ float regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_load_pars *s
     if(sum_den != 0.0)
     {
        pars->gain = sum_num / sum_den;
-
-        // Mark voltage source simulation as undersampled if step response reaches 95% in 1 period
-
-        sim_load_pars->vs_undersampled_flag = (pars->num[0] / pars->den[0]) >= 0.95;
     }
     else
     {
-        pars->gain = 1.0;
+        pars->gain = 0.0;
     }
 
-    return(pars->gain);
+    // Evaluate the step response time to reach 50%
+
+    regSimVsInitHistory(pars, vars, 0.0);
+
+    prev_step_response = 0.0;
+
+    // Scan to find when step response crosses 50% level - protect against ultra slow responses
+
+    for(i = 0 ; i < 1000 && (step_response = regSimVs(pars, vars, 1.0) >= 0.5) ; i++)
+    {
+        prev_step_response = step_response;
+    }
+
+    pars->step_rsp_time_iters = (float)i + (0.5 - prev_step_response) / (step_response - prev_step_response);
+
+    // Consider simulation to be under-sampled if step response time is less than 10% of one iteration
+
+    return(pars->step_rsp_time_iters < 0.1);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_load)
@@ -330,8 +344,8 @@ float regSimVs(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float
 
     for(i = REG_N_VS_SIM_COEFFS-2, j = REG_N_VS_SIM_COEFFS-1 ; j ; i--,j--)
     {
-	vars->v_ref [j] = vars->v_ref [i];
-	vars->v_load[j] = vars->v_load[i];
+        vars->v_ref [j] = vars->v_ref [i];
+        vars->v_load[j] = vars->v_load[i];
     }
 
     vars->v_ref[0] = v_ref;
