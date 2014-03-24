@@ -35,27 +35,28 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
                           float                 z,
                           float                 clbw3,
                           float                 clbw4,
-                          float                 pure_delay)
+                          float                 pure_delay_periods)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function prepares coefficients for the RST regulation algorithm to implement a dead-beat PII
-  controller, provided the voltage source bandwidth is more than ten times higher than
-  the desired closed loop bandwidth of the controlled quantity (identified by pars->reg_mode).
+  This function prepares coefficients for the RST regulation algorithm. It chooses the algorithm to use
+  based on the pure_delay_iters parameter. It is divided into 5 ranges, two result in dead-beat PII
+  controllers and two non-dead-beat PII controllers. To work the bandwidth of the voltage source and
+  FIR filter notches must be at least ten times the bandwidth because they not included in the load model.
 
   It can be used with slow inductive circuits as well as fast or even resistive loads.  For fast loads,
   clbw is set to 1.0E+5 and z to 0.8.  Normally clbw should equal clbw2 and z should be 0.5.
 
-  The pure_delay parameter informs the algorithm of the pure delay around the loop.  This can be
-  a dynamic behaviour (i.e. of the voltage source or FIR filter) crudely modelled as a pure delay for low
-  frequencies, or it can be real pure delay due to computation or communications delays. A different
-  algorithm is used according to the pure delay, however, support for pure delays above 40% of the period
-  is restricted to loads without a parallel resistor (i.e. one pole and no zero).
+  The pure_delay_iters parameter informs the algorithm of the pure delay around the loop.  This can be
+  a dynamic behaviour (i.e. of the voltage source or filters) crudely modelled as a pure delay for low
+  frequencies, or it can be real pure delay due to computation or communications delays.
 
-  The calculation of the RST coefficients requires double precision floation point, even though the
+  Support for pure delays above 40% of the period is restricted to loads without a parallel resistor
+  (i.e. one pole and no zero).
+
+  The calculation of the RST coefficients requires double precision floating point, even though the
   coefficients themselves are stored as single precision.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t alg_index;          // Algorithm index - selected according to pure delay fraction
-    double delay_fraction;       // pure delay as a fraction of the period
     double t1;                   // -period / load_Tc
     double a1;                   // -exp(t1)
     double a2;                   // a2 = 1 + a1 = 1 - exp(t1) - use Maclaurin expansion for small t1
@@ -84,64 +85,63 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         a2 = -(t1 * (1.0 + 0.5 * t1));  // This is more precise for small t1
     }
 
-    // Calculate pure delay as a fraction of the period and select the algorithm to used according to the pure delay fraction
+    // Select the algorithm to use according to the pure delay
 
     b0_b1 = 0.0;
-    delay_fraction =  pure_delay / pars->period;
 
-    if(delay_fraction < 0.401)
+    if(pure_delay_periods < 0.401)
     {
-        // Option 1 - pure delay fraction < 0.401
+        // Option 1 - pure delay < 0.401
 
         alg_index = 1;
-        b0 = load->gain0 + load->gain1 * a2 * (1.0 - delay_fraction);
-        b1 = load->gain0 * a1 + load->gain1 * a2 * delay_fraction;
+        b0 = load->gain0 + load->gain1 * a2 * (1.0 - pure_delay_periods);
+        b1 = load->gain0 * a1 + load->gain1 * a2 * pure_delay_periods;
     }
     else if(load->ohms_par < 1.0E6)
     {
-        // If pure delay fraction > 0.4 and parallel resistance is significant, then no solution is possible
+        // If pure delay > 0.401 and parallel resistance is significant, then no solution is possible
 
         return;
     }
-    else if(delay_fraction < 1.0)
+    else if(pure_delay_periods < 1.0)
     {
-        // Option 2 - pure delay fraction 0.401 - 0.999
+        // Option 2 - pure delay 0.401 - 0.999
 
         alg_index = 2;
         b0_b1 = load->gain1 * a2;
-        b0 = b0_b1 * (1.0 - delay_fraction);
-        b1 = b0_b1 * delay_fraction;
+        b0 = b0_b1 * (1.0 - pure_delay_periods);
+        b1 = b0_b1 * pure_delay_periods;
     }
-    else if(delay_fraction < 1.401)
+    else if(pure_delay_periods < 1.401)
     {
-        // Option 3 - pure delay fraction 1.0 - 1.401
+        // Option 3 - pure delay 1.0 - 1.401
 
         alg_index = 3;
         b0_b1 = load->gain1 * a2;
-        b0 = b0_b1 * (2.0 - delay_fraction);
-        b1 = b0_b1 * (delay_fraction - 1.0);
+        b0 = b0_b1 * (2.0 - pure_delay_periods);
+        b1 = b0_b1 * (pure_delay_periods - 1.0);
     }
-    else if (delay_fraction < 2.00)
+    else if (pure_delay_periods < 2.00)
     {
-        // Option 4 - pure delay fraction 1.401 - 1.999
+        // Option 4 - pure delay 1.401 - 1.999
 
         alg_index = 4;
         b0_b1 = load->gain1 * a2;
-        b0 = b0_b1 * (2.0 - delay_fraction);
-        b1 = b0_b1 * (delay_fraction - 1.0);
+        b0 = b0_b1 * (2.0 - pure_delay_periods);
+        b1 = b0_b1 * (pure_delay_periods - 1.0);
     }
-    else if (delay_fraction < 2.401)
+    else if (pure_delay_periods < 2.401)
     {
-        // Option 5 - pure delay fraction 2.00 - 2.401
+        // Option 5 - pure delay 2.00 - 2.401
 
         alg_index = 5;
         b0_b1 = load->gain1 * a2;
-        b0 = b0_b1 * (3.0 - delay_fraction);
-        b1 = b0_b1 * (delay_fraction - 2.0);
+        b0 = b0_b1 * (3.0 - pure_delay_periods);
+        b1 = b0_b1 * (pure_delay_periods - 2.0);
     }
     else
     {
-        // If pure delay fraction > 2.401 then no solution is possible
+        // If pure delay > 2.401 then no solution is possible
 
         return;
     }
@@ -166,7 +166,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     switch(alg_index)
     {
-    case 1:                                             // Algorithm 1 : Pure delay fraction 0 - 0.401 (dead-beat)
+    case 1:                 // Algorithm 1 : Pure delay fraction 0 - 0.401 (dead-beat)
 
         pars->rst.r[0] = c1 + d1 - a1 + 2.0;
         pars->rst.r[1] = c1*d1 + d2 + 2.0*a1 - 1.0;
@@ -181,11 +181,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[1] = c1 + d1;
         pars->rst.t[2] = c1*d1 + d2;
         pars->rst.t[3] = c1*d2;
-
-        pars->rst.track_delay = pars->period;               // Track delay is exactly 1 period
         break;
 
-    case 2:                                             // Algorithm 2 : Pure delay fraction 0.401 - 0.999 (not dead-beat)
+    case 2:                 // Algorithm 2 : Pure delay fraction 0.401 - 0.999 (not dead-beat)
 
         pars->rst.r[0] = (3*a1 + c1 + d1 + 2*a1*c1 + 2*a1*d1 + a1*d2 - c1*d2 + a1*c1*d1 + 2)/(b0_b1*(a1 + 1)*(a1 + 1)) +
                          (b1*(c1 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1)) + (a1*(a1 - c1)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0));
@@ -210,11 +208,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[1] = (c1 + d1) / b0_b1;
         pars->rst.t[2] = (c1*d1 + d2) / b0_b1;
         pars->rst.t[3] = c1*d2 / b0_b1;
-
-        pars->rst.track_delay = 2.0 * pars->period;         // Track delay is about 2 periods (not dead-beat)
         break;
 
-    case 3:                                            // Algorithm 3 : Pure delay fraction 1.0 - 1.401 (dead-beat)
+    case 3:                 // Algorithm 3 : Pure delay fraction 1.0 - 1.401 (dead-beat)
 
         c2 = exp(-pars->period * TWO_PI * clbw3);
         q1 = 2.0 - a1 + c1 + c2 + d1;
@@ -234,11 +230,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[2] = c1*c2 + d1*(c1 + c2) + d2;
         pars->rst.t[3] = c1*c2*d1 + d2*(c1 + c2);
         pars->rst.t[4] = c1*c2*d2;
-
-        pars->rst.track_delay = 2.0 * pars->period;         // Track delay is exactly 2 periods (dead-beat)
         break;
 
-    case 4:                                             // Algorithm 4 : Pure delay fraction 1.401 - 1.999 (not dead-beat)
+    case 4:                 // Algorithm 4 : Pure delay fraction 1.401 - 1.999 (not dead-beat)
 
         c2 = exp(-pars->period * TWO_PI * clbw3);
 
@@ -272,11 +266,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[2] = (d2 + c1*c2 + c1*d1 + c2*d1) / b0_b1;
         pars->rst.t[3] = (c1*d2 + c2*d2 + c1*c2*d1) / b0_b1;
         pars->rst.t[4] = c1*c2*d2 / b0_b1;
-     
-        pars->rst.track_delay = 3.0 * pars->period;         // Track delay is about 3 periods (not dead-beat)
         break;
 
-    case 5:                                            // Algorithm 5 : Pure delay fraction 2.0 - 2.401 (dead-beat)
+    case 5:                 // Algorithm 5 : Pure delay fraction 2.0 - 2.401 (dead-beat)
 
         c2 = exp(-pars->period * TWO_PI * clbw3);
         c3 = exp(-pars->period * TWO_PI * clbw4);
@@ -300,8 +292,6 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[3] = c1*d2 + c2*d2 + c3*d2 + c1*c2*c3 + c1*c2*d1 + c1*c3*d1 + c2*c3*d1;
         pars->rst.t[4] = c1*c2*d2 + c1*c3*d2 + c2*c3*d2 + c1*c2*c3*d1;
         pars->rst.t[5] = c1*c2*c3*d2;
-
-        pars->rst.track_delay = 3.0 * pars->period;         // Track delay is exactly 3 periods (dead-beat)
         break;
     }
 }
@@ -331,8 +321,6 @@ static void regRstInitPI(struct reg_rst_pars  *pars,
 
     pars->rst.t[0] = pars->rst.r[0];
     pars->rst.t[1] = pars->rst.r[1];
-
-    pars->rst.track_delay = pars->period;               // Track delay is at least 1 period
 }
 /*---------------------------------------------------------------------------------------------------------*/
 static void regRstInitI(struct reg_rst_pars  *pars,
@@ -357,8 +345,6 @@ static void regRstInitI(struct reg_rst_pars  *pars,
     pars->rst.s[1] = -b1;
 
     pars->rst.t[0] = 1.0 + c1;
-
-    pars->rst.track_delay = pars->period;               // Track delay is at least 1 period
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t regRstInit(struct reg_rst_pars  *pars,
@@ -370,38 +356,29 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
                     float                 z,
                     float                 clbw3,
                     float                 clbw4,
-                    float                 pure_delay,
+                    float                 pure_delay_periods,
                     enum reg_mode         reg_mode,
-                    uint32_t              decimate_flag,
                     struct reg_rst       *manual)
 /*---------------------------------------------------------------------------------------------------------*\
   This function prepares coefficients for the RST regulation algorithm based on the paper EDMS 686163 by
   Hugues Thiesen with extensions from Martin Veenstra and Michele Martino, to allow a pure loop delay to
   be accommodated. The function returns REG_OK on success and REG_FAULT if s[0] is too small (<1E-10).
 
-  Notes:    The algorithms can calculate the RST coefficients from the clbw/clbw2/z/clbw3/clbw4/pure_delay
-            and load parameters. This only works well if the voltage source bandwidth is much faster
+  Notes:    The algorithms can calculate the RST coefficients from the parameters
+            clbw/clbw2/z/clbw3/clbw4/pure_delay_periods and the load parameters.
+            This only works well if the voltage source bandwidth and FIR notch are much faster
             than the closed loop bandwidth (>10x). Three controllers are selectable:  I, PI, PII.
-            For the PII, the regulator may or may not be dead-beat according to the pure_delay.
+            For the PII, the regulator may or may not be dead-beat according to the pure delay.
 
             If the voltage source bandwidth is less than a factor 10 above the closed loop bandwidth
             then the algorithms will not produce good results and the RST coefficients will need
             to be calculated manually using Matlab.
-
-  Implementation notes:
-            Computing the T0 correction requires a better precision than 32-bit floating point for
-            the intermediate results. This is achieved by using the type double for the local variable
-            t0_correction. On TI C32 DSP, 'double' is simply an alias for 'float' i.e. 32-bit FP.
-            However that DSP can take advantage of the extended 40-bit FP precision of its ALU,
-            providing the code is written in such a way that the C32 compiler produces the most efficient
-            assembly code. That usually implies writing the formula on a single line, not relying on loops.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    i;
     double      t0_correction;
 
     pars->reg_mode      = reg_mode;
-    pars->decimate_flag = decimate_flag;
     pars->period_iters  = period_iters;
     pars->period        = iter_period * period_iters;
     pars->freq          = 1.0 / pars->period;
@@ -425,7 +402,7 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
 
         if(clbw2 > 0.0)                         // If CLBW2 > 0               -> PII regulator (slow inductive load)
         {
-            regRstInitPII(pars, load, clbw, clbw2, z, clbw3, clbw4, pure_delay);
+            regRstInitPII(pars, load, clbw, clbw2, z, clbw3, clbw4, pure_delay_periods);
         }
         else if(load->henrys >= 1.0E-10)        // If CLBW2 == 0, HENRYS > 0  ->  PI regulator (fast inductive load)
         {
@@ -434,13 +411,6 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
         else                                    // If CLBW2 == 0, HENRYS == 0 ->   I regulator (resistive load)
         {
             regRstInitI(pars, load, clbw);
-        }
-
-        // Use track delay supplied in manual RST structure if it is valid (i.e. >= regulation period)
-
-        if(manual->track_delay >= pars->period)
-        {
-            pars->rst.track_delay = manual->track_delay;
         }
     }
 

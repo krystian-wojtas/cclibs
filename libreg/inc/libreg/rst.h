@@ -62,7 +62,6 @@ enum reg_mode                                                   // Converter reg
 
 struct reg_rst                                                  // RST polynomial arrays and track delay
 {
-    float                       track_delay;                    // Track delay
     float                       r   [REG_N_RST_COEFFS];         // R polynomial coefficients (meas)
     float                       s   [REG_N_RST_COEFFS];         // S polynomial coefficients (act)
     float                       t   [REG_N_RST_COEFFS];         // T polynomial coefficients (ref)
@@ -72,7 +71,6 @@ struct reg_rst_pars                                             // RST algorithm
 {
     enum reg_status             status;                         // Regulation parameters status
     enum reg_mode               reg_mode;                       // Regulation mode (REG_CURRENT | REG_FIELD)
-    uint32_t                    decimate_flag;                  // Decimate measurement flag
     uint32_t                    period_iters;                   // Regulation period (in iterations)
     float                       period;                         // Regulation period
     float                       freq;                           // Regulation frequency
