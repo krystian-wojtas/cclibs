@@ -47,8 +47,8 @@ struct ccpars_meas
     uint32_t                i_extrapolate;              // Extrapolate current measurement for regulation
     uint32_t                b_extrapolate;              // Extrapolate field   measurement for regulation
 
-    uint32_t                i_fir_orders[2];            // Current measurement FIR filter orders
-    uint32_t                b_fir_orders[2];            // Field   measurement FIR filter orders
+    uint32_t                i_fir_lengths[2];           // Current measurement FIR filter lengths (in iterations)
+    uint32_t                b_fir_lengths[2];           // Field   measurement FIR filter lengths (in iterations)
 
     float                   v_sim_noise_pp;             // Simulated voltage measurement peak-peak noise level
     float                   i_sim_noise_pp;             // Simulated current measurement peak-peak noise level
@@ -67,8 +67,8 @@ CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
     1.3,                                      // B_DELAY_ITERS
     CC_DISABLED,                              // I_EXTRAPOLATE
     CC_DISABLED,                              // B_EXTRAPOLATE
-    { 1.0, 1.0 },                             // I_FIR_ORDERS
-    { 1.0, 1.0 },                             // B_FIR_ORDERS
+    { 1.0, 1.0 },                             // I_FIR_LENGTHS
+    { 1.0, 1.0 },                             // B_FIR_LENGTHS
     0.0,                                      // I_SIM_NOISE_PP
     0.0,                                      // I_SIM_NOISE_PP
     0.0,                                      // B_SIM_NOISE_PP
@@ -88,8 +88,8 @@ CCPARS_MEAS_EXT struct ccpars meas_pars_list[]
     { "I_DELAY_ITERS",         PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.i_delay_iters          }, 1 },
     { "B_DELAY_ITERS",         PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.b_delay_iters          }, 1 },
     { "I_EXTRAPOLATE",         PAR_ENUM,     1, 0, enabled_disabled,{ .i = &ccpars_meas.i_extrapolate          }, 1 },
-    { "I_FIR_ORDERS",          PAR_FLOAT,    2, 0, NULL,            { .f =  ccpars_meas.i_fir_orders           }, 2 },
-    { "B_FIR_ORDERS",          PAR_FLOAT,    2, 0, NULL,            { .f =  ccpars_meas.b_fir_orders           }, 2 },
+    { "I_FIR_LENGTHS",         PAR_FLOAT,    2, 0, NULL,            { .f =  ccpars_meas.i_fir_lengths          }, 2 },
+    { "B_FIR_LENGTHS",         PAR_FLOAT,    2, 0, NULL,            { .f =  ccpars_meas.b_fir_lengths          }, 2 },
     { "V_SIM_NOISE_PP",        PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.v_sim_noise_pp         }, 1 },
     { "I_SIM_NOISE_PP",        PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.i_sim_noise_pp         }, 1 },
     { "B_SIM_NOISE_PP",        PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.b_sim_noise_pp         }, 1 },
