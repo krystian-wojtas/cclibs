@@ -53,7 +53,7 @@ static void ccrunAbort(float time)
 
     if(config.acceleration <= 0.0)
     {
-        config.acceleration = 10.0 * config.linear_rate / reg.cl_period;
+        config.acceleration = 10.0 * config.linear_rate / reg.period;
     }
 
     // Make ramp symmetric with deceleration = acceleration
@@ -67,7 +67,7 @@ static void ccrunAbort(float time)
                &ccpars_ramp.ramp_pars,
                 ccpars_reg.time,                                              // time of last RST calculation
                 regRstPrevRef(&reg.rst_vars),                                 // last reference value
-                regRstDeltaRef(&reg.rst_vars) / reg.cl_period,                // last reference rate
+                regRstDeltaRef(&reg.rst_vars) / reg.period,                // last reference rate
                &fg_meta);
 
     // Check that abort duration is not too large (limit to 50000 iterations)
