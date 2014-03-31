@@ -113,7 +113,7 @@ void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_va
     if(pars->load_undersampled_flag == 0)
     {
         vars->integrator   = v_init * pars->load_pars.gain1;
-	vars->voltage      = v_init;
+        vars->voltage      = v_init;
         vars->compensation = 0.0;
     }
 
@@ -173,7 +173,6 @@ float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
         vars->integrator   = prev_integrator + increment;
         vars->compensation = (vars->integrator - prev_integrator) - increment;  // Algebraically 0, in fact holds the
                                                                                 // floating-point error compensation
-
         vars->current      = vars->integrator + pars->load_pars.gain0 * v_load;
         vars->mag_current  = vars->integrator * pars->load_pars.gain2;
     }
@@ -365,46 +364,6 @@ float regSimVs(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float
     vars->v_load[0] = v_load;
 
     return(v_load);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-float regSimNoiseAndTone(float noise_pp, float tone_amp, uint32_t tone_half_period_iters)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function uses a simple pseudo random number generator to generate a simple roughly white noise
-  signal with peak-peak specified by noise_pp, combined with a square wave tone with amplitude
-  specified by tone_amp.  The frequency of the tone is defined by its half-period in iterations.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    float            noise = 0.0;                            // Roughly white noise
-    float            tone  = 0.0;                            // Square wave tone
-    static uint32_t  noise_random_generator = 0x8E35B19C;    // Use fixed initial seed
-    static uint32_t  tone_toggle = 1;                        // Toggle for tone generator
-    static uint32_t  iter_counter;                           // Use for tone generation
-
-    // Use efficient random number generator to calculate the roughly white noise
-
-    if(noise_pp != 0.0)
-    {
-        noise_random_generator = (noise_random_generator << 16) +
-                               (((noise_random_generator >> 12) ^ (noise_random_generator >> 15)) & 0x0000FFFF);
-
-        noise = noise_pp * (float)((int32_t)noise_random_generator) / 4294967296.0;
-    }
-
-    // Use efficient square tone generator to create tone
-
-    if(tone_amp != 0.0)
-    {
-        if(++iter_counter >= tone_half_period_iters)
-        {
-            tone_toggle = 1 - tone_toggle;
-        }
-
-        tone = tone_toggle ? tone_amp : -tone_amp;
-    }
-
-    // Return sum of noise and tone
-
-    return(noise + tone);
 }
 // EOF
 
