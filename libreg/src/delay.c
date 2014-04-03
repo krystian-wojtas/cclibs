@@ -27,38 +27,35 @@
 #include "libreg/delay.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-void regDelayInitPars(struct reg_delay *delay, float *buf, float delay_in_iters, uint32_t undersampled_flag)
+static void regDelayCalcDelay(struct reg_delay_pars *delay, uint32_t under_sampled_flag, float delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function initialises the reg_delay structure parameters.  The buffer pointered to by buf must have
-  a length of (int)delay_in_iters.  If delay_in_iters is less than 1 then buf can be NULL.
-  If buf is NULL then the buffer pointer is preserved so once a buffer is linked the function can be called
-  with NULL without losing it. The undersampled_flag can be used to suppress the linear interpolation
-  between sampled.  When set it assumes that the signal settles to the new value immediately.
+  This function converts the delay in iterations into integer and fractional parts, taking into account
+  the under_sampled flag. When the signal is under sampled, it is assumed to jump to the final value
+  for an iteration immediately - so the delay is round up to the next integer value.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    double      delay_int;		// double variable required for modf() function
+    double      delay_int;      // double variable required for modf() function
 
-    // Remember undersampled_flag
+    // Clip delay
 
-    delay->undersampled_flag = undersampled_flag;
-
-    // Protect against negative delays
-
-    if(delay_in_iters < 0.0)
+    if(delay_iters < 0.0)
     {
-        delay_in_iters = 0.0;
-        buf            = 0;
+        delay_iters = 0.0;
+    }
+    else if(delay_iters > (REG_DELAY_BUF_INDEX_MASK - 1.0))
+    {
+        delay_iters = REG_DELAY_BUF_INDEX_MASK - 1.0;
     }
 
-    // Calculate delay integer and fractional parts
+    // Calculate integer and fractional parts of the delay in iterations
 
-    delay->delay_frac = modf(delay_in_iters, &delay_int);
+    delay->delay_frac = modf(delay_iters, &delay_int);
 
     delay->delay_int  = (int32_t)delay_int;
 
-    // If signal is undersampled then assume it settles immediately
+    // If signal is under sampled then assume it settles immediately
 
-    if(undersampled_flag)
+    if(under_sampled_flag)
     {
         // If delay has a fractional part then round up delay to next integer
 
@@ -68,17 +65,22 @@ void regDelayInitPars(struct reg_delay *delay, float *buf, float delay_in_iters,
             delay->delay_int++;
         }
     }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void regDelayInitDelays(struct reg_delay *delay, uint32_t under_sampled_flag,
+                        float delay_1_iters, float delay_2_iters)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function initialises the reg_delay structure parameters.  The buffer pointered to by buf must have
+  a length of (int)delay_in_iters.  If delay_in_iters is less than 1 then buf can be NULL.
+  If buf is NULL then the buffer pointer is preserved so once a buffer is linked the function can be called
+  with NULL without losing it. The undersampled_flag can be used to suppress the linear interpolation
+  between sampled.  When set it assumes that the signal settles to the new value immediately.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    // Initialise the delay parameters
 
-    // Connect the buffer if available - this will preserve an existing buffer pointer if NULL passed
-
-    if(buf)
-    {
-        delay->buf = buf;
-    }
-
-    // Initialise the delay structure variables
-
-    regDelayInitVars(delay, 0.0);
+    regDelayCalcDelay(&delay->delay_1, under_sampled_flag, delay_1_iters);
+    regDelayCalcDelay(&delay->delay_2, under_sampled_flag, delay_2_iters);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regDelayInitVars(struct reg_delay *delay, float initial_signal)
@@ -88,63 +90,36 @@ void regDelayInitVars(struct reg_delay *delay, float initial_signal)
 {
     uint32_t    i;
 
-    delay->buf_index = 0;
-
     // Initialise history to value of supplied signal
 
-    delay->prev_signal = initial_signal;
-
-    for(i=0 ; i < delay->delay_int ; i++)
+    for(i=0 ; i <= REG_DELAY_BUF_INDEX_MASK ; i++)
     {
         delay->buf[i] = initial_signal;
     }
-
-    // Iteration counter starts negative to add extra periods before delayed signal is valid
-
-    delay->iteration_counter = -2;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t regDelayCalc(struct reg_delay *delay, float signal, float *delayed_signal)
+static void regDelayCalcSignal(struct reg_delay *delay, struct reg_delay_pars *pars, float *delayed_signal)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function calculates the delayed signal value.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float s0 = delay->buf[(delay->buf_index - pars->delay_int    ) & REG_DELAY_BUF_INDEX_MASK];
+    float s1 = delay->buf[(delay->buf_index - pars->delay_int - 1) & REG_DELAY_BUF_INDEX_MASK];
+
+    *delayed_signal = s0 + pars->delay_frac * (s1 - s0);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void regDelayCalc(struct reg_delay *delay, float signal, float *delayed_signal_1, float *delayed_signal_2)
 /*---------------------------------------------------------------------------------------------------------*\
   This function should be called after the delay structure has been initialised.  It returns a
-  status to indicate if the delayed_signal can be used.  This will be zero initialy (invalid) until
+  status to indicate if the delayed_signal can be used.  This will be zero initially (invalid) until
   the history buffer is full and then it becomes 1, at which point the delayed_signal can be used.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float interpolated_signal;
+    delay->buf[++delay->buf_index & REG_DELAY_BUF_INDEX_MASK] = signal;
 
-    // Interpolate using fractional delay
-
-    interpolated_signal = signal + (delay->prev_signal - signal) * delay->delay_frac;
-    delay->prev_signal  = signal;
-
-    // Use circular buffer for the integer delay
-
-    if(delay->delay_int > 0)
-    {
-        *delayed_signal = delay->buf[delay->buf_index];
-
-        delay->buf[delay->buf_index] = interpolated_signal;
-
-        if(++delay->buf_index >= delay->delay_int)
-        {
-            delay->buf_index = 0;
-        }
-    }
-    else
-    {
-        *delayed_signal = interpolated_signal;
-    }
-
-    // Return validity flag - only valid once circular buffer is full
-
-    if(delay->iteration_counter >= delay->delay_int)
-    {
-        return(1);                              // delayed_signal is now valid
-    }
-
-    delay->iteration_counter++;
-    return(0);                          // delayed_signal is not yet valid
+    regDelayCalcSignal(delay, &delay->delay_1, delayed_signal_1);
+    regDelayCalcSignal(delay, &delay->delay_2, delayed_signal_2);
 }
 // EOF
 

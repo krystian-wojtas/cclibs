@@ -44,32 +44,45 @@
 #include <libreg/rst.h>
 #include <libreg/sim.h>
 
-// Constants
-
-#define REG_N_IIR_COEFFS        11                              // Number of Voltage Source simulation coefficients...
-                                                                // ...if this is changed, the code in reg.c must be modified
 // Measurement structures
 
 struct reg_meas_filter                                          // Measurement filter parameters and variables
 {
-    uint32_t                    run_flag;                       // Filter running flag - can block filter when being modified
-    uint32_t                    fir_order[2];                   // Filter order for two cascaded stages
-    uint32_t                    fir_index[2];                   // Index to oldest sample in buffer
+    uint32_t                    stop_iters;                     // Stop filter for specified number of iters
+    uint32_t                    extrapolate_flag;               // Use extrapolated measurement for regulation flag
+    uint32_t                    extrapolation_len_iters;        // Extrapolation length (normally regulation period)
+    uint32_t                    extrapolation_index;            // Index to oldest sample in extrapolation buffer
+    uint32_t                    fir_length[2];                  // Filter length for two cascaded stages
+    uint32_t                    fir_index[2];                   // Index to oldest sample in FIR buffers
     int32_t                     accumulator[2];                 // Filter accumulator for two cascaded stages
-    int32_t                    *buf[2];                         // Pointer to circular buffers for two cascaded stages
-    float                       unfiltered;                     // Unfiltered measurement at iteration period
-    float                       filtered;                       // Filtered measurement at iteration period
-    float                       max_value;                      // Maximum 
+    int32_t                    *fir_buf[2];                     // Pointer to circular buffers for two cascaded FIR stage
+    float                      *extrapolation_buf;              // Pointer to circular buffer for extrapolation
+    float                       meas_delay_iters;               // Measurement delay in iterations
+    float                       fir_delay_iters;                // FIR filter delay in iterations
+    float                       unfiltered;                     // Unfiltered measurement at iteration rate
+    float                       filtered;                       // FIR filtered measurement at iteration rate
+    float                       extrapolated;                   // Extrapolated measurement at iteration rate
+    float                       max_value;                      // Maximum value that can be filtered
     float                       float_to_integer;               // Factor to convert unfiltered measurement to integer
     float                       integer_to_float;               // Factor to converter integer to filtered measurement
-    float                       delay_iters;                    // Filter delay in iterations
+    float                       extrapolation_factor;           // Extrapolation factor
+};
+
+struct reg_noise_and_tone                                        // Noise and tone generator structure
+{
+    uint32_t                    iter_counter;                   // Iteration counter for simulated tone
+    uint32_t                    tone_half_period_iters;         // Tone half period in iterations
+    uint32_t                    tone_toggle;                    // Tone toggle (0,1,0,1,...)
+    float                       tone_amp;                       // Tone amplitude
+    float                       noise_pp;                       // Simulated measurement peak-peak noise level
 };
 
 struct reg_sim_meas                                             // Measurement simulation structure
 {
     struct reg_delay            delay;                          // Simulated measurement delay parameters
-    float                       noise;                          // Simulated measurement Noise amplitude
-    float                       meas;                           // Simulated measurement
+    struct reg_noise_and_tone   noise_and_tone;                 // Simulated noise and tone parameters
+    float                       load;                           // Simulated value in the load
+    float                       meas;                           // Simulated measurement with noise and tone
 };
 
 // Global power converter regulation structure
@@ -79,27 +92,23 @@ struct reg_converter                                            // Global conver
     enum reg_mode               mode;                           // Field, current or voltage regulation
 
     float                       iter_period;                    // Iteration period
-    float                       cl_period;                      // Closed loop regulation period
-    uint32_t                    cl_period_iters;                // Closed loop regulation period (in iterations)
+    float                       period;                         // Regulation period
+    uint32_t                    period_iters;                   // Regulation period (in iterations)
     uint32_t                    iteration_counter;              // Iteration counter
 
-    // Unfiltered measurements - real or simulated
-    
-    float                       v_meas;                         // Voltage measurement
-    
-    // Filtered measurements - real or simulated
-
-    struct reg_meas_filter      i_meas;                         // Current measurement
-    struct reg_meas_filter      b_meas;                         // Field measurement
+    float                       v_meas;                         // Unfiltered voltage measurement (real or sim)
+    struct reg_meas_filter      i_meas;                         // Unfiltered and filtered current measurement (real or sim)
+    struct reg_meas_filter      b_meas;                         // Unfiltered and filtered field measurement (real or sim)
 
     // Reference and regulation variables
 
     float                       ref;                            // Field or current reference
     float                       ref_limited;                    // Field or current reference after limits
     float                       ref_rst;                        // Field or current reference after back-calculation
-    float                       ref_prev;
-    float                       ref_rate;
-    float                       ref_interpolated;
+    float                       ref_prev;                       // Previous field or current reference
+    float                       ref_rate;                       // Rate of change of field or current reference
+    float                       ref_interpolated;               // Reference interpolated at iteration rate
+    float                       meas;                           // Field or current regulated measurement
     float                       v_ref;                          // Voltage reference before saturation or limits
     float                       v_ref_sat;                      // Voltage reference after saturation compensation
     float                       v_ref_limited;                  // Voltage reference after saturation and limits
@@ -148,7 +157,6 @@ struct reg_converter                                            // Global conver
 
 struct reg_converter_pars                                       // Global converter regulation parameters structure
 {
-    struct reg_rst_pars         v_rst_pars;                     // Voltage regulation RST parameters
     struct reg_rst_pars         i_rst_pars;                     // Current regulation RST parameters
     struct reg_rst_pars         b_rst_pars;                     // Field regulation RST parameters
     struct reg_sim_vs_pars      sim_vs_pars;                    // Voltage source simulation parameters
@@ -163,14 +171,16 @@ extern "C" {
 // Converter regulation functions
 
 void     regMeasFilterInitBuffer (struct reg_meas_filter *filter, int32_t *buf);
-void     regMeasFilterInitOrders (struct reg_meas_filter *filter, uint32_t fir_order[2]);
+void     regMeasFilterInitOrders (struct reg_meas_filter *filter, uint32_t fir_length[2]);
+void     regSetMeasNoise         (struct reg_converter *reg, float v_sim_noise, float i_sim_noise, float b_sim_noise);
 void     regMeasFilterInitMax    (struct reg_meas_filter *filter, float pos, float neg);
 void     regMeasFilterInitHistory(struct reg_meas_filter *filter);
 void     regSetSimLoad           (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
                                   enum reg_mode reg_mode, float sim_load_tc_error);
 void     regSetLoad              (float ohms_ser, float ohms_par, float ohms_mag, float henrys,
                                   float gauss_per_amp, float sim_load_tc_error);
-void     regSetMeasNoise         (struct reg_converter *reg, float v_sim_noise, float i_sim_noise, float b_sim_noise);
+void     regSetNoiseAndTone      (struct reg_noise_and_tone *noise_and_tone, float noise_pp,
+                                  float tone_amp, uint32_t tone_half_period_iters);
 void     regSetMeas              (struct reg_converter *reg,  struct reg_converter_pars *reg_pars,
                                   float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
 void     regSetVoltageMode       (struct reg_converter *reg, struct reg_converter_pars *reg_pars);
@@ -181,6 +191,7 @@ uint32_t regConverter            (struct reg_converter *reg, struct reg_converte
                                   uint32_t max_abs_err_control);
 void     regSimulate             (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
                                   float v_perturbation);
+float    regNoiseAndTone         (struct reg_noise_and_tone *noise_and_tone);
 
 #ifdef __cplusplus
 }
