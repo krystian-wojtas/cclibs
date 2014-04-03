@@ -34,7 +34,7 @@ static void regDelayCalcDelay(struct reg_delay_pars *delay, uint32_t under_sampl
   for an iteration immediately - so the delay is round up to the next integer value.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    double      delay_int;      // double variable required for modf() function
+    float delay_int;      // double variable required for modf() function
 
     // Clip delay
 
@@ -49,7 +49,7 @@ static void regDelayCalcDelay(struct reg_delay_pars *delay, uint32_t under_sampl
 
     // Calculate integer and fractional parts of the delay in iterations
 
-    delay->delay_frac = modf(delay_iters, &delay_int);
+    delay->delay_frac = modff(delay_iters, &delay_int);
 
     delay->delay_int  = (int32_t)delay_int;
 
