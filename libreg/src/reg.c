@@ -586,7 +586,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
     // Calculate and check the voltage regulation limits
 
-    regErrCheckLimits(&reg->v_err, 1, 1, reg->v_err.delayed_ref, reg->v_meas);
+    regErrCheckLimits(&reg->v_err, 1, reg->v_err.delayed_ref, reg->v_meas);
 
     // Check current measurement limits
 
@@ -623,20 +623,8 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
         // Clear current/field regulation error
 
-        if(reg->i_err.limits.err > 0.0)
-        {
-            reg->i_err.limits.err          = 0.0;
-            reg->i_err.limits.warning.flag = 0;
-            reg->i_err.limits.fault.flag   = 0;
-        }    
-
-        if(reg->b_err.limits.err > 0.0)
-        {
-            reg->b_err.limits.err          = 0.0;
-            reg->b_err.limits.warning.flag = 0;
-            reg->b_err.limits.fault.flag   = 0;
-        }    
-
+        regErrResetLimitsVars(&reg->i_err);
+        regErrResetLimitsVars(&reg->b_err);
         reg_flag = 1;
     }
     else  // else closed-loop on current or field
@@ -701,19 +689,19 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
   regConverter().  A voltage perturbation can be included in the simulation via the v_perturbation parameter.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float sim_v_load;
+    float sim_advanced_v_load;      // Simulated v_load advanced by V_REF_DELAY
 
-    // Simulate voltage source response to v_ref
+    // Simulate voltage source response to v_ref without V_REF_DELAY
 
-    sim_v_load = regSimVs(&reg_pars->sim_vs_pars, &reg->sim_vs_vars, reg->v_ref_limited);
+    sim_advanced_v_load = regSimVs(&reg_pars->sim_vs_pars, &reg->sim_vs_vars, reg->v_ref_limited);
 
-    // Simulate load current and field in response to sim_v_load plus the perturbation
+    // Simulate load current and field in response to sim_advanced_v_load plus the perturbation
 
-    regSimLoad(&reg_pars->sim_load_pars, &reg->sim_load_vars, sim_v_load + v_perturbation);
+    regSimLoad(&reg_pars->sim_load_pars, &reg->sim_load_vars, sim_advanced_v_load + v_perturbation);
 
     // Simulate voltage measurements using appropriate delay
 
-    regDelayCalc(&reg->v_sim.delay, reg->sim_load_vars.voltage, &reg->v_sim.meas);
+    regDelayCalc(&reg->v_sim.delay, reg->sim_load_vars.voltage, &reg->v_sim.load, &reg->v_sim.meas);
 
     // Store simulated voltage measurement without noise as the delayed ref for the v_err calculation
 
@@ -725,13 +713,13 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
 
     // Apply delay and noise to simulated current measurement
 
-    regDelayCalc(&reg->i_sim.delay, reg->sim_load_vars.current, &reg->i_sim.meas);
+    regDelayCalc(&reg->i_sim.delay, reg->sim_load_vars.current, &reg->i_sim.load, &reg->i_sim.meas);
 
     reg->i_sim.meas += regNoiseAndTone(&reg->i_sim.noise_and_tone);
 
     // Apply delay and noise to simulated field measurement
 
-    regDelayCalc(&reg->b_sim.delay, reg->sim_load_vars.field, &reg->b_sim.meas);
+    regDelayCalc(&reg->b_sim.delay, reg->sim_load_vars.field, &reg->b_sim.meas, &reg->b_sim.meas);
 
     reg->b_sim.meas += regNoiseAndTone(&reg->b_sim.noise_and_tone);
 }
