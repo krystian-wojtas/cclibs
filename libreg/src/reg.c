@@ -23,86 +23,135 @@
 #include <string.h>
 #include "libreg.h"
 
+#define STOP_FILTER     0xFFFFFFFF
+
 /*---------------------------------------------------------------------------------------------------------*/
-static void regMeasFilter(struct reg_meas_filter *filter)
+static float regMeasFirFilter(struct reg_meas_filter *filter)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function is called in real-time to filter the measurement with a 2-stage cascaded box car filter.
+  This function is called in real-time to filter the measurement with a 2-stage cascaded box car filter and
+  then uses extrapolation to estimate the measurement without the measurement and filtering delay.
   If the filter is not running then the output is simply the unfiltered input.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     int32_t input_integer;
-    
-    // If filter is not running
-    
-    if(filter->run_flag == 0)
+
+    // Filter stage 1
+
+    input_integer = (int32_t)(filter->float_to_integer * filter->unfiltered);
+
+    filter->accumulator[0] += (input_integer - filter->fir_buf[0][filter->fir_index[0]]);
+
+    filter->fir_buf[0][filter->fir_index[0]] = input_integer;
+
+    if(++filter->fir_index[0] >= filter->fir_length[0])
     {
-        // Bypass the filter - simply set the output value to the input value
-        
-        filter->filtered = filter->unfiltered;
+        filter->fir_index[0] = 0;
     }
-    else
+
+    // Filter stage 2
+
+    input_integer = filter->accumulator[0] / filter->fir_length[0];
+
+    filter->accumulator[1] += (input_integer - filter->fir_buf[1][filter->fir_index[1]]);
+
+    filter->fir_buf[1][filter->fir_index[1]] = input_integer;
+
+    if(++filter->fir_index[1] >= filter->fir_length[1])
     {
-        // Filter stage 1
+        filter->fir_index[1] = 0;
+    }
+
+    // Convert filter output back to floating point
+
+    return(filter->integer_to_float * (float)filter->accumulator[1]);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static void regMeasFilter(struct reg_meas_filter *filter)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function is called in real-time to filter the measurement with a 2-stage cascaded box car filter and
+  then uses extrapolation to estimate the measurement without the measurement and filtering delay.
+  If the filter is not running then the output is simply the unfiltered input.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float   old_filtered_value;
+    
+    // If filter is stopped
+    
+    if(filter->stop_iters == STOP_FILTER)
+    {
+        // Bypass the filter - simply set the output values to the input value
         
-        input_integer = (int32_t)(filter->float_to_integer * filter->unfiltered);
-        
-        filter->accumulator[0] += (input_integer - filter->buf[0][filter->fir_index[0]]);
-        filter->buf[0][filter->fir_index[0]] = input_integer;
-        
-        if(++filter->fir_index[0] >= filter->fir_order[0])
+        filter->extrapolated = filter->filtered = filter->unfiltered;
+    }
+    else // Filter is starting or running
+    {
+        filter->filtered = regMeasFirFilter(filter);
+
+        // Extrapolate to estimate the measurement without a delay
+
+        old_filtered_value = filter->extrapolation_buf[filter->extrapolation_index];
+
+        filter->extrapolation_buf[filter->extrapolation_index] = filter->filtered;
+
+        if(++filter->extrapolation_index >= filter->extrapolation_len_iters)
         {
-            filter->fir_index[0] = 0;
+            filter->extrapolation_index = 0;
         }
-        
-        // Filter stage 2
-        
-        input_integer = filter->accumulator[0] / filter->fir_order[0];
-        
-        filter->accumulator[1] += (input_integer - filter->buf[1][filter->fir_index[1]]);
-        filter->buf[1][filter->fir_index[1]] = input_integer;
-        
-        if(++filter->fir_index[1] >= filter->fir_order[1])
+
+        filter->extrapolated = filter->filtered;
+
+        // If filter is starting
+
+        if(filter->stop_iters > 0)
         {
-            filter->fir_index[1] = 0;
+            filter->stop_iters--;
         }
-        
-        // Convert filter output back to floating point
-        
-        filter->filtered = filter->integer_to_float * (float)filter->accumulator[1];
+        else // else filter is running
+        {
+            filter->extrapolated += (filter->filtered - old_filtered_value) * filter->extrapolation_factor;
+        }
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regMeasFilterInitBuffer(struct reg_meas_filter *filter, int32_t *buf)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function calculates the floating point correction and the order of the IIR filter. It also
-  saves the filter coefficients in the filter parameter structure.
+  This function allows the buffer for the measurement filter to be defined.  The buffer is used for both
+  FIR filter stages and the extrapolation history, so it needs to be long enough to cover all three
+  requirements: fir_length[0] + fir_length[1] + extrapolation_len_iters
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    filter->buf[0] = buf;
+    filter->fir_buf[0] = buf;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regMeasFilterInitOrders(struct reg_meas_filter *filter, uint32_t fir_order[2])
+void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
+                       uint32_t extrapolation_len_iters, float meas_delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function calculates the floating point correction and the order of the IIR filter. It also initialises
-  the history in case a simulation is being prepared with a non-zero initial measurement value.
+  This function initialises the measurement filter.  It will also initialise the
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    // Stop filter
+    // Stop the filter
     
-    filter->run_flag = 0;
+    filter->stop_iters = STOP_FILTER;
     
-    // Save filter fir_order for the two stages
+    // Save filter parameters
     
-    filter->fir_order[0] = fir_order[0];
-    filter->fir_order[1] = fir_order[1];
+    filter->fir_length[0]           = fir_length[0];
+    filter->fir_length[1]           = fir_length[1];
+    filter->extrapolation_len_iters = extrapolation_len_iters;
+    filter->meas_delay_iters        = meas_delay_iters;
+
+    // Set the pointers to the second stage FIR buffer and extrapolation buffer
     
-    filter->fir_index[0] = filter->fir_index[1] = 0;
+    filter->fir_buf[1] = filter->fir_buf[0] + fir_length[0];
+    filter->extrapolation_buf = (float*)filter->fir_buf[1] + fir_length[1];
     
-    // Set the pointer to the second stage buffer and calculate the filter delay
+    // Calculate FIR filter delay and extrapolation factor
     
-    filter->buf[1]       = filter->buf[0] + fir_order[0];
-    filter->delay_iters  = 0.5 * (float)(fir_order[0] + fir_order[1]) - 1.0;
+    filter->fir_delay_iters  = 0.5 * (float)(fir_length[0] + fir_length[1]) - 1.0;
         
+    filter->extrapolation_factor = (float)(meas_delay_iters + filter->fir_delay_iters) /
+                                   (float)extrapolation_len_iters;
+
     // If max value already defined then reset, initialise and restart the filter
     
     if(filter->max_value > 0.0)
@@ -121,7 +170,7 @@ void regMeasFilterInitMax(struct reg_meas_filter *filter, float pos, float neg)
     
     // Stop filter
     
-    filter->run_flag = 0;
+    filter->stop_iters = STOP_FILTER;
     
     // Calculate max from pos and neg limits and allow 20% over-range
     
@@ -130,12 +179,12 @@ void regMeasFilterInitMax(struct reg_meas_filter *filter, float pos, float neg)
     // Calculate float to integer scaling
     
     filter->max_value        = max;
-    filter->float_to_integer = INT32_MAX / (filter->fir_order[0] * max);
+    filter->float_to_integer = INT32_MAX / (filter->fir_length[0] * max);
     filter->integer_to_float = max / INT32_MAX;
     
     // If the filter orders have already been defined then reset, initialise and restart the filter
     
-    if(filter->fir_order[0] > 0)
+    if(filter->fir_length[0] > 0)
     {
         regMeasFilterInitHistory(filter);
     }
@@ -152,26 +201,26 @@ void regMeasFilterInitHistory(struct reg_meas_filter *filter)
     
     // Stop filter
     
-    filter->run_flag = 0;
+    filter->stop_iters = STOP_FILTER;
     
-    // Reset the filters
+    // Reset the FIP filters
 
     filter->accumulator[0] = filter->accumulator[1] = 0;
     
-    memset(filter->buf[0],0,(filter->fir_order[0] + filter->fir_order[1]) * sizeof(int32_t));
+    memset(filter->fir_buf[0],0,(filter->fir_length[0] + filter->fir_length[1]) * sizeof(int32_t));
 
     // Initialise filter to the value in filter->unfiltered
     
-    len = filter->fir_order[0] + filter->fir_order[1];
+    len = filter->fir_length[0] + filter->fir_length[1];
     
     for(i = 0 ; i < len ; i++)
     {
-        regMeasFilter(filter);
+        regMeasFirFilter(filter);
     }
 
-    // Restart filter
+    // Restart filter with a delay to allow the extrapolation buffer to fill up
 
-    filter->run_flag = 1;    
+    filter->stop_iters = filter->extrapolation_len_iters;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSetSimLoad(struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode,
@@ -208,15 +257,15 @@ void regSetSimLoad(struct reg_converter *reg, struct reg_converter_pars *reg_par
     reg->b_meas.filtered = reg->b_meas.unfiltered = reg->sim_load_vars.field;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regSetMeasNoise(struct reg_converter *reg, float v_sim_noise, float i_sim_noise, float b_sim_noise)
+void regSetNoiseAndTone(struct reg_noise_and_tone *noise_and_tone, float noise_pp,
+                        float tone_amp, uint32_t tone_half_period_iters)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will set the measured values in the reg structure based on the sim_meas_control.  When
-  active, the measurements will be based on the voltage source and load simulation
+  This function will set the noise and tone characteristics for the simulated measurement.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    reg->v_sim.noise = v_sim_noise;
-    reg->i_sim.noise = i_sim_noise;
-    reg->b_sim.noise = b_sim_noise;
+    noise_and_tone->noise_pp = noise_pp;
+    noise_and_tone->tone_amp = tone_amp;
+    noise_and_tone->tone_half_period_iters = tone_half_period_iters;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSetMeas(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
@@ -309,7 +358,7 @@ void regSetMode(struct reg_converter      *reg,
     uint32_t             idx;
     float                v_ref;
     float                ref_offset;
-    float                track_delay;
+//    float                track_delay;
     struct reg_rst_pars *rst_pars;
 
     if(mode != reg->mode)
@@ -328,30 +377,30 @@ void regSetMode(struct reg_converter      *reg,
             {
                 rst_pars    = &reg_pars->b_rst_pars;
                 v_ref       = reg->v_ref_limited;
-                track_delay = rst_pars->rst.track_delay - reg->iter_period * (float)(rst_pars->period_iters + 1);
+//                track_delay = rst_pars->rst.track_delay - reg->iter_period * (float)(rst_pars->period_iters + 1);
 
-                regErrInitDelay(&reg->b_err, 0, track_delay, reg->iter_period);
+//                regErrInitDelay(&reg->b_err, 0, track_delay, reg->iter_period);
             }
             else
             {
                 rst_pars    = &reg_pars->i_rst_pars;
                 v_ref       = regLoadInverseVrefSat(&reg_pars->load_pars, meas, reg->v_ref_limited);
-                track_delay = rst_pars->rst.track_delay - reg->iter_period * (float)(rst_pars->period_iters + 1);
+//                track_delay = rst_pars->rst.track_delay - reg->iter_period * (float)(rst_pars->period_iters + 1);
 
-                regErrInitDelay(&reg->i_err, 0, track_delay, reg->iter_period);
+//              regErrInitDelay(&reg->i_err, 0, track_delay, reg->iter_period);
             }
 
             // Prepare RST histories - assuming that v_ref has been constant when calculating rate
 
-            reg->cl_period_iters   = rst_pars->period_iters;
-            reg->cl_period         = rst_pars->period;
-            reg->iteration_counter = reg->cl_period_iters - 1;
+            reg->period_iters   = rst_pars->period_iters;
+            reg->period         = rst_pars->period;
+            reg->iteration_counter = reg->period_iters - 1;
             ref_offset             = rate * 1.0; // todo 
 
             for(idx = 0; idx < REG_N_RST_COEFFS; idx++)
             {
                 reg->rst_vars.act [idx] = v_ref;
-                reg->rst_vars.meas[idx] = meas - rate * (float)idx * reg->cl_period;
+                reg->rst_vars.meas[idx] = meas - rate * (float)idx * reg->period;
                 reg->rst_vars.ref [idx] = reg->rst_vars.meas[idx] + ref_offset;
             }
             reg->ref = reg->ref_prev = reg->rst_vars.ref[0];
@@ -377,7 +426,7 @@ static void regField(struct reg_converter      *reg,                   // Regula
     {
         // Apply field reference clip and rate limits
 
-        reg->ref_limited = regLimRef(&reg->lim_b_ref, reg->cl_period, reg->ref, reg->ref_limited);
+        reg->ref_limited = regLimRef(&reg->lim_b_ref, reg->period, reg->ref, reg->ref_limited);
 
         // Calculate voltage reference using RST algorithm (no magnet saturation compensation)
 
@@ -386,7 +435,7 @@ static void regField(struct reg_converter      *reg,                   // Regula
 
         // Apply voltage reference clip and rate limits
 
-        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->cl_period, reg->v_ref, reg->v_ref_limited);
+        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->period, reg->v_ref, reg->v_ref_limited);
 
         // If voltage reference has been clipped
 
@@ -416,7 +465,7 @@ static void regField(struct reg_converter      *reg,                   // Regula
 
         reg->v_ref_sat = reg->v_ref = feedforward_v_ref;
 
-        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->cl_period, feedforward_v_ref, reg->v_ref_limited);
+        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->period, feedforward_v_ref, reg->v_ref_limited);
 
         // Back calculate the current reference that would produce this voltage reference
 
@@ -448,7 +497,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
     {
         // Apply current reference clip and rate limits
 
-        reg->ref_limited = regLimRef(&reg->lim_i_ref, reg->cl_period, reg->ref, reg->ref_limited);
+        reg->ref_limited = regLimRef(&reg->lim_i_ref, reg->period, reg->ref, reg->ref_limited);
 
         // Calculate voltage reference using RST algorithm
 
@@ -460,7 +509,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 
         // Apply voltage reference clip and rate limits
 
-        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->cl_period, reg->v_ref_sat, reg->v_ref_limited);
+        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->period, reg->v_ref_sat, reg->v_ref_limited);
 
         // If voltage reference has been clipped
 
@@ -499,7 +548,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 
         // Apply voltage reference limits
 
-        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->cl_period, reg->v_ref_sat, reg->v_ref_limited);
+        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->period, reg->v_ref_sat, reg->v_ref_limited);
 
         // If v_ref was clipped then back calculate the new uncompensated v_ref
 
@@ -543,7 +592,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
     regLimMeas(&reg->lim_i_meas, reg->i_meas.unfiltered);
 
-    // Check field measurment limits only when regulating field
+    // Check field measurement limits only when regulating field
 
     if(reg->mode == REG_FIELD)
     {
@@ -598,7 +647,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
         {
             reg_flag = 1;
             reg->ref = *ref;
-            reg->iteration_counter = reg->cl_period_iters;
+            reg->iteration_counter = reg->period_iters;
 
             if(reg->mode == REG_FIELD)
             {
@@ -611,7 +660,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
             regRstHistory(&reg->rst_vars);
 
-            reg->ref_rate = (reg->ref_limited - reg->ref_prev) / (float)reg->cl_period_iters;
+            reg->ref_rate = (reg->ref_limited - reg->ref_prev) / (float)reg->period_iters;
             reg->ref_prev =  reg->ref_limited;
 
             *ref = reg->ref_rst;
@@ -670,30 +719,66 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
 
     reg->v_err.delayed_ref = reg->v_sim.meas;
 
-    // Simulate noise on voltage measurement
+    // Simulate noise and tone on voltage measurement
 
-    if(reg->v_sim.noise > 0.0)
-    {
-        reg->v_sim.meas += regSimNoise(reg->v_sim.noise);
-    }
+    reg->v_sim.meas += regNoiseAndTone(&reg->v_sim.noise_and_tone);
 
     // Apply delay and noise to simulated current measurement
 
     regDelayCalc(&reg->i_sim.delay, reg->sim_load_vars.current, &reg->i_sim.meas);
 
-    if(reg->i_sim.noise > 0.0)
-    {
-        reg->i_sim.meas += regSimNoise(reg->i_sim.noise);
-    }
+    reg->i_sim.meas += regNoiseAndTone(&reg->i_sim.noise_and_tone);
 
     // Apply delay and noise to simulated field measurement
 
     regDelayCalc(&reg->b_sim.delay, reg->sim_load_vars.field, &reg->b_sim.meas);
 
-    if(reg->b_sim.noise > 0.0)
+    reg->b_sim.meas += regNoiseAndTone(&reg->b_sim.noise_and_tone);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+float regNoiseAndTone(struct reg_noise_and_tone *noise_and_tone)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function uses a simple pseudo random number generator to generate a roughly white noise and a
+  square wave to simulate a tone. The frequency of the tone is defined by its half-period in iterations.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float            noise;                                 // Roughly white noise
+    float            tone;                                  // Square wave tone
+    static uint32_t  noise_random_generator = 0x8E35B19C;   // Use fixed initial seed
+
+    // Use efficient random number generator to calculate the roughly white noise
+
+    if(noise_and_tone->noise_pp != 0.0)
     {
-        reg->b_sim.meas += regSimNoise(reg->b_sim.noise);
+        noise_random_generator = (noise_random_generator << 16) +
+                               (((noise_random_generator >> 12) ^ (noise_random_generator >> 15)) & 0x0000FFFF);
+
+        noise = noise_and_tone->noise_pp * (float)((int32_t)noise_random_generator) / 4294967296.0;
     }
+    else
+    {
+        noise = 0.0;
+    }
+
+    // Use efficient square tone generator to create tone
+
+    if(noise_and_tone->tone_amp != 0.0)
+    {
+        if(++noise_and_tone->iter_counter >= noise_and_tone->tone_half_period_iters)
+        {
+            noise_and_tone->tone_toggle = !noise_and_tone->tone_toggle;
+        }
+
+        tone = noise_and_tone->tone_toggle ? noise_and_tone->tone_amp : -noise_and_tone->tone_amp;
+    }
+    else
+    {
+        tone = 0.0;
+    }
+
+    // Return sum of noise and tone
+
+    return(noise + tone);
 }
 // EOF
 

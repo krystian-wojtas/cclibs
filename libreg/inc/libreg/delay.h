@@ -27,17 +27,22 @@
 
 #include <stdint.h>
 
-// Signal delay structure
+#define REG_DELAY_BUF_INDEX_MASK    15
+
+// Signal delay structure - supports two different delays in parallel
+
+struct reg_delay_pars
+{
+    int32_t                     delay_int;                      // Integer delays in iteration periods
+    float                       delay_frac;                     // Fractional delays in iteration periods
+};
 
 struct reg_delay
 {
-    uint32_t                    undersampled_flag;              // Signal is undersampled flag
-    int32_t                     iteration_counter;              // Iteration counter
     int32_t                     buf_index;                      // Index into circular buffer
-    int32_t                     delay_int;                      // Integer delay in iteration periods
-    float                       delay_frac;                     // Fractional delay in iteration periods
-    float                       prev_signal;                    // Signal from previous iteration
-    float                       *buf;                           // Pointer to circular buffer for signal
+    float                       buf[REG_DELAY_BUF_INDEX_MASK+1];// Circular buffer for signal
+    struct reg_delay_pars       delay_1;                        // Delay 1 parameters
+    struct reg_delay_pars       delay_2;                        // Delay 2 parameters
 };
 
 // Signal delay functions
@@ -46,9 +51,9 @@ struct reg_delay
 extern "C" {
 #endif
 
-void     regDelayInitPars       (struct reg_delay *delay, float *buf, float delay_in_iters, uint32_t undersampled_flag);
-void     regDelayInitVars       (struct reg_delay *delay, float initial_signal);
-uint32_t regDelayCalc           (struct reg_delay *delay, float signal, float *delayed_signal);
+void    regDelayInitDelays  (struct reg_delay *delay, uint32_t under_sampled_flag, float delay_1_iters, float delay_2_iters);
+void    regDelayInitVars    (struct reg_delay *delay, float initial_signal);
+void    regDelayCalc        (struct reg_delay *delay, float signal, float *delayed_signal_1, float *delayed_signal_2);
 
 #ifdef __cplusplus
 }
