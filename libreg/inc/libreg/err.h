@@ -24,7 +24,6 @@
 #define LIBREG_ERR_H
 
 #include <stdint.h>
-#include <libreg/delay.h>
 
 // Regulation error structures
 
@@ -36,22 +35,13 @@ struct reg_err_limit
 };
 
 
-struct reg_err_limits
+struct reg_err
 {
     float                       delayed_ref;                    // Delayed reference
-    float                       err;                            // Regulation error = delayed_ref-meas
+    float                       err;                            // Regulation error = delayed_ref - meas
     float                       max_abs_err;                    // Max absolute error
     struct reg_err_limit        warning;                        // Warning limit structure
     struct reg_err_limit        fault;                          // Fault limit structure
-};
-
-struct reg_err
-{
-    float                       track_delay;                    // Regulation tracking delay
-    float                       iter_period;                    // Regulation iteration period
-
-    struct reg_delay            delay;                          // Signal delay structure
-    struct reg_err_limits       limits;                         // Regulation error limits
 };
 
 #ifdef __cplusplus
@@ -60,16 +50,9 @@ extern "C" {
 
 // Regulation error functions
 
-void     regErrInitDelay        (struct reg_err *err, float *buf, float track_delay, float iter_period);
-float    regErrCalc             (struct reg_err *err, uint32_t enable_err,
-                                 uint32_t enable_max_abs_err, float ref, float meas);
-
-void     regErrInitLimits       (struct reg_err_limits *err_limits, float err_warning_threshold,
-                                 float err_fault_threshold);
-void     regErrResetLimitsVars  (struct reg_err_limits *err_limits);
-float    regErrCheckLimits      (struct reg_err_limits *err_limits, uint32_t enable_err,
-                                 uint32_t enable_max_abs_err, float delayed_ref, float meas);
-
+void     regErrInitLimits       (struct reg_err *err, float warning_threshold, float fault_threshold);
+void     regErrResetLimitsVars  (struct reg_err *err);
+float    regErrCheckLimits      (struct reg_err *err, uint32_t enable_max_abs_err, float delayed_ref, float meas);
 #ifdef __cplusplus
 }
 #endif
