@@ -380,6 +380,7 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
 
     pars->reg_mode      = reg_mode;
     pars->period_iters  = period_iters;
+    pars->iters_period  = 1.0 / (float)period_iters;
     pars->period        = iter_period * period_iters;
     pars->freq          = 1.0 / pars->period;
 
@@ -484,14 +485,7 @@ float regRstCalcAct(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
 
     for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
     {
-        if(var_idx == 0)
-        {
-            var_idx = REG_N_RST_COEFFS-1;
-        }
-        else
-        {
-            var_idx--;
-        }
+        var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
 
         act += (double)pars->rst.t[par_idx] * vars->ref [var_idx] -
                (double)pars->rst.r[par_idx] * vars->meas[var_idx] -
@@ -546,14 +540,7 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
 
     for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
     {
-        if(var_idx == 0)
-        {
-            var_idx = REG_N_RST_COEFFS-1;
-        }
-        else
-        {
-            var_idx--;
-        }
+        var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
 
         ref += (double)pars->rst.s[par_idx] * vars->act [var_idx] +
                (double)pars->rst.r[par_idx] * vars->meas[var_idx] -
@@ -573,30 +560,14 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
     return(ref);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regRstHistory(struct reg_rst_vars *vars)
+void regRstHistory(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function must be called after calling regRstCalcAct() to adjust the RST history index.  It returns 
-  the average actuation value over the length of the RST history.
+  This function must be called after calling regRstCalcAct() to adjust the RST history index.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t	i;
-    float       act_accumulator = 0.0;
+    vars->history_index = (vars->history_index + 1) & REG_RST_HISTORY_MASK;
 
-    // Adjust var_idx to next free record in the history
-
-    if(++vars->history_index >= REG_N_RST_COEFFS)
-    {
-        vars->history_index = 0;
-    }
-
-    // Calculate the average actuation from the history
-
-    for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
-    {
-        act_accumulator += vars->act[i];
-    }
-
-    return(act_accumulator * (1.0 / REG_N_RST_COEFFS));
+    vars->delayed_ref_index = 0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regRstPrevRef(struct reg_rst_vars *vars)
@@ -605,22 +576,7 @@ float regRstPrevRef(struct reg_rst_vars *vars)
   regRstHistory() has been called.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t    index = vars->history_index;
-
-    // Use if() instead of modulus (%) operator as % can be slow on some older DSPs (e.g. TMS320C32)
-
-    if(index == 0)
-    {
-        index = REG_N_RST_COEFFS - 1;
-    }
-    else
-    {
-        index--;
-    }
-
-    // Return the previous reference
-
-    return(vars->ref[index]);
+    return(vars->ref[(vars->history_index - 1) & REG_RST_HISTORY_MASK]);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regRstDeltaRef(struct reg_rst_vars *vars)
@@ -629,18 +585,52 @@ float regRstDeltaRef(struct reg_rst_vars *vars)
   regRstHistory() has been called.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    int32_t    index2 = vars->history_index - 2;
+    return(vars->ref[(vars->history_index - 1) & REG_RST_HISTORY_MASK] -
+           vars->ref[(vars->history_index - 2) & REG_RST_HISTORY_MASK]);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float track_delay)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will return the reference delayed by track_delay.  It should be called after
+  regRstHistory() has been called.  It can be called every acquisition iteration between regulation
+  iterations, or just on the regulation iterations, as required.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    int32_t  delay_int;
+    float    float_delay_int;
+    float    delay_frac;
+    float    ref1;
+    float    ref2;
 
-    // Use if() instead of modulus (%) operator as % can be slow on some older DSPs (e.g. TMS320C32)
+    // Clip track delay
 
-    if(index2 < 0)
+    if(track_delay < 1.0)
     {
-        index2 += REG_N_RST_COEFFS;
+        track_delay = 1.0;
+    }
+    else if(track_delay > (REG_RST_HISTORY_MASK - 1.0))
+    {
+        track_delay = (REG_RST_HISTORY_MASK - 1.0);
     }
 
-    // Return the change in reference
+    // Adjust track delay to account for the acquisition iteration time between regulation iterations
 
-    return(regRstPrevRef(vars) - vars->ref[index2]);
+    track_delay -= (float)vars->delayed_ref_index++ * pars->iters_period;
+
+    // Convert track delay to integer and fractional parts
+
+    delay_frac = modff(track_delay, &float_delay_int);
+
+    delay_int  = 1 + (int32_t)float_delay_int;  // Add 1 because history_index has been incremented
+
+    // Extract references for the period containing the delayed reference
+
+    ref1 = vars->ref[(vars->history_index - delay_int    ) & REG_RST_HISTORY_MASK];
+    ref2 = vars->ref[(vars->history_index - delay_int - 1) & REG_RST_HISTORY_MASK];
+
+    // Return interpolated delayed reference value
+
+    return(ref1 + delay_frac * (ref2 - ref1));
 }
 // EOF
 

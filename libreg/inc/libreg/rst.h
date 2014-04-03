@@ -42,6 +42,7 @@
 // Constants
 
 #define REG_N_RST_COEFFS        10                              // RST order + 1
+#define REG_RST_HISTORY_MASK    15                              // History buffer index mask
 
 // Regulation RST algorithm structures
 
@@ -62,9 +63,9 @@ enum reg_mode                                                   // Converter reg
 
 struct reg_rst                                                  // RST polynomial arrays and track delay
 {
-    float                       r   [REG_N_RST_COEFFS];         // R polynomial coefficients (meas)
-    float                       s   [REG_N_RST_COEFFS];         // S polynomial coefficients (act)
-    float                       t   [REG_N_RST_COEFFS];         // T polynomial coefficients (ref)
+    float                       r[REG_N_RST_COEFFS];            // R polynomial coefficients (meas)
+    float                       s[REG_N_RST_COEFFS];            // S polynomial coefficients (act)
+    float                       t[REG_N_RST_COEFFS];            // T polynomial coefficients (ref)
 };
 
 struct reg_rst_pars                                             // RST algorithm parameters
@@ -72,6 +73,7 @@ struct reg_rst_pars                                             // RST algorithm
     enum reg_status             status;                         // Regulation parameters status
     enum reg_mode               reg_mode;                       // Regulation mode (REG_CURRENT | REG_FIELD)
     uint32_t                    period_iters;                   // Regulation period (in iterations)
+    float                       iters_period;                   // 1/period_iters
     float                       period;                         // Regulation period
     float                       freq;                           // Regulation frequency
     float                       inv_s0;                         // Store 1/S[0]
@@ -83,9 +85,10 @@ struct reg_rst_pars                                             // RST algorithm
 struct reg_rst_vars                                             // RST algorithm variables
 {
     uint32_t                    history_index;                  // Index to latest entry in the history
-    float                       ref [REG_N_RST_COEFFS];         // RST calculated reference history
-    float                       meas[REG_N_RST_COEFFS];         // RST measurement history
-    float                       act [REG_N_RST_COEFFS];         // RST actuation history
+    uint32_t                    delayed_ref_index;              // Iteration counter for delayed reference
+    float                       ref [REG_RST_HISTORY_MASK+1];   // RST calculated reference history
+    float                       meas[REG_RST_HISTORY_MASK+1];   // RST measurement history
+    float                       act [REG_RST_HISTORY_MASK+1];   // RST actuation history
 };
 
 #ifdef __cplusplus
@@ -99,9 +102,10 @@ uint32_t regRstInit             (struct reg_rst_pars *pars, float iter_period, u
                                  float pure_delay, enum reg_mode reg_mode, struct reg_rst *manual);
 float    regRstCalcAct          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas);
 float    regRstCalcRef          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas);
-float    regRstHistory          (struct reg_rst_vars *vars);
+void     regRstHistory          (struct reg_rst_vars *vars);
 float    regRstPrevRef          (struct reg_rst_vars *vars);
 float    regRstDeltaRef         (struct reg_rst_vars *vars);
+float    regRstDelayedRef       (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float track_delay);
 
 #ifdef __cplusplus
 }
