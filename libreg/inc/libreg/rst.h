@@ -43,6 +43,8 @@
 
 #define REG_N_RST_COEFFS        10                              // RST order + 1
 #define REG_RST_HISTORY_MASK    15                              // History buffer index mask
+#define REG_AVE_V_REF_LEN       4                               // Number of iterations over which to average V_REF
+#define REG_TRACK_DELAY_FLTR_TC 100                             // Track delay measurement filter time constant (periods)
 
 // Regulation RST algorithm structures
 
@@ -79,6 +81,7 @@ struct reg_rst_pars                                             // RST algorithm
     float                       inv_s0;                         // Store 1/S[0]
     float                       t0_correction;                  // Correction to t[0] for rounding errors
     float                       inv_corrected_t0;               // Store 1/(T[0]+ t0_correction)
+    float                       track_delay_periods;            // Track delay in regulation periods
     struct reg_rst              rst;                            // RST polynomials
 };
 
@@ -86,6 +89,8 @@ struct reg_rst_vars                                             // RST algorithm
 {
     uint32_t                    history_index;                  // Index to latest entry in the history
     uint32_t                    delayed_ref_index;              // Iteration counter for delayed reference
+    float                       meas_track_delay_periods;       // Measured track_delay in regulation periods
+    float                       filtered_track_delay_periods;   // Filtered measured track_delay in regulation periods
     float                       ref [REG_RST_HISTORY_MASK+1];   // RST calculated reference history
     float                       meas[REG_RST_HISTORY_MASK+1];   // RST measurement history
     float                       act [REG_RST_HISTORY_MASK+1];   // RST actuation history
@@ -106,6 +111,7 @@ void     regRstHistory          (struct reg_rst_vars *vars);
 float    regRstPrevRef          (struct reg_rst_vars *vars);
 float    regRstDeltaRef         (struct reg_rst_vars *vars);
 float    regRstDelayedRef       (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float track_delay);
+float    regRstAverageVref      (struct reg_rst_vars *vars);
 
 #ifdef __cplusplus
 }
