@@ -95,11 +95,13 @@ static void regErrLimit(struct reg_err_limit *err_limit, float abs_err)
     err_limit->flag = err_limit->filter > 0.3;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regErrCheckLimits(struct reg_err *err, uint32_t enable_max_abs_err, float delayed_ref, float meas)
+void regErrCheckLimits(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err,
+                       float delayed_ref, float meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function can be called to calculate the regulation error and to check the error limits (if supplied).
+  The calculation of the error can be enabled by setting enable_err.
   The calculation of the max_abs_err can be enabled by setting enable_max_abs_err to be non-zero,
-  otherwise max_abs_err is zeroed. The function returns the regulation error.
+  otherwise max_abs_err is zeroed.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float       abs_error;
@@ -107,6 +109,14 @@ float regErrCheckLimits(struct reg_err *err, uint32_t enable_max_abs_err, float 
     // Store delayed_ref so it can be logged if required
 
     err->delayed_ref = delayed_ref;
+
+    // Suppress error calculation if enable_err is zero
+
+    if(enable_err == 0)
+    {
+        regErrResetLimitsVars(err);
+        return;
+    }
 
     // Calculate regulation error
 
@@ -139,8 +149,6 @@ float regErrCheckLimits(struct reg_err *err, uint32_t enable_max_abs_err, float 
     {
         regErrLimit(&err->fault, abs_error);
     }
-
-    return(err->err);
 }
 // EOF
 
