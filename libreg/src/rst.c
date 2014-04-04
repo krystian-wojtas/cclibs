@@ -562,10 +562,49 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
 /*---------------------------------------------------------------------------------------------------------*/
 void regRstHistory(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function must be called after calling regRstCalcAct() to adjust the RST history index.
+  This function must be called after calling regRstCalcAct() to measure the track delay and to
+  adjust the RST history index.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    vars->history_index = (vars->history_index + 1) & REG_RST_HISTORY_MASK;
+    uint32_t var_idx   = vars->history_index;
+    float    delta_ref = regRstDeltaRef(vars);
+    float    meas_track_delay_periods;
+
+    // Measure track delay if reference is changing
+
+    if(delta_ref == 0.0)
+    {
+        meas_track_delay_periods = 0.0;
+    }
+    else
+    {
+        meas_track_delay_periods = 1.0 +
+                ((vars->ref[(var_idx - 1) & REG_RST_HISTORY_MASK]) - vars->meas[var_idx]) / delta_ref;
+
+        // Clip to sane range to handle when delta_ref is small
+
+        if(meas_track_delay_periods < 0.9)
+        {
+            meas_track_delay_periods = 0.9;
+        }
+        else if(meas_track_delay_periods > 2.5)
+        {
+            meas_track_delay_periods = 2.5;
+        }
+        else
+        {
+            // When not clipped, update the filtered measured track_delay
+
+            vars->filtered_track_delay_periods += (1.0 / REG_TRACK_DELAY_FLTR_TC) *
+                                          (meas_track_delay_periods - vars->filtered_track_delay_periods);
+        }
+    }
+
+    vars->meas_track_delay_periods = meas_track_delay_periods;
+
+    // Adjust RST history index
+
+    vars->history_index = (var_idx + 1) & REG_RST_HISTORY_MASK;
 
     vars->delayed_ref_index = 0;
 }
@@ -631,6 +670,25 @@ float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, flo
     // Return interpolated delayed reference value
 
     return(ref1 + delay_frac * (ref2 - ref1));
+}
+/*---------------------------------------------------------------------------------------------------------*/
+float regRstAverageVref(struct reg_rst_vars *vars)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will return the average RST actuation (V_REF) over the past few iterations.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t    i;
+    uint32_t    var_idx  = vars->history_index;
+    float       sum_vref = 0.0;
+
+    for(i = 0 ; i < REG_AVE_V_REF_LEN ; i++)
+    {
+        var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
+
+        sum_vref += vars->act [var_idx];
+    }
+
+    return(sum_vref * (1.0 / REG_AVE_V_REF_LEN));
 }
 // EOF
 
