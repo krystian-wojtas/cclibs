@@ -135,7 +135,6 @@ struct reg_converter                                            // Global conver
     // Regulation variables structures
 
     struct reg_rst_vars         rst_vars;                       // Field or current regulation RST variables
-    struct reg_rst_vars         v_rst_vars;                     // Voltage regulation RST variables
 
     struct reg_err              v_err;                          // Voltage regulation error
     struct reg_err              i_err;                          // Current regulation error
