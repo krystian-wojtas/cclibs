@@ -321,7 +321,7 @@ void regSetVoltageMode(struct reg_converter *reg, struct reg_converter_pars *reg
                 v_ref += reg->rst_vars.act[idx];
             }
 
-            reg->v_ref = v_ref / REG_N_RST_COEFFS;
+            reg->v_ref = regRstAverageVref(&reg->rst_vars);
 
             // If regulating CURRENT then adjust for the magnet saturation
 
@@ -660,8 +660,9 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
         if(reg->mode == REG_CURRENT)
         {
-            regErrCalc(&reg->i_err, !feedforward_control, max_abs_err_control,
-                        reg->ref_interpolated, reg->i_meas.unfiltered);
+            regErrCheckLimits(&reg->i_err, !feedforward_control, max_abs_err_control,
+                              regRstDelayedRef(reg_pars, &reg->rst_vars, float track_delay),
+                              reg->i_meas.unfiltered);
 
             reg->err         = reg->i_err.limits.err;
             reg->max_abs_err = reg->i_err.limits.max_abs_err;
@@ -685,13 +686,13 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars, float v_perturbation)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will simulate the voltage source and load and the measurements of the voltage, current
-  and field. The voltage reference comes from reg->v_ref_limited which is calcualted by calling
+  and field. The voltage reference comes from reg->v_ref_limited which is calculated by calling
   regConverter().  A voltage perturbation can be included in the simulation via the v_perturbation parameter.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float sim_advanced_v_load;      // Simulated v_load advanced by V_REF_DELAY
+    float sim_advanced_v_load;      // Simulated v_load without V_REF_DELAY
 
-    // Simulate voltage source response to v_ref without V_REF_DELAY
+    // Simulate voltage source response to v_ref without taking into account V_REF_DELAY
 
     sim_advanced_v_load = regSimVs(&reg_pars->sim_vs_pars, &reg->sim_vs_vars, reg->v_ref_limited);
 
@@ -699,7 +700,7 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
 
     regSimLoad(&reg_pars->sim_load_pars, &reg->sim_load_vars, sim_advanced_v_load + v_perturbation);
 
-    // Simulate voltage measurements using appropriate delay
+    // Use delays to estimate the voltage across the load and the measurement of this voltage
 
     regDelayCalc(&reg->v_sim.delay, reg->sim_load_vars.voltage, &reg->v_sim.load, &reg->v_sim.meas);
 
@@ -707,19 +708,19 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
 
     reg->v_err.delayed_ref = reg->v_sim.meas;
 
-    // Simulate noise and tone on voltage measurement
-
-    reg->v_sim.meas += regNoiseAndTone(&reg->v_sim.noise_and_tone);
-
-    // Apply delay and noise to simulated current measurement
+    // Use delays to estimate the current in the load and the measurement of the current
 
     regDelayCalc(&reg->i_sim.delay, reg->sim_load_vars.current, &reg->i_sim.load, &reg->i_sim.meas);
 
+    // Use delays to estimate the field in the load and the measurement of the field
+
+    regDelayCalc(&reg->b_sim.delay, reg->sim_load_vars.field, &reg->b_sim.load, &reg->b_sim.meas);
+
+    // Simulate noise and tone on V, I and B measurements
+
+    reg->v_sim.meas += regNoiseAndTone(&reg->v_sim.noise_and_tone);
+
     reg->i_sim.meas += regNoiseAndTone(&reg->i_sim.noise_and_tone);
-
-    // Apply delay and noise to simulated field measurement
-
-    regDelayCalc(&reg->b_sim.delay, reg->sim_load_vars.field, &reg->b_sim.meas, &reg->b_sim.meas);
 
     reg->b_sim.meas += regNoiseAndTone(&reg->b_sim.noise_and_tone);
 }
@@ -754,7 +755,8 @@ float regNoiseAndTone(struct reg_noise_and_tone *noise_and_tone)
     {
         if(++noise_and_tone->iter_counter >= noise_and_tone->tone_half_period_iters)
         {
-            noise_and_tone->tone_toggle = !noise_and_tone->tone_toggle;
+            noise_and_tone->tone_toggle  = !noise_and_tone->tone_toggle;
+            noise_and_tone->iter_counter = 0;
         }
 
         tone = noise_and_tone->tone_toggle ? noise_and_tone->tone_amp : -noise_and_tone->tone_amp;
