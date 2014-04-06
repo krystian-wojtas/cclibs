@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/global.h                                                               Copyright CERN 2014
+  File:     cctest/inc/pars/global.h                                                    Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -75,20 +75,20 @@ CCPARS_GLOBAL_EXT struct ccpars_enum function_type[]
 #endif
 ;
 
-// Function units is based on the reg_mode enum constants from libreg
+// Regulation mode enum constants from libreg
 
-CCPARS_GLOBAL_EXT struct ccpars_enum function_units[]
+CCPARS_GLOBAL_EXT struct ccpars_enum reg_mode[]
 #ifdef GLOBALS
 = {
-    { REG_VOLTAGE,    "VOLTS"  },
-    { REG_CURRENT,    "AMPS"   },
-    { REG_FIELD,      "GAUSS"  },
-    { 0,               NULL    },
+    { REG_VOLTAGE,    "VOLTAGE" },
+    { REG_CURRENT,    "CURRENT" },
+    { REG_FIELD,      "FIELD"   },
+    { 0,               NULL     },
 }
 #endif
 ;
 
-// Output format
+// Output format enum
 
 enum cc_output_format
 {
@@ -114,42 +114,39 @@ CCPARS_GLOBAL_EXT struct ccpars_enum output_format[]
 
 struct ccpars_global
 {
-    // Global file parameters
-
-    float               run_delay;        // Time before start of function
-    float               stop_delay;       // Time after end of function
-    float               iter_period;      // Global iteration period
-    float               abort_time;       // Time to abort the function (limits are required)
-    uint32_t            reverse_time;     // Reverse time flag (tests ref functions with descreasing time)
-    uint32_t            units;            // Function generator units (G, A or V)
-    uint32_t            function;         // Function type
-    uint32_t            fg_limits;        // Enable limits for function generator initialisation
-    uint32_t            sim_load;         // Enable load simulation (includes regulation if units are G or A)
-    uint32_t            output_format;    // Output data format
-    char *              flot_path;        // FLOT path to javascript libraries
-
-    // Global related variables
-
-    uint32_t            func_data_status; // Function data status
-    uint32_t            verbose_flag;     // -v option : Verbose enabled
-    uint32_t            output_format_opt;// -o option : Output format (overrides global parameter file)
-    uint32_t            num_iterations;   // Number of iterations for the simulation
+    float               run_delay;          // Time before start of function
+    float               stop_delay;         // Time after end of function
+    float               iter_period;        // Global iteration period
+    float               abort_time;         // Time to abort the function (limits are required)
+    uint32_t            reverse_time;       // Reverse time flag (tests ref functions with decreasing time)
+    uint32_t            reg_mode;           // Regulation mode (VOLTAGE, CURRENT or FIELD)
+    uint32_t            function;           // Function type
+    uint32_t            fg_limits;          // Enable limits for function generator initialisation
+    float               open_loop_time;     // Open loop time
+    float               open_loop_duration; // Open loop duration
+    uint32_t            sim_load;           // Enable load simulation (includes regulation if units are G or A)
+    uint32_t            output_format;      // Output data format
+    uint32_t            verbose;            // Verbose reporting enabled
+    char *              flot_path;          // FLOT path to javascript libraries
 };
 
 CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
 #ifdef GLOBALS
 = {//   Default value           Parameter
-        1.0,                 // RUN_DELAY
-        1.0,                 // STOP_DELAY
-        1.0E-3,              // ITER_PERIOD
-        0.0,                 // ABORT_TIME
-        CC_DISABLED,         // REVERSE_TIME
-        REG_VOLTAGE,         // UNITS
-        0,                   // FUNCTION
-        CC_DISABLED,         // FG_LIMITS
-        CC_DISABLED,         // SIM_LOAD
-        CC_STANDARD,         // OUTPUT_FORMAT
-        "../.."              // FLOT_PATH
+        1.0,                 // GLOBAL.RUN_DELAY
+        1.0,                 // GLOBAL.STOP_DELAY
+        1.0E-3,              // GLOBAL.ITER_PERIOD
+        0.0,                 // GLOBAL.ABORT_TIME
+        CC_DISABLED,         // GLOBAL.REVERSE_TIME
+        REG_VOLTAGE,         // GLOBAL.REG_MODE
+        0,                   // GLOBAL.FUNCTION
+        CC_DISABLED,         // GLOBAL.FG_LIMITS
+        CC_DISABLED,         // GLOBAL.SIM_LOAD
+        0.0,                 // GLOBAL.OPEN_LOOP_TIME
+        0.0,                 // GLOBAL.OPEN_LOOP_DURATION
+        CC_STANDARD,         // GLOBAL.OUTPUT_FORMAT
+        CC_DISABLED,         // GLOBAL.VERBOSE
+        "../.."              // GLOBAL.FLOT_PATH
 }
 #endif
 ;
@@ -158,18 +155,21 @@ CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
 
 CCPARS_GLOBAL_EXT struct ccpars global_pars_list[]
 #ifdef GLOBALS
-= {// "Signal name"      TYPE,    max_vals, min_vals,*enum,        *value,                        num_defaults
-    { "RUN_DELAY",       PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.run_delay       }, 1 },
-    { "STOP_DELAY",      PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.stop_delay      }, 1 },
-    { "ITER_PERIOD",     PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.iter_period     }, 1 },
-    { "ABORT_TIME",      PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.abort_time      }, 1 },
-    { "REVERSE_TIME",    PAR_ENUM,       1, 0, enabled_disabled, { .i = &ccpars_global.reverse_time    }, 1 },
-    { "UNITS",           PAR_ENUM,       1, 0, function_units,   { .i = &ccpars_global.units           }, 1 },
-    { "FUNCTION",        PAR_ENUM,       1, 0, function_type,    { .i = &ccpars_global.function        }, 1 },
-    { "FG_LIMITS",       PAR_ENUM,       1, 0, enabled_disabled, { .i = &ccpars_global.fg_limits       }, 1 },
-    { "SIM_LOAD",        PAR_ENUM,       1, 0, enabled_disabled, { .i = &ccpars_global.sim_load        }, 1 },
-    { "OUTPUT_FORMAT",   PAR_ENUM,       1, 0, output_format,    { .i = &ccpars_global.output_format   }, 1 },
-    { "FLOT_PATH",       PAR_STRING,     1, 0, NULL,             { .s = &ccpars_global.flot_path       }, 1 },
+= {// "Signal name"        TYPE,    max_vals, min_vals,*enum,        *value,                            num_defaults
+    { "RUN_DELAY",         PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.run_delay          }, 1 },
+    { "STOP_DELAY",        PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.stop_delay         }, 1 },
+    { "ITER_PERIOD",       PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.iter_period        }, 1 },
+    { "ABORT_TIME",        PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.abort_time         }, 1 },
+    { "REVERSE_TIME",      PAR_ENUM,       1, 0, enabled_disabled, { .i = &ccpars_global.reverse_time       }, 1 },
+    { "REG_MODE",          PAR_ENUM,       1, 0, reg_mode,         { .i = &ccpars_global.reg_mode           }, 1 },
+    { "FUNCTION",          PAR_ENUM,       1, 0, function_type,    { .i = &ccpars_global.function           }, 1 },
+    { "FG_LIMITS",         PAR_ENUM,       1, 0, enabled_disabled, { .i = &ccpars_global.fg_limits          }, 1 },
+    { "SIM_LOAD",          PAR_ENUM,       1, 0, enabled_disabled, { .i = &ccpars_global.sim_load           }, 1 },
+    { "OPEN_LOOP_TIME",    PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.open_loop_time     }, 1 },
+    { "OPEN_LOOP_DURATION",PAR_FLOAT,      1, 0, NULL,             { .f = &ccpars_global.open_loop_duration }, 1 },
+    { "OUTPUT_FORMAT",     PAR_ENUM,       1, 0, output_format,    { .i = &ccpars_global.output_format      }, 1 },
+    { "VERBOSE",           PAR_ENUM,       1, 0, enabled_disabled, { .i = &ccpars_global.verbose            }, 1 },
+    { "FLOT_PATH",         PAR_STRING,     1, 0, NULL,             { .s = &ccpars_global.flot_path          }, 1 },
     { NULL }
 }
 #endif

@@ -56,7 +56,6 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
   coefficients themselves are stored as single precision.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t alg_index;          // Algorithm index - selected according to pure delay fraction
     double t1;                   // -period / load_Tc
     double a1;                   // -exp(t1)
     double a2;                   // a2 = 1 + a1 = 1 - exp(t1) - use Maclaurin expansion for small t1
@@ -71,7 +70,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     double q1;
     double q2;
 
-    // Calculate a2 = 1 - exp(t1) using Maclaruin series if t1 is small
+    // Calculate a2 = 1 - exp(t1) using Maclaurin series if t1 is small
 
     t1 = -pars->period / load->tc;
     a1 = -exp(t1);
@@ -93,7 +92,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     {
         // Option 1 - pure delay < 0.401
 
-        alg_index = 1;
+        pars->alg_index = 1;
         b0 = load->gain0 + load->gain1 * a2 * (1.0 - pure_delay_periods);
         b1 = load->gain0 * a1 + load->gain1 * a2 * pure_delay_periods;
     }
@@ -107,7 +106,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     {
         // Option 2 - pure delay 0.401 - 0.999
 
-        alg_index = 2;
+        pars->alg_index = 2;
         b0_b1 = load->gain1 * a2;
         b0 = b0_b1 * (1.0 - pure_delay_periods);
         b1 = b0_b1 * pure_delay_periods;
@@ -116,7 +115,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     {
         // Option 3 - pure delay 1.0 - 1.401
 
-        alg_index = 3;
+        pars->alg_index = 3;
         b0_b1 = load->gain1 * a2;
         b0 = b0_b1 * (2.0 - pure_delay_periods);
         b1 = b0_b1 * (pure_delay_periods - 1.0);
@@ -125,7 +124,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     {
         // Option 4 - pure delay 1.401 - 1.999
 
-        alg_index = 4;
+        pars->alg_index = 4;
         b0_b1 = load->gain1 * a2;
         b0 = b0_b1 * (2.0 - pure_delay_periods);
         b1 = b0_b1 * (pure_delay_periods - 1.0);
@@ -134,7 +133,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     {
         // Option 5 - pure delay 2.00 - 2.401
 
-        alg_index = 5;
+        pars->alg_index = 5;
         b0_b1 = load->gain1 * a2;
         b0 = b0_b1 * (3.0 - pure_delay_periods);
         b1 = b0_b1 * (pure_delay_periods - 2.0);
@@ -164,9 +163,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     // Calculate RST coefficients
 
-    switch(alg_index)
+    switch(pars->alg_index)
     {
-    case 1:                 // Algorithm 1 : Pure delay fraction 0 - 0.401 (dead-beat)
+    case 1:                 // Algorithm 1 : Pure delay fraction 0 - 0.401 : dead-beat (1)
 
         pars->rst.r[0] = c1 + d1 - a1 + 2.0;
         pars->rst.r[1] = c1*d1 + d2 + 2.0*a1 - 1.0;
@@ -181,9 +180,11 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[1] = c1 + d1;
         pars->rst.t[2] = c1*d1 + d2;
         pars->rst.t[3] = c1*d2;
+
+        pars->dead_beat = 1;
         break;
 
-    case 2:                 // Algorithm 2 : Pure delay fraction 0.401 - 0.999 (not dead-beat)
+    case 2:                 // Algorithm 2 : Pure delay fraction 0.401 - 0.999 : not dead-beat
 
         pars->rst.r[0] = (3*a1 + c1 + d1 + 2*a1*c1 + 2*a1*d1 + a1*d2 - c1*d2 + a1*c1*d1 + 2)/(b0_b1*(a1 + 1)*(a1 + 1)) +
                          (b1*(c1 + 1)*(d1 + d2 + 1))/(b0_b1*b0_b1*(a1 + 1)) + (a1*(a1 - c1)*(a1*a1 - d1*a1 + d2))/((a1 + 1)*(a1 + 1)*(b1 - a1*b0));
@@ -208,9 +209,11 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[1] = (c1 + d1) / b0_b1;
         pars->rst.t[2] = (c1*d1 + d2) / b0_b1;
         pars->rst.t[3] = c1*d2 / b0_b1;
+
+        pars->dead_beat = 0;
         break;
 
-    case 3:                 // Algorithm 3 : Pure delay fraction 1.0 - 1.401 (dead-beat)
+    case 3:                 // Algorithm 3 : Pure delay fraction 1.0 - 1.401 : dead-beat (2)
 
         c2 = exp(-pars->period * TWO_PI * clbw3);
         q1 = 2.0 - a1 + c1 + c2 + d1;
@@ -230,9 +233,11 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[2] = c1*c2 + d1*(c1 + c2) + d2;
         pars->rst.t[3] = c1*c2*d1 + d2*(c1 + c2);
         pars->rst.t[4] = c1*c2*d2;
+
+        pars->dead_beat = 2;
         break;
 
-    case 4:                 // Algorithm 4 : Pure delay fraction 1.401 - 1.999 (not dead-beat)
+    case 4:                 // Algorithm 4 : Pure delay fraction 1.401 - 1.999 : not dead-beat
 
         c2 = exp(-pars->period * TWO_PI * clbw3);
 
@@ -266,9 +271,11 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[2] = (d2 + c1*c2 + c1*d1 + c2*d1) / b0_b1;
         pars->rst.t[3] = (c1*d2 + c2*d2 + c1*c2*d1) / b0_b1;
         pars->rst.t[4] = c1*c2*d2 / b0_b1;
+
+        pars->dead_beat = 0;
         break;
 
-    case 5:                 // Algorithm 5 : Pure delay fraction 2.0 - 2.401 (dead-beat)
+    case 5:                 // Algorithm 5 : Pure delay fraction 2.0 - 2.401 : dead-beat (3)
 
         c2 = exp(-pars->period * TWO_PI * clbw3);
         c3 = exp(-pars->period * TWO_PI * clbw4);
@@ -292,6 +299,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[3] = c1*d2 + c2*d2 + c3*d2 + c1*c2*c3 + c1*c2*d1 + c1*c3*d1 + c2*c3*d1;
         pars->rst.t[4] = c1*c2*d2 + c1*c3*d2 + c2*c3*d2 + c1*c2*c3*d1;
         pars->rst.t[5] = c1*c2*c3*d2;
+
+        pars->dead_beat = 3;
         break;
     }
 }
@@ -307,6 +316,8 @@ static void regRstInitPI(struct reg_rst_pars  *pars,
     float a1 = -exp(-pars->period * (load->ohms_ser + load->ohms_mag) * load->inv_henrys);
     float b1 = (1.0 + a1) / (load->ohms_ser + load->ohms_mag);
     float c1 = -exp(-pars->period * TWO_PI * clbw);
+
+    pars->alg_index = 10;
 
     if(pars->reg_mode == REG_FIELD)
     {
@@ -334,6 +345,8 @@ static void regRstInitI(struct reg_rst_pars  *pars,
     float b1 = 1.0 / (load->ohms_ser + load->ohms_mag);
     float c1 = -exp(-TWO_PI * pars->period * clbw);
 
+    pars->alg_index = 20;
+
     if(pars->reg_mode == REG_FIELD)
     {
         b1 *= load->gauss_per_amp;
@@ -357,6 +370,7 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
                     float                 clbw3,
                     float                 clbw4,
                     float                 pure_delay_periods,
+                    float                 track_delay_periods,
                     enum reg_mode         reg_mode,
                     struct reg_rst       *manual)
 /*---------------------------------------------------------------------------------------------------------*\
@@ -383,6 +397,8 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
     pars->iters_period  = 1.0 / (float)period_iters;
     pars->period        = iter_period * period_iters;
     pars->freq          = 1.0 / pars->period;
+    pars->alg_index     = 0;
+    pars->dead_beat     = 0;
 
     // if CLBW = 0.0 -> MANUAL RST coefficients
 
@@ -445,6 +461,17 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
         pars->t0_correction    = t0_correction;
         pars->inv_corrected_t0 = 1.0 / (pars->rst.t[0] + t0_correction);
         pars->inv_s0           = 1.0 /  pars->rst.s[0];
+    }
+
+    // Set track_delay
+
+    if(pars->dead_beat > 0)
+    {
+        pars->track_delay_periods = (float)pars->dead_beat;
+    }
+    else
+    {
+        pars->track_delay_periods = track_delay_periods;
     }
 
     // Return the status
@@ -587,9 +614,9 @@ void regRstHistory(struct reg_rst_vars *vars)
         {
             meas_track_delay_periods = 0.9;
         }
-        else if(meas_track_delay_periods > 2.5)
+        else if(meas_track_delay_periods > 3.5)
         {
-            meas_track_delay_periods = 2.5;
+            meas_track_delay_periods = 3.5;
         }
         else
         {

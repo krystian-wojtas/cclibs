@@ -198,7 +198,7 @@ static void ccparsPrintf(char * format, ...)
 
     if(ccpars_report.num_lines > PARS_MAX_REPORT_LINES)
     {
-        fprintf(stderr,"Error: max number of report lines (%d) exceeded\n",PARS_MAX_REPORT_LINES);
+        fprintf(stderr,"Error: Max number of report lines (%d) exceeded\n",PARS_MAX_REPORT_LINES);
         exit(EXIT_FAILURE);
     }
 
@@ -209,6 +209,8 @@ static void ccparsPrintf(char * format, ...)
     va_end(argv);
 
     // Allocate memory for line, line to report line pointer array and copy line
+
+    free(ccpars_report.line_buf[ccpars_report.num_lines]);
 
     ccpars_report.line_buf[ccpars_report.num_lines] = (char *)calloc(n_chars+1, sizeof(char));
 
@@ -282,55 +284,31 @@ char * ccparsEnumString(struct ccpars_enum *par_enum, uint32_t value)
     return(par_enum->string != NULL ? par_enum->string : "invalid");
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static uint32_t ccparsCheckMissingPars(enum ccpars_groups_enum group_idx, enum ccpars_group_required required)
+static uint32_t ccparsCheckMissingPars(enum ccpars_groups_enum group_idx)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     struct ccpars_group *group = &ccpars_groups[group_idx];
     struct ccpars       *par;
 
-    switch(required)
+    // If any parameters of a required group are missing, report the details
+
+    if(group->n_pars_missing > 0)
     {
-        case GROUP_REQUIRED:
+        fprintf(stderr,"Error: Group %s requires all parameters to be fully defined:\n",group->name);
 
-            // If any parameters of a requried group are missing, report the details
-
-            if(group->n_pars_missing > 0)
+        for(par = group->pars; par->name != NULL ; par++)
+        {
+            if(par->num_values < par->min_values)
             {
-                fprintf(stderr,"Error: Group %s requires all parameters to be fully defined:\n",group->name);
-
-                for(par = group->pars; par->name != NULL ; par++)
-                {
-                    if(par->num_values < par->min_values)
-                    {
-                        fprintf(stderr,"    %s.%s - %u of %u supplied\n",
-                                group->name,par->name,par->min_values,par->num_values);
-                    }
-                }
-                return(1);  // Return error code
+                fprintf(stderr,"    %s.%s - %u of %u supplied\n",
+                        group->name,par->name,par->min_values,par->num_values);
             }
-            else
-            {
-                group->enabled = 1;
-            }
-            break;
-
-        case GROUP_EXCLUDED:
-
-            // If any parameters of an excluded group are supplied then return error code
-
-            if(group->n_pars_read > 0)
-            {
-                return(1);      // Report error
-            }
-            break;
-
-        case GROUP_OPTIONAL:
-
-            group->enabled = 1;
-            break;
+        }
+        return(1);  // Return error code
     }
 
-    return(0);      // Return no error
+    group->enabled = 1;     // Mark group as enabled
+    return(0);              // Return no error
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ccparsGet(int argc, char **argv)
@@ -358,6 +336,8 @@ void ccparsGet(int argc, char **argv)
 
     for(group = ccpars_groups ; group->name != NULL ; group++)
     {
+        group->enabled = 0;
+
         for(par = group->pars ; par->name != NULL ; par++)
         {
             if(par->num_values < par->min_values)
@@ -369,106 +349,101 @@ void ccparsGet(int argc, char **argv)
 
     // Global group must always be valid
 
-    ccparsCheckMissingPars(GROUP_GLOBAL, GROUP_REQUIRED);
+    ccparsCheckMissingPars(GROUP_GLOBAL);
 
     // Function data must be defined for the specified function
 
-    ccparsCheckMissingPars(func[ccpars_global.function].group_idx, GROUP_REQUIRED);
+    ccparsCheckMissingPars(func[ccpars_global.function].group_idx);
 
-    // REVERSE_TIME: FG_LIMITS and SIM_LOAD must be DISABLED
+    // if GLOBAL.REVERSE_TIME is enabled then GLOBAL.FG_LIMITS and GLOBAL.SIM_LOAD must be DISABLED
 
     if(ccpars_global.reverse_time == CC_ENABLED)
     {
         if(ccpars_global.sim_load == CC_ENABLED || ccpars_global.fg_limits == CC_ENABLED)
         {
-            fputs("Error : With REVERSE_TIME: FG_LIMITS and SIM_LOAD must be DISABLED\n",stderr);
+            fputs("Error: When GLOBAL.REVERSE_TIME is ENABLED, GLOBAL.FG_LIMITS and GLOBAL.SIM_LOAD must be DISABLED\n",stderr);
             exit(EXIT_FAILURE);
         }
     }
 
-    // UNITS of AMPS or GAUSS requires SIM_LOAD to be ENABLED
+    // if GLOBAL.REG_MODE is FIELD or CURRENT then SIM_LOAD must be ENABLED
 
-    if(ccpars_global.units != REG_VOLTAGE && ccpars_global.sim_load == CC_DISABLED)
+    if(ccpars_global.reg_mode != REG_VOLTAGE && ccpars_global.sim_load == CC_DISABLED)
     {
-        fputs("Error : UNITS of AMPS or GAUSS requires SIM_LOAD to be ENABLED\n",stderr);
+        fputs("Error: GLOBAL.REG_MODE of FIELD or CURRENT requires GLOBAL.SIM_LOAD to be ENABLED\n",stderr);
         exit(EXIT_FAILURE);
     }
 
-    // Limit parameters (-m) requirement depends on FG_LIMITS and SIM_LOAD
+    // LIMITS group required if GLOBAL.FG_LIMITS or GLOBAL.SIM_LOAD enabled
 
-    if(ccpars_global.fg_limits == CC_DISABLED && ccpars_global.sim_load == CC_DISABLED)
+    if(ccpars_global.fg_limits == CC_ENABLED || ccpars_global.sim_load == CC_ENABLED)
     {
-        if(ccparsCheckMissingPars(GROUP_LIMITS, GROUP_EXCLUDED) == 1)
-        {
-            fputs("Error : LIMITS parameters not required\n",stderr);
-            exit(EXIT_FAILURE);
-        }
-    }
-    else
-    {
-        ccparsCheckMissingPars(GROUP_LIMITS, GROUP_REQUIRED);
+        ccparsCheckMissingPars(GROUP_LIMITS);
     }
 
-    // Load (-l) and voltage source (-s) parameters requirements depend on SIM_LOAD
+    // LOAD and VS parameters requirements depend on SIM_LOAD
 
-    if(ccpars_global.sim_load == CC_DISABLED)
+    if(ccpars_global.sim_load == CC_ENABLED)
     {
-        if(ccparsCheckMissingPars(GROUP_LOAD, GROUP_EXCLUDED) == 1)
-        {
-            fputs("Error : SIM_LOAD is DISABLED so LOAD parameters are not required\n",stderr);
-            exit(EXIT_FAILURE);
-        }
-
-        if(ccparsCheckMissingPars(GROUP_VS, GROUP_EXCLUDED) == 1)
-        {
-            fputs("Error : SIM_LOAD is DISABLED so VS parameters are not required\n",stderr);
-            exit(EXIT_FAILURE);
-        }
-    }
-    else
-    {
-        ccparsCheckMissingPars(GROUP_LOAD, GROUP_REQUIRED);
-        ccparsCheckMissingPars(GROUP_VS, GROUP_OPTIONAL);
+        ccparsCheckMissingPars(GROUP_LOAD);
+        ccparsCheckMissingPars(GROUP_VS);
 
         // If voltage perturbation is not required then set perturb_time to far beyond end of simulation
 
         if(ccpars_load.perturb_time <= 0.0 || ccpars_load.perturb_volts == 0.0)
         {
-            ccpars_load.perturb_time = 1.0E30;
+            ccpars_load.perturb_volts = 0.0;
+            ccpars_load.perturb_time  = 1.0E30;
         }
-    }
 
-    // Regulation parameters (-r) requirement depends on UNITS
+        // Ensure that open loop time/duration are coherent
 
-    if(ccpars_global.units != REG_VOLTAGE)
-    {
-        ccparsCheckMissingPars(GROUP_REG, GROUP_REQUIRED);
-    }
-    else
-    {
-        if(ccparsCheckMissingPars(GROUP_REG, GROUP_EXCLUDED) == 1)
+        if(ccpars_global.reg_mode == REG_VOLTAGE || ccpars_global.open_loop_time <= 0.0 || ccpars_global.open_loop_duration <= 0.0)
         {
-            fputs("Error : Regulation parameters not required\n",stderr);
+            ccpars_global.open_loop_time = 1.0E30;
+        }
+        else
+        {
+            ccrun.close_loop_time = ccpars_global.open_loop_time + ccpars_global.open_loop_duration;
+        }
+
+        // Ensure that VS.V_REF_DELAY_ITERS is at least 1
+
+        if(ccpars_vs.v_ref_delay_iters < 1.0)
+        {
+            fprintf(stderr,"Error: VS.V_REF_DELAY_ITERS (%g) must be >= 1.0\n",ccpars_vs.v_ref_delay_iters);
             exit(EXIT_FAILURE);
         }
+    }
+
+    // Regulation parameters requirement depends on reg mode
+
+    if(ccpars_global.reg_mode == REG_FIELD)
+    {
+        ccparsCheckMissingPars(GROUP_REG_B);
+    }
+
+    if(ccpars_global.reg_mode == REG_CURRENT)
+    {
+        ccparsCheckMissingPars(GROUP_REG_I);
     }
 
     // If simulation is enabled then ensure that open loop time/duration are coherent and v_ref_delay_iters >= 1
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        if(ccpars_global.units == REG_VOLTAGE || ccpars_reg.ol_time <= 0.0 || ccpars_reg.ol_duration <= 0.0)
+        if(ccpars_global.reg_mode == REG_VOLTAGE || ccpars_global.open_loop_time <= 0.0 || ccpars_global.open_loop_duration <= 0.0)
         {
-            ccpars_reg.ol_time = 1.0E30;
+            ccpars_global.open_loop_time = 1.0E30;
         }
         else
         {
-            ccpars_reg.cl_time = ccpars_reg.ol_time + ccpars_reg.ol_duration;
+            ccrun.close_loop_time = ccpars_global.open_loop_time + ccpars_global.open_loop_duration;
         }
 
         if(ccpars_vs.v_ref_delay_iters < 1.0)
         {
-            fprintf(stderr,"Error : VS.V_REF_DELAY_ITERS (%g) must be >= 1.0\n",ccpars_vs.v_ref_delay_iters);
+            fprintf(stderr,"Error: VS.V_REF_DELAY_ITERS (%g) must be >= 1.0\n",ccpars_vs.v_ref_delay_iters);
             exit(EXIT_FAILURE);
         }
     }
@@ -477,15 +452,15 @@ void ccparsGet(int argc, char **argv)
 
     if(ccpars_global.function == FG_START || ccpars_global.abort_time > 0.0)
     {
-        if(ccpars_global.units == REG_VOLTAGE)
+        if(ccpars_global.reg_mode == REG_VOLTAGE)
         {
-            fputs("Error : START function and ABORT_TIME require units of AMPS or GAUSS\n",stderr);
+            fputs("Error: START function and GLOBAL.ABORT_TIME require GLOBAL.REG_MODE of FIELD or CURRENT\n",stderr);
             exit(EXIT_FAILURE);
         }
 
         if(ccpars_global.fg_limits == CC_DISABLED)
         {
-            fputs("Error : START function and ABORT_TIME require FG_LIMITS to be ENABLED\n",stderr);
+            fputs("Error: START function and GLOBAL.ABORT_TIME require GLOBAL.FG_LIMITS to be ENABLED\n",stderr);
             exit(EXIT_FAILURE);
         }
     }
@@ -494,10 +469,10 @@ void ccparsGet(int argc, char **argv)
 
     if(ccpars_global.abort_time > 0.0)
     {
-        if(ccpars_global.abort_time <= ccpars_reg.cl_time)
+        if(ccpars_global.abort_time <= ccrun.close_loop_time)
         {
-            fprintf(stderr,"Error : ABORT_TIME (%.6f) must not be before the end of the open loop window (%.6f)\n",
-                        ccpars_global.abort_time, ccpars_reg.cl_time);
+            fprintf(stderr,"Error: ABORT_TIME (%.6f) must not be before the end of the open loop window (%.6f)\n",
+                        ccpars_global.abort_time, ccrun.close_loop_time);
             exit(EXIT_FAILURE);
         }
     }
@@ -513,6 +488,8 @@ void ccparsGenerateReport(void)
     unsigned             i;
     struct ccpars_group *group = ccpars_groups;
 
+    ccpars_report.num_lines = 0;
+
     // For FLOT output, generate inline div for the Show pars pop-up
 
     if(ccpars_global.output_format == CC_FLOT)
@@ -522,9 +499,9 @@ void ccparsGenerateReport(void)
         ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Simulation Parameters:</p>\n      <p><pre>\n");
     }
 
-    // Generate report of parameter values if verbose option (-v) or FLOT output format selected
+    // Generate report of parameter values if GLOBAL.VERBOSE is enabled or FLOT output format selected
 
-    if(ccpars_global.verbose_flag || ccpars_global.output_format == CC_FLOT)
+    if(ccpars_global.verbose == CC_ENABLED || ccpars_global.output_format == CC_FLOT)
     {
         while(group->name)
         {
@@ -548,17 +525,6 @@ void ccparsGenerateReport(void)
 
     if(ccpars_groups[GROUP_LOAD].enabled == 1)
     {
-        // Report measurement filter information
-
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:i_meas.num0_correction",
-                     reg_pars.i_meas.num0_correction);
-        ccparsPrintf("%-*s% d\n",     PARS_INDENT, "LOAD:i_meas.order",
-                     reg_pars.i_meas.order);
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:b_meas.num0_correction",
-                     reg_pars.b_meas.num0_correction);
-        ccparsPrintf("%-*s% d\n\n",   PARS_INDENT, "LOAD:b_meas.order",
-                     reg_pars.b_meas.order);
-
         // Report internally calculated load parameters
 
         ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:inv_henrys",
@@ -648,14 +614,7 @@ void ccparsGenerateReport(void)
 
     if(ccpars_groups[GROUP_VS].enabled == 1)
     {
-        // Report voltage measurement filter information
-
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "VS:v_meas.num0_correction",
-                     reg_pars.v_meas.num0_correction);
-        ccparsPrintf("%-*s% d\n\n",   PARS_INDENT, "VS:v_meas.order",
-                     reg_pars.v_meas.order);
-
-        // Report internally calculated parameters
+        // Report internally calculated voltage source parameters
 
         ccparsPrintf("%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:numerator",
                      reg_pars.sim_vs_pars.num[0],
@@ -669,36 +628,58 @@ void ccparsGenerateReport(void)
                      reg_pars.sim_vs_pars.den[2],
                      reg_pars.sim_vs_pars.den[3]);
 
-        ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMVS:gain",reg_pars.sim_vs_pars.gain);
+        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMVS:step_rsp_time_iters",reg_pars.sim_vs_pars.step_rsp_time_iters);
+        ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMVS:gain",               reg_pars.sim_vs_pars.gain);
     }
 
-    if(ccpars_groups[GROUP_REG].enabled == 1)
+    if(reg.mode == REG_FIELD)
     {
-        if(ccpars_global.units == REG_CURRENT)
+        // Report internally calculated field regulation parameters
+
+        ccparsPrintf("%-*s% d\n", PARS_INDENT, "B_RST:alg_index", reg_pars.b_rst_pars.alg_index);
+        ccparsPrintf("%-*s% d\n", PARS_INDENT, "B_RST:dead_beat", reg_pars.b_rst_pars.dead_beat);
+
+        for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
         {
-            for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
-            {
-               ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "RST:",
-                               reg_pars.i_rst_pars.rst.r[i],
-                               reg_pars.i_rst_pars.rst.s[i],
-                               reg_pars.i_rst_pars.rst.t[i]);
-            }
-            ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "RST:t0_correction",
-                               reg_pars.i_rst_pars.t0_correction);
+            ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "B_RST:",
+                           reg_pars.b_rst_pars.rst.r[i],
+                           reg_pars.b_rst_pars.rst.s[i],
+                           reg_pars.b_rst_pars.rst.t[i]);
         }
-        else
-        {
-            for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
-            {
-               ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "RST:",
-                               reg_pars.b_rst_pars.rst.r[i],
-                               reg_pars.b_rst_pars.rst.s[i],
-                               reg_pars.b_rst_pars.rst.t[i]);
-            }
-            ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "RST:t0_correction",
-                               reg_pars.b_rst_pars.t0_correction);
-        }
+        ccparsPrintf("%-*s% 16.9E\n",   PARS_INDENT, "B_RST:track_delay_periods",
+                           reg_pars.b_rst_pars.track_delay_periods);
+        ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "B_RST:t0_correction",
+                           reg_pars.b_rst_pars.t0_correction);
     }
+
+    if(reg.mode == REG_CURRENT)
+    {
+        // Report internally calculated field regulation parameters
+
+        ccparsPrintf("%-*s% d\n", PARS_INDENT, "I_RST:alg_index", reg_pars.i_rst_pars.alg_index);
+        ccparsPrintf("%-*s% d\n", PARS_INDENT, "I_RST:dead_beat", reg_pars.i_rst_pars.dead_beat);
+
+        for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+        {
+            ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "I_RST:",
+                           reg_pars.i_rst_pars.rst.r[i],
+                           reg_pars.i_rst_pars.rst.s[i],
+                           reg_pars.i_rst_pars.rst.t[i]);
+        }
+        ccparsPrintf("%-*s% 16.9E\n",   PARS_INDENT, "I_RST:track_delay_periods",
+                           reg_pars.i_rst_pars.track_delay_periods);
+        ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "I_RST:t0_correction",
+                           reg_pars.i_rst_pars.t0_correction);
+    }
+
+    // Report ref advance
+
+    if(reg.mode != REG_VOLTAGE)
+    {
+        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "REG.ref_advance", reg.ref_advance);
+    }
+
+    // Report function meta data
 
     ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:duration",    fg_meta.duration);
     ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.start", fg_meta.range.start);
@@ -706,9 +687,9 @@ void ccparsGenerateReport(void)
     ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.min",   fg_meta.range.min);
     ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.max",   fg_meta.range.max);
 
-    // Print report to stderr if verbose flag (-v) was set
+    // Print report to stderr if GLOBAL.VERBOSE is enabled
 
-    if(ccpars_global.verbose_flag)
+    if(ccpars_global.verbose == CC_ENABLED)
     {
         ccparsPrintReport(stderr);
     }
@@ -724,7 +705,4 @@ void ccparsPrintReport(FILE *f)
         fputs(ccpars_report.line_buf[i],f);
     }
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: ccpars.c
-\*---------------------------------------------------------------------------------------------------------*/
-
+// EOF

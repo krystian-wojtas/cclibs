@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     func/plep.h                                                                 Copyright CERN 2014
+  File:     cctest/inc/func/plep.h                                                      Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the plep data file (-d plep_file)
+  Purpose:  Structure for PLEP function parameters
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -54,7 +54,7 @@ CCPARS_PLEP_EXT struct ccpars_plep ccpars_plep;
 
 CCPARS_PLEP_EXT struct ccpars   plep_pars_list[]
 #ifdef GLOBALS
-= {// "Signal name"   TYPE, max_vals,min_vals,*enum, *value,                           num_defaults
+= {// "Signal name"   TYPE, max_vals,min_vals,*enum,     *value,                       num_defaults
     { "INITIAL_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.initial_ref         }, 0 },
     { "FINAL_REF",    PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.config.final        }, 0 },
     { "ACCELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.config.acceleration }, 0 },

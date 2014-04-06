@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/load.h                                                                 Copyright CERN 2014
+  File:     cctest/inc/pars/load.h                                                      Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -62,19 +62,19 @@ struct ccpars_load
 
 CCPARS_LOAD_EXT struct ccpars_load ccpars_load
 #ifdef GLOBALS
-= {
-    1.0,                            // OHMS_SER
-    1.0E9,                          // OHMS_PAR
-    1.0,                            // OHMS_MAG
-    1.0,                            // HENRYS
-    1.0,                            // HENRYS_SAT
-    0.0,                            // I_SAT_START
-    0.0,                            // I_SAT_END
-    1.0,                            // GAUSS_PER_AMP
-    0.0,                            // PERTURB_VOLTS
-    0.0,                            // PERTURB_TIME
-    0.0,                            // SIM_TC_ERROR
-    CC_DISABLED,                    // POL_SWI_AUTO
+= {//   Default value           Parameter
+        1.0,                 // LOAD.OHMS_SER
+        1.0E9,               // LOAD.OHMS_PAR
+        1.0,                 // LOAD.OHMS_MAG
+        1.0,                 // LOAD.HENRYS
+        1.0,                 // LOAD.HENRYS_SAT
+        0.0,                 // LOAD.I_SAT_START
+        0.0,                 // LOAD.I_SAT_END
+        1.0,                 // LOAD.GAUSS_PER_AMP
+        0.0,                 // LOAD.PERTURB_VOLTS
+        0.0,                 // LOAD.PERTURB_TIME
+        0.0,                 // LOAD.SIM_TC_ERROR
+        CC_DISABLED,         // LOAD.POL_SWI_AUTO
 }
 #endif
 ;

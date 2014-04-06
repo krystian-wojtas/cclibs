@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/limits.h                                                               Copyright CERN 2011
+  File:     cctest/inc/pars/limits.h                                                    Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -42,16 +42,16 @@ struct ccpars_limits
 {
     // Limits file parameters
 
-    struct fg_limits    b;                      // Field limits in gauss
+    struct fg_limits    b;                      // Field limits
     float               b_err_warning;          // Field regulation error warning limit
     float               b_err_fault;            // Field regulation error fault limit
 
-    struct fg_limits    i;                      // Current limits in amps
+    struct fg_limits    i;                      // Current limits
     float               i_err_warning;          // Current regulation error warning limit
     float               i_err_fault;            // Current regulation error fault limit
     float               i_quadrants41[2];       // Exclusion zone for quadrants 4 and 1
 
-    struct fg_limits    v;                      // Voltage limits in volts
+    struct fg_limits    v;                      // Voltage limits
     float               v_err_warning;          // Current regulation error warning limit
     float               v_err_fault;            // Current regulation error fault limit
     float               v_quadrants41[2];
@@ -67,10 +67,10 @@ struct ccpars_limits
 CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 #ifdef GLOBALS
 = {//  POS   MIN    NEG    RATE   ACC   ERR_WRN ERR_FLT  Quadrant41 
-    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,                 // Field limits   (G)
-    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,  { 0.0, 0.0 },  // Current limits (A)
-    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,  { 0.0, 0.0 },  // Voltage limits (V)
-    CC_DISABLED                                                       // Invert Limits 
+    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,                 // LIMITS.B_limits
+    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,  { 0.0, 0.0 },  // LIMITS.I_limits
+    { 1.0E9, 0.0, -1.0E9, 1.0E9, 1.0E9 }, 0.0,   0.0,  { 0.0, 0.0 },  // LIMITS.V_limits
+    CC_DISABLED                                                       // LIMITS.INVERT_LIMITS
 }
 #endif
 ;
@@ -79,7 +79,7 @@ CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 
 CCPARS_LIMITS_EXT struct ccpars limits_pars_list[]
 #ifdef GLOBALS
-= {// "Signal name"     TYPE,   max_vals,min_vals,*enum,        *value,                   num_defaults
+= {// "Signal name"     TYPE,   max_vals,min_vals,*enum,          *value,                    num_defaults
     { "B_POS",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.pos          }, 1 },
     { "B_MIN",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.min          }, 1 },
     { "B_NEG",          PAR_FLOAT, 1, 0, NULL,             { .f = &ccpars_limits.b.neg          }, 1 },
@@ -109,7 +109,4 @@ CCPARS_LIMITS_EXT struct ccpars limits_pars_list[]
 ;
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: pars/limits.h
-\*---------------------------------------------------------------------------------------------------------*/
-
+// EOF

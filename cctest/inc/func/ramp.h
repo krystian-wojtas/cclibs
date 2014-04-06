@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     func/ramp.h                                                                Copyright CERN 2014
+  File:     cctest/inc/func/ramp.h                                                      Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the ramp data file (-d ramp_file)
+  Purpose:  Structure for RAMP function parameters
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -66,6 +66,5 @@ CCPARS_RAMP_EXT struct ccpars   ramp_pars_list[]
 ;
 
 #endif
-
 // EOF
 

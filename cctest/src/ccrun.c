@@ -65,8 +65,8 @@ static void ccrunAbort(float time)
 
     fgRampCalc(&config,
                &ccpars_ramp.ramp_pars,
-                ccpars_reg.time,                                              // time of last RST calculation
-                regRstPrevRef(&reg.rst_vars),                                 // last reference value
+                ccrun.reg_time,                                            // time of last RST calculation
+                regRstPrevRef(&reg.rst_vars),                              // last reference value
                 regRstDeltaRef(&reg.rst_vars) / reg.period,                // last reference rate
                &fg_meta);
 
@@ -89,7 +89,7 @@ static float ccrunTestOpeningLoop(float time, float ref)
 {
     // If time is within period for open-loop operation
 
-    if(time >= ccpars_reg.ol_time && time < ccpars_reg.cl_time)
+    if(time >= ccpars_global.open_loop_time && time < ccrun.close_loop_time)
     {
         // If still closed loop then switch to voltage mode and set a cursor in the log
 
@@ -109,9 +109,9 @@ static float ccrunTestOpeningLoop(float time, float ref)
     //     to close the loop with a non-zero rate of change provided it can be measured and given
     //     to the regSetMode() function.
 
-    else if(time >= ccpars_reg.cl_time && reg.mode == REG_VOLTAGE)
+    else if(time >= ccrun.close_loop_time && reg.mode == REG_VOLTAGE)
     {
-        if(ccpars_global.units == REG_CURRENT)
+        if(ccpars_global.reg_mode == REG_CURRENT)
         {
             regSetMode(&reg, &reg_pars, REG_CURRENT, reg.i_meas.unfiltered, 0.0);
         }
@@ -135,8 +135,8 @@ static float ccrunTestForConverterTrip(float ref)
     if(ccpars_vs.trip_flag         == 0 &&
       (reg.lim_b_meas.flags.trip   == 1 ||
        reg.lim_i_meas.flags.trip   == 1 ||
-       reg.b_err.limits.fault.flag == 1 ||
-       reg.i_err.limits.fault.flag == 1 ||
+       reg.b_err.fault.flag        == 1 ||
+       reg.i_err.fault.flag        == 1 ||
        reg.v_err.fault.flag        == 1))
     {
         // Simulate converter trip - switch to voltage regulation mode and set v_ref to zero
@@ -197,7 +197,7 @@ void ccrunSimulation(uint32_t ref_function_type)
 
             // if regulating current or field then open the loop at the specified time for the specified duration
 
-            if(ccpars_global.units != REG_VOLTAGE)
+            if(ccpars_global.reg_mode != REG_VOLTAGE)
             {
                 ref = ccrunTestOpeningLoop(time, ref);
             }
@@ -209,15 +209,15 @@ void ccrunSimulation(uint32_t ref_function_type)
         if(regConverter(&reg,
                         &reg_pars,
                         &ref,                           // V_REF, I_REF or B_REF according to reg.mode
-                        ccpars_reg.feedforward_v_ref,   // V_REF when feedforward_control is 1
-                        ccpars_reg.feedforward_control, // 1=Feedforward  0=Feedback
+                        ccrun.feedforward_v_ref,        // V_REF when feedforward_control is 1
+                        ccrun.feedforward_control,      // 1=Feed-forward  0=Feedback
                         1                               // max_abs_err_control (always enabled)
                         ) == 1)
         {
             // Record time of iterations when current or field regulation algorithm runs.
             // This is used by START function and ABORT to initialise a new PLEP.
 
-            ccpars_reg.time = time;
+            ccrun.reg_time = time;
         }
 
         // Apply voltage perturbation from the specified time
@@ -228,7 +228,7 @@ void ccrunSimulation(uint32_t ref_function_type)
             ccsigsStoreCursor(CSR_LOAD,"Perturbation");
         }
 
-        // Set end of simulation time when function stops running
+        // Set end of simulation time when function stops running or converter trips
 
         if(end_time == 0.0 && (func_run_f == 0 || ccpars_vs.trip_flag == 1))
         {
@@ -239,14 +239,13 @@ void ccrunSimulation(uint32_t ref_function_type)
 
         regSimulate(&reg, &reg_pars, perturb_volts);
 
-        // Store and print enabled signals to stdout
+        // Store and print enabled signals
 
         ccsigsStore(time);
 
         // Check if measurement or regulation limits are exceeded that require a converter to be tripped off
 
         ref = ccrunTestForConverterTrip(ref);
-
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -261,9 +260,9 @@ void ccrunFunGen(uint32_t ref_function_type)
 
     duration = fg_meta.duration + ccpars_global.stop_delay;
 
-    ccpars_global.num_iterations = (uint32_t)(1.4999 + duration / reg.iter_period);
+    ccrun.num_iterations = (uint32_t)(1.4999 + duration / reg.iter_period);
 
-    for(iteration_idx = 0 ; iteration_idx < ccpars_global.num_iterations ; iteration_idx++)
+    for(iteration_idx = 0 ; iteration_idx < ccrun.num_iterations ; iteration_idx++)
     {
         // Calculate iteration time
 
@@ -273,14 +272,14 @@ void ccrunFunGen(uint32_t ref_function_type)
         }
         else
         {
-            time = reg.iter_period * (ccpars_global.num_iterations - iteration_idx - 1);
+            time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
         }
 
         // Generate reference value using libfg function
 
         func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &time, &reg.v_ref);
 
-        // Store and print enabled signals to stdout
+        // Store and print enabled signals
 
         ccsigsStore(time);
     }

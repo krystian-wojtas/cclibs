@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     func/pppl.h                                                                 Copyright CERN 2011
+  File:     cctest/inc/func/pppl.h                                                      Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the PPPL data file (-d pppl_file)
+  Purpose:  Structure for PPPL function parameters
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -54,7 +54,7 @@ CCPARS_PPPL_EXT struct ccpars_pppl ccpars_pppl;
 
 CCPARS_PPPL_EXT struct ccpars   pppl_pars_list[]
 #ifdef GLOBALS
-= {// "Signal name"    TYPE,   max_vals,   min_vals, *enum, *value,                           num_defaults
+= {// "Signal name"    TYPE,   max_vals,   min_vals, *enum,     *value,                        num_defaults
     { "INITIAL_REF",   PAR_FLOAT, 1,            1, NULL, { .f = &ccpars_pppl.initial_ref          }, 0 },
     { "ACCELERATION1", PAR_FLOAT, FG_MAX_PPPLS, 1, NULL, { .f =  ccpars_pppl.config.acceleration1 }, 0 },
     { "ACCELERATION2", PAR_FLOAT, FG_MAX_PPPLS, 1, NULL, { .f =  ccpars_pppl.config.acceleration2 }, 0 },
@@ -69,7 +69,4 @@ CCPARS_PPPL_EXT struct ccpars   pppl_pars_list[]
 ;
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: func/pppl.h
-\*---------------------------------------------------------------------------------------------------------*/
-
+// EOF

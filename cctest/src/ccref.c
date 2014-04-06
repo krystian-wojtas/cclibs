@@ -28,6 +28,7 @@
 // Include cctest program header files
 
 #include "ccpars.h"
+#include "ccrun.h"
 #include "ccref.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
@@ -126,8 +127,8 @@ void ccrefInitSTART(void)
 
     // Start with feedforward enabled and V_REF = 0
 
-    ccpars_reg.feedforward_v_ref   = 0.0;
-    ccpars_reg.feedforward_control = 1;
+    ccrun.feedforward_v_ref   = 0.0;
+    ccrun.feedforward_control = 1;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ccrefInitPLEP(void)
@@ -406,7 +407,7 @@ uint32_t ccrefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
 {
     // If within the open loop period with feedforward voltage reference
 
-    if(ccpars_reg.feedforward_control == 1)
+    if(ccrun.feedforward_control == 1)
     {
         if(*time < ccpars_global.run_delay)
         {
@@ -420,7 +421,7 @@ uint32_t ccrefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
         {
             // Apply feedforward voltage reference to start converter in openloop
 
-            ccpars_reg.feedforward_v_ref = ccpars_start.feedforward_v_ref;
+            ccrun.feedforward_v_ref = ccpars_start.feedforward_v_ref;
 
             *ref = 0.0;
 
@@ -436,14 +437,14 @@ uint32_t ccrefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
 
             fgPlepCalc(&ccpars_start.config,
                         pars,
-                        ccpars_reg.time,
+                        reg.time,
                         reg.rst_vars.ref[1],
                         ccpars_start.config.linear_rate,
                         &fg_meta);
 
             // Close the loop with the reference continuing with the same ramp rate
 
-            ccpars_reg.feedforward_control = 0;
+            ccrun.feedforward_control = 0;
         }
     }
 
@@ -461,7 +462,7 @@ enum fg_error ccrefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
 
     // If function is in gauss, then calculate corresponding current and rate of change of current
 
-    if(ccpars_global.units == REG_FIELD)
+    if(ccpars_global.reg_mode == REG_FIELD)
     {
         i_ref  = regLoadFieldToCurrent(&reg_pars.load_pars, ref);
         rate  *= i_ref / ref;

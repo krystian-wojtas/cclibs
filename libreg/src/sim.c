@@ -256,7 +256,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
     pars->den[3] = 0.0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars)
+uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref_delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates the gain and the 50% step response time of the simulated voltage source.
   It returns 1 if the voltage source simulation is under-sampled.
@@ -267,6 +267,10 @@ uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *
     float           sum_den  = 0.0;         // Sum(a)
     float           step_response;
     float           prev_step_response;
+
+    // Save v_ref_delay so that it can be used later by regCalcPureDelay()
+
+    pars->v_ref_delay_iters = v_ref_delay_iters;
 
     // Calculate gain of voltage source model
 

@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     ccref.h                                                                     Copyright CERN 2011
+  File:     cctest/inc/ccref.h                                                          Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -21,8 +21,8 @@
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
 
-#ifndef FGREF_H
-#define FGREF_H
+#ifndef CCREF_H
+#define CCREF_H
 
 // Include fg and reg library header files
 
@@ -41,9 +41,9 @@
 // GLOBALS should be defined in the source file where global variables should be defined
 
 #ifdef GLOBALS
-#define FGREF_EXT
+#define CCREF_EXT
 #else
-#define FGREF_EXT extern
+#define CCREF_EXT extern
 #endif
 
 // Function prototypes
@@ -68,7 +68,7 @@ enum fg_error   ccrefCheckConverterLimits (struct fg_limits *limits, uint32_t in
 
 // Function meta data
 
-FGREF_EXT struct fg_meta fg_meta;
+CCREF_EXT struct fg_meta fg_meta;
 
 // Reference functions structure
 
@@ -80,7 +80,7 @@ struct fgfunc
     uint32_t                (*fgen_func)();
 };
 
-FGREF_EXT struct fgfunc func[]  // Must be in enum fg_types order (in global.h)!
+CCREF_EXT struct fgfunc func[]  // Must be in enum fg_types order (in global.h)!
 #ifdef GLOBALS
 = {
     {   0,           NULL,                     NULL,               NULL          },
@@ -99,7 +99,4 @@ FGREF_EXT struct fgfunc func[]  // Must be in enum fg_types order (in global.h)!
 #endif
 ;
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: ccref.h
-\*---------------------------------------------------------------------------------------------------------*/
-
+// EOF

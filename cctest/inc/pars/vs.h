@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/vs.h                                                                   Copyright CERN 2014
+  File:     cctest/inc/pars/vs.h                                                        Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -45,7 +45,7 @@ struct ccpars_vs
     float                       bandwidth;          // Voltage source bandwidth
     float                       z;                  // Damping factor
     float                       tau_zero;           // Time constant of zero
-    struct reg_sim_vs_pars      sim_vs_pars;        // Voltage source simulation model
+    struct reg_sim_vs_pars      sim_vs_pars;        // Voltage source simulation model if bandwidth is zero
 
     // Voltage source related variables
 
@@ -54,12 +54,13 @@ struct ccpars_vs
 
 CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 #ifdef GLOBALS
-= {
-    1.0,                                            // V_REF_DELAY_ITERS
-    0.0,                                            // BANDWIDTH
-    0.9,                                            // Z
-    0.0,                                            // TAU_ZERO
-    {  { 1.0 }, { 1.0 }  },                         // SIM_NUM, SIM_DEN: Default VS response is no delay
+= {//   Default value               Parameter
+        1.0,                     // VS.V_REF_DELAY_ITERS
+        0.0,                     // VS.BANDWIDTH
+        0.9,                     // VS.Z
+        0.0,                     // VS.TAU_ZERO
+        {  { 1.0 },              // VS.SIM_NUM
+           { 1.0 }  },           // VS.SIM_DEN
 }
 #endif
 ;
@@ -68,7 +69,7 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 
 CCPARS_VS_EXT struct ccpars vs_pars_list[]
 #ifdef GLOBALS
-= {// "Signal name"       TYPE,   max_vals,        min_vals,*enum,     *value,                     num_defaults
+= {// "Signal name"       TYPE,   max_vals,        min_vals,*enum,         *value,                     num_defaults
     { "V_REF_DELAY_ITERS",PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.v_ref_delay_iters }, 1 },
     { "BANDWIDTH",        PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.bandwidth         }, 1 },
     { "Z",                PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.z                 }, 1 },

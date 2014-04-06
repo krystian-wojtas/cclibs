@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     func/start.h                                                                 Copyright CERN 2011
+  File:     cctest/inc/func/start.h                                                     Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the start data file (-d start_file)
+  Purpose:  Structure for START function parameters
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -30,9 +30,9 @@
 // GLOBALS is defined in source file where global variables should be defined
 
 #ifdef GLOBALS
-#define CCPARS_PLEP_EXT
+#define CCPARS_START_EXT
 #else
-#define CCPARS_PLEP_EXT extern
+#define CCPARS_START_EXT extern
 #endif
 
 // START data structure
@@ -50,13 +50,13 @@ struct ccpars_start
     struct fg_plep_pars         plep_pars;               // Libfg parameters for PLEP
 };
 
-CCPARS_PLEP_EXT struct ccpars_start ccpars_start;
+CCPARS_START_EXT struct ccpars_start ccpars_start;
 
-// PLEP data description structure
+// START data description structure
 
-CCPARS_PLEP_EXT struct ccpars   start_pars_list[]
+CCPARS_START_EXT struct ccpars   start_pars_list[]
 #ifdef GLOBALS
-= {// "Signal name"         TYPE, max_vals,min_vals,*enum, *value,                           num_defaults
+= {// "Signal name"         TYPE, max_vals,min_vals,*enum,     *value,                        num_defaults
     { "FEEDFORWARD_V_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.feedforward_v_ref   }, 0 },
     { "CLOSELOOP_LEVEL",    PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.closeloop_level     }, 0 },
     { "FINAL_REF",          PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.config.final        }, 0 },
@@ -67,7 +67,4 @@ CCPARS_PLEP_EXT struct ccpars   start_pars_list[]
 ;
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: func/start.h
-\*---------------------------------------------------------------------------------------------------------*/
-
+// EOF

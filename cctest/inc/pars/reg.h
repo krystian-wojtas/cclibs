@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     pars/reg.h                                                                  Copyright CERN 2014
+  File:     cctest/inc/pars/reg.h                                                       Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -34,76 +34,96 @@
 #define CCPARS_REG_EXT extern
 #endif
 
-// Regulation parameters structure
+// Field and current Regulation parameters
 
-struct ccpars_reg
+struct ccpars_reg_pars
 {
-    // Regulation file parameters
-
-    uint32_t            period_iters;              // Regulation period in iteration periods
-    float               track_delay_periods;       // Regulation track delay in periods
-    float               clbw;                      // Regulation closed loop bandwidth (real pole)
-    float               clbw2;                     // Regulation closed loop bandwidth (conjugate poles)
-    float               z;                         // Regulation conjugate poles damping factor (0.5-0.8)
-    float               clbw3;                     // Regulation closed loop bandwidth (second real pole)
-    float               clbw4;                     // Regulation closed loop bandwidth (third real pole)
-    struct reg_rst      rst;                       // Regulation RST coefficient
-    float               open_loop_time;            // Open loop time
-    float               open_loop_duration;        // Open loop duration
-
-    // Regulation related variables
-
-    double              time;                      // Time of last iteration when regulation algorithm ran
-    float               close_loop_time;           // Close loop time = Open loop time + open loop duration
-    float               feedforward_v_ref;         // Feed-forward reference for START function
-    unsigned            feedforward_control;       // Feed-forward control for START function
+    uint32_t            period_iters;               // Regulation period in iteration periods
+    float               track_delay_periods;        // Regulation track delay in periods
+    float               clbw;                       // Regulation closed loop bandwidth (real pole)
+    float               clbw2;                      // Regulation closed loop bandwidth (conjugate poles)
+    float               z;                          // Regulation conjugate poles damping factor (0.5-0.8)
+    float               clbw3;                      // Regulation closed loop bandwidth (second real pole)
+    float               clbw4;                      // Regulation closed loop bandwidth (third real pole)
+    struct reg_rst      rst;                        // Regulation RST coefficient
 };
 
-CCPARS_REG_EXT struct ccpars_reg ccpars_reg
+CCPARS_REG_EXT struct ccpars_reg_pars ccpars_reg_b
 #ifdef GLOBALS
-= {
-    10,                                            // PERIOD_ITERS
-    1.0,                                           // TRACK_DELAY_PERIODS
-    1.0,                                           // CLBW
-    1.0,                                           // CLBW2
-    0.5,                                           // Z
-    1.0,                                           // CLBW3
-    1.0,                                           // CLBW4
-    {  0.0  },                                     // R
-    {  0.0  },                                     // S
-    {  0.0  },                                     // T
-    0.0,                                           // OPEN_LOOP_TIME
-    0.0,                                           // OPEN_LOOP_DURATION
+= {//   Default value           Parameter
+        10,                  // REG_B.PERIOD_ITERS
+        1.0,                 // REG_B.TRACK_DELAY_PERIODS
+        1.0,                 // REG_B.CLBW
+        1.0,                 // REG_B.CLBW2
+        0.5,                 // REG_B.Z
+        1.0,                 // REG_B.CLBW3
+        1.0,                 // REG_B.CLBW4
+        { {  0.0  },         // REG_B.R
+          {  0.0  },         // REG_B.S
+          {  0.0  } },       // REG_B.T
 }
 #endif
 ;
 
-CCPARS_REG_EXT struct ccpars_reg ccpars_reg;       // All fields are zero by default
-
-CCPARS_REG_EXT struct reg_converter reg;           // Libreg converter regulation structure
-CCPARS_REG_EXT struct reg_converter_pars reg_pars; // Libreg converter regulation parameters structure
-
-// Regulation parameters description structure
-
-CCPARS_REG_EXT struct ccpars reg_pars_list[]
+CCPARS_REG_EXT struct ccpars_reg_pars ccpars_reg_i
 #ifdef GLOBALS
-= {// "Signal name"         TYPE,         max_vals,    min_vals, *enum, *value,                       num_defaults
-    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                0, NULL,  { .i = &ccpars_reg.period_iters        }, 1 },
-    { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.track_delay_periods }, 1 },
-    { "CLBW",               PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw                }, 1 },
-    { "CLBW2",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw2               }, 1 },
-    { "Z",                  PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.z                   }, 1 },
-    { "CLBW3",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw3               }, 1 },
-    { "CLBW4",              PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.clbw4               }, 1 },
-    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.r               }, 0 },
-    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.s               }, 0 },
-    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,  { .f =  ccpars_reg.rst.t               }, 0 },
-    { "OPEN_LOOP_TIME",     PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.open_loop_time      }, 1 },
-    { "OPEN_LOOP_DURATION", PAR_FLOAT,    1,                0, NULL,  { .f = &ccpars_reg.open_loop_duration  }, 1 },
+= {//   Default value           Parameter
+        10,                  // REG_I.PERIOD_ITERS
+        1.0,                 // REG_I.TRACK_DELAY_PERIODS
+        1.0,                 // REG_I.CLBW
+        1.0,                 // REG_I.CLBW2
+        0.5,                 // REG_I.Z
+        1.0,                 // REG_I.CLBW3
+        1.0,                 // REG_I.CLBW4
+        { {  0.0  },         // REG_I.R
+          {  0.0  },         // REG_I.S
+          {  0.0  } },       // REG_I.T
+}
+#endif
+;
+
+// Libreg structures
+
+CCPARS_REG_EXT struct reg_converter reg;            // Libreg converter regulation structure
+CCPARS_REG_EXT struct reg_converter_pars reg_pars;  // Libreg converter regulation parameters structure
+
+// Define Field and Current regulation parameters description structures
+
+CCPARS_REG_EXT struct ccpars reg_b_pars_list[]
+#ifdef GLOBALS
+= {// "Signal name"         TYPE,         max_vals,  min_vals,*enum,          *value,                             num_defaults
+    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                0, NULL,        { .i = &ccpars_reg_b.period_iters        }, 1 },
+    { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_b.track_delay_periods }, 1 },
+    { "CLBW",               PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_b.clbw                }, 1 },
+    { "CLBW2",              PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_b.clbw2               }, 1 },
+    { "Z",                  PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_b.z                   }, 1 },
+    { "CLBW3",              PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_b.clbw3               }, 1 },
+    { "CLBW4",              PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_b.clbw4               }, 1 },
+    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_b.rst.r               }, 0 },
+    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_b.rst.s               }, 0 },
+    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_b.rst.t               }, 0 },
+    { NULL }
+}
+#endif
+;
+
+CCPARS_REG_EXT struct ccpars reg_i_pars_list[]
+#ifdef GLOBALS
+= {// "Signal name"         TYPE,         max_vals,  min_vals,*enum,          *value,                             num_defaults
+    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                0, NULL,        { .i = &ccpars_reg_i.period_iters        }, 1 },
+    { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_i.track_delay_periods }, 1 },
+    { "CLBW",               PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_i.clbw                }, 1 },
+    { "CLBW2",              PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_i.clbw2               }, 1 },
+    { "Z",                  PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_i.z                   }, 1 },
+    { "CLBW3",              PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_i.clbw3               }, 1 },
+    { "CLBW4",              PAR_FLOAT,    1,                0, NULL,        { .f = &ccpars_reg_i.clbw4               }, 1 },
+    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_i.rst.r               }, 0 },
+    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_i.rst.s               }, 0 },
+    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_i.rst.t               }, 0 },
     { NULL }
 }
 #endif
 ;
 
 #endif
-# EOF
+// EOF

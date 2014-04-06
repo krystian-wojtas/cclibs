@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     ccpars.h                                                                    Copyright CERN 2011
+  File:     cctest/inc/ccpars.h                                                         Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -42,14 +42,6 @@
 #define PARS_MAX_REPORT_LINES   1000
 
 // Enums
-
-enum ccpars_group_required
-{
-    GROUP_EXCLUDED,
-    GROUP_OPTIONAL,
-    GROUP_REQUIRED,
-};
-
 
 enum ccpars_type
 {
@@ -104,7 +96,7 @@ CCPARS_EXT struct ccpars_report ccpars_report;
 
 // ENABLED/DISABLED enum
 
-enum fg_enabled_disabled
+enum cc_enabled_disabled
 {
     CC_DISABLED,
     CC_ENABLED
@@ -128,7 +120,8 @@ enum ccpars_groups_enum
     GROUP_LIMITS,
     GROUP_LOAD,
     GROUP_MEAS,
-    GROUP_REG,
+    GROUP_REG_B,
+    GROUP_REG_I,
     GROUP_VS,
     GROUP_START,
     GROUP_PLEP,
@@ -172,7 +165,8 @@ struct ccpars_group ccpars_groups[N_GROUPS+1] // Must be in enum ccpars_groups_e
     { "LIMITS", limits_pars_list },
     { "LOAD",   load_pars_list   },
     { "MEAS",   meas_pars_list   },
-    { "REG",    reg_pars_list    },
+    { "REG_B",  reg_b_pars_list  },
+    { "REG_I",  reg_i_pars_list  },
     { "VS",     vs_pars_list     },
     { "START",  start_pars_list  },
     { "PLEP",   plep_pars_list   },
@@ -194,7 +188,4 @@ void    ccparsGenerateReport    (void);
 void    ccparsPrintReport       (FILE *f);
 
 #endif
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: ccpars.h
-\*---------------------------------------------------------------------------------------------------------*/
-
+// EOF

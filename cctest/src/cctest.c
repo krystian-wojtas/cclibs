@@ -57,17 +57,12 @@ static void PrepareLoad(void)
 
         // Field regulation requires an inductive load
 
-        if(ccpars_global.units == REG_FIELD && reg.iter_period > (3.0 * reg_pars.load_pars.tc))
+        if(ccpars_global.reg_mode == REG_FIELD && reg.iter_period > (3.0 * reg_pars.load_pars.tc))
         {
             fputs("Error : GAUSS units not permitted for a resistive circuit "
                   "(circuit time constant is less than 1/3 x iteration period)\n",stderr);
             exit(EXIT_FAILURE);
         }
-
-        // Initialise measurement filters
-
-        regMeasFilterInit(&reg_pars.i_meas, &reg.i_meas, ccpars_meas.i_meas_pars.num, ccpars_meas.i_meas_pars.den);
-        regMeasFilterInit(&reg_pars.b_meas, &reg.b_meas, ccpars_meas.b_meas_pars.num, ccpars_meas.b_meas_pars.den);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -105,9 +100,9 @@ static void PrepareLimits(void)
 
         // Initialise field, current and voltage regulation error warning/fault thresholds
 
-        regErrInitLimits(&reg.b_err.limits, ccpars_limits.b_err_warning, ccpars_limits.b_err_fault);
+        regErrInitLimits(&reg.b_err, ccpars_limits.b_err_warning, ccpars_limits.b_err_fault);
 
-        regErrInitLimits(&reg.i_err.limits, ccpars_limits.i_err_warning, ccpars_limits.i_err_fault);
+        regErrInitLimits(&reg.i_err, ccpars_limits.i_err_warning, ccpars_limits.i_err_fault);
 
         regErrInitLimits(&reg.v_err, ccpars_limits.v_err_warning, ccpars_limits.v_err_fault);
     }
@@ -122,7 +117,7 @@ static void PrepareFunction(void)
     {
         // Set fg_limits pointer according to UNITS
 
-        switch(ccpars_global.units)
+        switch(ccpars_global.reg_mode)
         {
         case REG_FIELD:   ccpars_limits.fg = &ccpars_limits.b;       break;
         case REG_CURRENT: ccpars_limits.fg = &ccpars_limits.i;       break;
@@ -131,7 +126,7 @@ static void PrepareFunction(void)
 
         // If AMPS or GAUSS will be regulated then the limits checking includes the converter model
 
-        if(ccpars_global.units != REG_VOLTAGE)
+        if(ccpars_global.reg_mode != REG_VOLTAGE)
         {
             ccpars_limits.fg->user_check_limits = ccrefCheckConverterLimits;
 
@@ -152,11 +147,9 @@ static void PrepareFunction(void)
 static void PrepareSimulation(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    float    delay_in_iterations;
-
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        // By default use z-transform directly
+        // By default use voltage source simulation transfer function directly
 
         reg_pars.sim_vs_pars = ccpars_vs.sim_vs_pars;
 
@@ -170,9 +163,10 @@ static void PrepareSimulation(void)
         }
 
         // Initialise voltage source model gain and stop if gain error is more than 5%
-        // This also calculates the vs_undersampled_flag in the sim_load_pars
+        // This also calculates the vs_undersampled_flag for sim_load_pars
 
-        reg_pars.sim_load_pars.vs_undersampled_flag = regSimVsInitGain(&reg_pars.sim_vs_pars, &reg.sim_vs_vars);
+        reg_pars.sim_load_pars.vs_undersampled_flag = regSimVsInitGain(&reg_pars.sim_vs_pars, &reg.sim_vs_vars,
+                                                                       ccpars_vs.v_ref_delay_iters);
 
         if(fabs(reg_pars.sim_vs_pars.gain - 1.0) > 0.05)
         {
@@ -180,64 +174,85 @@ static void PrepareSimulation(void)
             exit(EXIT_FAILURE);
         }
 
-        // Initialise load model for simulation using the sim_tc_error factor to mismatch the regulation
         // First set the V/I/B measurements to cover all three regulation modes
 
-        reg.v_meas.unfiltered = fg_meta.range.start * reg_pars.sim_vs_pars.gain;     // Set v_meas to voltage on load
+        reg.v_meas            = fg_meta.range.start * reg_pars.sim_vs_pars.gain;     // Set v_meas to voltage on load
         reg.i_meas.unfiltered = fg_meta.range.start;                                 // i_meas
         reg.b_meas.unfiltered = fg_meta.range.start;                                 // b_meas
 
-        regSetSimLoad(&reg, &reg_pars, ccpars_global.units, ccpars_load.sim_tc_error);
+        // Initialise load model for simulation using the sim_tc_error factor to mismatch the regulation
 
-        regSetMeasNoise(&reg, ccpars_meas.v_sim_noise_pp, ccpars_meas.i_sim_noise_pp, ccpars_meas.b_sim_noise_pp);
+        regSetSimLoad(&reg, &reg_pars, ccpars_global.reg_mode, ccpars_load.sim_tc_error);
 
         // Initialise voltage source model history to allow simulation to start with a non-zero voltage
         // This is not needed in a real converter controller because the voltage always starts at zero
 
         reg.v_ref_sat     =
         reg.v_ref_limited =
-        reg.v_ref         = regSimVsInitHistory(&reg_pars.sim_vs_pars, &reg.sim_vs_vars, reg.v_meas.unfiltered);
+        reg.v_ref         = regSimVsInitHistory(&reg_pars.sim_vs_pars, &reg.sim_vs_vars, reg.v_meas);
 
-        // Initialise measurement delay structures for simulated field, current and voltage measurements.
-        // The delay must include the voltage reference delay and the measurement delay minus 1 period.
-        // The -1 is because the measurement delays are run by calling regSetMeas() at the start of an
-        // iteration using the voltage source and load simulation results calculated at the end of the
-        // previous iteration.  So a delay of 1 iteration period is always present.  This means that the
-        // voltage reference delay must be a minimum of one iteration period.
+        // Initialise measurement delay structures for simulated field, current and voltage in the
+        // load and the measurements of these values in the load. The delay is adjusted by -1.0
+        // iterations because the the simulation is used at the start of the next iteration, so
+        // one iteration period has elapsed anyway. For this reason, v_ref_delay_iters must be
+        // at least 1.
 
-        delay_in_iterations = ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0;
+        regDelayInitDelays(&reg.b_sim.delay,
+                           reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
+                           ccpars_vs.v_ref_delay_iters - 1.0,
+                           ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters - 1.0);
 
-        regDelayInitPars(&reg.v_sim.delay,
-                         calloc(1+(size_t)delay_in_iterations, sizeof(float)),
-                         delay_in_iterations,
-                         reg_pars.sim_load_pars.vs_undersampled_flag);
+        regDelayInitDelays(&reg.i_sim.delay,
+                           reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
+                           ccpars_vs.v_ref_delay_iters - 1.0,
+                           ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0);
 
-        delay_in_iterations = ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0;
-
-        regDelayInitPars(&reg.i_sim.delay,
-                         calloc(1+(size_t)delay_in_iterations, sizeof(float)),
-                         delay_in_iterations,
-                         reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag);
-
-        delay_in_iterations = ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters - 1.0;
-
-        regDelayInitPars(&reg.b_sim.delay,
-                         calloc(1+(size_t)delay_in_iterations,
-                         sizeof(float)),
-                         delay_in_iterations,
-                         reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag);
-
-        // Initialise measurement filter histories
-
-        regMeasFilterInitHistory(&reg.v_meas, reg.v_meas.unfiltered);
-        regMeasFilterInitHistory(&reg.i_meas, reg.i_meas.unfiltered);
-        regMeasFilterInitHistory(&reg.b_meas, reg.b_meas.unfiltered);
+        regDelayInitDelays(&reg.v_sim.delay,
+                           reg_pars.sim_load_pars.vs_undersampled_flag,
+                           ccpars_vs.v_ref_delay_iters - 1.0,
+                           ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0);
 
         // Initialise simulated measurement delay histories
 
-        regDelayInitVars(&reg.v_sim.delay, reg.v_meas.unfiltered);
-        regDelayInitVars(&reg.i_sim.delay, reg.i_meas.unfiltered);
         regDelayInitVars(&reg.b_sim.delay, reg.b_meas.unfiltered);
+        regDelayInitVars(&reg.i_sim.delay, reg.i_meas.unfiltered);
+        regDelayInitVars(&reg.v_sim.delay, reg.v_meas);
+
+        // Initialise field measurement filter
+
+        free(reg.b_meas.fir_buf[0]);
+
+        regMeasFilterInitBuffer(&reg.b_meas, calloc((ccpars_meas.b_fir_lengths[0] + ccpars_meas.b_fir_lengths[1] +
+                                                     ccpars_reg_b.period_iters),sizeof(uint32_t)));
+
+        regMeasFilterInit(&reg.b_meas, ccpars_meas.b_fir_lengths, ccpars_reg_b.period_iters, ccpars_meas.b_delay_iters);
+
+        regMeasFilterInitMax(&reg.b_meas, ccpars_limits.b.pos, ccpars_limits.b.neg);
+
+        regMeasSetReg(&reg.b_meas, ccpars_meas.b_reg_select);
+
+        // Initialise current measurement filter
+
+        free(reg.i_meas.fir_buf[0]);
+
+        regMeasFilterInitBuffer(&reg.i_meas, calloc((ccpars_meas.i_fir_lengths[0] + ccpars_meas.i_fir_lengths[1] +
+                                                     ccpars_reg_i.period_iters),sizeof(uint32_t)));
+
+        regMeasFilterInit(&reg.b_meas, ccpars_meas.i_fir_lengths, ccpars_reg_i.period_iters, ccpars_meas.i_delay_iters);
+
+        regMeasFilterInitMax(&reg.b_meas, ccpars_limits.i.pos, ccpars_limits.i.neg);
+
+        regMeasSetReg(&reg.i_meas, ccpars_meas.i_reg_select);
+
+        // Initialise simulation of measurement noise and tone
+
+        regMeasSetNoiseAndTone(&reg.b_sim.noise_and_tone, ccpars_meas.b_sim_noise_pp, ccpars_meas.b_sim_tone_amp,
+                               ccpars_meas.tone_half_period_iters);
+
+        regMeasSetNoiseAndTone(&reg.i_sim.noise_and_tone, ccpars_meas.i_sim_noise_pp, ccpars_meas.i_sim_tone_amp,
+                               ccpars_meas.tone_half_period_iters);
+
+        regMeasSetNoiseAndTone(&reg.v_sim.noise_and_tone, ccpars_meas.v_sim_noise_pp, 0.0, 0);
 
         // Run first simulation to initialise measurement variables
 
@@ -249,7 +264,6 @@ static void PrepareRegulation(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t status = 0;
-    float    delay_in_iterations;
 
     // If voltage source will be simulated
 
@@ -259,7 +273,7 @@ static void PrepareRegulation(void)
                                                 // change sensitive
         // If voltage regulation enabled
 
-        if(ccpars_global.units == REG_VOLTAGE)
+        if(ccpars_global.reg_mode == REG_VOLTAGE)
         {
             regSetVoltageMode(&reg, &reg_pars);
         }
@@ -271,20 +285,18 @@ static void PrepareRegulation(void)
 
             // Calculate track delay in iteration periods
 
-            switch(ccpars_global.units)
+            switch(ccpars_global.reg_mode)
             {
             case REG_FIELD:  // Initialise field regulation
 
                 status = regRstInit(&reg_pars.b_rst_pars,
-                                    reg.iter_period, ccpars_reg.period_iters, &reg_pars.load_pars,
-                                    ccpars_reg.clbw, ccpars_reg.clbw2, ccpars_reg.z,
-                                    ccpars_reg.clbw3, ccpars_reg.clbw4, ccpars_reg.pure_delay,
-                                    REG_FIELD, ccpars_reg.decimate, &ccpars_reg.rst);
+                                    reg.iter_period, ccpars_reg_b.period_iters, &reg_pars.load_pars,
+                                    ccpars_reg_b.clbw, ccpars_reg_b.clbw2, ccpars_reg_b.z,
+                                    ccpars_reg_b.clbw3, ccpars_reg_b.clbw4,
+                                    regCalcPureDelay(&reg, &reg_pars),
+                                    ccpars_reg_b.track_delay_periods,
+                                    REG_FIELD, &ccpars_reg_b.rst);
 
-                delay_in_iterations = reg_pars.b_rst_pars.rst.track_delay / reg.iter_period;
-
-                regErrInitDelay(&reg.b_err, calloc(1+(size_t)delay_in_iterations, sizeof(float)),
-                                 reg_pars.b_rst_pars.rst.track_delay, reg.iter_period);
 
                 // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
                 // corresponds to steady state reg.b_meas (last parameter is the rate of change)
@@ -295,15 +307,12 @@ static void PrepareRegulation(void)
             case REG_CURRENT:   // Initialise current regulation
 
                 status = regRstInit(&reg_pars.i_rst_pars,
-                                    reg.iter_period, ccpars_reg.period_iters, &reg_pars.load_pars,
-                                    ccpars_reg.clbw, ccpars_reg.clbw2, ccpars_reg.z,
-                                    ccpars_reg.clbw3, ccpars_reg.clbw4, ccpars_reg.pure_delay,
-                                    REG_CURRENT, ccpars_reg.decimate, &ccpars_reg.rst);
-
-                delay_in_iterations = reg_pars.i_rst_pars.rst.track_delay / reg.iter_period;
-
-                regErrInitDelay(&reg.i_err, calloc(1+(size_t)delay_in_iterations, sizeof(float)),
-                                 reg_pars.i_rst_pars.rst.track_delay, reg.iter_period);
+                                    reg.iter_period, ccpars_reg_i.period_iters, &reg_pars.load_pars,
+                                    ccpars_reg_i.clbw, ccpars_reg_i.clbw2, ccpars_reg_i.z,
+                                    ccpars_reg_i.clbw3, ccpars_reg_i.clbw4,
+                                    regCalcPureDelay(&reg, &reg_pars),
+                                    ccpars_reg_i.track_delay_periods,
+                                    REG_CURRENT, &ccpars_reg_i.rst);
 
                 // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
                 // corresponds to steady state reg.i_meas (last parameter is the rate of change)
@@ -319,6 +328,10 @@ static void PrepareRegulation(void)
                 fputs("Error : RST regulator failed to initialise: S[0] is less than 1.0E-10\n",stderr);
                 exit(EXIT_FAILURE);
             }
+
+            // Estimate the ref advance time
+
+            regCalcRefAdvance(&reg, &reg_pars);
         }
     }
 }
@@ -354,7 +367,7 @@ int32_t main(int argc, char **argv)
 
     PrepareRegulation();
 
-    // Generate report of parameter values and print to stderr if verbose flag (-v) was set
+    // Generate report of parameter values and print to stderr if GLOBAL.VERBOSE is enabled
 
     ccparsGenerateReport();
 
@@ -372,7 +385,7 @@ int32_t main(int argc, char **argv)
     }
     else
     {
-        // Generate function only - no simulation: this is just to test libfg
+        // Generate function only - no simulation: this is just to test libfg functions
 
         ccrunFunGen(ccpars_global.function);
     }

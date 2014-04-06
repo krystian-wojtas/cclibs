@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 #include "ccpars.h"
+#include "ccrun.h"
 #include "ccsigs.h"
 #include "flot.h"
 
@@ -58,7 +59,7 @@ static void ccsigsEnableSignal(enum ccsig_idx idx)
 
     // If FLOT output enabled then allocate buffer memory for non-Cursor signals
 
-    if(ccpars_global.output_format == CC_FLOT && signals[idx].type != CURSOR)
+    if(ccpars_global.output_format == CC_FLOT && signals[idx].type != CURSOR && signals[idx].buf == NULL)
     {
         signals[idx].buf = (float *)calloc(MAX_FLOT_POINTS+1, sizeof(double));  // On Mac, floats are doubles
     }
@@ -169,7 +170,7 @@ static void ccsigsPrintHeader(void)
             }
         }
 
-        // Second row: if ouput is for the Labview Dataviewer (LVDV) then add meta data line
+        // Second row: if output is for the Labview Dataviewer (LVDV) then add meta data line
 
         if(ccpars_global.output_format == CC_LVDV)
         {
@@ -186,9 +187,13 @@ static void ccsigsPrintHeader(void)
 
         fputc('\n',stdout);
     }
+    else // FLOT output so reset flot signal index
+    {
+        flot_index = 0;
+    }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccsigsPrintValues(float time)
+static void ccsigsPrintValues(double time)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will print the signal values to stdout.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -279,18 +284,22 @@ void ccsigsPrepare(void)
         ccsigsEnableSignal(DIG_V_REG_ERR_WARN);
         ccsigsEnableSignal(DIG_V_REG_ERR_FLT);
 
-        switch(ccpars_global.units)
+        switch(ccpars_global.reg_mode)
         {
         case REG_FIELD:
 
             // Field regulation signals
 
+            ccsigsEnableSignal(ANA_REG_MEAS);
+            ccsigsEnableSignal(ANA_TRACK_DLY);
+            ccsigsEnableSignal(ANA_TRACK_DLY_FLTR);
             ccsigsEnableSignal(ANA_B_REF);
             ccsigsEnableSignal(ANA_B_REF_LIMITED);
             ccsigsEnableSignal(ANA_B_REF_RST);
+            ccsigsEnableSignal(ANA_B_LOAD);
             ccsigsEnableSignal(ANA_B_MEAS);
             ccsigsEnableSignal(ANA_B_MEAS_FLTR);
-            ccsigsEnableSignal(ANA_B_REG);
+            ccsigsEnableSignal(ANA_B_MEAS_EXTR);
             ccsigsEnableSignal(ANA_B_ERR);
             ccsigsEnableSignal(ANA_MAX_ABS_B_ERR);
             ccsigsEnableSignal(DIG_B_MEAS_TRIP);
@@ -306,7 +315,9 @@ void ccsigsPrepare(void)
 
             // Current regulation signals
 
-            ccsigsEnableSignal(ANA_I_REG);
+            ccsigsEnableSignal(ANA_REG_MEAS);
+            ccsigsEnableSignal(ANA_TRACK_DLY);
+            ccsigsEnableSignal(ANA_TRACK_DLY_FLTR);
             ccsigsEnableSignal(ANA_I_REF);
             ccsigsEnableSignal(ANA_I_REF_LIMITED);
             ccsigsEnableSignal(ANA_I_REF_RST);
@@ -322,8 +333,10 @@ void ccsigsPrepare(void)
 
         // Current simulation signals
 
+        ccsigsEnableSignal(ANA_I_LOAD);
         ccsigsEnableSignal(ANA_I_MEAS);
         ccsigsEnableSignal(ANA_I_MEAS_FLTR);
+        ccsigsEnableSignal(ANA_I_MEAS_EXTR);
         ccsigsEnableSignal(DIG_I_MEAS_TRIP);
         ccsigsEnableSignal(DIG_I_MEAS_LOW);
         ccsigsEnableSignal(DIG_I_MEAS_ZERO);
@@ -334,7 +347,7 @@ void ccsigsPrepare(void)
     ccsigsPrintHeader();
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccsigsStore(float time)
+void ccsigsStore(double time)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will store all the signals for the current iteration.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -349,7 +362,7 @@ void ccsigsStore(float time)
     {
         // Store voltage reference signals
 
-        ccsigsStoreAnalog (ANA_V_MEAS,         reg.v_meas.unfiltered);
+        ccsigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
         ccsigsStoreAnalog (ANA_V_REF,          reg.v_ref);
         ccsigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
         ccsigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
@@ -362,15 +375,20 @@ void ccsigsStore(float time)
 
         // Store field or current signals according to regulation units
 
-        switch(ccpars_global.units)
+        switch(ccpars_global.reg_mode)
         {
         case REG_FIELD:
 
             // Field regulation signals
 
+            ccsigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
+            ccsigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
+            ccsigsStoreAnalog( ANA_TRACK_DLY_FLTR, reg.rst_vars.filtered_track_delay_periods);
+
+            ccsigsStoreAnalog( ANA_B_LOAD,         reg.b_sim.load);
             ccsigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.unfiltered);
             ccsigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.filtered);
-            ccsigsStoreAnalog( ANA_B_REG,          reg.b_meas.regulated);
+            ccsigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.extrapolated);
             ccsigsStoreAnalog (ANA_B_REF,          reg.ref);
             ccsigsStoreAnalog (ANA_B_REF_LIMITED,  reg.ref_limited);
             ccsigsStoreAnalog (ANA_B_REF_RST,      reg.ref_rst);
@@ -382,15 +400,18 @@ void ccsigsStore(float time)
             ccsigsStoreDigital(DIG_B_MEAS_ZERO,    reg.lim_b_meas.flags.zero);
             ccsigsStoreDigital(DIG_B_REF_CLIP,     reg.lim_b_ref.flags.clip);
             ccsigsStoreDigital(DIG_B_REF_RATE_CLIP,reg.lim_b_ref.flags.rate);
-            ccsigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b_err.limits.fault.flag);
-            ccsigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b_err.limits.warning.flag);
+            ccsigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b_err.fault.flag);
+            ccsigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b_err.warning.flag);
             break;
 
         case REG_CURRENT:
 
             // Current regulation signals
 
-            ccsigsStoreAnalog (ANA_I_REG,          reg.i_meas.regulated);
+            ccsigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
+            ccsigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
+            ccsigsStoreAnalog( ANA_TRACK_DLY_FLTR, reg.rst_vars.filtered_track_delay_periods);
+
             ccsigsStoreAnalog (ANA_I_REF,          reg.ref);
             ccsigsStoreAnalog (ANA_I_REF_LIMITED,  reg.ref_limited);
             ccsigsStoreAnalog (ANA_I_REF_RST,      reg.ref_rst);
@@ -400,15 +421,17 @@ void ccsigsStore(float time)
 
             ccsigsStoreDigital(DIG_I_REF_CLIP,     reg.lim_i_ref.flags.clip);
             ccsigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.lim_i_ref.flags.rate);
-            ccsigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i_err.limits.fault.flag);
-            ccsigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i_err.limits.warning.flag);
+            ccsigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i_err.fault.flag);
+            ccsigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i_err.warning.flag);
             break;
         }
 
         // Store current simulation signals
 
+        ccsigsStoreAnalog (ANA_I_LOAD,      reg.i_sim.load);
         ccsigsStoreAnalog (ANA_I_MEAS,      reg.i_meas.unfiltered);
         ccsigsStoreAnalog (ANA_I_MEAS_FLTR, reg.i_meas.filtered);
+        ccsigsStoreAnalog (ANA_I_MEAS_EXTR, reg.i_meas.extrapolated);
 
         ccsigsStoreDigital(DIG_I_MEAS_TRIP, reg.lim_i_meas.flags.trip);
         ccsigsStoreDigital(DIG_I_MEAS_LOW,  reg.lim_i_meas.flags.low);
@@ -523,7 +546,7 @@ void ccsigsFlot(void)
                         }
                         else
                         {
-                            time = reg.iter_period * (ccpars_global.num_iterations - iteration_idx - 1);
+                            time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
                         }
 
                         printf("[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
@@ -564,7 +587,7 @@ void ccsigsFlot(void)
                         }
                         else
                         {
-                            time = reg.iter_period * (ccpars_global.num_iterations - iteration_idx - 1);
+                            time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
                         }
 
                         printf("[%.6f,%.2f],", time, signals[sig_idx].buf[iteration_idx] + dig_offset);
