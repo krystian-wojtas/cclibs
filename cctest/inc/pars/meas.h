@@ -78,11 +78,11 @@ CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
         1.3,                     // MEAS.B_DELAY_ITERS
         1.3,                     // MEAS.I_DELAY_ITERS
         1.3,                     // MEAS.V_DELAY_ITERS
-        { 1.0, 1.0 },            // MEAS.I_FIR_LENGTHS
-        { 1.0, 1.0 },            // MEAS.B_FIR_LENGTHS
+        { 1, 1 },                // MEAS.B_FIR_LENGTHS
+        { 1, 1 },                // MEAS.I_FIR_LENGTHS
         0.0,                     // MEAS.B_SIM_NOISE_PP
         0.0,                     // MEAS.I_SIM_NOISE_PP
-        0.0,                     // MEAS.v_SIM_NOISE_PP
+        0.0,                     // MEAS.V_SIM_NOISE_PP
         100,                     // MEAS.TONE_HALF_PERIOD_ITERS
         0.0,                     // MEAS.I_SIM_TONE_AMP
         0.0,                     // MEAS.B_SIM_TONE_AMP
