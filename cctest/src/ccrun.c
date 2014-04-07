@@ -161,7 +161,8 @@ void ccrunSimulation(uint32_t ref_function_type)
     uint32_t    func_run_f    = 1;;   // Function running flag
     uint32_t    iteration_idx = 0;    // Iteration index
     float       perturb_volts = 0.0;  // Voltage perturbation to apply to circuit
-    double      time;                 // Function generator time
+    double      time;                 // Iteration time
+    double      ref_time;             // Reference function time
     double      end_time = 0.0;       // Simulation end time
     float       ref;                  // Function generator reference value
 
@@ -193,6 +194,8 @@ void ccrunSimulation(uint32_t ref_function_type)
 
         if(ccpars_vs.trip_flag == 0)
         {
+            ref_time = time + reg.ref_advance;
+
             func_run_f = func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &time, &ref);
 
             // if regulating current or field then open the loop at the specified time for the specified duration
