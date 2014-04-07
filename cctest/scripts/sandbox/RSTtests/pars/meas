@@ -1,0 +1,20 @@
+# CCTEST measurement parameters : Main ELENA dipole converter with FGC3
+
+
+MEAS.B_REG_SELECT               UNFILTERED
+MEAS.B_DELAY_ITERS              1.3
+MEAS.B_FIR_LENGTHS              1,1
+MEAS.B_SIM_NOISE_PP             0.005
+                                
+MEAS.I_REG_SELECT               UNFILTERED
+MEAS.I_DELAY_ITERS              1.3
+MEAS.I_FIR_LENGTHS              1,1
+MEAS.I_SIM_NOISE_PP             0.005
+                                
+MEAS.V_SIM_NOISE_PP             5.0E-2
+
+MEAS.TONE_HALF_PERIOD_ITERS     100
+MEAS.I_SIM_TONE_AMP             0.001
+MEAS.B_SIM_TONE_AMP             0.001
+
+# EOF

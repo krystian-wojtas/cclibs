@@ -5,6 +5,4 @@ VS.BANDWIDTH      2000
 VS.TAU_ZERO       0.0
 VS.Z              0.9
 
-MEAS.V_SIM_NOISE_PP 5.0E-2
-
 # EOF

@@ -4,9 +4,17 @@ cd `dirname $0`
 
 source ../../run_header.sh
 
+cat pars/global-amps functions/pppl pars/limits pars/load/load1 pars/meas pars/reg/reg1 pars/vs | "$cctest" "GLOBAL.OUTPUT_FORMAT $output_format" "GLOBAL.FUNCTION PPPL" > "$outpath/amps-pppl1.$file_type"   
+
+exit 0
+
+
 (
 "$cctest" -o $output_format -g pars/global-amps  -f PPPL    -d functions/pppl                 -m pars/limits -l pars/load/load1     -r pars/reg/reg1     -s pars/vs > "$outpath/amps-pppl1.$file_type"      &&
-"$cctest" -o $output_format -g pars/global-amps  -f SINE    -d functions/test_window_enabled  -m pars/limits -l pars/load/load1     -r pars/reg/reg1     -s pars/vs > "$outpath/amps-sine1.$file_type"      &&
+"$cctest" -o $output_format -g pars/global-amps  -f SINE    -d functions/test_window_enabled  -m pars/limits -l pars/load/load1     -r pars/reg/reg1     -s pars/vs > "$outpath/amps-sine1.$file_type"      
+) || exit 1
+
+
 "$cctest" -o $output_format -g pars/global-amps  -f PPPL    -d functions/pppl                 -m pars/limits -l pars/load/load2     -r pars/reg/reg2     -s pars/vs > "$outpath/amps-pppl2.$file_type"      &&
 "$cctest" -o $output_format -g pars/global-amps  -f SINE    -d functions/test_window_enabled  -m pars/limits -l pars/load/load2     -r pars/reg/reg2     -s pars/vs > "$outpath/amps-sine2.$file_type"      &&
 "$cctest" -o $output_format -g pars/global-amps  -f PPPL    -d functions/pppl                 -m pars/limits -l pars/load/load2-dec -r pars/reg/reg2-dec -s pars/vs > "$outpath/amps-pppl2-dec.$file_type"  &&
