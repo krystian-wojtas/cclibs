@@ -52,7 +52,7 @@ CCPARS_PLEP_EXT struct ccpars_plep ccpars_plep;
 
 // PLEP data description structure
 
-CCPARS_PLEP_EXT struct ccpars   plep_pars_list[]
+CCPARS_PLEP_EXT struct ccpars   plep_pars[]
 #ifdef GLOBALS
 = {// "Signal name"   TYPE, max_vals,min_vals,*enum,     *value,                       num_defaults
     { "INITIAL_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.initial_ref         }, 0 },

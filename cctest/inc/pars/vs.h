@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the voltage source parameters group
+  Purpose:  Structure for the voltage source parameters
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -24,8 +24,7 @@
 #ifndef CCPARS_VS_H
 #define CCPARS_VS_H
 
-#include "ccpars.h"
-#include "libreg.h"
+#include "cccmds.h"
 
 // GLOBALS is defined in source file where global variables should be defined
 
@@ -67,15 +66,15 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 
 // Voltage source parameters description structure
 
-CCPARS_VS_EXT struct ccpars vs_pars_list[]
+CCPARS_VS_EXT struct ccpars vs_pars[]
 #ifdef GLOBALS
 = {// "Signal name"       TYPE,   max_vals,        min_vals,*enum,         *value,                     num_defaults
-    { "V_REF_DELAY_ITERS",PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.v_ref_delay_iters }, 1 },
-    { "BANDWIDTH",        PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.bandwidth         }, 1 },
-    { "Z",                PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.z                 }, 1 },
-    { "TAU_ZERO",         PAR_FLOAT, 1,                   0, NULL,  { .f = &ccpars_vs.tau_zero          }, 1 },
-    { "SIM_NUM",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.num   }, 1 },
-    { "SIM_DEN",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, 0, NULL,  { .f =  ccpars_vs.sim_vs_pars.den   }, 1 },
+    { "V_REF_DELAY_ITERS",PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.v_ref_delay_iters }, 1 },
+    { "BANDWIDTH",        PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.bandwidth         }, 1 },
+    { "Z",                PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.z                 }, 1 },
+    { "TAU_ZERO",         PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.tau_zero          }, 1 },
+    { "SIM_NUM",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, 1, NULL,  { .f =  ccpars_vs.sim_vs_pars.num   }, 1 },
+    { "SIM_DEN",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, 1, NULL,  { .f =  ccpars_vs.sim_vs_pars.den   }, 1 },
     { NULL }
 }
 #endif

@@ -42,10 +42,11 @@
 static void PrepareLoad(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    // If load parameters supplied
+    // If load needs to be simulated
 
-    if(ccpars_groups[GROUP_LOAD].enabled == 1)
+    if(ccpars_global.sim_load == CC_ENABLED)
     {
+
         // Initialise load model structure
 
         regLoadInit(&reg_pars.load_pars, ccpars_load.ohms_ser, ccpars_load.ohms_par,

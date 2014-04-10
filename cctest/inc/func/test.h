@@ -48,17 +48,30 @@ struct ccpars_test
     struct fg_test_pars        test_pars;               // Libfg parameters for TEST
 };
 
-CCPARS_TEST_EXT struct ccpars_test ccpars_test;         // Default window is disabled
+CCPARS_TEST_EXT struct ccpars_test ccpars_test
+#ifdef GLOBALS
+= {//   Default value           Parameter
+        0.0,                 // TEST.INITIAL_REF
+        {
+            FG_TEST_COSINE,
+            2.0,             // TEST.AMPLITUDE_PP
+            1.0,             // TEST.NUM_CYCLES
+            1.0,             // TEST.PERIOD
+            CC_DISABLED      // TEST.WINDOW
+        }
+}
+#endif
+;
 
 // Test data description structure
 
-CCPARS_TEST_EXT struct ccpars   test_pars_list[]
+CCPARS_TEST_EXT struct ccpars   test_pars[]
 #ifdef GLOBALS
 = {// "Signal name"   TYPE, max_vals,min_vals,*enum,              *value,                       num_defaults
-    { "INITIAL_REF",  PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.initial_ref         }, 0 },
-    { "AMPLITUDE_PP", PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.amplitude_pp }, 0 },
-    { "NUM_CYCLES",   PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.num_cycles   }, 0 },
-    { "PERIOD",       PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.period       }, 0 },
+    { "INITIAL_REF",  PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.initial_ref         }, 1 },
+    { "AMPLITUDE_PP", PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.amplitude_pp }, 1 },
+    { "NUM_CYCLES",   PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.num_cycles   }, 1 },
+    { "PERIOD",       PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.period       }, 1 },
     { "WINDOW",       PAR_ENUM,    1, 0, enabled_disabled, { .i = &ccpars_test.config.window_flag  }, 1 },
     { NULL }
 }

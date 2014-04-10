@@ -24,6 +24,8 @@
 #ifndef CCREF_H
 #define CCREF_H
 
+#include "cccmds.h"
+
 // Include fg and reg library header files
 
 #include "libfg.h"
@@ -68,13 +70,13 @@ enum fg_error   ccrefCheckConverterLimits (struct fg_limits *limits, uint32_t in
 
 // Function meta data
 
-CCREF_EXT struct fg_meta fg_meta;
+CCREF_EXT struct fg_meta fg_meta[MAX_FUNCS];
 
 // Reference functions structure
 
 struct fgfunc
 {
-    enum ccpars_groups_enum group_idx;
+    enum cccmds_enum         cmd_idx;
     void                    *fg_pars;
     void                    (*init_func)(void);
     uint32_t                (*fgen_func)();
@@ -83,18 +85,18 @@ struct fgfunc
 CCREF_EXT struct fgfunc func[]  // Must be in enum fg_types order (in global.h)!
 #ifdef GLOBALS
 = {
-    {   0,           NULL,                     NULL,               NULL          },
-    {   GROUP_START, &ccpars_start.plep_pars,  ccrefInitSTART,     ccrefStartGen },
-    {   GROUP_PLEP,  &ccpars_plep.plep_pars,   ccrefInitPLEP,      fgPlepGen     },
-    {   GROUP_RAMP,  &ccpars_ramp.ramp_pars,   ccrefInitRAMP,      fgRampGen     },
-    {   GROUP_PPPL,  &ccpars_pppl.pppl_pars,   ccrefInitPPPL,      fgPpplGen     },
-    {   GROUP_TABLE, &ccpars_table.table_pars, ccrefInitTABLE,     fgTableGen    },
-    {   GROUP_TEST,  &ccpars_test.test_pars,   ccrefInitSTEPS,     fgTestGen     },
-    {   GROUP_TEST,  &ccpars_test.test_pars,   ccrefInitSQUARE,    fgTestGen     },
-    {   GROUP_TEST,  &ccpars_test.test_pars,   ccrefInitSINE,      fgTestGen     },
-    {   GROUP_TEST,  &ccpars_test.test_pars,   ccrefInitCOSINE,    fgTestGen     },
-    {   GROUP_TRIM,  &ccpars_trim.trim_pars,   ccrefInitLTRIM,     fgTrimGen     },
-    {   GROUP_TRIM,  &ccpars_trim.trim_pars,   ccrefInitCTRIM,     fgTrimGen     },
+    {   0,         NULL,                     NULL,               NULL          },
+    {   CMD_START, &ccpars_start.plep_pars,  ccrefInitSTART,     ccrefStartGen },
+    {   CMD_PLEP,  &ccpars_plep.plep_pars,   ccrefInitPLEP,      fgPlepGen     },
+    {   CMD_RAMP,  &ccpars_ramp.ramp_pars,   ccrefInitRAMP,      fgRampGen     },
+    {   CMD_PPPL,  &ccpars_pppl.pppl_pars,   ccrefInitPPPL,      fgPpplGen     },
+    {   CMD_TABLE, &ccpars_table.table_pars, ccrefInitTABLE,     fgTableGen    },
+    {   CMD_TEST,  &ccpars_test.test_pars,   ccrefInitSTEPS,     fgTestGen     },
+    {   CMD_TEST,  &ccpars_test.test_pars,   ccrefInitSQUARE,    fgTestGen     },
+    {   CMD_TEST,  &ccpars_test.test_pars,   ccrefInitSINE,      fgTestGen     },
+    {   CMD_TEST,  &ccpars_test.test_pars,   ccrefInitCOSINE,    fgTestGen     },
+    {   CMD_TRIM,  &ccpars_trim.trim_pars,   ccrefInitLTRIM,     fgTrimGen     },
+    {   CMD_TRIM,  &ccpars_trim.trim_pars,   ccrefInitCTRIM,     fgTrimGen     },
 }
 #endif
 ;

@@ -54,7 +54,7 @@ CCPARS_START_EXT struct ccpars_start ccpars_start;
 
 // START data description structure
 
-CCPARS_START_EXT struct ccpars   start_pars_list[]
+CCPARS_START_EXT struct ccpars   start_pars[]
 #ifdef GLOBALS
 = {// "Signal name"         TYPE, max_vals,min_vals,*enum,     *value,                        num_defaults
     { "FEEDFORWARD_V_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.feedforward_v_ref   }, 0 },

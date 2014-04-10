@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "ccpars.h"
+#include "cccmds.h"
 #include "ccrun.h"
 #include "ccsigs.h"
 #include "flot.h"
@@ -459,13 +459,7 @@ void ccsigsFlot(void)
     {
         // Print start of FLOT html page including flot path to all the javascript libraries
 
-        printf(flot[0],
-               ccpars_global.flot_path,
-               ccpars_global.flot_path,
-               ccpars_global.flot_path,
-               ccpars_global.flot_path,
-               ccpars_global.flot_path,
-               ccpars_global.flot_path);
+        printf(flot[0],FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
 
         // Print table, pppl or plep data if selected and use points instead of lines
 
@@ -484,7 +478,7 @@ void ccsigsFlot(void)
 
             case FG_TABLE:
 
-                for(iteration_idx = 0 ; iteration_idx < table_pars_list[0].num_values &&
+                for(iteration_idx = 0 ; iteration_idx < table_pars[0].num_values &&
                                         (time = ccpars_table.time[iteration_idx] + ccpars_global.run_delay) < end_time ; iteration_idx++)
                 {
                     printf("[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);

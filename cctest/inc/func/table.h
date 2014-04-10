@@ -55,7 +55,7 @@ CCPARS_TABLE_EXT struct ccpars_table ccpars_table;
 
 // Table data description structure
 
-CCPARS_TABLE_EXT struct ccpars   table_pars_list[]
+CCPARS_TABLE_EXT struct ccpars   table_pars[]
 #ifdef GLOBALS
 = {// "Signal name", TYPE,       max_vals, min_vals, *enum,       *value,        num_defaults
     { "REF",         PAR_FLOAT, TABLE_LEN, 2, NULL,        { .f = ccpars_table.ref  }, 0 },

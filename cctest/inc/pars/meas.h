@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Structure for the meas parameters group
+  Purpose:  Structure for the measurement parameters
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
@@ -24,7 +24,7 @@
 #ifndef CCPARS_MEAS_H
 #define CCPARS_MEAS_H
 
-#include "ccpars.h"
+#include "cccmds.h"
 
 // GLOBALS should be defined in the source file where global variables should be defined
 
@@ -83,7 +83,7 @@ CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
         0.0,                     // MEAS.B_SIM_NOISE_PP
         0.0,                     // MEAS.I_SIM_NOISE_PP
         0.0,                     // MEAS.V_SIM_NOISE_PP
-        100,                     // MEAS.TONE_HALF_PERIOD_ITERS
+        10,                      // MEAS.TONE_HALF_PERIOD_ITERS
         0.0,                     // MEAS.I_SIM_TONE_AMP
         0.0,                     // MEAS.B_SIM_TONE_AMP
 }
@@ -92,22 +92,22 @@ CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
 
 // Meas parameters description structure
 
-CCPARS_MEAS_EXT struct ccpars meas_pars_list[]
+CCPARS_MEAS_EXT struct ccpars meas_pars[]
 #ifdef GLOBALS
 = {// "Signal name"            TYPE,max_vals,min_vals,*enum,          *value,                               num_defaults
-    { "B_REG_SELECT",          PAR_ENUM,     1, 0, reg_meas_select, { .i = &ccpars_meas.b_reg_select           }, 1 },
-    { "I_REG_SELECT",          PAR_ENUM,     1, 0, reg_meas_select, { .i = &ccpars_meas.b_reg_select           }, 1 },
-    { "B_DELAY_ITERS",         PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.b_delay_iters          }, 1 },
-    { "I_DELAY_ITERS",         PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.i_delay_iters          }, 1 },
-    { "V_DELAY_ITERS",         PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.v_delay_iters          }, 1 },
-    { "B_FIR_LENGTHS",         PAR_UNSIGNED, 2, 0, NULL,            { .i =  ccpars_meas.b_fir_lengths          }, 2 },
-    { "I_FIR_LENGTHS",         PAR_UNSIGNED, 2, 0, NULL,            { .i =  ccpars_meas.i_fir_lengths          }, 2 },
-    { "B_SIM_NOISE_PP",        PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.b_sim_noise_pp         }, 1 },
-    { "I_SIM_NOISE_PP",        PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.i_sim_noise_pp         }, 1 },
-    { "V_SIM_NOISE_PP",        PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.v_sim_noise_pp         }, 1 },
-    { "TONE_HALF_PERIOD_ITERS",PAR_UNSIGNED, 1, 0, NULL,            { .i = &ccpars_meas.tone_half_period_iters }, 1 },
-    { "B_SIM_TONE_AMP",        PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.b_sim_tone_amp         }, 1 },
-    { "I_SIM_TONE_AMP",        PAR_FLOAT,    1, 0, NULL,            { .f = &ccpars_meas.i_sim_tone_amp         }, 1 },
+    { "B_REG_SELECT",          PAR_ENUM,     1, 1, reg_meas_select, { .i = &ccpars_meas.b_reg_select           }, 1 },
+    { "I_REG_SELECT",          PAR_ENUM,     1, 1, reg_meas_select, { .i = &ccpars_meas.b_reg_select           }, 1 },
+    { "B_DELAY_ITERS",         PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_delay_iters          }, 1 },
+    { "I_DELAY_ITERS",         PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_delay_iters          }, 1 },
+    { "V_DELAY_ITERS",         PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.v_delay_iters          }, 1 },
+    { "B_FIR_LENGTHS",         PAR_UNSIGNED, 2, 2, NULL,            { .i =  ccpars_meas.b_fir_lengths          }, 2 },
+    { "I_FIR_LENGTHS",         PAR_UNSIGNED, 2, 2, NULL,            { .i =  ccpars_meas.i_fir_lengths          }, 2 },
+    { "B_SIM_NOISE_PP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_sim_noise_pp         }, 1 },
+    { "I_SIM_NOISE_PP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_sim_noise_pp         }, 1 },
+    { "V_SIM_NOISE_PP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.v_sim_noise_pp         }, 1 },
+    { "TONE_HALF_PERIOD_ITERS",PAR_UNSIGNED, 1, 1, NULL,            { .i = &ccpars_meas.tone_half_period_iters }, 1 },
+    { "B_SIM_TONE_AMP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_sim_tone_amp         }, 1 },
+    { "I_SIM_TONE_AMP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_sim_tone_amp         }, 1 },
     { NULL }
 }
 #endif

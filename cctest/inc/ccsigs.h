@@ -36,6 +36,10 @@
 #define CCSIGS_EXT extern
 #endif
 
+// Constants
+
+#define FLOT_PATH               "../../"
+
 // Signal constants
 
 enum ccsig_type

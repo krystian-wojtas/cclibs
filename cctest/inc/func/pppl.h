@@ -52,7 +52,7 @@ CCPARS_PPPL_EXT struct ccpars_pppl ccpars_pppl;
 
 // PPPL data description structure
 
-CCPARS_PPPL_EXT struct ccpars   pppl_pars_list[]
+CCPARS_PPPL_EXT struct ccpars   pppl_pars[]
 #ifdef GLOBALS
 = {// "Signal name"    TYPE,   max_vals,   min_vals, *enum,     *value,                        num_defaults
     { "INITIAL_REF",   PAR_FLOAT, 1,            1, NULL, { .f = &ccpars_pppl.initial_ref          }, 0 },

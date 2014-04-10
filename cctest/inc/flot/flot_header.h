@@ -21,8 +21,8 @@
 
   Authors:  Quentin.King@cern.ch
 
-  Notes:    This file is automatically assembed by the makefile from two header file fragments
-            and three html file fragments processed using inc/flot/htmlquote.sh to add and escape
+  Notes:    This file is automatically assembled by the makefile from two header file fragments
+            and four html file fragments processed using inc/flot/htmlquote.sh to add and escape
             quotes:
 
                 flot_header.h, flot_footer.h

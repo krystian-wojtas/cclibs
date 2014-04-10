@@ -52,7 +52,7 @@ CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp;
 
 // RAMP data description structure
 
-CCPARS_RAMP_EXT struct ccpars   ramp_pars_list[]
+CCPARS_RAMP_EXT struct ccpars   ramp_pars[]
 #ifdef GLOBALS
 = {// "Signal name"   TYPE, max_vals,min_vals,*enum, *value,                           num_defaults
     { "INITIAL_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.initial_ref         }, 0 },

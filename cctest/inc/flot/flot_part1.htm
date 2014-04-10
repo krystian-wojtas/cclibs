@@ -34,11 +34,11 @@
 
     <link rel="stylesheet" href="../../colorbox/example4/colorbox.css" />
 
-    <script language="javascript" type="text/javascript" src="../../colorbox/jquery.min.js"></script>
-    <script language="javascript" type="text/javascript" src="../../colorbox/jquery.colorbox-min.js"></script>
-    <script language="javascript" type="text/javascript" src="../../flot/jquery.flot.js"></script>
-    <script language="javascript" type="text/javascript" src="../../flot/jquery.flot.selection.js"></script>
-    <script language="javascript" type="text/javascript" src="../../modernizr/modernizr.touch.js"></script>
+    <script language="javascript" type="text/javascript" src="%s/colorbox/jquery.min.js"></script>
+    <script language="javascript" type="text/javascript" src="%s/colorbox/jquery.colorbox-min.js"></script>
+    <script language="javascript" type="text/javascript" src="%s/flot/jquery.flot.js"></script>
+    <script language="javascript" type="text/javascript" src="%s/flot/jquery.flot.selection.js"></script>
+    <script language="javascript" type="text/javascript" src="%s/modernizr/modernizr.touch.js"></script>
     <script language="javascript" type="text/javascript">
 
     // ----- Only load flot.resize plug-in on non-touch devices because it uses CPU and generates garbage -----
@@ -46,7 +46,7 @@
     if(!Modernizr.touch)
     {
        var selection_script = document.createElement('script');
-       selection_script.setAttribute('src', "../../flot/jquery.flot.resize.js");
+       selection_script.setAttribute('src', "%s/flot/jquery.flot.resize.js");
        document.getElementsByTagName('head')[0].appendChild(selection_script);
     }
     

@@ -196,7 +196,7 @@ void ccrunSimulation(uint32_t ref_function_type)
         {
             ref_time = time + reg.ref_advance;
 
-            func_run_f = func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &time, &ref);
+            func_run_f = func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &ref_time, &ref);
 
             // if regulating current or field then open the loop at the specified time for the specified duration
 
