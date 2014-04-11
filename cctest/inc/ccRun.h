@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     cctest/inc/ccrun.h                                                          Copyright CERN 2014
+  File:     cctest/inc/ccRun.h                                                          Copyright CERN 2014
 
   License:  This file is part of cctest.
 

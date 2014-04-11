@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     ccsigs.c                                                                    Copyright CERN 2011
+  File:     ccSigs.c                                                                    Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -24,9 +24,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "cccmds.h"
-#include "ccrun.h"
-#include "ccsigs.h"
+#include "ccCmds.h"
+#include "ccRun.h"
+#include "ccSigs.h"
 #include "flot.h"
 
 #define DIG_STEP        0.5      // Digital signal step size
@@ -600,7 +600,4 @@ void ccsigsFlot(void)
         puts(flot[3]);
     }
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: ccsigs.c
-\*---------------------------------------------------------------------------------------------------------*/
-
+// EOF

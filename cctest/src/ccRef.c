@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     ccref.c                                                                     Copyright CERN 2011
+  File:     ccRef.c                                                                     Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -27,9 +27,9 @@
 
 // Include cctest program header files
 
-#include "ccpars.h"
-#include "ccrun.h"
-#include "ccref.h"
+#include "ccPars.h"
+#include "ccRun.h"
+#include "ccRef.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
 static char * ccrefErrMsg(enum fg_error fg_error)

@@ -31,10 +31,10 @@
 
 // Include cctest program header files
 
-#include "cccmds.h"
-#include "ccref.h"
-#include "ccsigs.h"
-#include "ccrun.h"
+#include "ccCmds.h"
+#include "ccRef.h"
+#include "ccSigs.h"
+#include "ccRun.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t cccmdsHelp(uint32_t cmd_idx, char *pars)

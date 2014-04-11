@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     cctest/inc/ccref.h                                                          Copyright CERN 2014
+  File:     cctest/inc/ccRef.h                                                          Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -24,7 +24,7 @@
 #ifndef CCREF_H
 #define CCREF_H
 
-#include "cccmds.h"
+#include "ccCmds.h"
 
 // Include fg and reg library header files
 

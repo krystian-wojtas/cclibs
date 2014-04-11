@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     cctest/inc/cccmds.h                                                         Copyright CERN 2014
+  File:     cctest/inc/ccCmds.h                                                         Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -39,9 +39,9 @@
 #define CC_MAX_FILE_LINE_LEN  65536
 #define CC_PROMPT             ">"
 
-// Include ccpars.h to declare
+// Include ccPars.h to declare
 
-#include <ccpars.h>
+#include <ccPars.h>
 
 // Include libreg header files - required by cccmds[]
 

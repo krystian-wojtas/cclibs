@@ -24,7 +24,7 @@
 #ifndef CCPARS_GLOBAL_H
 #define CCPARS_GLOBAL_H
 
-#include "cccmds.h"
+#include "ccCmds.h"
 
 // GLOBALS should be defined in the source file where global variables should be defined
 

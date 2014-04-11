@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     cctest/inc/ccpars.h                                                         Copyright CERN 2014
+  File:     cctest/inc/ccPars.h                                                         Copyright CERN 2014
 
   License:  This file is part of cctest.
 

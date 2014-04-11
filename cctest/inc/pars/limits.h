@@ -24,7 +24,7 @@
 #ifndef CCPARS_LIMITS_H
 #define CCPARS_LIMITS_H
 
-#include "cccmds.h"
+#include "ccCmds.h"
 #include "libfg.h"
 
 // GLOBALS should be defined in the source file where global variables should be defined

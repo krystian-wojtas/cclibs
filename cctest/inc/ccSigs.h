@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     cctest/inc/ccsigs.h                                                         Copyright CERN 2014
+  File:     cctest/inc/ccSigs.h                                                         Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -26,7 +26,7 @@
 
 #include <stdint.h>
 
-#include "ccpars.h"
+#include "ccPars.h"
 
 // GLOBALS should be defined in the source file where global variables should be defined
 

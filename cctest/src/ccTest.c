@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     cctest.c                                                                    Copyright CERN 2011
+  File:     ccTest.c                                                                    Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -27,17 +27,45 @@
 #include <stdlib.h>
 #include <math.h>
 
-// Declare all variables in cctest.c
+// Declare all variables in ccTest.c
 
 #define GLOBALS
 
 // Include cctest program header files
 
-#include "ccpars.h"
-#include "ccref.h"
-#include "ccsigs.h"
-#include "ccrun.h"
+#include "ccPars.h"
+#include "ccRef.h"
+#include "ccSigs.h"
+#include "ccRun.h"
 
+/*---------------------------------------------------------------------------------------------------------*/
+int main(int argc, char **argv)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    int status = 0;
+
+    printf(">%s<\n",argv[0]);
+
+    // If no arguments supplied, read from stdin
+
+    if(argc == 1)
+    {
+        status = ccParsParseLine("read stdin");
+    }
+    else
+    {
+        // else process all arguments unless an error is reported
+
+        while(status == 0 && --argc > 0)
+        {
+            status = ccParsParseLine(*(++argv));
+        }
+    }
+
+    // Report status as exit code
+
+    exit(status);
+}
 /*---------------------------------------------------------------------------------------------------------*/
 static void PrepareLoad(void)
 /*---------------------------------------------------------------------------------------------------------*/
@@ -336,69 +364,4 @@ static void PrepareRegulation(void)
         }
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
-int32_t main(int argc, char **argv)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    // Read parameters from files according to command line options
-
-    ccparsGet(argc, argv);
-
-    // Initialise iteration period
-
-    reg.iter_period = ccpars_global.iter_period;
-
-    // Prepare load model (must be before PrepareFunction() if FG_LIMITS is enabled)
-
-    PrepareLoad();
-
-    // Prepare function to be generated
-
-    PrepareFunction();
-
-    // Prepare limits for the measurement, reference and regulation error if required
-
-    PrepareLimits();
-
-    // Prepare to simulate load and voltage source if required
-
-    PrepareSimulation();
-
-    // Prepare to regulate field or current if required
-
-    PrepareRegulation();
-
-    // Generate report of parameter values and print to stderr if GLOBAL.VERBOSE is enabled
-
-    ccparsGenerateReport();
-
-    // Enable signals to be written to stdout
-
-    ccsigsPrepare();
-
-    // Run the test
-
-    if(ccpars_global.sim_load == CC_ENABLED)
-    {
-        // Generate function and simulate voltage source and load and regulate if required
-
-        ccrunSimulation(ccpars_global.function);
-    }
-    else
-    {
-        // Generate function only - no simulation: this is just to test libfg functions
-
-        ccrunFunGen(ccpars_global.function);
-    }
-
-    // Write FLOT data if output format is FLOT
-
-    ccsigsFlot();
-
-    // Program completed successfully
-
-    exit(EXIT_SUCCESS);
-}
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: cctest.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF

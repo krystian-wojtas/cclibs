@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     ccrun.c                                                                    Copyright CERN 2011
+  File:     ccRun.c                                                                     Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -28,10 +28,10 @@
 
 // Include cctest program header files
 
-#include "ccpars.h"
-#include "ccref.h"
-#include "ccsigs.h"
-#include "ccrun.h"
+#include "ccPars.h"
+#include "ccRef.h"
+#include "ccSigs.h"
+#include "ccRun.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
 static void ccrunAbort(float time)
@@ -287,6 +287,4 @@ void ccrunFunGen(uint32_t ref_function_type)
         ccsigsStore(time);
     }
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: ccrun.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF

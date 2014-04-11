@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     ccpars.c                                                                    Copyright CERN 2014
+  File:     ccPars.c                                                                    Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -31,10 +31,10 @@
 
 // Include cctest program header files
 
-#include "cccmds.h"
-#include "ccref.h"
-#include "ccsigs.h"
-#include "ccrun.h"
+#include "ccCmds.h"
+#include "ccRef.h"
+#include "ccSigs.h"
+#include "ccRun.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
 static void ccparsGetPar(char *line)
@@ -699,7 +699,7 @@ void ccparsPrintReport(FILE *f)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t ccparsParseLine(char *line)
+int ccParsParseLine(char *line)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     char                *ch_p;
@@ -749,6 +749,6 @@ uint32_t ccparsParseLine(char *line)
 
 
 
-    return(0);
+    return(EXIT_SUCCESS);
 }
 // EOF
