@@ -25,7 +25,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include <string.h>
+#include <libgen.h>
+#include <errno.h>
 
 // Declare all variables in ccTest.c
 
@@ -33,335 +37,228 @@
 
 // Include cctest program header files
 
-#include "ccPars.h"
-#include "ccRef.h"
-#include "ccSigs.h"
-#include "ccRun.h"
+#include "ccCmds.h"
+#include "ccTest.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, char **argv)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    int status = 0;
+    uint32_t exit_status = EXIT_SUCCESS;
 
-    printf(">%s<\n",argv[0]);
+    puts("\nWelcome to cctest\n");
+
+    // Get path to cctest project root
+
+    sprintf(cctest.base_path, "%s/../../",dirname(argv[0]));
 
     // If no arguments supplied, read from stdin
 
     if(argc == 1)
     {
-        status = ccParsParseLine("read stdin");
+        exit_status = ccTestParseLine("read");
     }
     else
     {
         // else process all arguments unless an error is reported
 
-        while(status == 0 && --argc > 0)
+        while(exit_status == EXIT_SUCCESS && --argc > 0)
         {
-            status = ccParsParseLine(*(++argv));
+            exit_status = ccTestParseLine(*(++argv));
         }
     }
 
-    // Report status as exit code
+    // Report exit status
 
-    exit(status);
+    exit(exit_status);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void PrepareLoad(void)
-/*---------------------------------------------------------------------------------------------------------*/
+uint32_t ccTestParseLine(char *line)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will try to set the current directory using the supplied parameter
+\*---------------------------------------------------------------------------------------------------------*/
 {
-    // If load needs to be simulated
+    int32_t      idx;
+    int32_t      cmd_idx;
+    char        *command;
+    size_t       command_len;
+    struct cccmds *cmd;
 
-    if(ccpars_global.sim_load == CC_ENABLED)
+    // Skip leading white space and ignore empty lines or comment (#) lines
+
+    command = line + strspn(line, " \t");
+
+    if(*command == '\n' || *command == '\0' || *command == '#')
     {
-
-        // Initialise load model structure
-
-        regLoadInit(&reg_pars.load_pars, ccpars_load.ohms_ser, ccpars_load.ohms_par,
-                     ccpars_load.ohms_mag, ccpars_load.henrys, ccpars_load.gauss_per_amp);
-
-        // Initialise load saturation model
-
-        regLoadInitSat(&reg_pars.load_pars, ccpars_load.henrys_sat, ccpars_load.i_sat_start, ccpars_load.i_sat_end);
-
-        // Field regulation requires an inductive load
-
-        if(ccpars_global.reg_mode == REG_FIELD && reg.iter_period > (3.0 * reg_pars.load_pars.tc))
-        {
-            fputs("Error : GAUSS units not permitted for a resistive circuit "
-                  "(circuit time constant is less than 1/3 x iteration period)\n",stderr);
-            exit(EXIT_FAILURE);
-        }
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static void PrepareLimits(void)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    // If load simulation enabled then limits must be supplied
-
-    if(ccpars_global.sim_load == CC_ENABLED)
-    {
-         // Initialise field and current measurement trip/low/zero limits
-
-        regLimMeasInit(&reg.lim_b_meas,
-                       ccpars_limits.b.pos, ccpars_limits.b.neg,
-                       ccpars_limits.b.pos * LOW_MEAS_FACTOR,
-                       ccpars_limits.b.pos * ZERO_MEAS_FACTOR,
-                       ccpars_limits.invert_limits);
-
-        regLimMeasInit(&reg.lim_i_meas,
-                       ccpars_limits.i.pos, ccpars_limits.i.neg,
-                       ccpars_limits.i.pos * LOW_MEAS_FACTOR,
-                       ccpars_limits.i.pos * ZERO_MEAS_FACTOR,
-                       ccpars_limits.invert_limits);
-
-        // Initialise field, current and voltage reference pos/min/neg/rate limits
-
-        regLimRefInit (&reg.lim_b_ref, ccpars_limits.b.pos, ccpars_limits.b.neg, ccpars_limits.b.rate,
-                       ccpars_limits.invert_limits);
-
-        regLimRefInit (&reg.lim_i_ref, ccpars_limits.i.pos, ccpars_limits.i.neg, ccpars_limits.i.rate,
-                       ccpars_limits.invert_limits);
-
-        regLimVrefInit(&reg.lim_v_ref, ccpars_limits.v.pos, ccpars_limits.v.neg, ccpars_limits.v.rate,
-                       ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41, ccpars_limits.invert_limits);
-
-        // Initialise field, current and voltage regulation error warning/fault thresholds
-
-        regErrInitLimits(&reg.b_err, ccpars_limits.b_err_warning, ccpars_limits.b_err_fault);
-
-        regErrInitLimits(&reg.i_err, ccpars_limits.i_err_warning, ccpars_limits.i_err_fault);
-
-        regErrInitLimits(&reg.v_err, ccpars_limits.v_err_warning, ccpars_limits.v_err_fault);
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static void PrepareFunction(void)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    // If FG_LIMITS is ENABLED
-
-    if(ccpars_global.fg_limits == CC_ENABLED)
-    {
-        // Set fg_limits pointer according to UNITS
-
-        switch(ccpars_global.reg_mode)
-        {
-        case REG_FIELD:   ccpars_limits.fg = &ccpars_limits.b;       break;
-        case REG_CURRENT: ccpars_limits.fg = &ccpars_limits.i;       break;
-        case REG_VOLTAGE: ccpars_limits.fg = &ccpars_limits.v;       break;
-        }
-
-        // If AMPS or GAUSS will be regulated then the limits checking includes the converter model
-
-        if(ccpars_global.reg_mode != REG_VOLTAGE)
-        {
-            ccpars_limits.fg->user_check_limits = ccrefCheckConverterLimits;
-
-            // Initialise v_ref limits for ccrefCheckConverterLimits() which is called when
-            // arming a function to check the voltage available is sufficient
-
-            regLimVrefInit(&ccpars_limits.fg_v_ref, ccpars_limits.v.pos, ccpars_limits.v.neg,
-                           ccpars_limits.v.rate, ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41, 
-                           CC_DISABLED);
-        }
+        return(EXIT_SUCCESS);
     }
 
-    // Initialise the reference function
+    // Get first argument from line
 
-    func[ccpars_global.function].init_func();
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static void PrepareSimulation(void)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    if(ccpars_global.sim_load == CC_ENABLED)
+    command_len = strcspn(command, CC_ARG_DELIMITER);
+
+    line = command + command_len;
+
+    if(*line != '\0')
     {
-        // By default use voltage source simulation transfer function directly
+        *(line++) = '\0';
 
-        reg_pars.sim_vs_pars = ccpars_vs.sim_vs_pars;
-
-        // If VS bandwidth defined the try to initialise voltage source simulation model coefficients
-        // using Tustin algorithm.
-
-        if(ccpars_vs.bandwidth > 0.0)
-        {
-            regSimVsInit(&reg_pars.sim_vs_pars, reg.iter_period, ccpars_vs.bandwidth,
-                         ccpars_vs.z, ccpars_vs.tau_zero);
-        }
-
-        // Initialise voltage source model gain and stop if gain error is more than 5%
-        // This also calculates the vs_undersampled_flag for sim_load_pars
-
-        reg_pars.sim_load_pars.vs_undersampled_flag = regSimVsInitGain(&reg_pars.sim_vs_pars, &reg.sim_vs_vars,
-                                                                       ccpars_vs.v_ref_delay_iters);
-
-        if(fabs(reg_pars.sim_vs_pars.gain - 1.0) > 0.05)
-        {
-            fprintf(stderr,"Error : Voltage source model gain (%.3f) has an error of more than 5%%\n",reg_pars.sim_vs_pars.gain);
-            exit(EXIT_FAILURE);
-        }
-
-        // First set the V/I/B measurements to cover all three regulation modes
-
-        reg.v_meas            = fg_meta.range.start * reg_pars.sim_vs_pars.gain;     // Set v_meas to voltage on load
-        reg.i_meas.unfiltered = fg_meta.range.start;                                 // i_meas
-        reg.b_meas.unfiltered = fg_meta.range.start;                                 // b_meas
-
-        // Initialise load model for simulation using the sim_tc_error factor to mismatch the regulation
-
-        regSetSimLoad(&reg, &reg_pars, ccpars_global.reg_mode, ccpars_load.sim_tc_error);
-
-        // Initialise voltage source model history to allow simulation to start with a non-zero voltage
-        // This is not needed in a real converter controller because the voltage always starts at zero
-
-        reg.v_ref_sat     =
-        reg.v_ref_limited =
-        reg.v_ref         = regSimVsInitHistory(&reg_pars.sim_vs_pars, &reg.sim_vs_vars, reg.v_meas);
-
-        // Initialise measurement delay structures for simulated field, current and voltage in the
-        // load and the measurements of these values in the load. The delay is adjusted by -1.0
-        // iterations because the the simulation is used at the start of the next iteration, so
-        // one iteration period has elapsed anyway. For this reason, v_ref_delay_iters must be
-        // at least 1.
-
-        regDelayInitDelays(&reg.b_sim.delay,
-                           reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
-                           ccpars_vs.v_ref_delay_iters - 1.0,
-                           ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters - 1.0);
-
-        regDelayInitDelays(&reg.i_sim.delay,
-                           reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
-                           ccpars_vs.v_ref_delay_iters - 1.0,
-                           ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0);
-
-        regDelayInitDelays(&reg.v_sim.delay,
-                           reg_pars.sim_load_pars.vs_undersampled_flag,
-                           ccpars_vs.v_ref_delay_iters - 1.0,
-                           ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0);
-
-        // Initialise simulated measurement delay histories
-
-        regDelayInitVars(&reg.b_sim.delay, reg.b_meas.unfiltered);
-        regDelayInitVars(&reg.i_sim.delay, reg.i_meas.unfiltered);
-        regDelayInitVars(&reg.v_sim.delay, reg.v_meas);
-
-        // Initialise field measurement filter
-
-        free(reg.b_meas.fir_buf[0]);
-
-        regMeasFilterInitBuffer(&reg.b_meas, calloc((ccpars_meas.b_fir_lengths[0] + ccpars_meas.b_fir_lengths[1] +
-                                                     ccpars_reg_b.period_iters),sizeof(uint32_t)));
-
-        regMeasFilterInit(&reg.b_meas, ccpars_meas.b_fir_lengths, ccpars_reg_b.period_iters, ccpars_meas.b_delay_iters);
-
-        regMeasFilterInitMax(&reg.b_meas, ccpars_limits.b.pos, ccpars_limits.b.neg);
-
-        regMeasSetReg(&reg.b_meas, ccpars_meas.b_reg_select);
-
-        // Initialise current measurement filter
-
-        free(reg.i_meas.fir_buf[0]);
-
-        regMeasFilterInitBuffer(&reg.i_meas, calloc((ccpars_meas.i_fir_lengths[0] + ccpars_meas.i_fir_lengths[1] +
-                                                     ccpars_reg_i.period_iters),sizeof(uint32_t)));
-
-        regMeasFilterInit(&reg.b_meas, ccpars_meas.i_fir_lengths, ccpars_reg_i.period_iters, ccpars_meas.i_delay_iters);
-
-        regMeasFilterInitMax(&reg.b_meas, ccpars_limits.i.pos, ccpars_limits.i.neg);
-
-        regMeasSetReg(&reg.i_meas, ccpars_meas.i_reg_select);
-
-        // Initialise simulation of measurement noise and tone
-
-        regMeasSetNoiseAndTone(&reg.b_sim.noise_and_tone, ccpars_meas.b_sim_noise_pp, ccpars_meas.b_sim_tone_amp,
-                               ccpars_meas.tone_half_period_iters);
-
-        regMeasSetNoiseAndTone(&reg.i_sim.noise_and_tone, ccpars_meas.i_sim_noise_pp, ccpars_meas.i_sim_tone_amp,
-                               ccpars_meas.tone_half_period_iters);
-
-        regMeasSetNoiseAndTone(&reg.v_sim.noise_and_tone, ccpars_meas.v_sim_noise_pp, 0.0, 0);
-
-        // Run first simulation to initialise measurement variables
-
-        regSimulate(&reg, &reg_pars, 0.0);
+        line += strspn(line, CC_ARG_DELIMITER);
     }
+
+    // If no more arguments then set line to NULL
+
+    if(*line == '\0')
+    {
+        line = NULL;
+    }
+
+    // Compare first argument against list of commands
+
+    for(cmd = cmds, cmd_idx = -1, idx = 0 ; cmd->name != NULL ; cmd++, idx++)
+    {
+         // If command argument matches start or all of a command
+
+         if(strncasecmp(cmd->name, command, command_len) == 0)
+         {
+             // If first match, remember command index
+
+             if(cmd_idx == -1)
+             {
+                 cmd_idx = idx;
+             }
+             else // else second match so report error
+             {
+                 ccTestPrintError("ambiguous command '%s'", ccTestAbbreviatedArg(command));
+                 return(EXIT_FAILURE);
+             }
+         }
+    }
+
+    // If unambiguous match with a command, run the associated command function
+
+    if(cmd_idx >= 0)
+    {
+        return(cmds[cmd_idx].cmd_func(cmd_idx, &line));
+    }
+    else
+    {
+         ccTestPrintError("unknown command '%s'", ccTestAbbreviatedArg(command));
+         return(EXIT_FAILURE);
+    }
+
+    return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void PrepareRegulation(void)
-/*---------------------------------------------------------------------------------------------------------*/
+char * ccTestGetArgument(char **remaining_line)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will return the next argument in the line, delimited by white space or a comma. It returns
+  NULL if there are no more arguments and *remaining_line points the start of the next argument, or is NULL
+  if there are no more arguments.
+\*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t status = 0;
+    char *arg = *remaining_line;
+    char *remains;
 
-    // If voltage source will be simulated
+    // if more arguments remain on the line
 
-    if(ccpars_global.sim_load == CC_ENABLED)
+    if(arg != NULL)
     {
-        reg.mode = REG_NONE;                    // Reset reg.mode since regSetMode & regSetVoltageMode are
-                                                // change sensitive
-        // If voltage regulation enabled
+        remains = arg + strcspn(arg, CC_ARG_DELIMITER);
 
-        if(ccpars_global.reg_mode == REG_VOLTAGE)
+        // Nul terminate the new argument
+
+        if(*remains != '\0')
         {
-            regSetVoltageMode(&reg, &reg_pars);
+            *(remains++) = '\0';
+
+            remains += strcspn(remains, CC_ARG_DELIMITER);
+        }
+
+        // If no more arguments on the line then set *remaining_line to NULL
+
+        if(*remains == '\0')
+        {
+            *remaining_line = NULL;
         }
         else
         {
-            // Initialise limited reference to equal the starting value of the reference function
-
-            reg.ref_rst = reg.ref_limited = fg_meta.range.start;
-
-            // Calculate track delay in iteration periods
-
-            switch(ccpars_global.reg_mode)
-            {
-            case REG_FIELD:  // Initialise field regulation
-
-                status = regRstInit(&reg_pars.b_rst_pars,
-                                    reg.iter_period, ccpars_reg_b.period_iters, &reg_pars.load_pars,
-                                    ccpars_reg_b.clbw, ccpars_reg_b.clbw2, ccpars_reg_b.z,
-                                    ccpars_reg_b.clbw3, ccpars_reg_b.clbw4,
-                                    regCalcPureDelay(&reg, &reg_pars),
-                                    ccpars_reg_b.track_delay_periods,
-                                    REG_FIELD, &ccpars_reg_b.rst);
-
-
-                // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
-                // corresponds to steady state reg.b_meas (last parameter is the rate of change)
-
-                regSetMode(&reg, &reg_pars, REG_FIELD, reg.b_meas.unfiltered, 0.0);
-                break;
-
-            case REG_CURRENT:   // Initialise current regulation
-
-                status = regRstInit(&reg_pars.i_rst_pars,
-                                    reg.iter_period, ccpars_reg_i.period_iters, &reg_pars.load_pars,
-                                    ccpars_reg_i.clbw, ccpars_reg_i.clbw2, ccpars_reg_i.z,
-                                    ccpars_reg_i.clbw3, ccpars_reg_i.clbw4,
-                                    regCalcPureDelay(&reg, &reg_pars),
-                                    ccpars_reg_i.track_delay_periods,
-                                    REG_CURRENT, &ccpars_reg_i.rst);
-
-                // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
-                // corresponds to steady state reg.i_meas (last parameter is the rate of change)
-
-                regSetMode(&reg, &reg_pars, REG_CURRENT, reg.i_meas.unfiltered, 0.0);
-                break;
-            }
-
-            // Check for regulation initialisation failure - there is only one possible reason: S[0] is too small
-
-            if(status != REG_OK)
-            {
-                fputs("Error : RST regulator failed to initialise: S[0] is less than 1.0E-10\n",stderr);
-                exit(EXIT_FAILURE);
-            }
-
-            // Estimate the ref advance time
-
-            regCalcRefAdvance(&reg, &reg_pars);
+            *remaining_line = remains;
         }
     }
+
+    return(arg);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void ccTestPrintError(const char * format, ...)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function print an error message to stdout with the filename and line number prefix, if reading from
+  a file.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    va_list     argv;
+
+    // Print input file name and line number if reading from file
+
+    if(cctest.input[cctest.input_idx].line_number == 0)
+    {
+        // Reading from stdin
+
+        printf("Error - ");
+    }
+    else
+    {
+        // Reading from file
+
+        printf("Error at %s:%u - ",
+                cctest.input[cctest.input_idx].path,
+                cctest.input[cctest.input_idx].line_number);
+    }
+
+    // Print error message to stdout
+
+    va_start(argv, format);
+    vprintf(format, argv);
+    va_end(argv);
+
+    // Write newline
+
+    putchar('\n');
+}
+/*---------------------------------------------------------------------------------------------------------*/
+char *ccTestAbbreviatedArg(char *arg)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will check if an argument is too long and will truncate with "..." if it is.  This makes 
+  it safe to print.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    if(strlen(arg) > CC_ABBREVIATED_ARG_LEN)
+    {
+        arg[CC_ABBREVIATED_ARG_LEN-4] = '.';
+        arg[CC_ABBREVIATED_ARG_LEN-3] = '.';
+        arg[CC_ABBREVIATED_ARG_LEN-2] = '.';
+        arg[CC_ABBREVIATED_ARG_LEN-1] = '\0';
+    }
+
+    return(arg);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+uint32_t ccTestNoMoreArgs(char **remaining_line)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will check that there are no more arguments on the line. If there are, it will print an
+  error message.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    char *arg;
+
+    arg = ccTestGetArgument(remaining_line);
+
+    if(arg != NULL)
+    {
+        ccTestPrintError("Unexpected argument '%s'", ccTestAbbreviatedArg(arg));
+        return(EXIT_FAILURE);
+    }
+
+    return(EXIT_SUCCESS);
 }
 // EOF
