@@ -37,6 +37,7 @@
 
 enum fg_trim_type                       // Types of trim function
 {
+    FG_TRIM_UNDEFINED,
     FG_TRIM_CUBIC,
     FG_TRIM_LINEAR
 };

@@ -37,6 +37,7 @@
 
 enum fg_test_type                           // Types of test function
 {
+    FG_TEST_UNDEFINED,
     FG_TEST_COSINE,
     FG_TEST_SINE,
     FG_TEST_SQUARE,
