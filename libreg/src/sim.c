@@ -26,6 +26,7 @@
 
 #include <math.h>
 #include "libreg/sim.h"
+#include <stdio.h>
 
 #define PI 3.141592653589793238462
 
@@ -207,6 +208,13 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
     float       d;
     float       y;
 
+    // Do nothing if bandwidth isn't valid
+
+    if(bandwidth <= 0.0)
+    {
+        return;
+    }
+
     // If voltage source model is too undersampled then do not attempt Tustin algorithm
 
     if(bandwidth > 0.501 / sim_period)
@@ -299,16 +307,24 @@ uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *
 
     // Scan to find when step response crosses 50% level - protect against ultra slow responses
 
-    for(i = 0 ; i < 1000 && (step_response = regSimVs(pars, vars, 1.0) >= 0.5) ; i++)
+    for(i = 0 ; i < 1000 && ((step_response = regSimVs(pars, vars, 1.0)) < 0.5) ; i++)
     {
         prev_step_response = step_response;
     }
 
-    pars->step_rsp_time_iters = (float)i + (0.5 - prev_step_response) / (step_response - prev_step_response);
+    if(i >= 1000)
+    {
+        pars->step_rsp_time_iters = 1000.0;
+    }
+    else
+    {
+        pars->step_rsp_time_iters = (float)i + (0.5 - prev_step_response) /
+                                               (step_response - prev_step_response);
+    }
 
-    // Consider simulation to be under-sampled if step response time is less than 10% of one iteration
+    // Consider simulation to be under-sampled if step response time is less than 60% of one iteration
 
-    return(pars->step_rsp_time_iters < 0.1);
+    return(pars->step_rsp_time_iters < 0.6);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_load)
