@@ -1,5 +1,428 @@
 };
 
-    // ----- Digital signals -----
+//------------------------------------------------------------------------------------------------
+    function OnLoad()
+    {
 
-    var digital_signals = {
+        // ----- Get container variables -----
+
+        analog_chart_div   = $("#analog_chart_div");
+        analog_legend_div  = $("#analog_legend_div");
+        digital_chart_div  = $("#digital_chart_div");
+
+        // ----- Initialise colour, index and scaling for each signal -----
+
+        var i = 0;
+
+        $.each(analog_signals, function(sig_name, signal)
+        {
+            signal.color     = i + 2 + (i > 8);         // Skip color 11 as it is too pale
+            signal.index     = i++;
+            signal.visible   = 1;
+            signal.exp       = 0;
+            signal.exp_deriv = 0;
+        });
+
+        i = 0;
+        var dig_legend = [];
+
+        $.each(digital_signals, function(sig_name, signal)
+        {
+            signal.color = i + 2 + (i > 8);             // Skip color 11 as it is too pale
+            dig_legend.push([-(++i),sig_name]);
+            signal.label = sig_name;
+            visible_digital_signals.push(digital_signals[sig_name]);
+        });
+
+        // ----- Set up plot options for analog and digital signals -----
+
+        analog_options =
+        {
+            series:         { shadowSize: 1, lines: { show: true, lineWidth: 1}, points: { radius: 2} },
+            grid:           { color: "#444", borderWidth: 1, backgroundColor: "#FFF" },
+            yaxis:          { labelWidth:220 },
+            legend:         { container: analog_legend_div, position: "nw", labelFormatter: function (label, series) { return '<a href="javascript:ToggleVisibility(' + series.index + ');">' + label + '</a>'; }},
+            selection:      { mode: "xy", touch: Modernizr.touch, tapCallback: ZoomOut }
+        };
+
+        analog_options_zoom = analog_options;
+
+        digital_options =
+        {
+            series:    { shadowSize: 1, lines: { show: true, lineWidth: 1} },
+            grid:      { color: "#444", borderWidth: 1, backgroundColor: "#FFF", axisMargin: 50 },
+            yaxis:     { labelWidth:220, max: -0.25, min: -i-0.75, ticks: dig_legend },
+            legend:    { show: false }
+        };
+
+        digital_options_zoom = digital_options;
+
+        // ----- Display analog and digital plots (if digital signals are included) -----
+
+        PlotSignals();
+
+        // ----- Save x-axis setting for analog plot for when all signals are invisible -----
+
+        analog_xaxis = analog_plot.getAxes().xaxis;
+
+        // ----- Link colorbox pop-ups to inline links -----
+
+        $(document).ready(function(){$(".inline").colorbox({inline:true, width:"80%", height:"90%"});});
+
+        // ----- Calculate derivative signal and the exponent scaling factor for each signal & its derivative -----
+
+        $.each(analog_signals, function(sig_name, signal)
+        {
+            var derivative;
+            var abs_value;
+            var last_time           = signal.data[0][0]
+            var last_value          = signal.data[0][1];
+            var max_abs_value       = 0.0;
+            var max_abs_deriv_value = 0.0;
+            var exp_scaling         = 1.0;
+            var exp_scaling_deriv   = 1.0;
+            var exponent;
+
+            // ----- Initialise three new signals -----
+
+            signal.derivative   = [];
+            signal.deriv_escale = [];
+            signal.data_escale  = [];
+
+            signal.derivative.push( [ last_time, 0.0 ] );       // Add a first point
+
+            // ----- Scan signal to calculate derivative and the max abs value of the signal and its derivative -----
+
+            for(i=0 ; i < signal.data.length ; i++)
+            {
+                if((abs_value = Math.abs(signal.data[i][1])) > max_abs_value) max_abs_value = abs_value;
+
+                if(signal.data[i][1] != last_value)
+                {
+                    derivative = (signal.data[i][1] - last_value) / (signal.data[i][0] - last_time);
+                    last_time  = signal.data[i][0];
+                    last_value = signal.data[i][1];
+                    signal.derivative.push( [ last_time, derivative ] );
+
+                    if((abs_value = Math.abs(derivative)) > max_abs_deriv_value) max_abs_deriv_value = abs_value;
+                }
+            }
+
+            if(signal.data[i-1][0] != last_time)
+            {
+                signal.derivative.push( [ signal.data[i-1][0], 0.0 ] );       // Add a last point
+            }
+
+            // ----- Calculate exponential scaling factor for the signal -----
+
+            exponent = 0;
+
+            if(max_abs_value > 0.0)
+            {
+                exponent  = Math.floor(Math.log(max_abs_value) / Math.LN10 + 999.999) - 1000;
+                exp_scaling = Math.pow(10.0, -exponent);
+            }
+
+            if(exponent >= 0)
+            {
+                signal.exp = '.E+' + exponent;
+            }
+            else
+            {
+                signal.exp = '.E' + exponent;
+            }
+
+            // ----- Calculate exponential scaling factor for the signal derivative -----
+
+            exponent = 0;
+
+            if(max_abs_deriv_value > 0.0)
+            {
+                exponent = Math.floor(Math.log(max_abs_deriv_value) / Math.LN10 + 999.999) - 1000;
+                exp_scaling_deriv = Math.pow(10.0, -exponent);
+            }
+
+            if(exponent >= 0)
+            {
+                signal.exp_deriv = '.E+' + exponent;
+            }
+            else
+            {
+                signal.exp_deriv = '.E' + exponent;
+            }
+
+            // ----- Calculate e-scaled signal -----
+
+            for(i=0 ; i < signal.data.length ; i++)
+            {
+                signal.data_escale.push( [ signal.data[i][0], signal.data[i][1] * exp_scaling ] );
+            }
+
+            // ----- Calculate e-scaled derivative ------
+
+            for(i=0 ; i < signal.derivative.length ; i++)
+            {
+                signal.deriv_escale.push( [ signal.derivative[i][0], signal.derivative[i][1] * exp_scaling_deriv ] );
+            }
+        });
+
+        // ----- Bind functions to zoom in/out to pointer button events -----
+
+        analog_chart_div.bind('plotselected', ZoomIn);
+        analog_chart_div.bind('contextmenu',  ZoomOut);
+    }
+
+//------------------------------------------------------------------------------------------------
+    function PlotSignals()
+    {
+        visible_analog_signals = [];
+
+        // ----- If zoomed out then rescale plot automatically -----
+
+        if(stack_depth == 0)
+        {
+            analog_options_zoom = analog_options;
+        }
+
+        // ----- Create list of visible signals -----
+
+        $.each(analog_signals, function(sig_name, signal)
+        {
+            if(signal.visible == 1)
+            {
+                if(derivative_flag == 1)
+                {
+                    if(escale_flag == 1)
+                    {
+
+                        visible_analog_signals.push({data: signal.deriv_escale, label: sig_name + " '" + signal.exp_deriv, color: signal.color, lines: signal.lines, points: signal.points, index: signal.index});
+                    }
+                    else
+                    {
+                        visible_analog_signals.push({data: signal.derivative, label: sig_name + " '", color: signal.color, lines: signal.lines, points: signal.points, index: signal.index});
+                    }
+                }
+                else
+                {
+                    if(escale_flag == 1)
+                    {
+                        visible_analog_signals.push({data: signal.data_escale, label: sig_name + signal.exp, color: signal.color, lines: signal.lines, points: signal.points, index: signal.index});
+                    }
+                    else
+                    {
+                        visible_analog_signals.push({data: signal.data, label: sig_name, color: signal.color, lines: signal.lines, points: signal.points, index: signal.index});
+                    }
+                }
+            }
+            else
+            {
+                visible_analog_signals.push({ data: [[analog_xaxis.min,0], [analog_xaxis.max,0]], label: sig_name, color: "#CCC", index: signal.index});
+            }
+        });
+
+        // ----- Plot analog signals -----
+
+        analog_plot = $.plot(analog_chart_div, visible_analog_signals, analog_options_zoom);
+
+        // ----- Plot digital signals if they are defined -----
+
+        if (visible_digital_signals.length > 0)
+        {
+            $.plot(digital_chart_div, visible_digital_signals, digital_options_zoom);
+        }
+    }
+
+//------------------------------------------------------------------------------------------------
+    function ToggleMode(mode)
+    {
+        if(mode == 0)
+        {
+            // ----- mode 0 : Toggle E-Scale flag -----
+
+            escale_flag = 1 - escale_flag;
+        }
+        else
+        {
+            // ----- mode 1 : Toggle Derivative flag -----
+
+            derivative_flag = 1 - derivative_flag;
+        }
+
+        // ----- Zoom out to full scale -----
+
+        stack_depth   = 0;
+        options_stack = [];
+        analog_options_zoom  = analog_options;
+        digital_options_zoom = digital_options;
+
+        // ----- Replot charts -----
+
+        PlotSignals();
+    }
+
+//------------------------------------------------------------------------------------------------
+    function ToggleVisibility(series_index)
+    {
+        $.each(analog_signals, function(sig_name, signal)
+        {
+            if(signal.index == series_index) signal.visible = 1 - signal.visible;
+        });
+
+        PlotSignals();
+    }
+
+//------------------------------------------------------------------------------------------------
+    function AllNoneVisible(visibility)
+    {
+        $.each(analog_signals, function(sig_name, signal)
+        {
+            signal.visible = visibility;
+        });
+
+        PlotSignals();
+    }
+
+//------------------------------------------------------------------------------------------------
+    function ZoomIn(event, ranges)
+    {
+
+        if (visible_analog_signals.length > 0)
+        {
+            // ----- Clip selection range to 10 micro units in both X and Y -----
+
+            if (ranges.xaxis.to - ranges.xaxis.from < 0.00001)
+            {
+                ranges.xaxis.to = ranges.xaxis.from + 0.00001;
+            }
+
+            if (ranges.yaxis.to - ranges.yaxis.from < 0.00001)
+            {
+                ranges.yaxis.to = ranges.yaxis.from + 0.00001;
+            }
+
+            // ------ Push current zoom options onto the options stack -----
+
+            stack_depth++;
+            options_stack.push(analog_options_zoom);
+            options_stack.push(digital_options_zoom);
+
+            // ------ Zoom to new selection range -----
+
+            analog_options_zoom = $.extend(true, {}, analog_options, {
+                                           xaxis: { min: ranges.xaxis.from, max: ranges.xaxis.to },
+                                           yaxis: { min: ranges.yaxis.from, max: ranges.yaxis.to } });
+
+            analog_plot = $.plot(analog_chart_div, visible_analog_signals, analog_options_zoom);
+
+            if (visible_digital_signals.length > 0)
+            {
+                digital_options_zoom = $.extend(true, {}, digital_options, {
+                                                xaxis: { min: ranges.xaxis.from, max: ranges.xaxis.to } });
+
+                $.plot(digital_chart_div, visible_digital_signals, digital_options_zoom);
+            }
+        }
+    }
+
+//------------------------------------------------------------------------------------------------
+    function ZoomOut()
+    {
+        if (visible_analog_signals.length > 0 && stack_depth > 0)
+        {
+            // ----- Pop options from options stack to restore previous zoom level -----
+
+            stack_depth--;
+            digital_options_zoom = options_stack.pop();
+            analog_options_zoom  = options_stack.pop();
+
+            analog_plot = $.plot(analog_chart_div, visible_analog_signals, analog_options_zoom);
+
+            if (visible_digital_signals.length > 0)
+            {
+                $.plot($("#digital_chart_div"), visible_digital_signals, digital_options_zoom);
+            }
+        }
+
+        // ----- return false to suppress the right-mouse context menu from appearing -----
+
+        return false
+    }
+
+    </script>
+</head>
+
+<!-- ========================================================================================== -->
+
+<body bgcolor='#DDDDDD'>
+
+  <!--  Control links above analog plot -->
+
+  <p id='links_line' style='font-size:14px'><strong>&nbsp;&nbsp;cctest simulation</strong> : &nbsp;
+    <a href='javascript:AllNoneVisible(1);'>Show all signals</a> |
+    <a href='javascript:AllNoneVisible(0);'>Hide all signals</a> |
+    <a href='javascript:ToggleMode(0);'>Toggle E-Scaling</a> |
+    <a href='javascript:ToggleMode(1);'>Toggle Derivative</a> |
+    <a class='inline' href='#inline_pars'>Show pars</a> |
+    <a class='inline' href='#inline_debug'>Show debug</a> |
+    <a class='inline' href='#inline_about'>About</a> |
+    <a class='inline' href='#inline_help'>Help</a>
+  </p>
+
+  <!-- Divs for analog and digital plots -->
+
+  <div id='analog_chart_div'  style='width:95%;height:65%;'></div>
+  <div id='analog_legend_div' style='position:absolute;left:5px;top:50px;width:200px;height:65%;'></div>
+  <div id='digital_chart_div' style='width:95%;height:35%;'></div>
+
+  <!-- Pop-up texts -->
+
+  <div style='display:none'>
+
+    <!-- About pop-up -->
+
+    <div id='inline_about' style='padding:20px;background:#fff;font-size:17px;text-align:justify;'>
+        <p style='font-size:22px;font-weight:bold;'>About this chart:</p>
+        <p style=>cctest is program that simulates the control of current or magnetic field in a magnet circuit
+        driven by a power converter.  It is written in standard C and uses the function generation library (libfg) and regulation
+        library (libreg).  These libraries are also written in C and are part of the
+        Converter Control libraries (cclibs) provided under the Lesser General Public License
+        by the CERN power converter group. The cctest program is driven by a set of text files that
+        contain all the simulation, regulation and function generation parameters.</p>
+        <p>For more information or to download the cclibs software, go to the
+        <a href='http://cern.ch/project-cclibs/' target='_blank'>website for cclibs</a>.
+        For information on all the parameters, consult the
+        <a href='https://github.com/qking/cclibs/raw/master/cctest/doc/cctest_user_guide.pdf' target='_blank'>user guide</a>.
+        </p>
+        <p>This webpage uses the
+        <a href='http://www.flotcharts.org/' target='_blank'>FLOT library</a> for the graphs and
+        <a href='http://colorpowered.com/colorbox/' target='_blank'>Colorbox</a> for the pop-ups.
+        </p>
+    </div>
+
+    <!-- Help pop-up -->
+
+    <div id='inline_help' style='padding:20px; background:#fff;font-size:17px;text-align:justify;'>
+        <p style='font-size:22px;font-weight:bold;'>Controlling this chart:</p>
+        <p>
+        <ul>
+            <li><strong>Signal Visibility</strong><br/><br/>To toggle the visibility of an analog signal, click
+                on the signal's name in the legend.  To control the visiblity of all the analog signals, click
+                on the "Show All Signals" or "Hide All Signals" links.
+                The visibility of digital signals cannot be controlled.</li><br/>
+            <li><strong>Zooming in</strong><br/><br/>Select the zoom area using the left pointer button or your 
+                finger on a touch device.</li><br/>
+            <li><strong>Zooming out</strong><br/><br/>Press the right pointer button or tap anywhere on the chart
+                on a touch device to zoom out to the previous zoom level.</li><br/>
+            <li><strong>E-Scaling</strong><br/><br/>Click on the "Toggle E-Scaling" link to toggle between normal
+                scaling mode and exponential scaling mode.  In this mode, every signal is scaled by a
+                power of 10 to be within the range &plusmn;10. The scale factors are shown in the legend
+                with "E&plusmn;N" notation.</li><br/>
+            <li><strong>Derivative</strong><br/><br/>Click on the "Toggle Derivative" link to toggle between normal
+                mode and derivative mode.  In Derivative mode, the first derivatives of all the signals are displayed.</li><br/>
+            <li><strong>Digital signals</strong><br/><br/>If the data includes digital signals they will be
+                displayed in the lower chart.  Zooming the analog signals will zoom the time-axis
+                for the digital signals automatically.</li>
+        </ul>
+        </p>
+    </div>
+
