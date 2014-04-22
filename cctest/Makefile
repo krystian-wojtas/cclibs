@@ -76,7 +76,7 @@ $(obj_path)/%.o: %.c $(inc_path)/flot.h
 
 # flot header file
 
-$(inc_path)/flot.h: $(inc_path)/flot/flot_header.h $(inc_path)/flot/flot_footer.h $(inc_path)/flot/flot_part1.htm $(inc_path)/flot/flot_part2.htm $(inc_path)/flot/flot_part3.htm $(inc_path)/flot/flot_part4.htm
+$(inc_path)/flot.h: $(inc_path)/flot/flot_header.h $(inc_path)/flot/flot_footer.h $(inc_path)/flot/flot_part0.htm $(inc_path)/flot/flot_part1.htm $(inc_path)/flot/flot_part2.htm $(inc_path)/flot/flot_part3.htm $(inc_path)/flot/flot_part4.htm
 	$(inc_path)/flot/htmlquote.sh $^ >$@
 
 # Make flot output files
