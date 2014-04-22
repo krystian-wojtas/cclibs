@@ -42,8 +42,8 @@
 struct fg_ramp_config                       // RAMP function configuration
 {
     float       final;                      // Final reference
-    float       linear_rate;                // Linear rate limit
     float       acceleration;               // Absolute acceleration of the 1st parabolic segment (must be positive)
+    float       linear_rate;                // Linear rate limit
     float       deceleration;               // Absolute deceleration of the 2nd parabolic segment (must be positive)
 };
 
