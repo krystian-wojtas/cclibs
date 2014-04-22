@@ -32,6 +32,8 @@
         }
     </style>
 
+    <script>document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')</script>
+
     <link rel="stylesheet" href="../../colorbox/example4/colorbox.css" />
 
     <script language="javascript" type="text/javascript" src="%s/colorbox/jquery.min.js"></script>
@@ -39,8 +41,8 @@
     <script language="javascript" type="text/javascript" src="%s/flot/jquery.flot.js"></script>
     <script language="javascript" type="text/javascript" src="%s/flot/jquery.flot.selection.js"></script>
     <script language="javascript" type="text/javascript" src="%s/modernizr/modernizr.touch.js"></script>
-    <script language="javascript" type="text/javascript">
-
+    <script language="javascript" type="text/javascript">    
+        
     // ----- Only load flot.resize plug-in on non-touch devices because it uses CPU and generates garbage -----
     
     if(!Modernizr.touch)

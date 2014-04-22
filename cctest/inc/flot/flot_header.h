@@ -22,11 +22,11 @@
   Authors:  Quentin.King@cern.ch
 
   Notes:    This file is automatically assembled by the makefile from two header file fragments
-            and four html file fragments processed using inc/flot/htmlquote.sh to add and escape
+            and five html file fragments processed using inc/flot/htmlquote.sh to add and escape
             quotes:
 
                 flot_header.h, flot_footer.h
-                flot_part1.html, flot_part2.html, flot_part3.html and flot_part4.html
+                flot_part0.htm, flot_part1.htm, flot_part2.htm, flot_part3.htm and flot_part4.htm
 
             DO NOT EDIT flot.h - YOUR CHANGES WILL BE LOST WHEN YOU NEXT RUN MAKE!
 \*---------------------------------------------------------------------------------------------------------*/

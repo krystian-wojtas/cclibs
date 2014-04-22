@@ -233,6 +233,21 @@
     }
 
 //------------------------------------------------------------------------------------------------
+    function FullScale()
+    {
+        // ----- Zoom out to full scale -----
+
+        stack_depth   = 0;
+        options_stack = [];
+        analog_options_zoom  = analog_options;
+        digital_options_zoom = digital_options;
+
+        // ----- Replot charts -----
+
+        PlotSignals();
+    }
+
+//------------------------------------------------------------------------------------------------
     function ToggleMode(mode)
     {
         if(mode == 0)
@@ -250,14 +265,7 @@
 
         // ----- Zoom out to full scale -----
 
-        stack_depth   = 0;
-        options_stack = [];
-        analog_options_zoom  = analog_options;
-        digital_options_zoom = digital_options;
-
-        // ----- Replot charts -----
-
-        PlotSignals();
+        FullScale();
     }
 
 //------------------------------------------------------------------------------------------------
@@ -285,7 +293,6 @@
 //------------------------------------------------------------------------------------------------
     function ZoomIn(event, ranges)
     {
-
         if (visible_analog_signals.length > 0)
         {
             // ----- Clip selection range to 10 micro units in both X and Y -----
@@ -362,6 +369,7 @@
     <a href='javascript:AllNoneVisible(0);'>Hide all signals</a> |
     <a href='javascript:ToggleMode(0);'>Toggle E-Scaling</a> |
     <a href='javascript:ToggleMode(1);'>Toggle Derivative</a> |
+    <a href='javascript:FullScale();'>Full Scale</a> |
     <a class='inline' href='#inline_pars'>Show pars</a> |
     <a class='inline' href='#inline_debug'>Show debug</a> |
     <a class='inline' href='#inline_about'>About</a> |
@@ -412,7 +420,8 @@
             <li><strong>Zooming in</strong><br/><br/>Select the zoom area using the left pointer button or your 
                 finger on a touch device.</li><br/>
             <li><strong>Zooming out</strong><br/><br/>Press the right pointer button or tap anywhere on the chart
-                on a touch device to zoom out to the previous zoom level.</li><br/>
+                on a touch device to zoom out to the previous zoom level. Select "Full Scale" to zoom
+                out to see all the signals.</li><br/>
             <li><strong>E-Scaling</strong><br/><br/>Click on the "Toggle E-Scaling" link to toggle between normal
                 scaling mode and exponential scaling mode.  In this mode, every signal is scaled by a
                 power of 10 to be within the range &plusmn;10. The scale factors are shown in the legend
@@ -425,4 +434,10 @@
         </ul>
         </p>
     </div>
+    
+    <!-- Simulation parameters pop-up -->
 
+    <div id='inline_pars' style='padding:10px; background:#fff;font-size:14px;'>
+
+        <p style='font-size:22px;font-weight:bold;'>cctest Simulation Parameters:</p>
+        <p><pre>
