@@ -57,7 +57,7 @@ struct reg_sim_meas                                             // Measurement s
 struct reg_converter                                            // Global converter regulation structure
 {
     enum reg_mode               mode;                           // Regulation mode: Field, current or voltage
-    float                       iter_period;                    // Iteration period
+    double                      iter_period;                    // Iteration period
 
     // Field, current and voltage measurements
 
@@ -67,11 +67,11 @@ struct reg_converter                                            // Global conver
 
     // Reference and regulation variables
 
-    float                       period;                         // Regulation period
+    double                      period;                         // Regulation period
     uint32_t                    period_iters;                   // Regulation period (in iterations)
     uint32_t                    iteration_counter;              // Iteration counter
     double                      time;                           // Time of last regulation iteration
-    float                       ref_advance;                    // Time to advance reference
+    double                      ref_advance;                    // Time to advance reference
     float                       meas;                           // Field or current regulated measurement
 
     float                       ref;                            // Field or current reference
