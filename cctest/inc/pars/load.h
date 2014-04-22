@@ -83,7 +83,7 @@ CCPARS_LOAD_EXT struct ccpars_load ccpars_load
 
 CCPARS_LOAD_EXT struct ccpars load_pars[]
 #ifdef GLOBALS
-= {// "Signal name"      TYPE,max_vals,min_vals,*enum,              *value,                    num_defaults
+= {// "Signal name"      type,max_n_els,min_n_els,*enum,              *value,                    num_defaults
     { "OHMS_SER",        PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.ohms_ser        }, 1 },
     { "OHMS_PAR",        PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.ohms_par        }, 1 },
     { "OHMS_MAG",        PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.ohms_mag        }, 1 },

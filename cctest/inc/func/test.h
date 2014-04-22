@@ -51,13 +51,13 @@ struct ccpars_test
 CCPARS_TEST_EXT struct ccpars_test ccpars_test
 #ifdef GLOBALS
 = {//   Default value           Parameter
-        0.0,                 // TEST.INITIAL_REF
+        0.0,                 // TEST INITIAL_REF
         {
-            FG_TEST_COSINE,
-            2.0,             // TEST.AMPLITUDE_PP
-            1.0,             // TEST.NUM_CYCLES
-            1.0,             // TEST.PERIOD
-            CC_DISABLED      // TEST.WINDOW
+            FG_TEST_COSINE,  // Overwritten by init function (SINE, COSINE, STEPS or SQUARE)
+            2.0,             // TEST AMPLITUDE_PP
+            1.0,             // TEST NUM_CYCLES
+            1.0,             // TEST PERIOD
+            CC_DISABLED      // TEST WINDOW
         }
 }
 #endif
@@ -65,14 +65,14 @@ CCPARS_TEST_EXT struct ccpars_test ccpars_test
 
 // Test data description structure
 
-CCPARS_TEST_EXT struct ccpars   test_pars[]
+CCPARS_TEST_EXT struct ccpars test_pars[]
 #ifdef GLOBALS
-= {// "Signal name"   TYPE, max_vals,min_vals,*enum,              *value,                       num_defaults
-    { "INITIAL_REF",  PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.initial_ref         }, 1 },
-    { "AMPLITUDE_PP", PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.amplitude_pp }, 1 },
-    { "NUM_CYCLES",   PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.num_cycles   }, 1 },
-    { "PERIOD",       PAR_FLOAT,   1, 1, NULL,             { .f = &ccpars_test.config.period       }, 1 },
-    { "WINDOW",       PAR_ENUM,    1, 0, enabled_disabled, { .i = &ccpars_test.config.window_flag  }, 1 },
+= {// "Signal name"   type,max_n_els,min_n_els,*enum,                   *value,                       num_defaults
+    { "INITIAL_REF",  PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.initial_ref         }, 1 },
+    { "AMPLITUDE_PP", PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.amplitude_pp }, 1 },
+    { "NUM_CYCLES",   PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.num_cycles   }, 1 },
+    { "PERIOD",       PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.period       }, 1 },
+    { "WINDOW",       PAR_ENUM,    1,        0, enabled_disabled, { .i = &ccpars_test.config.window_flag  }, 1 },
     { NULL }
 }
 #endif

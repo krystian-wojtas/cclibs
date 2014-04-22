@@ -32,242 +32,130 @@
 // Include cctest program header files
 
 #include "ccCmds.h"
+#include "ccTest.h"
 #include "ccRef.h"
-#include "ccSigs.h"
 #include "ccRun.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccparsGetPar(char *line)
+uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will try to interpret one line of input.  Blank lines and comment (#) lines are ignored.
-  All other lines must have the format: GROUP.PARAMETER VALUE(S)
-  Where VALUES are comma separated.
+  This function will try to interpret arguments remaining on the input line as values belonging to
+  a command parameter.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    char                remains;
-    char                *ch_p;
-    char                par_string[CC_MAX_FILE_LINE_LEN];
-    struct cccmds       *cmd;
-    struct ccpars       *par;
+
+    char                *remaining_arg;
+    char                *arg;
+    size_t               arg_len;
     struct ccpars_enum  *par_enum;
+    struct ccpars_enum  *par_enum_matched;
 
-    // Check if line exceeds maximum length
+    // Try to parse the arguments to set the parameter values
 
-    if(strlen(line) >= (CC_MAX_FILE_LINE_LEN-1))
+    par->num_elements = 0;
+
+    while((arg = ccTestGetArgument(remaining_line)) != NULL)
     {
-        line[20] = '\0';
-        fprintf(stderr,"Error: Line starting \"%s...\" is too long (%u max)\n",
-                       line,CC_MAX_FILE_LINE_LEN-2);
-        exit(EXIT_FAILURE);
-    }
-
-    // Skip leading white space
-
-    ch_p = line;
-
-    while(isspace(*ch_p))
-    {
-        ch_p++;
-    }
-
-    // Skip blank lines and comment lines
-
-    if(*ch_p == '\0' || *ch_p == '#')
-    {
-        return;
-    }
-
-    // Try to identify the parameter cmd name
-
-    ch_p = strtok( ch_p, ".\n" );
-
-    for(cmd = cmds ; cmd->name != NULL && strcasecmp(cmd->name,ch_p) != 0; cmd++);
-
-    if(cmd->name == NULL)
-    {
-        ch_p[20] = '\0';       // Protect against long strings
-        fprintf(stderr,"Error: Unknown parameter cmd: \"%s\"\n", ch_p);
-        exit(EXIT_FAILURE);
-    }
-
-    // Try to identify the parameter name within the cmd
-
-    ch_p = strtok( NULL, " \t\n" );
-
-    for(par = cmd->pars ; par->name != NULL && strcasecmp(par->name,ch_p) != 0; par++);
-
-    if(par->name == NULL)
-    {
-        ch_p[20] = '\0';       // Protect against long strings
-        fprintf(stderr,"Error: Unknown parameter: \"%s.%s\"\n",cmd->name,ch_p);
-        exit(EXIT_FAILURE);
-    }
-
-    // Try to parse values for the parameter
-
-    par->num_values = 0;
-
-    while((ch_p = strtok( NULL, ",\n" )) != NULL)
-    {
-        if(par->num_values >= par->max_values)
+        if(par->num_elements >= par->max_num_elements)
         {
-            fprintf(stderr,"Error: Too many values for %s.%s (%u max)\n",
-                    cmd->name,par->name,par->max_values);
-            exit(EXIT_FAILURE);
+            ccTestPrintError("too many values for %s %s (%u max)",
+                    cmd_name,par->name,par->max_num_elements);
+            return(EXIT_FAILURE);
         }
+
+        arg_len = strlen(arg);
 
         switch(par->type)
         {
         case PAR_UNSIGNED:
 
-            if(sscanf(ch_p," %u %c",&par->value_p.i[par->num_values],&remains) != 1)
+            par->value_p.i[par->num_elements] = strtoul(arg, &remaining_arg, 10);
+
+            if(*remaining_arg != '\0' || errno != 0)
             {
-                fprintf(stderr,"Error: Invalid integer for %s.%s: %s\n",
-                        cmd->name,par->name,ch_p);
-                exit(EXIT_FAILURE);
+                ccTestPrintError("invalid integer for %s %s[%u]: '%s'",
+                        cmd_name, par->name, par->num_elements, arg);
+                return(EXIT_FAILURE);
             }
             break;
 
         case PAR_FLOAT:
 
-            if(sscanf(ch_p," %e %c",&par->value_p.f[par->num_values],&remains) != 1)
+            par->value_p.f[par->num_elements] = strtod(arg, &remaining_arg);
+
+            if(*remaining_arg != '\0' || errno != 0)
             {
-                fprintf(stderr,"Error: Invalid float for %s.%s: %s\n",
-                        cmd->name,par->name,ch_p);
-                exit(EXIT_FAILURE);
+                ccTestPrintError("invalid float for %s %s[%u]: '%s'",
+                        cmd_name, par->name, par->num_elements, arg);
+                return(EXIT_FAILURE);
             }
             break;
 
         case PAR_STRING:
 
-            if(sscanf(ch_p," %s %c",par_string,&remains) != 1)
+            // On first call, allocate space for array of pointers to strings
+
+            if(par->value_p.s == NULL)
             {
-                fprintf(stderr,"Error: Invalid token for %s.%s: %s\n",
-                        cmd->name,par->name,ch_p);
-                exit(EXIT_FAILURE);
+                par->value_p.s = calloc(par->max_num_elements, sizeof(char*));
             }
 
-            par->value_p.s[par->num_values] = strcpy(malloc(strlen(par_string)),par_string);
+            // Free and reallocate space for string argment
+
+            free(par->value_p.s[par->num_elements]);
+            par->value_p.s[par->num_elements] = strcpy(malloc(arg_len),arg);
             break;
 
         case PAR_ENUM:
 
-            if(sscanf(ch_p," %s %c",par_string,&remains) != 1)
+            // Compare first argument against list of enum strings for the parameter
+
+            for(par_enum = par->ccpars_enum, par_enum_matched = NULL ; par_enum->string != NULL ; par_enum++)
             {
-                ch_p[30] = '\0';       // Protect against long strings
-                fprintf(stderr,"Error: Invalid token for %s.%s: %s\n",
-                        cmd->name,par->name,ch_p);
-                exit(EXIT_FAILURE);
+                // If argument matches start or all of an enum string
+
+                if(strncasecmp(par_enum->string, arg, arg_len) == 0)
+                {
+                    // If first match, remember enum
+
+                    if(par_enum_matched == NULL)
+                    {
+                        par_enum_matched = par_enum;
+                    }
+                    else // else second match so report error
+                    {
+                        ccTestPrintError("ambiguous enum for %s %s[%u]: '%s'",
+                                         cmd_name, par->name, par->num_elements, arg);
+                        return(EXIT_FAILURE);
+                    }
+                }
             }
 
-            for(par_enum = par->ccpars_enum ;
-                par_enum->string != NULL && strcasecmp(par_enum->string,par_string) != 0 ;
-                par_enum++);
-
-            if(par_enum->string == NULL)
+            if(par_enum_matched == NULL)
             {
-                ch_p[30] = '\0';       // Protect against long strings
-                fprintf(stderr,"Error: Unknown value for %s.%s: %s\n",
-                        cmd->name,par->name,par_string);
-                exit(EXIT_FAILURE);
+                ccTestPrintError("unknown enum for %s %s[%u]: '%s'",
+                                 cmd_name, par->name, par->num_elements, ccTestAbbreviatedArg(arg));
+                return(EXIT_FAILURE);
             }
 
-            par->value_p.i[par->num_values] = par_enum->value;
+            par->value_p.i[par->num_elements] = par_enum_matched->value;
             break;
         }
 
-        par->num_values++;
+        par->num_elements++;
     }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static void ccparsPrintf(char * format, ...)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will print to memory that will later be written to the output to create the parameter and
-  debug pop-ups
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    va_list     argv;
-    int         n_chars;
-    char        print_buf[PARS_MAX_PRINT_LINE_LEN];
 
-    // Check for overflow of the report line pointer buffer
-
-    if(ccpars_report.num_lines > PARS_MAX_REPORT_LINES)
+    if(par->num_elements < par->min_num_elements)
     {
-        fprintf(stderr,"Error: Max number of report lines (%d) exceeded\n",PARS_MAX_REPORT_LINES);
-        exit(EXIT_FAILURE);
+        ccTestPrintError("too few values for %s %s[%u]: %u of %u",
+                         cmd_name, par->name, par->num_elements, par->num_elements, par->min_num_elements);
+        return(EXIT_FAILURE);
     }
 
-    // Print report line to local buffer variable
-
-    va_start(argv, format);
-    n_chars = vsnprintf(print_buf, PARS_MAX_PRINT_LINE_LEN, format, argv);
-    va_end(argv);
-
-    // Allocate memory for line, line to report line pointer array and copy line
-
-    free(ccpars_report.line_buf[ccpars_report.num_lines]);
-
-    ccpars_report.line_buf[ccpars_report.num_lines] = (char *)calloc(n_chars+1, sizeof(char));
-
-    strcpy(ccpars_report.line_buf[ccpars_report.num_lines++], print_buf);
+    return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccparsReportPars(char * cmd_name, struct ccpars *par)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will print the parameter values
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    uint32_t            idx;
-    uint32_t            n_chars;
-    uint32_t            num_values;
-    char                par_name_buf[PARS_INDENT+1];
-    char                value_buf[PARS_MAX_PRINT_LINE_LEN];
-
-    while(par->name != NULL)
-    {
-        snprintf(par_name_buf,PARS_INDENT,"%s.%s",cmd_name,par->name);
-
-        num_values = (par->num_values > 0 ? par->num_values : par->default_values);
-
-        for( n_chars = idx = 0 ; idx < num_values ; idx ++)
-        {
-            if(idx > 0)
-            {
-                value_buf[n_chars++] = ',';
-            }
-
-            switch(par->type)
-            {
-            case PAR_UNSIGNED:
-
-                n_chars += sprintf(&value_buf[n_chars],"% d",par->value_p.i[idx]);
-                break;
-
-            case PAR_FLOAT:
-
-                n_chars += sprintf(&value_buf[n_chars],"% .6E",par->value_p.f[idx]);
-                break;
-
-            case PAR_STRING:
-
-                n_chars += sprintf(&value_buf[n_chars]," %s",par->value_p.s[idx]);
-                break;
-
-            case PAR_ENUM:
-
-                n_chars += sprintf(&value_buf[n_chars]," %s",ccparsEnumString(par->ccpars_enum, par->value_p.i[idx]));
-                break;
-            }
-        }
-        ccparsPrintf("%-*s%s\n", PARS_INDENT, par_name_buf,value_buf);
-        par++;
-    }
-
-    ccparsPrintf("\n");
-}
-/*---------------------------------------------------------------------------------------------------------*/
-char * ccparsEnumString(struct ccpars_enum *par_enum, uint32_t value)
+char * ccParsEnumString(struct ccpars_enum *par_enum, uint32_t value)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will return the string corresponding to the enum
 \*---------------------------------------------------------------------------------------------------------*/
@@ -280,475 +168,231 @@ char * ccparsEnumString(struct ccpars_enum *par_enum, uint32_t value)
     return(par_enum->string != NULL ? par_enum->string : "invalid");
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static uint32_t ccparsCheckMissingPars(enum cccmds_enum cmd_idx)
-/*---------------------------------------------------------------------------------------------------------*/
+void ccParsPrintAll(FILE *f, char *cmd_name, struct ccpars *par)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will print the name and value(s) for all parameters for one command
+\*---------------------------------------------------------------------------------------------------------*/
 {
-    struct ccpars_group *cmd = &cmds[cmd_idx];
-    struct ccpars       *par;
-
-    // If any parameters of a required command are missing, report the details
-
-    if(cmd->n_pars_missing > 0)
+    while(par->name != NULL)
     {
-        fprintf(stderr,"Error: Group %s requires all parameters to be fully defined:\n",cmd->name);
-
-        for(par = cmd->pars; par->name != NULL ; par++)
-        {
-            if(par->num_values < par->min_values)
-            {
-                fprintf(stderr,"    %s.%s - %u of %u supplied\n",
-                        cmd->name,par->name,par->min_values,par->num_values);
-            }
-        }
-        return(1);  // Return error code
-    }
-
-    cmd->enabled = 1;     // Mark parameter set as enabled
-    return(0);            // Return no error
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void ccparsGet(int argc, char **argv)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    char    line[CC_MAX_FILE_LINE_LEN];
-    struct cccmds       *cmd;
-    struct ccpars       *par;
-
-    // Process all lines from standard input
-
-    while(fgets(line, CC_MAX_FILE_LINE_LEN, stdin) != NULL)
-    {
-        ccparsGetPar(line);
-    }
-
-    // Process all parameters from arguments
-
-    while(--argc > 0)
-    {
-        ccparsGetPar(*(++argv));
-    }
-
-    // Count how many parameters are missing values
-
-    for(cmd = cmds ; cmd->name != NULL ; cmd++)
-    {
-        cmd->enabled = 0;
-
-        for(par = cmd->pars ; par->name != NULL ; par++)
-        {
-            if(par->num_values < par->min_values)
-            {
-                cmd->n_pars_missing++;
-            }
-        }
-    }
-
-    // Global parameters must always be valid
-
-    ccparsCheckMissingPars(CMD_GLOBAL);
-
-    // Function data must be defined for the specified function
-
-    ccparsCheckMissingPars(func[ccpars_global.function].cmd_idx);
-
-    // if GLOBAL.REVERSE_TIME is enabled then GLOBAL.FG_LIMITS and GLOBAL.SIM_LOAD must be DISABLED
-
-    if(ccpars_global.reverse_time == CC_ENABLED)
-    {
-        if(ccpars_global.sim_load == CC_ENABLED || ccpars_global.fg_limits == CC_ENABLED)
-        {
-            fputs("Error: When GLOBAL.REVERSE_TIME is ENABLED, GLOBAL.FG_LIMITS and GLOBAL.SIM_LOAD must be DISABLED\n",stderr);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // if GLOBAL.REG_MODE is FIELD or CURRENT then SIM_LOAD must be ENABLED
-
-    if(ccpars_global.reg_mode != REG_VOLTAGE && ccpars_global.sim_load == CC_DISABLED)
-    {
-        fputs("Error: GLOBAL.REG_MODE of FIELD or CURRENT requires GLOBAL.SIM_LOAD to be ENABLED\n",stderr);
-        exit(EXIT_FAILURE);
-    }
-
-    // LIMITS parameters required if GLOBAL.FG_LIMITS or GLOBAL.SIM_LOAD enabled
-
-    if(ccpars_global.fg_limits == CC_ENABLED || ccpars_global.sim_load == CC_ENABLED)
-    {
-        ccparsCheckMissingPars(CMD_LIMITS);
-    }
-
-    // LOAD and VS parameters requirements depend on SIM_LOAD
-
-    if(ccpars_global.sim_load == CC_ENABLED)
-    {
-        ccparsCheckMissingPars(CMD_LOAD);
-        ccparsCheckMissingPars(CMD_VS);
-
-        // If voltage perturbation is not required then set perturb_time to far beyond end of simulation
-
-        if(ccpars_load.perturb_time <= 0.0 || ccpars_load.perturb_volts == 0.0)
-        {
-            ccpars_load.perturb_volts = 0.0;
-            ccpars_load.perturb_time  = 1.0E30;
-        }
-
-        // Ensure that open loop time/duration are coherent
-
-        if(ccpars_global.reg_mode == REG_VOLTAGE || ccpars_global.open_loop_time <= 0.0 || ccpars_global.open_loop_duration <= 0.0)
-        {
-            ccpars_global.open_loop_time = 1.0E30;
-        }
-        else
-        {
-            ccrun.close_loop_time = ccpars_global.open_loop_time + ccpars_global.open_loop_duration;
-        }
-
-        // Ensure that VS.V_REF_DELAY_ITERS is at least 1
-
-        if(ccpars_vs.v_ref_delay_iters < 1.0)
-        {
-            fprintf(stderr,"Error: VS.V_REF_DELAY_ITERS (%g) must be >= 1.0\n",ccpars_vs.v_ref_delay_iters);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // Regulation parameters requirement depends on reg mode
-
-    if(ccpars_global.reg_mode == REG_FIELD)
-    {
-        ccparsCheckMissingPars(CMD_REG_B);
-    }
-
-    if(ccpars_global.reg_mode == REG_CURRENT)
-    {
-        ccparsCheckMissingPars(CMD_REG_I);
-    }
-
-    // If simulation is enabled then ensure that open loop time/duration are coherent and v_ref_delay_iters >= 1
-
-    if(ccpars_global.sim_load == CC_ENABLED)
-    {
-        if(ccpars_global.reg_mode == REG_VOLTAGE || ccpars_global.open_loop_time <= 0.0 || ccpars_global.open_loop_duration <= 0.0)
-        {
-            ccpars_global.open_loop_time = 1.0E30;
-        }
-        else
-        {
-            ccrun.close_loop_time = ccpars_global.open_loop_time + ccpars_global.open_loop_duration;
-        }
-
-        if(ccpars_vs.v_ref_delay_iters < 1.0)
-        {
-            fprintf(stderr,"Error: VS.V_REF_DELAY_ITERS (%g) must be >= 1.0\n",ccpars_vs.v_ref_delay_iters);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // START function and ABORT_TIME require units of AMPS or GAUSS and FG_LIMITS ENABLED
-
-    if(ccpars_global.function == FG_START || ccpars_global.abort_time > 0.0)
-    {
-        if(ccpars_global.reg_mode == REG_VOLTAGE)
-        {
-            fputs("Error: START function and GLOBAL.ABORT_TIME require GLOBAL.REG_MODE of FIELD or CURRENT\n",stderr);
-            exit(EXIT_FAILURE);
-        }
-
-        if(ccpars_global.fg_limits == CC_DISABLED)
-        {
-            fputs("Error: START function and GLOBAL.ABORT_TIME require GLOBAL.FG_LIMITS to be ENABLED\n",stderr);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    // ABORT_TIME cannot lie within the open loop time window
-
-    if(ccpars_global.abort_time > 0.0)
-    {
-        if(ccpars_global.abort_time <= ccrun.close_loop_time)
-        {
-            fprintf(stderr,"Error: ABORT_TIME (%.6f) must not be before the end of the open loop window (%.6f)\n",
-                        ccpars_global.abort_time, ccrun.close_loop_time);
-            exit(EXIT_FAILURE);
-        }
-    }
-    else
-    {
-        ccpars_global.abort_time = 1.0E30;
+        ccParsPrint(f, cmd_name, par++);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccparsGenerateFlotReport(FILE *flot_file)
-/*---------------------------------------------------------------------------------------------------------*/
+void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will print the name and value(s) for one parameter
+\*---------------------------------------------------------------------------------------------------------*/
 {
-    unsigned         i;
-    struct cccmds   *cmd;
+    uint32_t            idx;
 
-    // For FLOT output, generate inline div for the Show pars pop-up
+    fprintf(f,"%-*s %-*s",CC_MAX_CMD_NAME_LEN,cmd_name,CC_MAX_PAR_NAME_LEN,par->name);
 
-    if(ccpars_global.flot_output == CC_ENABLED)
+
+    for( idx = 0 ; idx < par->num_elements ; idx++)
     {
-        ccpars_report.num_lines = 0;
-
-        ccparsPrintf("<!-- Simulation parameters pop-up -->\n\n");
-        ccparsPrintf("    <div id='inline_pars' style='padding:10px; background:#fff;font-size:14px;'>\n");
-        ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Simulation Parameters:</p>\n      <p><pre>\n");
-
-        // Generate report of all active parameter values
-
-        cmd = &cmds[0];
-
-        while(cmd->name)
+        if(idx > 0)
         {
-            if(cmd->enabled == 1)
-            {
-                ccparsReportPars(cmd->name,cmd->pars);
-            }
-
-            cmd++;
+            fputc(',',f);
         }
 
-        // Generate inline div for the Show debug pop-up
+        switch(par->type)
+        {
+        case PAR_UNSIGNED:
 
-        ccparsPrintf("      </pre></p>\n    </div>\n\n<!-- Debug parameters pop-up -->\n\n");
-        ccparsPrintf("    <div id='inline_debug' style='padding:10px; background:#fff;font-size:14px;'>\n");
-        ccparsPrintf("      <p style='font-size:22px;font-weight:bold;'>cctest Debug Information:</p>\n      <p><pre>\n");
+            fprintf(f,"% d",par->value_p.i[idx]);
+            break;
 
-        // Generate debug report and write it to FLOT file
+        case PAR_FLOAT:
 
-        ccparsGenerateDebugReport();
-        ccparsPrintReport(flot_file);
+            fprintf(f,"% .6E",par->value_p.f[idx]);
+            break;
+
+        case PAR_STRING:
+
+            fprintf(f," %s",par->value_p.s[idx]);
+            break;
+
+        case PAR_ENUM:
+
+            fprintf(f," %s",ccParsEnumString(par->ccpars_enum, par->value_p.i[idx]));
+            break;
+        }
     }
+
+    fputc('\n',f);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccparsGenerateDebugReport(void)
+void ccParsPrintDebug(FILE *f)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    unsigned             i;
+    uint32_t     i;
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
         // Report internally calculated load parameters
 
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:inv_henrys",
+        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:inv_henrys",
                      reg_pars.load_pars.inv_henrys);
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:ohms",
+        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:ohms",
                      reg_pars.load_pars.ohms);
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:tc",
+        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:tc",
                      reg_pars.load_pars.tc);
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain0",
+        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:gain0",
                      reg_pars.load_pars.gain0);
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain1",
+        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:gain1",
                      reg_pars.load_pars.gain1);
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain2",
+        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:gain2",
                      reg_pars.load_pars.gain2);
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:gain3",
+        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:gain3",
                      reg_pars.load_pars.gain3);
-        ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "LOAD:gain10",
+        fprintf(f,"%-*s% .6E\n\n", PARS_INDENT, "LOAD:gain10",
                      reg_pars.load_pars.gain10);
 
         if(reg_pars.load_pars.sat.i_end > 0.0)
         {
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.i_delta",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.i_delta",
                          reg_pars.load_pars.sat.i_delta);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.b_end",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.b_end",
                          reg_pars.load_pars.sat.b_end);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.b_factor",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.b_factor",
                          reg_pars.load_pars.sat.b_factor);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.l_rate",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "LOAD:sat.l_rate",
                          reg_pars.load_pars.sat.l_rate);
-            ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "LOAD:sat.l_clip",
+            fprintf(f,"%-*s% .6E\n\n", PARS_INDENT, "LOAD:sat.l_clip",
                          reg_pars.load_pars.sat.l_clip);
         }
 
         // Report internally calculated simulated load parameters
 
-        ccparsPrintf("%-*s% d\n",     PARS_INDENT, "SIMLOAD:vs_undersampled_flag",
+        fprintf(f,"%-*s% d\n",     PARS_INDENT, "SIMLOAD:vs_undersampled_flag",
                      reg_pars.sim_load_pars.vs_undersampled_flag);
-        ccparsPrintf("%-*s% d\n",     PARS_INDENT, "SIMLOAD:load_undersampled_flag",
+        fprintf(f,"%-*s% d\n",     PARS_INDENT, "SIMLOAD:load_undersampled_flag",
                      reg_pars.sim_load_pars.load_undersampled_flag);
-        ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:period_tc_ratio",
+        fprintf(f,"%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:period_tc_ratio",
                      reg_pars.sim_load_pars.period_tc_ratio);
 
         if(ccpars_load.sim_tc_error != 0.0)
         {
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_ser",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_ser",
                          reg_pars.sim_load_pars.load_pars.ohms_ser);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_par",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_par",
                          reg_pars.sim_load_pars.load_pars.ohms_par);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_mag",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms_mag",
                          reg_pars.sim_load_pars.load_pars.ohms_mag);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:henrys",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:henrys",
                          reg_pars.sim_load_pars.load_pars.henrys);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:inv_henrys",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:inv_henrys",
                          reg_pars.sim_load_pars.load_pars.inv_henrys);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:ohms",
                          reg_pars.sim_load_pars.load_pars.ohms);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:tc",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:tc",
                          reg_pars.sim_load_pars.load_pars.tc);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain0",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain0",
                          reg_pars.sim_load_pars.load_pars.gain0);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain1",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain1",
                          reg_pars.sim_load_pars.load_pars.gain1);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain2",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain2",
                          reg_pars.sim_load_pars.load_pars.gain2);
-            ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain3",
+            fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:gain3",
                          reg_pars.sim_load_pars.load_pars.gain3);
-            ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:gain10",
+            fprintf(f,"%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:gain10",
                          reg_pars.sim_load_pars.load_pars.gain10);
 
             if(reg_pars.sim_load_pars.load_pars.sat.i_end > 0.0)
             {
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.henrys",
+                fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.henrys",
                              reg_pars.sim_load_pars.load_pars.sat.henrys);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.i_delta",
+                fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.i_delta",
                              reg_pars.sim_load_pars.load_pars.sat.i_delta);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.b_end",
+                fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.b_end",
                              reg_pars.sim_load_pars.load_pars.sat.b_end);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.b_factor",
+                fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.b_factor",
                              reg_pars.sim_load_pars.load_pars.sat.b_factor);
-                ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.l_rate",
+                fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMLOAD:sat.l_rate",
                              reg_pars.sim_load_pars.load_pars.sat.l_rate);
-                ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:sat.l_clip",
+                fprintf(f,"%-*s% .6E\n\n", PARS_INDENT, "SIMLOAD:sat.l_clip",
                              reg_pars.sim_load_pars.load_pars.sat.l_clip);
             }
         }
 
         // Report internally calculated voltage source parameters
 
-        ccparsPrintf("%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:numerator",
+        fprintf(f,"%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:numerator",
                      reg_pars.sim_vs_pars.num[0],
                      reg_pars.sim_vs_pars.num[1],
                      reg_pars.sim_vs_pars.num[2],
                      reg_pars.sim_vs_pars.num[3]);
 
-        ccparsPrintf("%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:denominator",
+        fprintf(f,"%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:denominator",
                      reg_pars.sim_vs_pars.den[0],
                      reg_pars.sim_vs_pars.den[1],
                      reg_pars.sim_vs_pars.den[2],
                      reg_pars.sim_vs_pars.den[3]);
 
-        ccparsPrintf("%-*s% .6E\n",   PARS_INDENT, "SIMVS:step_rsp_time_iters",reg_pars.sim_vs_pars.step_rsp_time_iters);
-        ccparsPrintf("%-*s% .6E\n\n", PARS_INDENT, "SIMVS:gain",               reg_pars.sim_vs_pars.gain);
+        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMVS:step_rsp_time_iters",reg_pars.sim_vs_pars.step_rsp_time_iters);
+        fprintf(f,"%-*s% .6E\n\n", PARS_INDENT, "SIMVS:gain",               reg_pars.sim_vs_pars.gain);
 
         // Report internally calculated field regulation parameters
 
-        ccparsPrintf("%-*s% d\n", PARS_INDENT, "B_RST:alg_index", reg_pars.b_rst_pars.alg_index);
-        ccparsPrintf("%-*s% d\n", PARS_INDENT, "B_RST:dead_beat", reg_pars.b_rst_pars.dead_beat);
-
-        for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+        if(ccrun.breg_flag == 1)
         {
-            ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "B_RST:",
-                           reg_pars.b_rst_pars.rst.r[i],
-                           reg_pars.b_rst_pars.rst.s[i],
-                           reg_pars.b_rst_pars.rst.t[i]);
+            fprintf(f,"%-*s% d\n", PARS_INDENT, "B_RST:alg_index", reg_pars.b_rst_pars.alg_index);
+            fprintf(f,"%-*s% d\n", PARS_INDENT, "B_RST:dead_beat", reg_pars.b_rst_pars.dead_beat);
+
+            for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+            {
+                fprintf(f,"%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "B_RST:",
+                               reg_pars.b_rst_pars.rst.r[i],
+                               reg_pars.b_rst_pars.rst.s[i],
+                               reg_pars.b_rst_pars.rst.t[i]);
+            }
+            fprintf(f,"%-*s% 16.9E\n",   PARS_INDENT, "B_RST:track_delay_periods",
+                               reg_pars.b_rst_pars.track_delay_periods);
+            fprintf(f,"%-*s% 16.9E\n\n", PARS_INDENT, "B_RST:t0_correction",
+                               reg_pars.b_rst_pars.t0_correction);
         }
-        ccparsPrintf("%-*s% 16.9E\n",   PARS_INDENT, "B_RST:track_delay_periods",
-                           reg_pars.b_rst_pars.track_delay_periods);
-        ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "B_RST:t0_correction",
-                           reg_pars.b_rst_pars.t0_correction);
 
         // Report internally calculated current regulation parameters
 
-        ccparsPrintf("%-*s% d\n", PARS_INDENT, "I_RST:alg_index", reg_pars.i_rst_pars.alg_index);
-        ccparsPrintf("%-*s% d\n", PARS_INDENT, "I_RST:dead_beat", reg_pars.i_rst_pars.dead_beat);
-
-        for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+        if(ccrun.ireg_flag == 1)
         {
-            ccparsPrintf("%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "I_RST:",
-                           reg_pars.i_rst_pars.rst.r[i],
-                           reg_pars.i_rst_pars.rst.s[i],
-                           reg_pars.i_rst_pars.rst.t[i]);
+            fprintf(f,"%-*s% d\n", PARS_INDENT, "I_RST:alg_index", reg_pars.i_rst_pars.alg_index);
+            fprintf(f,"%-*s% d\n", PARS_INDENT, "I_RST:dead_beat", reg_pars.i_rst_pars.dead_beat);
+
+            for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+            {
+                fprintf(f,"%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "I_RST:",
+                               reg_pars.i_rst_pars.rst.r[i],
+                               reg_pars.i_rst_pars.rst.s[i],
+                               reg_pars.i_rst_pars.rst.t[i]);
+            }
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "I_RST:track_delay_periods",
+                               reg_pars.i_rst_pars.track_delay_periods);
+            fprintf(f,"%-*s% 16.9E\n\n", PARS_INDENT, "I_RST:t0_correction",
+                               reg_pars.i_rst_pars.t0_correction);
         }
-        ccparsPrintf("%-*s% 16.9E\n",   PARS_INDENT, "I_RST:track_delay_periods",
-                           reg_pars.i_rst_pars.track_delay_periods);
-        ccparsPrintf("%-*s% 16.9E\n\n", PARS_INDENT, "I_RST:t0_correction",
-                           reg_pars.i_rst_pars.t0_correction);
     }
 
-    // Report ref advance
+    // Report function meta data from last run
 
-    if(reg.mode != REG_VOLTAGE)
+    for(i = 0 ; i < ccrun.num_functions ; i++)
     {
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "REG.ref_advance", reg.ref_advance);
+        if(i > 0)
+        {
+            fputc('\n',f);
+        }
+
+        fprintf(f,"%-*s %s\n",   PARS_INDENT, "FUNCTION:",
+                            ccParsEnumString(function_type, ccpars_global.function[i]));
+        fprintf(f,"%-*s %s\n",   PARS_INDENT, "REG_MODE:",
+                            ccParsEnumString(reg_mode,      ccpars_global.reg_mode[i]));
+        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "REG:ref_advance",     ccrun.ref_advance[i]);
+        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:duration",    ccrun.fg_meta[i].duration);
+        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.start", ccrun.fg_meta[i].range.start);
+        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.end",   ccrun.fg_meta[i].range.end);
+        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.min",   ccrun.fg_meta[i].range.min);
+        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.max",   ccrun.fg_meta[i].range.max);
     }
-
-    // Report function meta data
-
-    for(i = 0 ; i < global_pars[GLOBAL_FUNCTION].num_values ; i++)
-    {
-        ccparsPrintf("\n%-*s% .6E\n", PARS_INDENT, "FUNCTION:",
-                            ccparsEnumString(function_type, ccpars_global.function[i]));
-
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:duration",    fg_meta.duration);
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.start", fg_meta.range.start);
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.end",   fg_meta.range.end);
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.min",   fg_meta.range.min);
-        ccparsPrintf("%-*s% .6E\n", PARS_INDENT, "FG_META:range.max",   fg_meta.range.max);
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void ccparsPrintReport(FILE *f)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    unsigned        i;
-
-    for(i = 0 ; i < ccpars_report.num_lines ; i++)
-    {
-        fputs(ccpars_report.line_buf[i],f);
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-int ccParsParseLine(char *line)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    char                *ch_p;
-    char                par_string[CC_MAX_FILE_LINE_LEN];
-    struct cccmds       *cmd;
-    struct ccpars       *par;
-    struct ccpars_enum  *par_enum;
-
-    // Check if line exceeds maximum length
-
-    if(strlen(line) >= (CC_MAX_FILE_LINE_LEN-1))
-    {
-        line[20] = '\0';
-        fprintf(stderr,"Error: Line starting \"%s...\" is too long (%u max)\n",
-                       line,CC_MAX_FILE_LINE_LEN-2);
-        exit(EXIT_FAILURE);
-    }
-
-    // Skip leading white space
-
-    ch_p = line;
-
-    while(isspace(*ch_p))
-    {
-        ch_p++;
-    }
-
-    // Skip blank lines and comment lines
-
-    if(*ch_p == '\0' || *ch_p == '#')
-    {
-        return;
-    }
-
-    // Try to identify the parameter cmd name
-
-    ch_p = strtok( ch_p, ".\n" );
-
-    for(cmd = cmds ; cmd->name != NULL && strcasecmp(cmd->name,ch_p) != 0; cmd++);
-
-    if(cmd->name == NULL)
-    {
-        ch_p[20] = '\0';       // Protect against long strings
-        fprintf(stderr,"Error: Unknown parameter cmd: \"%s\"\n", ch_p);
-        exit(EXIT_FAILURE);
-    }
-
-
-
-    return(EXIT_SUCCESS);
 }
 // EOF

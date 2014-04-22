@@ -48,18 +48,30 @@ struct ccpars_ramp
     struct fg_ramp_pars         ramp_pars;                  // Libfg parameters for RAMP
 };
 
-CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp;
+CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp
+#ifdef GLOBALS
+= {//   Default value           Parameter
+        0.0,                 // RAMP INITIAL_REF
+        {
+            1.0,             // RAMP FINAL_REF
+            4.0,             // RAMP ACCELERATION
+            1.0,             // RAMP LINEAR_RATE
+            6.0,             // RAMP DECELERTION
+        }
+}
+#endif
+;
 
 // RAMP data description structure
 
 CCPARS_RAMP_EXT struct ccpars   ramp_pars[]
 #ifdef GLOBALS
-= {// "Signal name"   TYPE, max_vals,min_vals,*enum, *value,                           num_defaults
-    { "INITIAL_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.initial_ref         }, 0 },
-    { "FINAL_REF",    PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.final        }, 0 },
-    { "ACCELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.acceleration }, 0 },
-    { "DECELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_ramp.config.deceleration }, 0 },
-    { "LINEAR_RATE",  PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_ramp.config.linear_rate  }, 1 },
+= {// "Signal name"   type, max_n_els,min_n_els,*enum,        *value,                       num_defaults
+    { "INITIAL_REF",  PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.initial_ref         }, 1 },
+    { "FINAL_REF",    PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.config.final        }, 1 },
+    { "ACCELERATION", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.config.acceleration }, 1 },
+    { "LINEAR_RATE",  PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.config.linear_rate  }, 1 },
+    { "DECELERATION", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.config.deceleration }, 1 },
     { NULL }
 }
 #endif

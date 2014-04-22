@@ -26,11 +26,12 @@
 
 // Function declarations
 
-void ccInitLoad       (void);
-void ccInitLimits     (void);
-void ccInitFunction   (void);
-void ccInitSimulation (void);
-void ccInitRegulation (void);
+uint32_t ccInitRun        (void);
+uint32_t ccInitLoad       (void);
+uint32_t ccInitFunctions  (void);
+uint32_t ccInitLimits     (void);
+uint32_t ccInitRegulation (void);
+uint32_t ccInitSimulation (void);
 
 #endif
 // EOF

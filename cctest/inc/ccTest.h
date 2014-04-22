@@ -54,9 +54,7 @@ struct cctest
     uint32_t                input_idx;
     struct cctest_input     input       [CC_INPUT_FILE_NEST_LIMIT];
     char                    base_path   [CC_PATH_LEN];
-    char                    csv_path    [CC_PATH_LEN];
-    char                    flot_path   [CC_PATH_LEN];
-    FILE                   *flot_file;
+    char                    csv_path    [CC_PATH_LEN * 2];
     FILE                   *csv_file;
 };
 

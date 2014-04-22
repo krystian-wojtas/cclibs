@@ -48,20 +48,34 @@ struct ccpars_plep
     struct fg_plep_pars         plep_pars;               // Libfg parameters for PLEP
 };
 
-CCPARS_PLEP_EXT struct ccpars_plep ccpars_plep;
+CCPARS_PLEP_EXT struct ccpars_plep ccpars_plep
+#ifdef GLOBALS
+= {//   Default value           Parameter
+        0.0,                 // PLEP INITIAL_REF
+        {
+            1.0,             // PLEP FINAL_REF
+            1.0,             // PLEP ACCELERATION
+            1.0,             // PLEP LINEAR_RATE
+            0.0,             // PLEP FINAL_RATE
+            0.0,             // PLEP EXP_TC
+            0.0,             // PLEP EXP_FINAL
+        }
+}
+#endif
+;
 
 // PLEP data description structure
 
 CCPARS_PLEP_EXT struct ccpars   plep_pars[]
 #ifdef GLOBALS
-= {// "Signal name"   TYPE, max_vals,min_vals,*enum,     *value,                       num_defaults
-    { "INITIAL_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.initial_ref         }, 0 },
-    { "FINAL_REF",    PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.config.final        }, 0 },
-    { "ACCELERATION", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.config.acceleration }, 0 },
-    { "LINEAR_RATE",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_plep.config.linear_rate  }, 0 },
-    { "FINAL_RATE",   PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_plep.config.final_rate   }, 1 },  // Default = 0.0
-    { "EXP_TC",       PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_plep.config.exp_tc       }, 1 },  // Default = 0.0
-    { "EXP_FINAL",    PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_plep.config.exp_final    }, 1 },  // Default = 0.0
+= {// "Signal name"   type, max_n_els,min_n_els,*enum,        *value,                       num_defaults
+    { "INITIAL_REF",  PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_plep.initial_ref         }, 1 },
+    { "FINAL_REF",    PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_plep.config.final        }, 1 },
+    { "ACCELERATION", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_plep.config.acceleration }, 1 },
+    { "LINEAR_RATE",  PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_plep.config.linear_rate  }, 1 },
+    { "FINAL_RATE",   PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_plep.config.final_rate   }, 1 },
+    { "EXP_TC",       PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_plep.config.exp_tc       }, 1 },
+    { "EXP_FINAL",    PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_plep.config.exp_final    }, 1 },
     { NULL }
 }
 #endif

@@ -91,17 +91,17 @@ CCPARS_REG_EXT struct reg_converter_pars reg_pars;  // Libreg converter regulati
 
 CCPARS_REG_EXT struct ccpars breg_pars[]
 #ifdef GLOBALS
-= {// "Signal name"         TYPE,         max_vals,  min_vals,*enum,          *value,                             num_defaults
-    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                1, NULL,        { .i = &ccpars_reg_b.period_iters        }, 1 },
-    { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_b.track_delay_periods }, 1 },
-    { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_b.clbw                }, 1 },
-    { "CLBW2",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_b.clbw2               }, 1 },
-    { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_b.z                   }, 1 },
-    { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_b.clbw3               }, 1 },
-    { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_b.clbw4               }, 1 },
-    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_b.rst.r               }, 0 },
-    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_b.rst.s               }, 0 },
-    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_b.rst.t               }, 0 },
+= {// "Signal name"         type,         max_n_els,  min_n_els,*enum,          *value,                            num_defaults
+    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                1, NULL,        { .i = &ccpars_breg.period_iters        }, 1 },
+    { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.track_delay_periods }, 1 },
+    { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw                }, 1 },
+    { "CLBW2",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw2               }, 1 },
+    { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.z                   }, 1 },
+    { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw3               }, 1 },
+    { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw4               }, 1 },
+    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_breg.rst.r               }, 0 },
+    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_breg.rst.s               }, 0 },
+    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_breg.rst.t               }, 0 },
     { NULL }
 }
 #endif
@@ -109,17 +109,17 @@ CCPARS_REG_EXT struct ccpars breg_pars[]
 
 CCPARS_REG_EXT struct ccpars ireg_pars[]
 #ifdef GLOBALS
-= {// "Signal name"         TYPE,         max_vals,  min_vals,*enum,          *value,                             num_defaults
-    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                1, NULL,        { .i = &ccpars_reg_i.period_iters        }, 1 },
-    { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_i.track_delay_periods }, 1 },
-    { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_i.clbw                }, 1 },
-    { "CLBW2",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_i.clbw2               }, 1 },
-    { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_i.z                   }, 1 },
-    { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_i.clbw3               }, 1 },
-    { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_reg_i.clbw4               }, 1 },
-    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_i.rst.r               }, 0 },
-    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_i.rst.s               }, 0 },
-    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_reg_i.rst.t               }, 0 },
+= {// "Signal name"         type,         max_n_els,  min_n_els,*enum,          *value,                            num_defaults
+    { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                1, NULL,        { .i = &ccpars_ireg.period_iters        }, 1 },
+    { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.track_delay_periods }, 1 },
+    { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw                }, 1 },
+    { "CLBW2",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw2               }, 1 },
+    { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.z                   }, 1 },
+    { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw3               }, 1 },
+    { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw4               }, 1 },
+    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_ireg.rst.r               }, 0 },
+    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_ireg.rst.s               }, 0 },
+    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_ireg.rst.t               }, 0 },
     { NULL }
 }
 #endif

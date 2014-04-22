@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 #include "ccCmds.h"
+#include "ccTest.h"
 #include "ccRun.h"
 #include "ccSigs.h"
 #include "flot.h"
@@ -35,22 +36,22 @@ static unsigned flot_index;      // Index into flot buffers
 static float    dig_offset;      // Offset to stack digital signals for FGCSPY and LVDV output formats
 
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccsigsEnableSignal(enum ccsig_idx idx)
+static void ccSigsEnableSignal(enum ccsig_idx idx)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will enable a signal and define its type to be ANALOG, DIGITAL or CURSOR. If the
-  output format is FGCSPY or LVDV then for each new digital signal the offset is moved down by -1.0
+  CSV output format is FGCSPY or LVDV then for each new digital signal the offset is moved down by -1.0
   so that they do not overlap on the graphing tool when looking at the results.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     // Enable signal
 
-    signals[idx].flag = CC_ENABLED;
+    signals[idx].control = CC_ENABLED;
 
     // Set offset for digital signals for FGCSPY and LVDV output formats
 
     if(signals[idx].type == DIGITAL &&
-       (ccpars_global.output_format == CC_FGCSPY ||
-        ccpars_global.output_format == CC_LVDV))
+       (ccpars_global.csv_format == CC_FGCSPY ||
+        ccpars_global.csv_format == CC_LVDV))
     {
         dig_offset -= 1.0;
 
@@ -59,82 +60,90 @@ static void ccsigsEnableSignal(enum ccsig_idx idx)
 
     // If FLOT output enabled then allocate buffer memory for non-Cursor signals
 
-    if(ccpars_global.output_format == CC_FLOT && signals[idx].type != CURSOR && signals[idx].buf == NULL)
+    if(ccpars_global.flot_control == CC_ENABLED && signals[idx].type != CURSOR && signals[idx].buf == NULL)
     {
+        // Allocate space for overflow point since flot_index will stop at MAX_FLOT_POINTS
+
         signals[idx].buf = (float *)calloc(MAX_FLOT_POINTS+1, sizeof(double));  // On Mac, floats are doubles
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccsigsStoreAnalog(enum ccsig_idx idx, float ana_value)
+static void ccSigsStoreAnalog(enum ccsig_idx idx, float ana_value)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will store an analog signal value that was previously enabled by ccsigsEnableSignal().
+  This function will store an analog signal value that was previously enabled by ccSigsEnableSignal().
 \*---------------------------------------------------------------------------------------------------------*/
 {
     if(signals[idx].type != ANALOG)
     {
-        fprintf(stderr,"Error: Attempt to store an analog value in signal %s which is not enabled as ANALOG\n",
+        fprintf(stderr,"Fatal: Attempt to store an analog value in signal %s which is not enabled as ANALOG\n",
                         signals[idx].name);
         exit(EXIT_FAILURE);
     }
 
-    // Store analogue value
+    // Store analogue value if signal is enabled
 
-    signals[idx].value = ana_value;
-
-    // If FLOT output format enabled then also save value in the FLOT buffer
-
-    if(ccpars_global.output_format == CC_FLOT)
+    if(signals[idx].control == CC_ENABLED)
     {
-        signals[idx].buf[flot_index] = ana_value;
+        signals[idx].value = ana_value;
+
+        // If FLOT output enabled then also save value in the FLOT buffer
+
+        if(ccpars_global.flot_control == CC_ENABLED)
+        {
+            signals[idx].buf[flot_index] = ana_value;
+        }
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccsigsStoreDigital(enum ccsig_idx idx, uint32_t dig_value)
+static void ccSigsStoreDigital(enum ccsig_idx idx, uint32_t dig_value)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will store a digital signal value that was previously enabled by ccsigsEnableSignal().
+  This function will store a digital signal value that was previously enabled by ccSigsEnableSignal().
 \*---------------------------------------------------------------------------------------------------------*/
 {
     if(signals[idx].type != DIGITAL)
     {
-        fprintf(stderr,"Error: Attempt to store a digital value in signal %s which is not enabled as DIGITAL\n",
+        fprintf(stderr,"Fatal: Attempt to store a digital value in signal %s which is not enabled as DIGITAL\n",
                         signals[idx].name);
         exit(EXIT_FAILURE);
     }
 
-    // Store digital level as a float using the digital offset
+    // Store digital level as a float using the digital offset, if signal is enabled
 
-    signals[idx].value = signals[idx].dig_offset;       // Initialise value to digital zero
-
-    if(dig_value != 0)
+    if(signals[idx].control == CC_ENABLED)
     {
-        // For digital one, the step depends on the output format
+        signals[idx].value = signals[idx].dig_offset;       // Initialise value to digital zero
 
-        if(ccpars_global.output_format == CC_STANDARD)
+        if(dig_value != 0)
         {
-            signals[idx].value += 1.0;
+            // For digital one, the step depends on the output format
+
+            if(ccpars_global.csv_format == CC_STANDARD)
+            {
+                signals[idx].value += 1.0;
+            }
+            else
+            {
+                signals[idx].value += DIG_STEP;
+            }
         }
-        else
+
+        // If FLOT output enabled then also save value in the FLOT buffer
+
+        if(ccpars_global.flot_control == CC_ENABLED)
         {
-            signals[idx].value += DIG_STEP;
+            signals[idx].buf[flot_index] = signals[idx].value;
         }
-    }
-
-    // If FLOT output format enabled then also save value in the FLOT buffer
-
-    if(ccpars_global.output_format == CC_FLOT)
-    {
-        signals[idx].buf[flot_index] = signals[idx].value;
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccsigsStoreCursor(enum ccsig_idx idx, char *cursor_label)
+void ccSigsStoreCursor(enum ccsig_idx idx, char *cursor_label)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will store a cursor signal value that was previously enabled by ccsigsEnableSignal().
+  This function will store a cursor signal value that was previously enabled by ccSigsEnableSignal().
 \*---------------------------------------------------------------------------------------------------------*/
 {
     if(signals[idx].type != CURSOR)
     {
-        fprintf(stderr,"Error: Attempt to store a cursor value in signal %s which is not enabled as CURSOR\n",
+        fprintf(stderr,"Fatal: Attempt to store a cursor value in signal %s which is not enabled as CURSOR\n",
                         signals[idx].name);
         exit(EXIT_FAILURE);
     }
@@ -144,102 +153,259 @@ void ccsigsStoreCursor(enum ccsig_idx idx, char *cursor_label)
     signals[idx].cursor_label = cursor_label;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccsigsPrintHeader(void)
+void ccSigsInit(void)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will print the signal headers to stdout for non-FLOT output formats
+  This function will enable the signals that need to be stored according to the mode(s) of the run.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t idx;
+    uint32_t    idx;
 
-    // If not FLOT output format
+    // Reset FLOT buffer index
 
-    if(ccpars_global.output_format != CC_FLOT)
+    flot_index = 0;
+
+    // Start with all signals disabled
+
+    for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
+    {
+        signals[idx].control = CC_DISABLED;
+    }
+
+    // Voltage reference is always enabled
+
+    ccSigsEnableSignal(ANA_V_REF);
+
+    // Enable additional signals with simulating load
+
+    if(ccpars_global.sim_load == CC_ENABLED)
+    {
+        // Enable cursor signals only if CSV output is for the Labview Dataviewer (LVDV)
+
+        if(ccpars_global.csv_format == CC_LVDV)
+        {
+            ccSigsEnableSignal(CSR_LOAD);
+            ccSigsEnableSignal(CSR_REGMODE);
+            ccSigsEnableSignal(CSR_REF);
+        }
+
+        // Voltage source simulation signals
+
+        ccSigsEnableSignal(ANA_V_REF_LIMITED);
+        ccSigsEnableSignal(ANA_V_MEAS);
+        ccSigsEnableSignal(ANA_V_ERR);
+        ccSigsEnableSignal(ANA_MAX_ABS_V_ERR);
+        ccSigsEnableSignal(DIG_V_REF_CLIP);
+        ccSigsEnableSignal(DIG_V_REF_RATE_CLIP);
+        ccSigsEnableSignal(DIG_V_REG_ERR_WARN);
+        ccSigsEnableSignal(DIG_V_REG_ERR_FLT);
+
+        // Field regulation signals
+
+        if(ccrun.breg_flag == 1)
+        {
+            ccSigsEnableSignal(ANA_REG_MEAS);
+            ccSigsEnableSignal(ANA_TRACK_DLY);
+            ccSigsEnableSignal(ANA_TRACK_DLY_FLTR);
+            ccSigsEnableSignal(ANA_B_REF);
+            ccSigsEnableSignal(ANA_B_REF_LIMITED);
+            ccSigsEnableSignal(ANA_B_REF_RST);
+            ccSigsEnableSignal(ANA_B_LOAD);
+            ccSigsEnableSignal(ANA_B_MEAS);
+            ccSigsEnableSignal(ANA_B_MEAS_FLTR);
+            ccSigsEnableSignal(ANA_B_MEAS_EXTR);
+            ccSigsEnableSignal(ANA_B_ERR);
+            ccSigsEnableSignal(ANA_MAX_ABS_B_ERR);
+            ccSigsEnableSignal(DIG_B_MEAS_TRIP);
+            ccSigsEnableSignal(DIG_B_MEAS_LOW);
+            ccSigsEnableSignal(DIG_B_MEAS_ZERO);
+            ccSigsEnableSignal(DIG_B_REF_CLIP);
+            ccSigsEnableSignal(DIG_B_REF_RATE_CLIP);
+            ccSigsEnableSignal(DIG_B_REG_ERR_WARN);
+            ccSigsEnableSignal(DIG_B_REG_ERR_FLT);
+        }
+
+        // Current regulation signals
+
+        if(ccrun.breg_flag == 1)
+        {
+            ccSigsEnableSignal(ANA_REG_MEAS);
+            ccSigsEnableSignal(ANA_TRACK_DLY);
+            ccSigsEnableSignal(ANA_TRACK_DLY_FLTR);
+            ccSigsEnableSignal(ANA_I_REF);
+            ccSigsEnableSignal(ANA_I_REF_LIMITED);
+            ccSigsEnableSignal(ANA_I_REF_RST);
+            ccSigsEnableSignal(ANA_I_ERR);
+            ccSigsEnableSignal(ANA_MAX_ABS_I_ERR);
+            ccSigsEnableSignal(ANA_V_REF_SAT);
+            ccSigsEnableSignal(DIG_I_REF_CLIP);
+            ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
+            ccSigsEnableSignal(DIG_I_REG_ERR_WARN);
+            ccSigsEnableSignal(DIG_I_REG_ERR_FLT);
+        }
+
+        // Current simulation signals
+
+        ccSigsEnableSignal(ANA_I_LOAD);
+        ccSigsEnableSignal(ANA_I_MEAS);
+        ccSigsEnableSignal(ANA_I_MEAS_FLTR);
+        ccSigsEnableSignal(ANA_I_MEAS_EXTR);
+        ccSigsEnableSignal(DIG_I_MEAS_TRIP);
+        ccSigsEnableSignal(DIG_I_MEAS_LOW);
+        ccSigsEnableSignal(DIG_I_MEAS_ZERO);
+    }
+
+    // If CSV output is enabled, write header to CSV file
+
+    if(ccpars_global.csv_format != CC_NONE)
     {
         // First row: print enabled signal headers
         // Add _D suffix for digital signals if output is for FGCSPY
 
-        fputs("TIME",stdout);
+        fputs("TIME",cctest.csv_file);
 
         for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
         {
-            if(signals[idx].flag == CC_ENABLED)
+            if(signals[idx].control == CC_ENABLED)
             {
-                printf( ",%s%s", signals[idx].name,
-                        ccpars_global.output_format == CC_FGCSPY &&
+                fprintf(cctest.csv_file,",%s%s", signals[idx].name,
+                        ccpars_global.csv_format == CC_FGCSPY &&
                         signals[idx].meta_data[0] == 'T' ? "_D" : "");
             }
         }
 
-        // Second row: if output is for the Labview Dataviewer (LVDV) then add meta data line
+        // Second row: if CSV output is for the Labview Dataviewer (LVDV) then add meta data line
 
-        if(ccpars_global.output_format == CC_LVDV)
+        if(ccpars_global.csv_format == CC_LVDV)
         {
-            fputs("\nMETA",stdout);
+            fputs("\nMETA",cctest.csv_file);
 
             for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
             {
-                if(signals[idx].flag == CC_ENABLED)
+                if(signals[idx].control == CC_ENABLED)
                 {
-                    printf(",%s",signals[idx].meta_data);
+                    fprintf(cctest.csv_file,",%s",signals[idx].meta_data);
                 }
             }
         }
 
-        fputc('\n',stdout);
-    }
-    else // FLOT output so reset flot signal index
-    {
-        flot_index = 0;
+        fputc('\n',cctest.csv_file);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccsigsPrintValues(double time)
+void ccSigsStore(double time)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will print the signal values to stdout.
+  This function will store all the signals for the current iteration.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t   idx;
+    // Voltage reference is always stored
 
-    // If FLOT output enabled then print flot header
+    ccSigsStoreAnalog(ANA_V_REF, reg.v_ref);
 
-    if(ccpars_global.output_format == CC_FLOT)
+    // Store other signals when simulating load - if they are not enabled then they are ignored
+
+    if(ccpars_global.sim_load == CC_ENABLED)
     {
-        if(flot_index < MAX_FLOT_POINTS)
-        {
-            flot_index++;
-        }
+        ccSigsStoreAnalog (ANA_B_REF,          reg.ref);
+        ccSigsStoreAnalog (ANA_B_REF_LIMITED,  reg.ref_limited);
+        ccSigsStoreAnalog (ANA_B_REF_RST,      reg.ref_rst);
+
+        ccSigsStoreAnalog( ANA_B_LOAD,         reg.b_sim.load);
+        ccSigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.unfiltered);
+        ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.filtered);
+        ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.extrapolated);
+
+        ccSigsStoreAnalog (ANA_I_REF,          reg.ref);
+        ccSigsStoreAnalog (ANA_I_REF_LIMITED,  reg.ref_limited);
+        ccSigsStoreAnalog (ANA_I_REF_RST,      reg.ref_rst);
+
+        ccSigsStoreAnalog (ANA_I_LOAD,         reg.i_sim.load);
+        ccSigsStoreAnalog (ANA_I_MEAS,         reg.i_meas.unfiltered);
+        ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i_meas.filtered);
+        ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i_meas.extrapolated);
+
+        ccSigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
+
+        ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v_ref_sat);
+        ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
+        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
+
+        ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
+        ccSigsStoreAnalog( ANA_TRACK_DLY_FLTR, reg.rst_vars.filtered_track_delay_periods);
+
+        ccSigsStoreAnalog (ANA_B_ERR,          reg.err);
+        ccSigsStoreAnalog (ANA_I_ERR,          reg.err);
+        ccSigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
+
+        ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v_err.max_abs_err);
+
+        ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.lim_b_meas.flags.trip);
+        ccSigsStoreDigital(DIG_B_MEAS_LOW,     reg.lim_b_meas.flags.low);
+        ccSigsStoreDigital(DIG_B_MEAS_ZERO,    reg.lim_b_meas.flags.zero);
+
+        ccSigsStoreDigital(DIG_B_REF_CLIP,     reg.lim_b_ref.flags.clip);
+        ccSigsStoreDigital(DIG_B_REF_RATE_CLIP,reg.lim_b_ref.flags.rate);
+        ccSigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b_err.warning.flag);
+        ccSigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b_err.fault.flag);
+
+        ccSigsStoreDigital(DIG_I_MEAS_TRIP, reg.lim_i_meas.flags.trip);
+        ccSigsStoreDigital(DIG_I_MEAS_LOW,  reg.lim_i_meas.flags.low);
+        ccSigsStoreDigital(DIG_I_MEAS_ZERO, reg.lim_i_meas.flags.zero);
+
+        ccSigsStoreDigital(DIG_I_REF_CLIP,     reg.lim_i_ref.flags.clip);
+        ccSigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.lim_i_ref.flags.rate);
+        ccSigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i_err.warning.flag);
+        ccSigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i_err.fault.flag);
+
+        ccSigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v_err.fault.flag);
+        ccSigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v_err.warning.flag);
+        ccSigsStoreDigital(DIG_V_REF_CLIP,     reg.lim_v_ref.flags.clip);
+        ccSigsStoreDigital(DIG_V_REF_RATE_CLIP,reg.lim_v_ref.flags.rate);
     }
-    else
+
+    // Increment FLOT data index, but clip to max number of FLOT points
+
+    if(flot_index < MAX_FLOT_POINTS)
     {
+        flot_index++;
+    }
+
+    // If CSV output is enabled, write data to CSV file
+
+    if(ccpars_global.csv_format != CC_NONE)
+    {
+        uint32_t idx;
+
         // Print the timestamp first with microsecond resolution
 
-        printf("%.6f",time);
+        fprintf(cctest.csv_file,"%.6f",time);
 
         // Print enabled signal values
 
         for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
         {
-            if(signals[idx].flag == CC_ENABLED)
+            if(signals[idx].control == CC_ENABLED)
             {
-                putchar(',');
+                fputc(',',cctest.csv_file);
 
                 switch(signals[idx].type)
                 {
                 case ANALOG:
 
-                    printf("%.7E",signals[idx].value);
+                    fprintf(cctest.csv_file,"%.7E",signals[idx].value);
                     break;
 
                 case DIGITAL:
 
-                    printf("%.1f",signals[idx].value);
+                    fprintf(cctest.csv_file,"%.1f",signals[idx].value);
                     break;
 
                 case CURSOR:        // Cursor values - clear cursor label after printing
 
                     if(signals[idx].cursor_label != NULL)
                     {
-                        printf("%s",signals[idx].cursor_label);
+                        fputs(signals[idx].cursor_label, cctest.csv_file);
                         signals[idx].cursor_label = NULL;
                     }
                     break;
@@ -247,357 +413,206 @@ static void ccsigsPrintValues(double time)
             }
         }
 
-        fputc('\n',stdout);
+        fputc('\n',cctest.csv_file);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccsigsPrepare(void)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will enable the signals that need to be stored according to the mode of the run.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    // Voltage reference is always enabled
-
-    ccsigsEnableSignal(ANA_V_REF);
-
-    // Enable additional signals with simulating load
-
-    if(ccpars_global.sim_load == CC_ENABLED)
-    {
-        // Enable cursor signals only if output is for the Labview Dataviewer (LVDV)
-
-        if(ccpars_global.output_format == CC_LVDV)
-        {
-            ccsigsEnableSignal(CSR_LOAD);
-            ccsigsEnableSignal(CSR_REGMODE);
-            ccsigsEnableSignal(CSR_REF);
-        }
-
-        // Voltage source simulation signals
-
-        ccsigsEnableSignal(ANA_V_REF_LIMITED);
-        ccsigsEnableSignal(ANA_V_MEAS);
-        ccsigsEnableSignal(ANA_V_ERR);
-        ccsigsEnableSignal(ANA_MAX_ABS_V_ERR);
-        ccsigsEnableSignal(DIG_V_REF_CLIP);
-        ccsigsEnableSignal(DIG_V_REF_RATE_CLIP);
-        ccsigsEnableSignal(DIG_V_REG_ERR_WARN);
-        ccsigsEnableSignal(DIG_V_REG_ERR_FLT);
-
-        switch(ccpars_global.reg_mode)
-        {
-        case REG_FIELD:
-
-            // Field regulation signals
-
-            ccsigsEnableSignal(ANA_REG_MEAS);
-            ccsigsEnableSignal(ANA_TRACK_DLY);
-            ccsigsEnableSignal(ANA_TRACK_DLY_FLTR);
-            ccsigsEnableSignal(ANA_B_REF);
-            ccsigsEnableSignal(ANA_B_REF_LIMITED);
-            ccsigsEnableSignal(ANA_B_REF_RST);
-            ccsigsEnableSignal(ANA_B_LOAD);
-            ccsigsEnableSignal(ANA_B_MEAS);
-            ccsigsEnableSignal(ANA_B_MEAS_FLTR);
-            ccsigsEnableSignal(ANA_B_MEAS_EXTR);
-            ccsigsEnableSignal(ANA_B_ERR);
-            ccsigsEnableSignal(ANA_MAX_ABS_B_ERR);
-            ccsigsEnableSignal(DIG_B_MEAS_TRIP);
-            ccsigsEnableSignal(DIG_B_MEAS_LOW);
-            ccsigsEnableSignal(DIG_B_MEAS_ZERO);
-            ccsigsEnableSignal(DIG_B_REF_CLIP);
-            ccsigsEnableSignal(DIG_B_REF_RATE_CLIP);
-            ccsigsEnableSignal(DIG_B_REG_ERR_WARN);
-            ccsigsEnableSignal(DIG_B_REG_ERR_FLT);
-            break;
-
-        case REG_CURRENT:
-
-            // Current regulation signals
-
-            ccsigsEnableSignal(ANA_REG_MEAS);
-            ccsigsEnableSignal(ANA_TRACK_DLY);
-            ccsigsEnableSignal(ANA_TRACK_DLY_FLTR);
-            ccsigsEnableSignal(ANA_I_REF);
-            ccsigsEnableSignal(ANA_I_REF_LIMITED);
-            ccsigsEnableSignal(ANA_I_REF_RST);
-            ccsigsEnableSignal(ANA_I_ERR);
-            ccsigsEnableSignal(ANA_MAX_ABS_I_ERR);
-            ccsigsEnableSignal(ANA_V_REF_SAT);
-            ccsigsEnableSignal(DIG_I_REF_CLIP);
-            ccsigsEnableSignal(DIG_I_REF_RATE_CLIP);
-            ccsigsEnableSignal(DIG_I_REG_ERR_WARN);
-            ccsigsEnableSignal(DIG_I_REG_ERR_FLT);
-            break;
-        }
-
-        // Current simulation signals
-
-        ccsigsEnableSignal(ANA_I_LOAD);
-        ccsigsEnableSignal(ANA_I_MEAS);
-        ccsigsEnableSignal(ANA_I_MEAS_FLTR);
-        ccsigsEnableSignal(ANA_I_MEAS_EXTR);
-        ccsigsEnableSignal(DIG_I_MEAS_TRIP);
-        ccsigsEnableSignal(DIG_I_MEAS_LOW);
-        ccsigsEnableSignal(DIG_I_MEAS_ZERO);
-    }
-
-    // Write signal headers
-
-    ccsigsPrintHeader();
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void ccsigsStore(double time)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will store all the signals for the current iteration.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    // Voltage reference is always stored
-
-    ccsigsStoreAnalog(ANA_V_REF, reg.v_ref);
-
-    // Store other signals when simulating load
-
-    if(ccpars_global.sim_load == CC_ENABLED)
-    {
-        // Store voltage reference signals
-
-        ccsigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
-        ccsigsStoreAnalog (ANA_V_REF,          reg.v_ref);
-        ccsigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
-        ccsigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
-        ccsigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v_err.max_abs_err);
-
-        ccsigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v_err.fault.flag);
-        ccsigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v_err.warning.flag);
-        ccsigsStoreDigital(DIG_V_REF_CLIP,     reg.lim_v_ref.flags.clip);
-        ccsigsStoreDigital(DIG_V_REF_RATE_CLIP,reg.lim_v_ref.flags.rate);
-
-        // Store field or current signals according to regulation units
-
-        switch(ccpars_global.reg_mode)
-        {
-        case REG_FIELD:
-
-            // Field regulation signals
-
-            ccsigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
-            ccsigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
-            ccsigsStoreAnalog( ANA_TRACK_DLY_FLTR, reg.rst_vars.filtered_track_delay_periods);
-
-            ccsigsStoreAnalog( ANA_B_LOAD,         reg.b_sim.load);
-            ccsigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.unfiltered);
-            ccsigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.filtered);
-            ccsigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.extrapolated);
-            ccsigsStoreAnalog (ANA_B_REF,          reg.ref);
-            ccsigsStoreAnalog (ANA_B_REF_LIMITED,  reg.ref_limited);
-            ccsigsStoreAnalog (ANA_B_REF_RST,      reg.ref_rst);
-            ccsigsStoreAnalog (ANA_B_ERR,          reg.err);
-            ccsigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.max_abs_err);
-
-            ccsigsStoreDigital(DIG_B_MEAS_TRIP,    reg.lim_b_meas.flags.trip);
-            ccsigsStoreDigital(DIG_B_MEAS_LOW,     reg.lim_b_meas.flags.low);
-            ccsigsStoreDigital(DIG_B_MEAS_ZERO,    reg.lim_b_meas.flags.zero);
-            ccsigsStoreDigital(DIG_B_REF_CLIP,     reg.lim_b_ref.flags.clip);
-            ccsigsStoreDigital(DIG_B_REF_RATE_CLIP,reg.lim_b_ref.flags.rate);
-            ccsigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b_err.fault.flag);
-            ccsigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b_err.warning.flag);
-            break;
-
-        case REG_CURRENT:
-
-            // Current regulation signals
-
-            ccsigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
-            ccsigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
-            ccsigsStoreAnalog( ANA_TRACK_DLY_FLTR, reg.rst_vars.filtered_track_delay_periods);
-
-            ccsigsStoreAnalog (ANA_I_REF,          reg.ref);
-            ccsigsStoreAnalog (ANA_I_REF_LIMITED,  reg.ref_limited);
-            ccsigsStoreAnalog (ANA_I_REF_RST,      reg.ref_rst);
-            ccsigsStoreAnalog (ANA_I_ERR,          reg.err);
-            ccsigsStoreAnalog (ANA_V_REF_SAT,      reg.v_ref_sat);
-            ccsigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.max_abs_err);
-
-            ccsigsStoreDigital(DIG_I_REF_CLIP,     reg.lim_i_ref.flags.clip);
-            ccsigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.lim_i_ref.flags.rate);
-            ccsigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i_err.fault.flag);
-            ccsigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i_err.warning.flag);
-            break;
-        }
-
-        // Store current simulation signals
-
-        ccsigsStoreAnalog (ANA_I_LOAD,      reg.i_sim.load);
-        ccsigsStoreAnalog (ANA_I_MEAS,      reg.i_meas.unfiltered);
-        ccsigsStoreAnalog (ANA_I_MEAS_FLTR, reg.i_meas.filtered);
-        ccsigsStoreAnalog (ANA_I_MEAS_EXTR, reg.i_meas.extrapolated);
-
-        ccsigsStoreDigital(DIG_I_MEAS_TRIP, reg.lim_i_meas.flags.trip);
-        ccsigsStoreDigital(DIG_I_MEAS_LOW,  reg.lim_i_meas.flags.low);
-        ccsigsStoreDigital(DIG_I_MEAS_ZERO, reg.lim_i_meas.flags.zero);
-    }
-
-    // Print enabled values to stdout
-
-    ccsigsPrintValues(time);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void ccsigsFlot(void)
+void ccSigsFlot(FILE *f)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will print the flot data and footer
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t   iteration_idx;
-    uint32_t   sig_idx;
-    double     time;
-    double     end_time;
+    uint32_t       func_idx;
+    uint32_t       iteration_idx;
+    uint32_t       sig_idx;
+    double         time;
+    double         end_flot_time;
+    double         start_func_time;
+    struct cccmds *cmd;
 
-    // If FLOT output enabled then print flot header
+    // Print start of FLOT html page including flot path to all the javascript libraries
 
-    if(ccpars_global.output_format == CC_FLOT)
+    fprintf(f,flot[0],FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
+
+    // Time of end of FLOT data
+
+    start_func_time = 0.0;
+    end_flot_time   = flot_index * reg.iter_period;
+
+    // For each function
+
+    for(func_idx = 0 ; func_idx < ccrun.num_functions ; func_idx++)
     {
-        // Print start of FLOT html page including flot path to all the javascript libraries
-
-        printf(flot[0],FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
-
         // Print table, pppl or plep data if selected and use points instead of lines
 
-        if(ccpars_global.function == FG_TABLE ||
-           ccpars_global.function == FG_PPPL ||
-           ccpars_global.function == FG_PLEP)
+        if(ccpars_global.function[func_idx] == FG_TABLE ||
+           ccpars_global.function[func_idx] == FG_PPPL ||
+           ccpars_global.function[func_idx] == FG_PLEP)
         {
-            printf("\"%s\": { lines: { show:false }, points: { show:true },\ndata:[",
-                   ccparsEnumString(function_type, ccpars_global.function));
+            fprintf(f,"\"%u.%s\": { lines: { show:false }, points: { show:true },\ndata:[",
+                      func_idx+1, ccParsEnumString(function_type, ccpars_global.function[func_idx]));
 
-            end_time = flot_index * reg.iter_period;
-
-            switch(ccpars_global.function)
+            switch(ccpars_global.function[func_idx])
             {
             default: break;     // Suppress gcc warning
 
             case FG_TABLE:
 
-                for(iteration_idx = 0 ; iteration_idx < table_pars[0].num_values &&
-                                        (time = ccpars_table.time[iteration_idx] + ccpars_global.run_delay) < end_time ; iteration_idx++)
+                for(iteration_idx = 0 ; iteration_idx < table_pars[0].num_elements ; iteration_idx++)
                 {
-                    printf("[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);
+                    time = start_func_time + ccpars_global.run_delay + ccpars_table.time[iteration_idx];
+
+                    if(time < end_flot_time)
+                    {
+                        fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);
+                    }
                 }
                 break;
 
             case FG_PPPL:
 
-                printf("[%.6f,%.7E],", ccpars_global.run_delay, ccpars_pppl.initial_ref);
+                time = start_func_time + ccpars_global.run_delay;
 
-                for(iteration_idx = 0 ; iteration_idx < ccpars_pppl.pppl_pars.num_segs &&
-                                        ccpars_pppl.pppl_pars.time[iteration_idx] < end_time ; iteration_idx++)
+                if(time < end_flot_time)
                 {
-                    printf("[%.6f,%.7E],",
-                            ccpars_pppl.pppl_pars.time[iteration_idx],
-                            ccpars_pppl.pppl_pars.a0  [iteration_idx]);
+                    fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref);
+
+                    for(iteration_idx = 0 ; iteration_idx < ccpars_pppl.pppl_pars.num_segs ; iteration_idx++)
+                    {
+                        time = start_func_time + ccpars_pppl.pppl_pars.time[iteration_idx];
+
+                        if(time < end_flot_time)
+                        {
+                            fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pppl_pars.a0[iteration_idx]);
+                        }
+                    }
                 }
                 break;
 
             case FG_PLEP:
 
-                printf("[%.6f,%.7E],", ccpars_global.run_delay, ccpars_plep.initial_ref);
+                time = start_func_time + ccpars_global.run_delay;
 
-                for(iteration_idx = 0 ; iteration_idx <= FG_PLEP_N_SEGS && 
-                                        ccpars_plep.plep_pars.time[iteration_idx] < end_time ; iteration_idx++)
+                if(time < end_flot_time)
                 {
-                    printf("[%.6f,%.7E],",
-                            ccpars_plep.plep_pars.time[iteration_idx],
-                            ccpars_plep.plep_pars.normalisation * ccpars_plep.plep_pars.ref[iteration_idx]);
+                    fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref);
+
+                    for(iteration_idx = 0 ; iteration_idx <= FG_PLEP_N_SEGS ; iteration_idx++)
+                    {
+                        time = start_func_time + ccpars_plep.plep_pars.time[iteration_idx];
+
+                        if(time < end_flot_time)
+                        {
+                            fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.plep_pars.normalisation * ccpars_plep.plep_pars.ref[iteration_idx]);
+                        }
+                    }
                 }
                 break;
             }
 
-            puts("]\n },");
+            fputs("]\n },\n",f);
         }
 
-        // Print enabled analogue signal values
-
-        for(sig_idx = 0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
-        {
-            if(signals[sig_idx].flag == CC_ENABLED && signals[sig_idx].type == ANALOG)
-            {
-                printf("\"%s\": { lines: { steps:%s }, points: { show:false },\ndata:[",
-                        signals[sig_idx].name,
-                        signals[sig_idx].meta_data[0] == 'T' ? "true" : "false");
-
-                for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
-                {
-                    // Only print changed values when meta_data is TRAIL_STEP
-
-                    if(iteration_idx == 0 ||
-                       iteration_idx == (flot_index - 1) ||
-                       signals[sig_idx].meta_data[0] != 'T' ||
-                       signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
-                    {
-                        if(ccpars_global.reverse_time == CC_DISABLED)
-                        {
-                            time = reg.iter_period * iteration_idx;
-                        }
-                        else
-                        {
-                            time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
-                        }
-
-                        printf("[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
-                    }
-                }
-                puts("]\n },");
-            }
-        }
-
-        // Print start of digital signals
-
-        puts(flot[1]);
-
-        // Print enabled digital signal values
-
-        for(sig_idx = 0, dig_offset = -DIG_STEP/2.0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
-        {
-            if(signals[sig_idx].flag == CC_ENABLED && signals[sig_idx].type == DIGITAL)
-            {
-                dig_offset -= 1.0;
-
-                printf("\"%s\": {\n lines: { steps:%s },\n data:[",
-                        signals[sig_idx].name,
-                        signals[sig_idx].meta_data[0] == 'T' ? "true" : "false");
-
-                for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
-                {
-                    // Only print changed values when meta_data is TRAIL_STEP
-
-                    if(iteration_idx == 0 ||
-                       iteration_idx == (flot_index - 1) ||
-                       signals[sig_idx].meta_data[0] != 'T' ||
-                       signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
-                    {
-                        if(ccpars_global.reverse_time == CC_DISABLED)
-                        {
-                            time = reg.iter_period * iteration_idx;
-                        }
-                        else
-                        {
-                            time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
-                        }
-
-                        printf("[%.6f,%.2f],", time, signals[sig_idx].buf[iteration_idx] + dig_offset);
-                    }
-                }
-                puts("]\n },");
-            }
-        }
-
-        // Print configuration data to become a colorbox pop-up
-
-        puts(flot[2]);
-
-        ccparsPrintReport(stdout);
-
-        puts(flot[3]);
+        start_func_time += ccrun.fg_meta[func_idx].duration + ccpars_global.pre_func_delay;
     }
+
+    // Print enabled analogue signal values
+
+    for(sig_idx = 0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
+    {
+        if(signals[sig_idx].control == CC_ENABLED && signals[sig_idx].type == ANALOG)
+        {
+            fprintf(f,"\"%s\": { lines: { steps:%s }, points: { show:false },\ndata:[",
+                    signals[sig_idx].name,
+                    signals[sig_idx].meta_data[0] == 'T' ? "true" : "false");
+
+            for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
+            {
+                // Only print changed values when meta_data is TRAIL_STEP
+
+                if(iteration_idx == 0 ||
+                   iteration_idx == (flot_index - 1) ||
+                   signals[sig_idx].meta_data[0] != 'T' ||
+                   signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
+                {
+                    if(ccpars_global.reverse_time == CC_DISABLED)
+                    {
+                        time = reg.iter_period * iteration_idx;
+                    }
+                    else
+                    {
+                        time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
+                    }
+
+                    fprintf(f,"[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
+                }
+            }
+            fputs("]\n },\n",f);
+        }
+    }
+
+    // Print start of digital signals
+
+    fputs(flot[1],f);
+
+    // Print enabled digital signal values
+
+    for(sig_idx = 0, dig_offset = -DIG_STEP/2.0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
+    {
+        if(signals[sig_idx].control == CC_ENABLED && signals[sig_idx].type == DIGITAL)
+        {
+            dig_offset -= 1.0;
+
+            fprintf(f,"\"%s\": {\n lines: { steps:%s },\n data:[",
+                    signals[sig_idx].name,
+                    signals[sig_idx].meta_data[0] == 'T' ? "true" : "false");
+
+            for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
+            {
+                // Only print changed values when meta_data is TRAIL_STEP
+
+                if(iteration_idx == 0 ||
+                   iteration_idx == (flot_index - 1) ||
+                   signals[sig_idx].meta_data[0] != 'T' ||
+                   signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
+                {
+                    if(ccpars_global.reverse_time == CC_DISABLED)
+                    {
+                        time = reg.iter_period * iteration_idx;
+                    }
+                    else
+                    {
+                        time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
+                    }
+
+                    fprintf(f,"[%.6f,%.2f],", time, signals[sig_idx].buf[iteration_idx] + dig_offset);
+                }
+            }
+            fputs("]\n },\n",f);
+        }
+    }
+
+    // Print command parameter values to become a colorbox pop-up
+
+    fputs(flot[2],f);
+
+    for(cmd = cmds ; cmd->name != NULL ; cmd++)
+    {
+        if(cmd->enabled == 1)
+        {
+            fputc('\n',f);
+            ccParsPrintAll(f, cmd->name, cmd->pars);
+        }
+    }
+
+    // Print debug variable to become a colorbox pop-up
+
+    fputs(flot[3],f);
+
+    ccParsPrintDebug(f);
+
+    // Write HTML file footer
+
+    fputs(flot[4],f);
 }
 // EOF

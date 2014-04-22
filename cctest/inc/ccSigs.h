@@ -124,7 +124,7 @@ struct signals
     char                       *name;                   // Signal name
     enum ccsig_type             type;                   // Signal type (CURSON, ANALOG, DIGITAL)
     char                       *meta_data;              // LVDV meta data (CURSOR, TRAIL_STEP)
-    enum cc_enabled_disabled    flag;                   // Signal in use flag (ENABLED/DISABLED)
+    enum cc_enabled_disabled    control;                   // Signal in use flag (ENABLED/DISABLED)
     float                       dig_offset;             // Digital trace offset
     float                       value;                  // Signal value
     char                       *cursor_label;           // Cursor signal label
@@ -202,10 +202,10 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
 
 // Function declarations
 
-void    ccsigsPrepare           (void);
-void    ccsigsStore             (double time);
-void    ccsigsStoreCursor       (enum ccsig_idx idx, char *cursor_label);
-void    ccsigsFlot              (void);
+void    ccSigsInit              (void);
+void    ccSigsStore             (double time);
+void    ccSigsStoreCursor       (enum ccsig_idx idx, char *cursor_label);
+void    ccSigsFlot              (FILE *f);
 
 #endif
 // EOF

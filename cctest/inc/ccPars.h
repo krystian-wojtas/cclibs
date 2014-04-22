@@ -36,7 +36,7 @@
 
 // Constants
 
-#define PARS_INDENT             30
+#define PARS_INDENT             31
 #define PARS_MAX_PRINT_LINE_LEN (CC_MAX_FILE_LINE_LEN*8)      // Allow for longest print line for table
 #define PARS_MAX_REPORT_LINES   1000
 
@@ -56,8 +56,8 @@ struct ccpars
 {
     char               *name;
     enum ccpars_type    type;
-    uint32_t            max_values;
-    uint32_t            min_values;
+    uint32_t            max_num_elements;
+    uint32_t            min_num_elements;
     struct ccpars_enum *ccpars_enum;
     union
     {
@@ -66,8 +66,7 @@ struct ccpars
         char          **s;
     } value_p;
 
-    uint32_t            default_values;
-    uint32_t            num_values;
+    uint32_t            num_elements;
 };
 
 struct ccpars_enum
@@ -104,11 +103,14 @@ CCPARS_EXT struct ccpars_enum enabled_disabled[]
 
 // Function declarations
 
-char  * ccparsEnumString            (struct ccpars_enum *par_enum, uint32_t value);
-void    ccparsGet                   (int argc, char **argv);
-void    ccparsGenerateFlotReport    (void);
-void    ccparsGenerateDebugReport   (void);
-void    ccparsPrintReport           (FILE *f);
+uint32_t ccParsGet                  (char *cmd_name, struct ccpars *par, char **remaining_line);
+char    *ccParsEnumString           (struct ccpars_enum *par_enum, uint32_t value);
+void     ccParsGenerateFlotReport   (FILE *f);
+uint32_t ccParsCheckMissingPars     (uint32_t cmd_idx);
+void     ccParsPrintAll             (FILE *f, char *cmd_name, struct ccpars *par);
+void     ccParsPrint                (FILE *f, char *cmd_name, struct ccpars *par);
+void     ccParsPrintFlotFooter      (FILE *f);
+void     ccParsPrintDebug           (FILE *f);
 
 #endif
 // EOF

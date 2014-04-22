@@ -68,7 +68,7 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 
 CCPARS_VS_EXT struct ccpars vs_pars[]
 #ifdef GLOBALS
-= {// "Signal name"       TYPE,   max_vals,        min_vals,*enum,         *value,                     num_defaults
+= {// "Signal name"       type,   max_n_els,        min_n_els,*enum,         *value,                     num_defaults
     { "V_REF_DELAY_ITERS",PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.v_ref_delay_iters }, 1 },
     { "BANDWIDTH",        PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.bandwidth         }, 1 },
     { "Z",                PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.z                 }, 1 },

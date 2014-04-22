@@ -51,15 +51,21 @@ struct ccpars_table
     struct fg_table_pars        table_pars;             // Libfg parameters for TABLE
 };
 
-CCPARS_TABLE_EXT struct ccpars_table ccpars_table;
-
+CCPARS_TABLE_EXT struct ccpars_table ccpars_table
+#ifdef GLOBALS
+= {//     Default value                Parameter
+        { 0.0, 1.0, 1.0, 0.0 },     // TABLE REF
+        { 0.0, 1.0, 2.0, 3.0 }      // TABLE TIME
+}
+#endif
+;
 // Table data description structure
 
 CCPARS_TABLE_EXT struct ccpars   table_pars[]
 #ifdef GLOBALS
-= {// "Signal name", TYPE,       max_vals, min_vals, *enum,       *value,        num_defaults
-    { "REF",         PAR_FLOAT, TABLE_LEN, 2, NULL,        { .f = ccpars_table.ref  }, 0 },
-    { "TIME",        PAR_FLOAT, TABLE_LEN, 2, NULL,        { .f = ccpars_table.time }, 0 },
+= {// "Signal name", type,      max_n_els, min_n_els,*enum,       *value,         num_defaults
+    { "REF",         PAR_FLOAT, TABLE_LEN,         2, NULL, { .f = ccpars_table.ref  }, 4 },
+    { "TIME",        PAR_FLOAT, TABLE_LEN,         2, NULL, { .f = ccpars_table.time }, 4 },
     { NULL }
 }
 #endif

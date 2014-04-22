@@ -48,16 +48,27 @@ struct ccpars_trim
     struct fg_trim_pars        trim_pars;               // Libfg parameters for TRIM
 };
 
-CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim;
+CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim
+#ifdef GLOBALS
+= {//   Default value           Parameter
+        0.0,                 // TRIM INITIAL_REF
+        {
+            FG_TRIM_LINEAR,  // Overwritten by init function (LTRIM or CTRIM)
+            1.0,             // TRIM DURATION
+            1.0,             // TRIM FINAL
+        }
+}
+#endif
+;
 
 // Trim data description structure
 
 CCPARS_TRIM_EXT struct ccpars   trim_pars[]
 #ifdef GLOBALS
-= {// "Signal name"  TYPE,max_vals,min_vals,*enum,      *value,                   num_defaults
-    { "INITIAL_REF", PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_trim.initial_ref     }, 0 },
-    { "FINAL_REF",   PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_trim.config.final    }, 0 },
-    { "DURATION",    PAR_FLOAT,  1, 0, NULL,     { .f = &ccpars_trim.config.duration }, 1 }, // Default = 0.0
+= {// "Signal name"  type,max_n_els,min_n_els,*enum,        *value,                   num_defaults
+    { "INITIAL_REF", PAR_FLOAT,   1,        1, NULL, { .f = &ccpars_trim.initial_ref     }, 1 },
+    { "FINAL_REF",   PAR_FLOAT,   1,        1, NULL, { .f = &ccpars_trim.config.final    }, 1 },
+    { "DURATION",    PAR_FLOAT,   1,        1, NULL, { .f = &ccpars_trim.config.duration }, 1 },
     { NULL }
 }
 #endif

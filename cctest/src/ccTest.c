@@ -39,6 +39,9 @@
 
 #include "ccCmds.h"
 #include "ccTest.h"
+#include "ccRun.h"
+#include "ccRef.h"
+#include "ccSigs.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, char **argv)
@@ -56,6 +59,8 @@ int main(int argc, char **argv)
 
     if(argc == 1)
     {
+        cctest.input[0].line_number++;
+
         exit_status = ccTestParseLine("read");
     }
     else
@@ -64,6 +69,8 @@ int main(int argc, char **argv)
 
         while(exit_status == EXIT_SUCCESS && --argc > 0)
         {
+            cctest.input[0].line_number++;
+
             exit_status = ccTestParseLine(*(++argv));
         }
     }
@@ -129,7 +136,7 @@ uint32_t ccTestParseLine(char *line)
              }
              else // else second match so report error
              {
-                 ccTestPrintError("ambiguous command '%s'", ccTestAbbreviatedArg(command));
+                 ccTestPrintError("ambiguous command '%s'", command);
                  return(EXIT_FAILURE);
              }
          }
@@ -166,13 +173,13 @@ char * ccTestGetArgument(char **remaining_line)
     {
         remains = arg + strcspn(arg, CC_ARG_DELIMITER);
 
-        // Nul terminate the new argument
+        // Nul terminate the new argument and skip trailing delimiter characters
 
         if(*remains != '\0')
         {
             *(remains++) = '\0';
 
-            remains += strcspn(remains, CC_ARG_DELIMITER);
+            remains += strspn(remains, CC_ARG_DELIMITER);
         }
 
         // If no more arguments on the line then set *remaining_line to NULL
@@ -192,30 +199,35 @@ char * ccTestGetArgument(char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*/
 void ccTestPrintError(const char * format, ...)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function print an error message to stdout with the filename and line number prefix, if reading from
-  a file.
+  This function print an error message to stdout. It adds an appropriate prefix according to the source of
+  the input line being processed.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     va_list     argv;
 
-    // Print input file name and line number if reading from file
+    // If processing command line arguments
 
-    if(cctest.input[cctest.input_idx].line_number == 0)
+    if(cctest.input_idx == 0)
     {
-        // Reading from stdin
-
-        printf("Error - ");
+        printf("Error at argument %u - ",cctest.input[0].line_number);
     }
     else
     {
-        // Reading from file
+        // If reading from stdin
 
-        printf("Error at %s:%u - ",
-                cctest.input[cctest.input_idx].path,
-                cctest.input[cctest.input_idx].line_number);
+        if(cctest.input[cctest.input_idx].line_number == 0)
+        {
+            printf("Error - ");
+        }
+        else // else reading from file
+        {
+            printf("Error at %s:%u - ",
+                    cctest.input[cctest.input_idx].path,
+                    cctest.input[cctest.input_idx].line_number);
+        }
     }
 
-    // Print error message to stdout
+    // Print error message
 
     va_start(argv, format);
     vprintf(format, argv);
@@ -255,7 +267,7 @@ uint32_t ccTestNoMoreArgs(char **remaining_line)
 
     if(arg != NULL)
     {
-        ccTestPrintError("Unexpected argument '%s'", ccTestAbbreviatedArg(arg));
+        ccTestPrintError("unexpected argument '%s'", ccTestAbbreviatedArg(arg));
         return(EXIT_FAILURE);
     }
 

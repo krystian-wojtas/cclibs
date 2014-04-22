@@ -28,13 +28,85 @@
 
 // Include cctest program header files
 
-#include "ccPars.h"
+#include "ccCmds.h"
+#include "ccTest.h"
 #include "ccRef.h"
 #include "ccSigs.h"
 #include "ccRun.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
-static void ccrunAbort(float time)
+    // If voltage source will be simulated
+
+/*    if(ccpars_global.sim_load == CC_ENABLED)
+    {
+        reg.mode = REG_NONE;                    // Reset reg.mode since regSetMode & regSetVoltageMode are
+                                                // change sensitive
+        // If voltage regulation enabled
+
+        if(ccpars_global.reg_mode == REG_VOLTAGE)
+        {
+            regSetVoltageMode(&reg, &reg_pars);
+        }
+        else
+        {
+            // Initialise limited reference to equal the starting value of the reference function
+
+            reg.ref_rst = reg.ref_limited = ccrun.fg_meta[0].range.start;
+
+            // Calculate track delay in iteration periods
+
+            switch(ccpars_global.reg_mode)
+            {
+            case REG_FIELD:  // Initialise field regulation
+
+                status = regRstInit(&reg_pars.b_rst_pars,
+                                    reg.iter_period, ccpars_reg_b.period_iters, &reg_pars.load_pars,
+                                    ccpars_reg_b.clbw, ccpars_reg_b.clbw2, ccpars_reg_b.z,
+                                    ccpars_reg_b.clbw3, ccpars_reg_b.clbw4,
+                                    regCalcPureDelay(&reg, &reg_pars),
+                                    ccpars_reg_b.track_delay_periods,
+                                    REG_FIELD, &ccpars_reg_b.rst);
+
+
+                // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
+                // corresponds to steady state reg.b_meas (last parameter is the rate of change)
+
+                regSetMode(&reg, &reg_pars, REG_FIELD, reg.b_meas.unfiltered, 0.0);
+                break;
+
+            case REG_CURRENT:   // Initialise current regulation
+
+                status = regRstInit(&reg_pars.i_rst_pars,
+                                    reg.iter_period, ccpars_reg_i.period_iters, &reg_pars.load_pars,
+                                    ccpars_reg_i.clbw, ccpars_reg_i.clbw2, ccpars_reg_i.z,
+                                    ccpars_reg_i.clbw3, ccpars_reg_i.clbw4,
+                                    regCalcPureDelay(&reg, &reg_pars),
+                                    ccpars_reg_i.track_delay_periods,
+                                    REG_CURRENT, &ccpars_reg_i.rst);
+
+                // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
+                // corresponds to steady state reg.i_meas (last parameter is the rate of change)
+
+                regSetMode(&reg, &reg_pars, REG_CURRENT, reg.i_meas.unfiltered, 0.0);
+                break;
+            }
+
+            // Check for regulation initialisation failure - there is only one possible reason: S[0] is too small
+
+            if(status != REG_OK)
+            {
+                ccTestPrintError("RST regulator failed to initialise: S[0] is less than 1.0E-10");
+                return(EXIT_FAILURE);
+            }
+
+            // Estimate the ref advance time
+
+            regCalcRefAdvance(&reg, &reg_pars);
+        }
+    }*/
+
+
+/*---------------------------------------------------------------------------------------------------------
+static void ccRunAbort(float time)
 /*---------------------------------------------------------------------------------------------------------*\
   This will initialise a RAMP function that will take over the from the running function and will smoothly
   ramp to the minimum reference value given in the limits. This is only supported when regulating current
@@ -81,7 +153,7 @@ static void ccrunAbort(float time)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static float ccrunTestOpeningLoop(float time, float ref)
+static float ccRunTestOpeningLoop(float time, float ref)
 /*---------------------------------------------------------------------------------------------------------*\
   This function tests the ability to open and re-close the loop regulating current or field.  The user can
   specify the time and duration of a period of open-loop to be included with-in a run in closed loop.
@@ -126,7 +198,7 @@ static float ccrunTestOpeningLoop(float time, float ref)
     return(ref);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static float ccrunTestForConverterTrip(float ref)
+static float ccRunTestForConverterTrip(float ref)
 /*---------------------------------------------------------------------------------------------------------*\
   This function checks the limit fault flags and sets the converter trip flag if any critical limit has
   been exceeded.
@@ -151,20 +223,25 @@ static float ccrunTestForConverterTrip(float ref)
     return(ref);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccrunSimulation(uint32_t ref_function_type)
+void ccRunSimulation(void)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will run a simulation of the voltage source and load.  Regulation maybe enabled (AMPS or
   GAUSS) or disabled (VOLTAGE).
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    abort_f       = 0;    // Abort function flag
-    uint32_t    func_run_f    = 1;;   // Function running flag
+    uint32_t    func_run_f    = 1;    // Function running flag
+    uint32_t    func_idx      = 0;    // Function index
     uint32_t    iteration_idx = 0;    // Iteration index
     float       perturb_volts = 0.0;  // Voltage perturbation to apply to circuit
     double      time;                 // Iteration time
+    double      start_func_time;      // Time of the start of the function
     double      ref_time;             // Reference function time
     double      end_time = 0.0;       // Simulation end time
     float       ref;                  // Function generator reference value
+
+    // Prepare o
+
 
     while(end_time == 0.0 || time < end_time)
     {
@@ -196,7 +273,7 @@ void ccrunSimulation(uint32_t ref_function_type)
         {
             ref_time = time + reg.ref_advance;
 
-            func_run_f = func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &ref_time, &ref);
+            func_run_f = funcs[ref_function_type].fgen_func(funcs[ref_function_type].fg_pars, &ref_time, &ref);
 
             // if regulating current or field then open the loop at the specified time for the specified duration
 
@@ -252,39 +329,117 @@ void ccrunSimulation(uint32_t ref_function_type)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccrunFunGen(uint32_t ref_function_type)
+void ccRunFuncGen(void)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will test the function generator with either an increasing or decreasing sample time.
+  This function will test the function generator with one or more functions, with increasing time only.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t    iteration_idx;    // Iteration index
-    double      time;             // Iteration time
-    float       duration;         // Duration of run
+    uint32_t    iteration_idx   = 0;        // Iteration index
+    uint32_t    func_idx        = 0;        // Function index
+    uint32_t    func_run_f      = 1;        // Function running flag
+    double      time            = 0.0;      // Iteration time (since start of run)
+    double      ref_time        = 0.0;      // Reference time (since start of function)
+    double      func_start_time = 0.0;      // Function start time (relative to start of run)
+    float       func_duration;              // Duration of current function
+    uint32_t  (*fgen_func)();               // Function to generate the reference
+    void        *fg_pars;                   // Function generation parameter structure
 
-    duration = fg_meta.duration + ccpars_global.stop_delay;
+    // Prepare to generation the first function
+
+    func_duration = ccrun.fg_meta[0].duration;
+    fgen_func     = funcs[ccpars_global.function[0]].fgen_func;
+    fg_pars       = funcs[ccpars_global.function[0]].fg_pars;
+
+    // Loop for until all funtions have completed
+
+    for(;;)
+    {
+        // Generate reference value using libfg function
+
+        func_run_f = fgen_func(fg_pars, &ref_time, &reg.v_ref);
+
+        // Store and print to CSV file the enabled signals
+
+        ccSigsStore(time);
+
+        // Calculate next iteration time
+
+        time = reg.iter_period * ++iteration_idx;
+
+        ref_time = time - func_start_time;
+
+        // If reference function has finished
+
+        if(ref_time >= func_duration && func_run_f == 0)
+        {
+            // If not yet into the stop delay period, advance to next function
+
+            if(func_idx < ccrun.num_functions)
+            {
+                func_idx++;
+
+                // If another function is in the list
+
+                if(func_idx < ccrun.num_functions)
+                {
+                    // Prepare to generate the new function
+
+                    func_start_time += func_duration + ccpars_global.pre_func_delay;
+                    func_duration    = ccrun.fg_meta[func_idx].duration;
+                    fgen_func        = funcs[ccpars_global.function[func_idx]].fgen_func;
+                    fg_pars          = funcs[ccpars_global.function[func_idx]].fg_pars;
+                    ref_time         = time - func_start_time;
+                }
+                else // else last function completed
+                {
+                    // Set duration to the stop delay and continue to use the last function
+
+                    func_duration += ccpars_global.stop_delay;
+                }
+            }
+            else // else stop delay is complete so break out of loop
+            {
+                break;
+            }
+        }
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void ccRunFuncGenReverseTime(void)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will test a single function with decreasing sample time.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t    iteration_idx;          // Iteration index
+    double      time;                   // Iteration time (runs backwards)
+    float       duration;               // Run duration (function time and stop delay)
+    uint32_t  (*fgen_func)();           // Function to generate the reference
+    void        *fg_pars;               // Function generation parameter structure
+
+    // Reverse time can only be used with a single function
+
+    duration = ccrun.fg_meta[0].duration + ccpars_global.stop_delay;
 
     ccrun.num_iterations = (uint32_t)(1.4999 + duration / reg.iter_period);
+
+    fgen_func = funcs[ccpars_global.function[0]].fgen_func;
+    fg_pars   = funcs[ccpars_global.function[0]].fg_pars;
+
+    // Loop for the duration of the function plus stop delay
 
     for(iteration_idx = 0 ; iteration_idx < ccrun.num_iterations ; iteration_idx++)
     {
         // Calculate iteration time
 
-        if(ccpars_global.reverse_time == CC_DISABLED)
-        {
-            time = reg.iter_period * iteration_idx;
-        }
-        else
-        {
-            time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
-        }
+        time = reg.iter_period * (ccrun.num_iterations - iteration_idx - 1);
 
         // Generate reference value using libfg function
 
-        func[ref_function_type].fgen_func(func[ref_function_type].fg_pars, &time, &reg.v_ref);
+        fgen_func(fg_pars, &time, &reg.v_ref);
 
         // Store and print enabled signals
 
-        ccsigsStore(time);
+        ccSigsStore(time);
     }
 }
 // EOF

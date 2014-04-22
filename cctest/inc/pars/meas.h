@@ -94,7 +94,7 @@ CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
 
 CCPARS_MEAS_EXT struct ccpars meas_pars[]
 #ifdef GLOBALS
-= {// "Signal name"            TYPE,max_vals,min_vals,*enum,          *value,                               num_defaults
+= {// "Signal name"            type,max_n_els,min_n_els,*enum,          *value,                               num_defaults
     { "B_REG_SELECT",          PAR_ENUM,     1, 1, reg_meas_select, { .i = &ccpars_meas.b_reg_select           }, 1 },
     { "I_REG_SELECT",          PAR_ENUM,     1, 1, reg_meas_select, { .i = &ccpars_meas.b_reg_select           }, 1 },
     { "B_DELAY_ITERS",         PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_delay_iters          }, 1 },

@@ -50,17 +50,28 @@ struct ccpars_start
     struct fg_plep_pars         plep_pars;               // Libfg parameters for PLEP
 };
 
-CCPARS_START_EXT struct ccpars_start ccpars_start;
+CCPARS_START_EXT struct ccpars_start ccpars_start
+#ifdef GLOBALS
+= {//   Default value           Parameter
+        1.0,                 // START FEEDFORWARD_V_REF
+        0.5,                 // START CLOSELOOP_LEVEL
+        {
+            1.0,             // START FINAL_REF
+            1.0,             // START ACCELERATION
+        }
+}
+#endif
+;
 
 // START data description structure
 
 CCPARS_START_EXT struct ccpars   start_pars[]
 #ifdef GLOBALS
-= {// "Signal name"         TYPE, max_vals,min_vals,*enum,     *value,                        num_defaults
-    { "FEEDFORWARD_V_REF",  PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.feedforward_v_ref   }, 0 },
-    { "CLOSELOOP_LEVEL",    PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.closeloop_level     }, 0 },
-    { "FINAL_REF",          PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.config.final        }, 0 },
-    { "ACCELERATION",       PAR_FLOAT,  1, 1, NULL,     { .f = &ccpars_start.config.acceleration }, 0 },
+= {// "Signal name"         type, max_n_els,min_n_els,*enum,        *value,                        num_defaults
+    { "FEEDFORWARD_V_REF",  PAR_FLOAT,     1,       1, NULL, { .f = &ccpars_start.feedforward_v_ref   }, 1 },
+    { "CLOSELOOP_LEVEL",    PAR_FLOAT,     1,       1, NULL, { .f = &ccpars_start.closeloop_level     }, 1 },
+    { "FINAL_REF",          PAR_FLOAT,     1,       1, NULL, { .f = &ccpars_start.config.final        }, 1 },
+    { "ACCELERATION",       PAR_FLOAT,     1,       1, NULL, { .f = &ccpars_start.config.acceleration }, 1 },
     { NULL }
 }
 #endif

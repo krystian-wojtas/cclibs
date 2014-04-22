@@ -56,11 +56,6 @@ struct ccpars_limits
     float               v_quadrants41[2];
 
     uint32_t            invert_limits;          // Invert real-time limits (switch is negative)
-
-    // Limits related variables
-
-    struct fg_limits   *fg;                     // Pointer to fg_limits (b/i/v)
-    struct reg_lim_ref  fg_v_ref;               // Libreg voltage measurement limits structure
 };
 
 CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
@@ -78,7 +73,7 @@ CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 
 CCPARS_LIMITS_EXT struct ccpars limits_pars[]
 #ifdef GLOBALS
-= {// "Signal name"     TYPE,   max_vals,min_vals,*enum,          *value,                    num_defaults
+= {// "Signal name"     type,   max_n_els,min_n_els,*enum,          *value,                    num_defaults
     { "B_POS",          PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.b.pos          }, 1 },
     { "B_MIN",          PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.b.min          }, 1 },
     { "B_NEG",          PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.b.neg          }, 1 },

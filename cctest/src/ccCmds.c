@@ -72,7 +72,7 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
 
     if(arg != NULL && chdir(arg) != 0)
     {
-        ccTestPrintError("changing directory to '%s' : %s (%d)\n",
+        ccTestPrintError("changing directory to '%s' : %s (%d)",
                           ccTestAbbreviatedArg(arg), strerror(errno), errno);
         return(EXIT_FAILURE);
     }
@@ -82,22 +82,26 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsPwd(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will display the current directory using the supplied parameter
+  This function will display the current directory
 \*---------------------------------------------------------------------------------------------------------*/
 {
     char    cwd_buf[CC_PATH_LEN];
     char    *wd;
+
+    // No arguments expected
 
     if(ccTestNoMoreArgs(remaining_line) == EXIT_FAILURE)
     {
         return(EXIT_FAILURE);
     }
 
+    // Get and print current working directory
+
     wd = getcwd(cwd_buf, sizeof(cwd_buf));
 
     if(wd == NULL)
     {
-        ccTestPrintError("getting current directory : %s (%d)\n", strerror(errno), errno);
+        ccTestPrintError("getting current directory : %s (%d)", strerror(errno), errno);
         return(EXIT_FAILURE);
     }
 
@@ -108,7 +112,8 @@ uint32_t ccCmdsPwd(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsLs(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will display the current directory using the supplied parameter
+  This function will display the contents of the current directory using the ls command.  It will supply
+  any arguments provided to ls.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     char ls_command[CC_MAX_FILE_LINE_LEN];
@@ -148,8 +153,8 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
 
     if(cctest.input_idx >= (CC_INPUT_FILE_NEST_LIMIT - 1))
     {
-         ccTestPrintError("input file nesting limit (%u) reached", CC_INPUT_FILE_NEST_LIMIT);
-         return(EXIT_FAILURE);
+        ccTestPrintError("input file nesting limit (%u) reached", CC_INPUT_FILE_NEST_LIMIT);
+        return(EXIT_FAILURE);
     }
 
     // Get the first argument (if provided) and check that there are no more arguments after that
@@ -165,6 +170,16 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
 
     if(arg == NULL)
     {
+        // If already reading from stdin or from a file then report an error
+
+        if(cctest.input_idx > 0)
+        {
+            ccTestPrintError("already reading from a file or from stdin");
+            return(EXIT_FAILURE);
+        }
+
+        // Read from stdin
+
         f = stdin;
         cctest.input_idx++;
         cctest.input[cctest.input_idx].line_number = 0;
@@ -256,93 +271,218 @@ uint32_t ccCmdsSave(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsDebug(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will display the debug information for all the active parameters.
+  This function will display the debug information for all the active parameters from the previous run.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    // Reset report
-/*
-    ccpars_report.num_lines = 0;
-    ccparsGenerateDebugReport();
-    ccparsPrintReport(stdout);
-*/
+    // No arguments expected
+
+    if(ccTestNoMoreArgs(remaining_line))
+    {
+        return(EXIT_FAILURE);
+    }
+
+    // Print debug information from previous run to stdout
+
+    ccParsPrintDebug(stdout);
+
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will
+  This function will launch a run of the function generation and optionally simulate the voltage source
+  and load.
 \*---------------------------------------------------------------------------------------------------------*/
-{/*
-    // Initialise iteration period
+{
+    // Initialise run, the load model and the reference functions
 
-    reg.iter_period = ccpars_global.iter_period;
+    if(ccInitRun()       == EXIT_FAILURE ||
+       ccInitLoad()      == EXIT_FAILURE ||
+       ccInitFunctions() == EXIT_FAILURE)
+    {
+        return(EXIT_FAILURE);
+    }
 
-    // Initialise load model (must be before ccInitFunction() if FG_LIMITS is enabled)
+    // If the load will be simulated, initialise the limits, regulation and simulation
 
-    ccInitLoad();
+    if(ccpars_global.sim_load == CC_ENABLED)
+    {
+        if(ccInitLimits()     == EXIT_FAILURE ||
+           ccInitRegulation() == EXIT_FAILURE ||
+           ccInitSimulation() == EXIT_FAILURE)
+        {
+            return(EXIT_FAILURE);
+        }
+    }
 
-    // Initialise function to be generated
+    // Open CSV output file
 
-    ccInitFunction();
+    if(ccpars_global.csv_format != CC_NONE)
+    {
+        sprintf(cctest.csv_path, "%s/results/csv/%s/%s/%s.csv",
+                                  cctest.base_path,
+                                  ccpars_global.group,
+                                  ccpars_global.project,
+                                  ccpars_global.file);
 
-    // Initialise limits for the measurement, reference and regulation error if required
+        cctest.csv_file = fopen(cctest.csv_path, "w");
 
-    ccInitLimits();
+        if(cctest.csv_file == NULL)
+        {
+             ccTestPrintError("opening file '%s' : %s (%d)", cctest.csv_path, strerror(errno), errno);
+             return(EXIT_FAILURE);
+        }
+    }
 
-    // Initialise to simulate load and voltage source if required
+    // Enable signals that are to be logged
 
-    ccInitSimulation();
-
-    // Initialise to regulate field or current if required
-
-    ccInitRegulation();
-
-    // Generate FLOT report of parameter values, if required
-
-    ccParsGenerateFlotReport();
-
-    // Enable signals to be written to stdout
-
-    ccsigsInit();
+    ccSigsInit();
 
     // Run the test
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        // Generate function and simulate voltage source and load and regulate if required
+        // Generate functions and simulate voltage source and load and regulate if required
 
         printf("Running simulation... ");
 
-        ccRunSimulation();
+//        ccRunSimulation();
     }
     else
     {
         // Generate reference function only - no load simulation: this is just to test libfg functions
 
-        printf("Generating function(s)... ");
+        if(ccpars_global.reverse_time == CC_DISABLED)
+        {
+            printf("Generating function(s)... ");
 
-        ccRunFuncGen();
+            ccRunFuncGen();
+        }
+        else // Reverse time can be used with only one function
+        {
+            printf("Generating function with reverse time... ");
+
+            ccRunFuncGenReverseTime();
+        }
+    }
+
+    // Close CSV output file
+
+    if(ccpars_global.csv_format != CC_NONE)
+    {
+        fclose(cctest.csv_file);
     }
 
     // Write FLOT data if required
 
-    ccSigsFlot();
+    if(ccpars_global.flot_control == CC_ENABLED)
+    {
+        FILE    *flot_file;
+        char     flot_path[CC_PATH_LEN * 2];
+
+        sprintf(flot_path, "%s/results/webplots/%s/%s/%s.html",
+                           cctest.base_path,
+                           ccpars_global.group,
+                           ccpars_global.project,
+                           ccpars_global.file);
+
+        flot_file = fopen(flot_path, "w");
+
+        if(flot_file == NULL)
+        {
+             ccTestPrintError("opening file '%s' : %s (%d)", flot_path, strerror(errno), errno);
+             return(EXIT_FAILURE);
+        }
+
+        ccSigsFlot(flot_file);
+
+        fclose(flot_file);
+    }
 
     // Report completion of task
 
-    printf("done.\n");
-*/
+    puts("done.");
+
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsPar(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will
+  This function will print or set parameters
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    if(ccTestNoMoreArgs(remaining_line) == EXIT_FAILURE)
+    char               *arg;
+    uint32_t            arg_len;
+    struct ccpars      *par_matched;
+    struct ccpars      *par;
+    struct ccpars_enum *par_enum;
+
+    arg = ccTestGetArgument(remaining_line);
+
+    // If no arguments then print the names and value(s) for all the parameter for this command
+
+    if(arg == NULL)
     {
-        return(EXIT_FAILURE);
+        ccParsPrintAll(stdout, cmds[cmd_idx].name, cmds[cmd_idx].pars);
+    }
+    else
+    {
+        arg_len = strlen(arg);
+
+        // Compare first argument against list of parameters to find unambiguous match
+
+        for(par = cmds[cmd_idx].pars, par_matched = NULL ; par->name != NULL ; par++)
+        {
+             // If command argument matches start or all of a command
+
+             if(strncasecmp(par->name, arg, arg_len) == 0)
+             {
+                 // If first match, remember command index
+
+                if(par_matched == NULL)
+                {
+                    par_matched = par;
+                }
+                else // else second match so report error
+                {
+                    ccTestPrintError("ambiguous %s parameter '%s'", cmds[cmd_idx].name, arg);
+                    return(EXIT_FAILURE);
+                }
+            }
+        }
+
+        if(par_matched == NULL)
+        {
+            ccTestPrintError("unknown parameter for %s: '%s'",
+                             cmds[cmd_idx].name, ccTestAbbreviatedArg(arg));
+            return(EXIT_FAILURE);
+        }
+
+        // If no arguments provided, report information about the parameter
+
+        if(*remaining_line == NULL)
+        {
+            ccParsPrint(stdout, cmds[cmd_idx].name, par_matched);
+            printf("Number of elements defined: %u\n",par_matched->num_elements);
+            printf("Minimum number of elements: %u\n",par_matched->min_num_elements);
+            printf("Maximum number of elements: %u\n",par_matched->max_num_elements);
+
+            if(par_matched->type == PAR_ENUM)
+            {
+                printf("Range:");
+
+                for(par_enum = par_matched->ccpars_enum ; par_enum->string != NULL ; par_enum++)
+                {
+                    printf(" %s",par_enum->string);
+                }
+
+                putchar('\n');
+            }
+        }
+        else // else get parameter values from arguments
+        {
+            return(ccParsGet(cmds[cmd_idx].name, par_matched, remaining_line));
+        }
     }
 
     return(EXIT_SUCCESS);
