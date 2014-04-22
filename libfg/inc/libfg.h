@@ -66,6 +66,7 @@ struct fg_limits
     float       neg;                       // Negative reference limit
     float       rate;                      // Rate of change limit
     float       acceleration;              // Acceleration limit
+    uint32_t    user_data;                 // User data available to user_check_limits() function
 
     // User callback for checking reference
 
