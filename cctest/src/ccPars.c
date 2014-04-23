@@ -337,8 +337,14 @@ void ccParsPrintDebug(FILE *f)
 
         if(ccrun.breg_flag == 1)
         {
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "B_RST:pure_delay_periods",
+                               reg_pars.b_rst_pars.pure_delay_periods);
+
             fprintf(f,"%-*s% d\n", PARS_INDENT, "B_RST:alg_index", reg_pars.b_rst_pars.alg_index);
             fprintf(f,"%-*s% d\n", PARS_INDENT, "B_RST:dead_beat", reg_pars.b_rst_pars.dead_beat);
+
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "B_RST:track_delay_periods",
+                               reg_pars.b_rst_pars.track_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
@@ -347,8 +353,6 @@ void ccParsPrintDebug(FILE *f)
                                reg_pars.b_rst_pars.rst.s[i],
                                reg_pars.b_rst_pars.rst.t[i]);
             }
-            fprintf(f,"%-*s% 16.9E\n",   PARS_INDENT, "B_RST:track_delay_periods",
-                               reg_pars.b_rst_pars.track_delay_periods);
             fprintf(f,"%-*s% 16.9E\n\n", PARS_INDENT, "B_RST:t0_correction",
                                reg_pars.b_rst_pars.t0_correction);
         }
@@ -357,8 +361,14 @@ void ccParsPrintDebug(FILE *f)
 
         if(ccrun.ireg_flag == 1)
         {
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "I_RST:pure_delay_periods",
+                               reg_pars.i_rst_pars.pure_delay_periods);
+
             fprintf(f,"%-*s% d\n", PARS_INDENT, "I_RST:alg_index", reg_pars.i_rst_pars.alg_index);
             fprintf(f,"%-*s% d\n", PARS_INDENT, "I_RST:dead_beat", reg_pars.i_rst_pars.dead_beat);
+
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "I_RST:track_delay_periods",
+                               reg_pars.i_rst_pars.track_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
@@ -367,8 +377,6 @@ void ccParsPrintDebug(FILE *f)
                                reg_pars.i_rst_pars.rst.s[i],
                                reg_pars.i_rst_pars.rst.t[i]);
             }
-            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "I_RST:track_delay_periods",
-                               reg_pars.i_rst_pars.track_delay_periods);
             fprintf(f,"%-*s% 16.9E\n\n", PARS_INDENT, "I_RST:t0_correction",
                                reg_pars.i_rst_pars.t0_correction);
         }

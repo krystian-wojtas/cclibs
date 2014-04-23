@@ -275,55 +275,6 @@ uint32_t ccInitFunctions(void)
     return(exit_status);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t ccInitRegulation(void)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    uint32_t status = 0;
-
-    // Reset reg.mode since regSetMode & regSetVoltageMode are change sensitive
-
-    reg.mode = REG_NONE;
-
-    // Initialise FIELD regulator if field regulation used by at least one function
-
-    if(ccrun.breg_flag == 1)
-    {
-        status = regRstInit(&reg_pars.b_rst_pars,
-                            reg.iter_period, ccpars_breg.period_iters, &reg_pars.load_pars,
-                            ccpars_breg.clbw, ccpars_breg.clbw2, ccpars_breg.z,
-                            ccpars_breg.clbw3, ccpars_breg.clbw4,
-                            regCalcPureDelay(&reg, &reg_pars),
-                            ccpars_breg.track_delay_periods,
-                            REG_FIELD, &ccpars_breg.rst);
-
-        if(status != REG_OK)
-        {
-            ccTestPrintError("FIELD RST regulator failed to initialise: S[0] is less than 1.0E-10");
-            return(EXIT_FAILURE);
-        }
-    }
-
-    // Initialise CURRENT regulator if current regulation used by at least one function
-
-    if(ccrun.ireg_flag == 1)
-    {
-        status = regRstInit(&reg_pars.i_rst_pars,
-                            reg.iter_period, ccpars_ireg.period_iters, &reg_pars.load_pars,
-                            ccpars_ireg.clbw, ccpars_ireg.clbw2, ccpars_ireg.z,
-                            ccpars_ireg.clbw3, ccpars_ireg.clbw4,
-                            regCalcPureDelay(&reg, &reg_pars),
-                            ccpars_ireg.track_delay_periods,
-                            REG_CURRENT, &ccpars_ireg.rst);
-        if(status != REG_OK)
-        {
-            ccTestPrintError("FIELD RST regulator failed to initialise: S[0] is less than 1.0E-10");
-            return(EXIT_FAILURE);
-        }
-    }
-
-    return(EXIT_SUCCESS);
-}
-/*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccInitSimulation(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
@@ -413,7 +364,7 @@ uint32_t ccInitSimulation(void)
 
     regMeasFilterInitMax(&reg.b_meas, ccpars_limits.b.pos, ccpars_limits.b.neg);
 
-    regMeasSetReg(&reg.b_meas, ccpars_meas.b_reg_select);
+    regMeasRegSelect(&reg.b_meas, ccpars_meas.b_reg_select);
 
     // Initialise current measurement filter
 
@@ -426,7 +377,7 @@ uint32_t ccInitSimulation(void)
 
     regMeasFilterInitMax(&reg.b_meas, ccpars_limits.i.pos, ccpars_limits.i.neg);
 
-    regMeasSetReg(&reg.i_meas, ccpars_meas.i_reg_select);
+    regMeasRegSelect(&reg.i_meas, ccpars_meas.i_reg_select);
 
     // Initialise simulation of measurement noise and tone
 
@@ -441,6 +392,56 @@ uint32_t ccInitSimulation(void)
     // Run first simulation to initialise measurement variables
 
     regSimulate(&reg, &reg_pars, 0.0);
+
+    return(EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+uint32_t ccInitRegulation(void)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t status = 0;
+
+    // Reset reg.mode since regSetMode & regSetVoltageMode are change sensitive
+
+    reg.mode = REG_NONE;
+
+    // Initialise FIELD regulator if field regulation used by at least one function
+
+    if(ccrun.breg_flag == 1)
+    {
+        status = regRstInit(&reg_pars.b_rst_pars,
+                            reg.iter_period, ccpars_breg.period_iters, &reg_pars.load_pars,
+                            ccpars_breg.clbw, ccpars_breg.clbw2, ccpars_breg.z,
+                            ccpars_breg.clbw3, ccpars_breg.clbw4,
+                            regCalcPureDelay(&reg, &reg_pars, REG_FIELD),
+                            ccpars_breg.track_delay_periods,
+                            REG_FIELD, &ccpars_breg.rst);
+
+        if(status != REG_OK)
+        {
+            ccTestPrintError("FIELD RST regulator failed to initialise: S[0] is less than 1.0E-10");
+            return(EXIT_FAILURE);
+        }
+    }
+
+    // Initialise CURRENT regulator if current regulation used by at least one function
+
+    if(ccrun.ireg_flag == 1)
+    {
+        status = regRstInit(&reg_pars.i_rst_pars,
+                            reg.iter_period, ccpars_ireg.period_iters, &reg_pars.load_pars,
+                            ccpars_ireg.clbw, ccpars_ireg.clbw2, ccpars_ireg.z,
+                            ccpars_ireg.clbw3, ccpars_ireg.clbw4,
+                            regCalcPureDelay(&reg, &reg_pars, REG_CURRENT),
+                            ccpars_ireg.track_delay_periods,
+                            REG_CURRENT, &ccpars_ireg.rst);
+
+        if(status != REG_OK)
+        {
+            ccTestPrintError("CURRENT RST regulator failed to initialise: S[0] is less than 1.0E-10");
+            return(EXIT_FAILURE);
+        }
+    }
 
     return(EXIT_SUCCESS);
 }

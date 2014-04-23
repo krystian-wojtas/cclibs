@@ -294,6 +294,13 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
   and load.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    // No arguments expected
+
+    if(ccTestNoMoreArgs(remaining_line))
+    {
+        return(EXIT_FAILURE);
+    }
+
     // Initialise run, the load model and the reference functions
 
     if(ccInitRun()       == EXIT_FAILURE ||
@@ -308,8 +315,8 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
     if(ccpars_global.sim_load == CC_ENABLED)
     {
         if(ccInitLimits()     == EXIT_FAILURE ||
-           ccInitRegulation() == EXIT_FAILURE ||
-           ccInitSimulation() == EXIT_FAILURE)
+           ccInitSimulation() == EXIT_FAILURE ||
+           ccInitRegulation() == EXIT_FAILURE)      // InitRegulation must be after InitSimulation
         {
             return(EXIT_FAILURE);
         }
@@ -442,6 +449,13 @@ uint32_t ccCmdsPar(uint32_t cmd_idx, char **remaining_line)
                 if(par_matched == NULL)
                 {
                     par_matched = par;
+
+                    // If argument exactly matches a parameter name then take use it
+
+                    if(strlen(par->name) == arg_len)
+                    {
+                        break;
+                    }
                 }
                 else // else second match so report error
                 {

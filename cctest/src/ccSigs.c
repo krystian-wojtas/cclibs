@@ -183,9 +183,7 @@ void ccSigsInit(void)
 
         if(ccpars_global.csv_format == CC_LVDV)
         {
-            ccSigsEnableSignal(CSR_LOAD);
-            ccSigsEnableSignal(CSR_REGMODE);
-            ccSigsEnableSignal(CSR_REF);
+            ccSigsEnableSignal(CSR_FUNC);
         }
 
         // Voltage source simulation signals
