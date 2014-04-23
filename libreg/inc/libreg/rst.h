@@ -77,14 +77,14 @@ struct reg_rst_pars                                             // RST algorithm
     uint32_t                    period_iters;                   // Regulation period (in iterations)
     uint32_t                    alg_index;                      // Algorithm index (1-5) - based on pure delay
     uint32_t                    dead_beat;                      // 0 = not dead-beat, 1-3 = dead-beat(1-3)
-    float                       iters_period;                   // 1/period_iters
-    float                       period;                         // Regulation period
-    float                       freq;                           // Regulation frequency
+    double                      period;                         // Regulation period
+    float                       inv_period_iters;               // 1/period_iters
+    float                       ref_advance;                    // Reference advance time
+    float                       pure_delay_periods;             // Pure delay in regulation periods
+    float                       track_delay_periods;            // Track delay in regulation periods
     float                       inv_s0;                         // Store 1/S[0]
     float                       t0_correction;                  // Correction to t[0] for rounding errors
     float                       inv_corrected_t0;               // Store 1/(T[0]+ t0_correction)
-    float                       track_delay_periods;            // Track delay in regulation periods
-    float                       ref_advance;                    // Reference advance time (s)
     struct reg_rst              rst;                            // RST polynomials
 };
 
@@ -105,7 +105,7 @@ extern "C" {
 
 // RST regulation functions
 
-uint32_t regRstInit             (struct reg_rst_pars *pars, float iter_period, uint32_t period_iters,
+uint32_t regRstInit             (struct reg_rst_pars *pars, double iter_period, uint32_t period_iters,
                                  struct reg_load_pars *load, float clbw, float clbw2, float z, float clbw3, float clbw4,
                                  float pure_delay_periods, float track_delay_periods, enum reg_mode reg_mode,
                                  struct reg_rst *manual);

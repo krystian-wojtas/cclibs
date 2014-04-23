@@ -225,12 +225,27 @@ void regMeasFilterInitHistory(struct reg_meas_filter *filter)
     filter->stop_iters = filter->extrapolation_len_iters;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regMeasSetReg(struct reg_meas_filter *filter, enum reg_meas_select reg_select)
+void regMeasRegSelect(struct reg_meas_filter *filter, enum reg_meas_select reg_select)
 /*---------------------------------------------------------------------------------------------------------*\
   This function sets the selector of the regulation measurement.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     filter->reg_select = reg_select;
+}
+/*---------------------------------------------------------------------------------------------------------*/
+float regMeasReg(struct reg_meas_filter *filter)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function returns the measurement selected by calling regMeasRegSelect().
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    switch(filter->reg_select)
+    {
+        case REG_MEAS_UNFILTERED:   return(filter->unfiltered);
+        case REG_MEAS_FILTERED:     return(filter->filtered);
+        case REG_MEAS_EXTRAPOLATED: return(filter->extrapolated);
+    }
+
+    return(0.0);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regMeasSetNoiseAndTone(struct reg_noise_and_tone *noise_and_tone, float noise_pp,
@@ -289,5 +304,39 @@ float regMeasNoiseAndTone(struct reg_noise_and_tone *noise_and_tone)
 
     return(noise + tone);
 }
-// EOF
+/*---------------------------------------------------------------------------------------------------------*/
+void regMeasRateStore(struct reg_meas_rate *meas_rate, float meas, int32_t period_iters)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will store the filtered measurement in the rate estimation history at the reg_period
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    // Store measurement at the specified period
 
+    if(++meas_rate->iter_counter >= period_iters)
+    {
+        meas_rate->iter_counter = 0;
+        meas_rate->buf_index    = (meas_rate->buf_index + 1) & REG_MEAS_RATE_BUF_MASK;
+
+        meas_rate->buf[meas_rate->buf_index] = meas;
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+float regMeasRate(struct reg_meas_rate *meas_rate, float period)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will use linear regression through four points to estimate the rate of change of the
+  measurement stored by regMeasRateStore().
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float    *buf   = meas_rate->buf;           // Local pointer to history buffer
+    uint32_t  index = meas_rate->buf_index;     // Local copy of index of most recent sample
+
+    // Least-squares linear regression through four points
+
+    meas_rate->rate = 2.0 / (20.0 * period) * (3.0 * (buf[ index ] -
+                                                      buf[(index - 3) & REG_MEAS_RATE_BUF_MASK]) +
+                                                     (buf[(index - 1) & REG_MEAS_RATE_BUF_MASK]  -
+                                                      buf[(index - 2) & REG_MEAS_RATE_BUF_MASK]));
+
+    return(meas_rate->rate);
+}
+// EOF

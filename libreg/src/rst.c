@@ -34,11 +34,10 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
                           float                 clbw2,
                           float                 z,
                           float                 clbw3,
-                          float                 clbw4,
-                          float                 pure_delay_periods)
+                          float                 clbw4)
 /*---------------------------------------------------------------------------------------------------------*\
   This function prepares coefficients for the RST regulation algorithm. It chooses the algorithm to use
-  based on the pure_delay_iters parameter. It is divided into 5 ranges, two result in dead-beat PII
+  based on pars->pure_delay_iters. It is divided into 5 ranges, two result in dead-beat PII
   controllers and two non-dead-beat PII controllers. To work the bandwidth of the voltage source and
   FIR filter notches must be at least ten times the bandwidth because they not included in the load model.
 
@@ -88,13 +87,13 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     b0_b1 = 0.0;
 
-    if(pure_delay_periods < 0.401)
+    if(pars->pure_delay_periods < 0.401)
     {
         // Option 1 - pure delay < 0.401
 
         pars->alg_index = 1;
-        b0 = load->gain0 + load->gain1 * a2 * (1.0 - pure_delay_periods);
-        b1 = load->gain0 * a1 + load->gain1 * a2 * pure_delay_periods;
+        b0 = load->gain0 + load->gain1 * a2 * (1.0 - pars->pure_delay_periods);
+        b1 = load->gain0 * a1 + load->gain1 * a2 * pars->pure_delay_periods;
     }
     else if(load->ohms_par < 1.0E6)
     {
@@ -102,41 +101,41 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
         return;
     }
-    else if(pure_delay_periods < 1.0)
+    else if(pars->pure_delay_periods < 1.0)
     {
         // Option 2 - pure delay 0.401 - 0.999
 
         pars->alg_index = 2;
         b0_b1 = load->gain1 * a2;
-        b0 = b0_b1 * (1.0 - pure_delay_periods);
-        b1 = b0_b1 * pure_delay_periods;
+        b0 = b0_b1 * (1.0 - pars->pure_delay_periods);
+        b1 = b0_b1 * pars->pure_delay_periods;
     }
-    else if(pure_delay_periods < 1.401)
+    else if(pars->pure_delay_periods < 1.401)
     {
         // Option 3 - pure delay 1.0 - 1.401
 
         pars->alg_index = 3;
         b0_b1 = load->gain1 * a2;
-        b0 = b0_b1 * (2.0 - pure_delay_periods);
-        b1 = b0_b1 * (pure_delay_periods - 1.0);
+        b0 = b0_b1 * (2.0 - pars->pure_delay_periods);
+        b1 = b0_b1 * (pars->pure_delay_periods - 1.0);
     }
-    else if (pure_delay_periods < 2.00)
+    else if (pars->pure_delay_periods < 2.00)
     {
         // Option 4 - pure delay 1.401 - 1.999
 
         pars->alg_index = 4;
         b0_b1 = load->gain1 * a2;
-        b0 = b0_b1 * (2.0 - pure_delay_periods);
-        b1 = b0_b1 * (pure_delay_periods - 1.0);
+        b0 = b0_b1 * (2.0 - pars->pure_delay_periods);
+        b1 = b0_b1 * (pars->pure_delay_periods - 1.0);
     }
-    else if (pure_delay_periods < 2.401)
+    else if (pars->pure_delay_periods < 2.401)
     {
         // Option 5 - pure delay 2.00 - 2.401
 
         pars->alg_index = 5;
         b0_b1 = load->gain1 * a2;
-        b0 = b0_b1 * (3.0 - pure_delay_periods);
-        b1 = b0_b1 * (pure_delay_periods - 2.0);
+        b0 = b0_b1 * (3.0 - pars->pure_delay_periods);
+        b1 = b0_b1 * (pars->pure_delay_periods - 2.0);
     }
     else
     {
@@ -361,7 +360,7 @@ static void regRstInitI(struct reg_rst_pars  *pars,
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t regRstInit(struct reg_rst_pars  *pars,
-                    float                 iter_period,
+                    double                iter_period,
                     uint32_t              period_iters,
                     struct reg_load_pars *load,
                     float                 clbw,
@@ -392,13 +391,13 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
     uint32_t    i;
     double      t0_correction;
 
-    pars->reg_mode      = reg_mode;
-    pars->period_iters  = period_iters;
-    pars->iters_period  = 1.0 / (float)period_iters;
-    pars->period        = iter_period * period_iters;
-    pars->freq          = 1.0 / pars->period;
-    pars->alg_index     = 0;
-    pars->dead_beat     = 0;
+    pars->reg_mode           = reg_mode;
+    pars->period_iters       = period_iters;
+    pars->inv_period_iters   = 1.0 / (float)period_iters;
+    pars->period             = iter_period * (double)period_iters;
+    pars->alg_index          = 0;
+    pars->dead_beat          = 0;
+    pars->pure_delay_periods = pure_delay_periods;
 
     // if CLBW = 0.0 -> MANUAL RST coefficients
 
@@ -419,13 +418,13 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
 
         if(clbw2 > 0.0)                         // If CLBW2 > 0               -> PII regulator (slow inductive load)
         {
-            regRstInitPII(pars, load, clbw, clbw2, z, clbw3, clbw4, pure_delay_periods);
+            regRstInitPII(pars, load, clbw, clbw2, z, clbw3, clbw4);
         }
-        else if(load->henrys >= 1.0E-10)        // If CLBW2 == 0, HENRYS > 0  ->  PI regulator (fast inductive load)
+        else if(load->henrys >= 1.0E-10)        // If CLBW2 <= 0, HENRYS > 0  ->  PI regulator (fast inductive load)
         {
             regRstInitPI(pars, load, clbw);
         }
-        else                                    // If CLBW2 == 0, HENRYS == 0 ->   I regulator (resistive load)
+        else                                    // If CLBW2 <= 0, HENRYS <= 0 ->   I regulator (resistive load)
         {
             regRstInitI(pars, load, clbw);
         }
@@ -455,11 +454,11 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
 
         for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
         {
-            t0_correction += (double)pars->rst.r[i] - pars->rst.t[i];
+            t0_correction += (double)pars->rst.r[i] - (double)pars->rst.t[i];
         }
 
         pars->t0_correction    = t0_correction;
-        pars->inv_corrected_t0 = 1.0 / (pars->rst.t[0] + t0_correction);
+        pars->inv_corrected_t0 = 1.0 / (t0_correction + (double)pars->rst.t[0]);
         pars->inv_s0           = 1.0 /  pars->rst.s[0];
     }
 
@@ -681,7 +680,7 @@ float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, flo
 
     // Adjust track delay to account for the acquisition iteration time between regulation iterations
 
-    track_delay -= (float)vars->delayed_ref_index++ * pars->iters_period;
+    track_delay -= (float)vars->delayed_ref_index++ * pars->inv_period_iters;
 
     // Convert track delay to integer and fractional parts
 

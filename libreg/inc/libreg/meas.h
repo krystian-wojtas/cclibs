@@ -32,6 +32,10 @@
 
 #include <stdint.h>
 
+// Constants
+
+#define REG_MEAS_RATE_BUF_MASK      3                           // Rate will use linear regression through 4 points
+
 // Enum constants
 
 enum reg_meas_select
@@ -72,6 +76,14 @@ struct reg_meas_filter                                          // Measurement f
     float                       extrapolated;                   // Extrapolated measurement at iteration rate
 };
 
+struct reg_meas_rate
+{
+    uint32_t                    iter_counter;                   // Iteration counter
+    uint32_t                    buf_index;                      // Index of most recent sample in history
+    float                       buf[REG_MEAS_RATE_BUF_MASK+1];  // History buffer
+    float                       rate;                           // Rate of change based on history
+};
+
 struct reg_noise_and_tone                                        // Noise and tone generator structure
 {
     uint32_t                    iter_counter;                   // Iteration counter for simulated tone
@@ -93,10 +105,13 @@ void     regMeasFilterInit       (struct reg_meas_filter *filter, uint32_t fir_l
                                   uint32_t extrapolation_len_iters, float meas_delay_iters);
 void     regMeasFilterInitMax    (struct reg_meas_filter *filter, float pos, float neg);
 void     regMeasFilterInitHistory(struct reg_meas_filter *filter);
-void     regMeasSetReg           (struct reg_meas_filter *filter, enum reg_meas_select reg_select);
+void     regMeasRegSelect        (struct reg_meas_filter *filter, enum reg_meas_select reg_select);
+float    regMeasReg              (struct reg_meas_filter *filter);
 void     regMeasSetNoiseAndTone  (struct reg_noise_and_tone *noise_and_tone, float noise_pp,
                                   float tone_amp, uint32_t tone_half_period_iters);
 float    regMeasNoiseAndTone     (struct reg_noise_and_tone *noise_and_tone);
+void     regMeasRateStore        (struct reg_meas_rate *meas_rate, float meas, int32_t period_iters);
+float    regMeasRate             (struct reg_meas_rate *meas_rate, float period);
 
 #ifdef __cplusplus
 }

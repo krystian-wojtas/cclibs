@@ -65,13 +65,18 @@ struct reg_converter                                            // Global conver
     struct reg_meas_filter      i_meas;                         // Unfiltered and filtered current measurement (real or sim)
     float                       v_meas;                         // Unfiltered voltage measurement (real or sim)
 
+    // Field and current measurement rate
+
+    struct reg_meas_rate        b_rate;                         // Estimation of the rate of the field measurement
+    struct reg_meas_rate        i_rate;                         // Estimation of the rate of the current measurement
+
     // Reference and regulation variables
 
     double                      period;                         // Regulation period
     uint32_t                    period_iters;                   // Regulation period (in iterations)
     uint32_t                    iteration_counter;              // Iteration counter
     double                      time;                           // Time of last regulation iteration
-    double                      ref_advance;                    // Time to advance reference
+    float                       ref_advance;                    // Time to advance reference
     float                       meas;                           // Field or current regulated measurement
 
     float                       ref;                            // Field or current reference
@@ -140,11 +145,9 @@ void     regSetSimLoad          (struct reg_converter *reg, struct reg_converter
                                  enum reg_mode reg_mode, float sim_load_tc_error);
 void     regSetMeas             (struct reg_converter *reg,  struct reg_converter_pars *reg_pars,
                                  float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
-float    regCalcPureDelay       (struct reg_converter *reg, struct reg_converter_pars *reg_pars);
-void     regCalcRefAdvance      (struct reg_converter *reg, struct reg_converter_pars *reg_pars);
-void     regSetVoltageMode      (struct reg_converter *reg, struct reg_converter_pars *reg_pars);
-void     regSetMode             (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
-                                 enum reg_mode mode, float meas, float rate);
+float    regCalcPureDelay       (struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode);
+float    regCalcRefAdvance      (struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode);
+void     regSetMode             (struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode);
 uint32_t regConverter           (struct reg_converter *reg, struct reg_converter_pars *reg_pars, float *ref,
                                  float feedforward_v_ref, uint32_t feedforward_control,
                                  uint32_t max_abs_err_control);
