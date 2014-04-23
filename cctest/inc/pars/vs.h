@@ -45,10 +45,6 @@ struct ccpars_vs
     float                       z;                  // Damping factor
     float                       tau_zero;           // Time constant of zero
     struct reg_sim_vs_pars      sim_vs_pars;        // Voltage source simulation model if bandwidth is zero
-
-    // Voltage source related variables
-
-    uint32_t                    trip_flag;          // Voltage source tripped by measurement limit
 };
 
 CCPARS_VS_EXT struct ccpars_vs ccpars_vs

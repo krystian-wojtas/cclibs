@@ -30,8 +30,8 @@ uint32_t ccInitRun        (void);
 uint32_t ccInitLoad       (void);
 uint32_t ccInitFunctions  (void);
 uint32_t ccInitLimits     (void);
-uint32_t ccInitRegulation (void);
 uint32_t ccInitSimulation (void);
+uint32_t ccInitRegulation (void);
 
 #endif
 // EOF

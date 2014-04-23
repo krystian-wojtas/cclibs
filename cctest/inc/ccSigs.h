@@ -51,9 +51,7 @@ enum ccsig_type
 
 enum ccsig_idx
 {
-    CSR_LOAD,                   // Load events
-    CSR_REGMODE,                // Regulation mode events
-    CSR_REF,                    // Reference events
+    CSR_FUNC,                   // Start of function cursor
 
     ANA_B_REF,                  // Field reference
     ANA_B_REF_LIMITED,          // Field reference after limits applied
@@ -134,9 +132,7 @@ struct signals
 CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same order as enum ccsig_idx (above)
 #ifdef GLOBALS
 = {
-    { "LOAD",                   CURSOR,         "CURSOR"     },
-    { "REGMODE",                CURSOR,         "CURSOR"     },
-    { "REF",                    CURSOR,         "CURSOR"     },
+    { "FUNCTION",               CURSOR,         "CURSOR"     },
 
     { "B_REF",                  ANALOG,         "TRAIL_STEP" },
     { "B_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
