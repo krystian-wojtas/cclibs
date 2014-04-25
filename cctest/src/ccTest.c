@@ -43,17 +43,39 @@
 #include "ccRef.h"
 #include "ccSigs.h"
 
+// Default commands to run on start-up
+
+char *default_commands[] =
+{
+    "GLOBAL GROUP   sandbox",
+    "GLOBAL PROJECT FG",
+    "GLOBAL FILE    cctest",
+    NULL
+};
+
 /*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, char **argv)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t exit_status = EXIT_SUCCESS;
+    char   **cmd;
+    char     line[40];
 
     puts("\nWelcome to cctest\n");
 
     // Get path to cctest project root
 
     sprintf(cctest.base_path, "%s/../../",dirname(argv[0]));
+
+    // Set default group, project and filename
+
+    for(cmd = default_commands ; *cmd != NULL ; cmd++)
+    {
+        if(ccTestParseLine(strcpy(line,*cmd)) == EXIT_FAILURE)
+        {
+            exit(EXIT_FAILURE);
+        }
+    }
 
     // If no arguments supplied, read from stdin
 

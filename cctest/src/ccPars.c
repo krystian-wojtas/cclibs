@@ -91,19 +91,22 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
             }
             break;
 
-        case PAR_STRING:
+        case PAR_STRING:   // STRING parameters must be scalar (max_num_element = 1)
 
-            // On first call, allocate space for array of pointers to strings
+            // Fatal error if string parameter is an array
 
-            if(par->value_p.s == NULL)
+            if(par->max_num_elements > 1)
             {
-                par->value_p.s = calloc(par->max_num_elements, sizeof(char*));
+                printf("Fatal - %s %s is a STRING parameter: max_num_elements is %u but must be 1\n",
+                       cmd_name, par->name, par->max_num_elements);
+                exit(EXIT_FAILURE);
             }
 
-            // Free and reallocate space for string argment
+            // Free and reallocate space for string argument
+            // On first call, the point is NULL which is ignored by free()
 
-            free(par->value_p.s[par->num_elements]);
-            par->value_p.s[par->num_elements] = strcpy(malloc(arg_len),arg);
+            free(*par->value_p.s);
+            *par->value_p.s = strcpy(malloc(arg_len+1),arg);
             break;
 
         case PAR_ENUM:
@@ -337,23 +340,23 @@ void ccParsPrintDebug(FILE *f)
 
         if(ccrun.breg_flag == 1)
         {
-            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "B_RST:pure_delay_periods",
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "BREG:pure_delay_periods",
                                reg_pars.b_rst_pars.pure_delay_periods);
 
-            fprintf(f,"%-*s% d\n", PARS_INDENT, "B_RST:alg_index", reg_pars.b_rst_pars.alg_index);
-            fprintf(f,"%-*s% d\n", PARS_INDENT, "B_RST:dead_beat", reg_pars.b_rst_pars.dead_beat);
+            fprintf(f,"%-*s% d\n", PARS_INDENT, "BREG:alg_index", reg_pars.b_rst_pars.alg_index);
+            fprintf(f,"%-*s% d\n", PARS_INDENT, "BREG:dead_beat", reg_pars.b_rst_pars.dead_beat);
 
-            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "B_RST:track_delay_periods",
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "BREG",
                                reg_pars.b_rst_pars.track_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
-                fprintf(f,"%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "B_RST:",
+                fprintf(f,"%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "BREG:R:S:T",
                                reg_pars.b_rst_pars.rst.r[i],
                                reg_pars.b_rst_pars.rst.s[i],
                                reg_pars.b_rst_pars.rst.t[i]);
             }
-            fprintf(f,"%-*s% 16.9E\n\n", PARS_INDENT, "B_RST:t0_correction",
+            fprintf(f,"%-*s% 16.9E\n\n", PARS_INDENT, "BREG:t0_correction",
                                reg_pars.b_rst_pars.t0_correction);
         }
 
@@ -361,23 +364,23 @@ void ccParsPrintDebug(FILE *f)
 
         if(ccrun.ireg_flag == 1)
         {
-            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "I_RST:pure_delay_periods",
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "IREG:pure_delay_periods",
                                reg_pars.i_rst_pars.pure_delay_periods);
 
-            fprintf(f,"%-*s% d\n", PARS_INDENT, "I_RST:alg_index", reg_pars.i_rst_pars.alg_index);
-            fprintf(f,"%-*s% d\n", PARS_INDENT, "I_RST:dead_beat", reg_pars.i_rst_pars.dead_beat);
+            fprintf(f,"%-*s% d\n", PARS_INDENT, "IREG:alg_index", reg_pars.i_rst_pars.alg_index);
+            fprintf(f,"%-*s% d\n", PARS_INDENT, "IREG:dead_beat", reg_pars.i_rst_pars.dead_beat);
 
-            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "I_RST:track_delay_periods",
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "IREG:track_delay_periods",
                                reg_pars.i_rst_pars.track_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
-                fprintf(f,"%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "I_RST:",
+                fprintf(f,"%-*s% 16.9E  % 16.9E  % 16.9E\n", PARS_INDENT, "IREG:R:S:T",
                                reg_pars.i_rst_pars.rst.r[i],
                                reg_pars.i_rst_pars.rst.s[i],
                                reg_pars.i_rst_pars.rst.t[i]);
             }
-            fprintf(f,"%-*s% 16.9E\n\n", PARS_INDENT, "I_RST:t0_correction",
+            fprintf(f,"%-*s% 16.9E\n\n", PARS_INDENT, "IREG:t0_correction",
                                reg_pars.i_rst_pars.t0_correction);
         }
     }

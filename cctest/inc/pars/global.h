@@ -147,9 +147,6 @@ CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
         CC_DISABLED,         // GLOBAL SIM_LOAD
         CC_NONE,             // GLOBAL CSV_FORMAT
         CC_ENABLED,          // GLOBAL FLOT_OUTPUT
-        "sandbox",           // GLOBAL GROUP
-        "FG",                // GLOBAL PROJECT
-        "cctest"             // GLOBAL FILE
 }
 #endif
 ;
