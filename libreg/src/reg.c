@@ -84,7 +84,8 @@ void regSetMeas(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regCalcPureDelay(struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode)
+float regCalcPureDelay(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
+                       uint32_t period_iters, enum reg_mode reg_mode)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will estimate the pure loop delay in regulation periods needed by regRstInit().
 \*---------------------------------------------------------------------------------------------------------*/
@@ -133,7 +134,7 @@ float regCalcPureDelay(struct reg_converter *reg, struct reg_converter_pars *reg
 
     // Return pure loop delay in regulation periods
 
-    return(pure_delay_iters / reg->period_iters);
+    return(pure_delay_iters / (float)period_iters);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regCalcRefAdvance(struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode)
@@ -208,7 +209,6 @@ void regSetMode(struct reg_converter      *reg,
     uint32_t             idx;
     float                v_ref;
     float                ref_offset;
-    float                meas;
     float                rate;
     struct reg_rst_vars *rst_vars = &reg->rst_vars;
     struct reg_rst_pars *rst_pars;
@@ -255,32 +255,32 @@ void regSetMode(struct reg_converter      *reg,
 
             if(reg_mode == REG_FIELD)
             {
-                rst_pars = &reg_pars->b_rst_pars;
-                v_ref    = reg->v_ref_limited;
-                rate     = regMeasRate(&reg->b_rate, rst_pars->period);
-                meas     = regMeasReg(&reg->b_meas);
+                rst_pars  = &reg_pars->b_rst_pars;
+                v_ref     = reg->v_ref_limited;
+                rate      = regMeasRate(&reg->b_rate, rst_pars->period);
+                reg->meas = regMeasReg(&reg->b_meas);
 
             }
             else
             {
-                rst_pars = &reg_pars->i_rst_pars;
-                v_ref    = regLoadInverseVrefSat(&reg_pars->load_pars, reg->i_meas.unfiltered, reg->v_ref_limited);
-                rate     = regMeasRate(&reg->i_rate, rst_pars->period);
-                meas     = regMeasReg(&reg->i_meas);
+                rst_pars  = &reg_pars->i_rst_pars;
+                v_ref     = regLoadInverseVrefSat(&reg_pars->load_pars, reg->i_meas.unfiltered, reg->v_ref_limited);
+                rate      = regMeasRate(&reg->i_rate, rst_pars->period);
+                reg->meas = regMeasReg(&reg->i_meas);
             }
 
             // Prepare RST histories - assuming that v_ref has been constant when calculating rate
-
-            ref_offset = rate * regCalcRefAdvance(reg, reg_pars, reg_mode);
 
             reg->period_iters      = rst_pars->period_iters;
             reg->period            = rst_pars->period;
             reg->iteration_counter = reg->period_iters;
 
+            ref_offset = rate * regCalcRefAdvance(reg, reg_pars, reg_mode);
+
             for(idx = 0; idx < REG_N_RST_COEFFS; idx++)
             {
                 rst_vars->act [idx] = v_ref;
-                rst_vars->meas[idx] = meas - rate * (float)(REG_N_RST_COEFFS - 1 - idx) * reg->period;
+                rst_vars->meas[idx] = reg->meas - rate * (float)(REG_N_RST_COEFFS - 1 - idx) * reg->period;
                 rst_vars->ref [idx] = rst_vars->meas[idx] + ref_offset;
             }
 
@@ -308,9 +308,7 @@ static void regField(struct reg_converter      *reg,                   // Regula
   compensated.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float reg_meas;
-
-    reg_meas = regMeasReg(&reg->b_meas);
+    reg->meas = regMeasReg(&reg->b_meas);
 
     if(feedforward_control == 0)
     {
@@ -321,7 +319,7 @@ static void regField(struct reg_converter      *reg,                   // Regula
         // Calculate voltage reference using RST algorithm (no magnet saturation compensation)
 
         reg->v_ref_sat = reg->v_ref = regRstCalcAct(&reg_pars->b_rst_pars, &reg->rst_vars,
-                                                    reg->ref_limited, reg_meas);
+                                                    reg->ref_limited, reg->meas);
 
         // Apply voltage reference clip and rate limits
 
@@ -334,7 +332,7 @@ static void regField(struct reg_converter      *reg,                   // Regula
             // Back calculate new current reference to keep RST histories balanced
 
             reg->ref_rst = regRstCalcRef(&reg_pars->b_rst_pars, &reg->rst_vars,
-                                         reg->v_ref_limited, reg_meas);
+                                         reg->v_ref_limited, reg->meas);
 
             // Mark field reference as rate limited
 
@@ -360,7 +358,7 @@ static void regField(struct reg_converter      *reg,                   // Regula
         // Back calculate the current reference that would produce this voltage reference
 
         reg->ref = reg->ref_limited = reg->ref_rst =
-            regRstCalcRef(&reg_pars->b_rst_pars, &reg->rst_vars, reg->v_ref_limited, reg_meas);
+            regRstCalcRef(&reg_pars->b_rst_pars, &reg->rst_vars, reg->v_ref_limited, reg->meas);
 
         // Set limit flags
 
@@ -382,9 +380,8 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float v_ref;
-    float reg_meas;
 
-    reg_meas = regMeasReg(&reg->i_meas);
+    reg->meas = regMeasReg(&reg->i_meas);
 
     if(feedforward_control == 0)
     {
@@ -394,7 +391,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 
         // Calculate voltage reference using RST algorithm
 
-        reg->v_ref = regRstCalcAct(&reg_pars->i_rst_pars, &reg->rst_vars, reg->ref_limited, reg_meas);
+        reg->v_ref = regRstCalcAct(&reg_pars->i_rst_pars, &reg->rst_vars, reg->ref_limited, reg->meas);
 
         // Calculate magnet saturation compensation
 
@@ -414,7 +411,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
 
             // Back calculate new current reference to keep RST histories balanced
 
-            reg->ref_rst = regRstCalcRef(&reg_pars->i_rst_pars, &reg->rst_vars, v_ref, reg_meas);
+            reg->ref_rst = regRstCalcRef(&reg_pars->i_rst_pars, &reg->rst_vars, v_ref, reg->meas);
 
             // Mark current reference as rate limited
 
@@ -459,7 +456,7 @@ static void regCurrent(struct reg_converter      *reg,                   // Regu
         // Back calculate the current reference that would produce this voltage reference
 
         reg->ref = reg->ref_limited = reg->ref_rst =
-            regRstCalcRef(&reg_pars->i_rst_pars, &reg->rst_vars, v_ref, reg_meas);
+            regRstCalcRef(&reg_pars->i_rst_pars, &reg->rst_vars, v_ref, reg->meas);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/

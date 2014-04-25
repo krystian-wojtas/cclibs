@@ -145,7 +145,8 @@ void     regSetSimLoad          (struct reg_converter *reg, struct reg_converter
                                  enum reg_mode reg_mode, float sim_load_tc_error);
 void     regSetMeas             (struct reg_converter *reg,  struct reg_converter_pars *reg_pars,
                                  float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
-float    regCalcPureDelay       (struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode);
+float    regCalcPureDelay       (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
+                                 enum reg_mode reg_mode, uint32_t period_iters);
 float    regCalcRefAdvance      (struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode);
 void     regSetMode             (struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode);
 uint32_t regConverter           (struct reg_converter *reg, struct reg_converter_pars *reg_pars, float *ref,

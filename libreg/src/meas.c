@@ -48,7 +48,7 @@ static float regMeasFirFilter(struct reg_meas_filter *filter)
 
     // Filter stage 2
 
-    input_integer = filter->fir_accumulator[0] / filter->fir_length[0];
+    input_integer = filter->fir_accumulator[0] / (int32_t)filter->fir_length[0];
 
     filter->fir_accumulator[1] += (input_integer - filter->fir_buf[1][filter->fir_index[1]]);
 
@@ -169,7 +169,8 @@ void regMeasFilterInitMax(struct reg_meas_filter *filter, float pos, float neg)
   will be reinitialised using filter->unfiltered and started.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float max;
+    float       max;
+    uint32_t    longest_fir_len;
     
     // Stop filter
     
@@ -181,8 +182,10 @@ void regMeasFilterInitMax(struct reg_meas_filter *filter, float pos, float neg)
     
     // Calculate float to integer scaling
     
+    longest_fir_len          = (filter->fir_length[0] > filter->fir_length[1] ?
+                                filter->fir_length[1] : filter->fir_length[0]);
     filter->max_value        = max;
-    filter->float_to_integer = INT32_MAX / (filter->fir_length[0] * max);
+    filter->float_to_integer = INT32_MAX / (longest_fir_len * max);
     filter->integer_to_float = max / INT32_MAX;
     
     // If the filter orders have already been defined then reset, initialise and restart the filter
