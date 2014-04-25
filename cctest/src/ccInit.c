@@ -355,6 +355,12 @@ uint32_t ccInitSimulation(void)
 
     // Initialise field measurement filter
 
+    if(ccpars_meas.b_fir_lengths[0] == 0 || ccpars_meas.b_fir_lengths[1] == 0)
+    {
+        ccTestPrintError("B_FIR_LENGTHS must not be zero");
+        return(EXIT_FAILURE);
+    }
+
     free(reg.b_meas.fir_buf[0]);
 
     regMeasFilterInitBuffer(&reg.b_meas, calloc((ccpars_meas.b_fir_lengths[0] + ccpars_meas.b_fir_lengths[1] +
@@ -368,14 +374,20 @@ uint32_t ccInitSimulation(void)
 
     // Initialise current measurement filter
 
+    if(ccpars_meas.i_fir_lengths[0] == 0 || ccpars_meas.i_fir_lengths[1] == 0)
+    {
+        ccTestPrintError("I_FIR_LENGTHS must not be zero");
+        return(EXIT_FAILURE);
+    }
+
     free(reg.i_meas.fir_buf[0]);
 
     regMeasFilterInitBuffer(&reg.i_meas, calloc((ccpars_meas.i_fir_lengths[0] + ccpars_meas.i_fir_lengths[1] +
                                                  ccpars_ireg.period_iters),sizeof(uint32_t)));
 
-    regMeasFilterInit(&reg.b_meas, ccpars_meas.i_fir_lengths, ccpars_ireg.period_iters, ccpars_meas.i_delay_iters);
+    regMeasFilterInit(&reg.i_meas, ccpars_meas.i_fir_lengths, ccpars_ireg.period_iters, ccpars_meas.i_delay_iters);
 
-    regMeasFilterInitMax(&reg.b_meas, ccpars_limits.i.pos, ccpars_limits.i.neg);
+    regMeasFilterInitMax(&reg.i_meas, ccpars_limits.i.pos, ccpars_limits.i.neg);
 
     regMeasRegSelect(&reg.i_meas, ccpars_meas.i_reg_select);
 
@@ -413,7 +425,7 @@ uint32_t ccInitRegulation(void)
                             reg.iter_period, ccpars_breg.period_iters, &reg_pars.load_pars,
                             ccpars_breg.clbw, ccpars_breg.clbw2, ccpars_breg.z,
                             ccpars_breg.clbw3, ccpars_breg.clbw4,
-                            regCalcPureDelay(&reg, &reg_pars, REG_FIELD),
+                            regCalcPureDelay(&reg, &reg_pars, ccpars_breg.period_iters, REG_FIELD),
                             ccpars_breg.track_delay_periods,
                             REG_FIELD, &ccpars_breg.rst);
 
@@ -432,7 +444,7 @@ uint32_t ccInitRegulation(void)
                             reg.iter_period, ccpars_ireg.period_iters, &reg_pars.load_pars,
                             ccpars_ireg.clbw, ccpars_ireg.clbw2, ccpars_ireg.z,
                             ccpars_ireg.clbw3, ccpars_ireg.clbw4,
-                            regCalcPureDelay(&reg, &reg_pars, REG_CURRENT),
+                            regCalcPureDelay(&reg, &reg_pars, ccpars_ireg.period_iters, REG_CURRENT),
                             ccpars_ireg.track_delay_periods,
                             REG_CURRENT, &ccpars_ireg.rst);
 
