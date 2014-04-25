@@ -353,7 +353,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
         printf("Running simulation... ");
 
-//        ccRunSimulation();
+        ccRunSimulation();
     }
     else
     {
