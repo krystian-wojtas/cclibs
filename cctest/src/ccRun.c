@@ -193,7 +193,7 @@ void ccRunSimulation(void)
 
     ccRunStartFunction(0);
 
-    ref_time = -reg.ref_advance;
+    ref_time = reg.ref_advance;
 
     // Loop until all functions have completed
 
@@ -247,13 +247,13 @@ void ccRunSimulation(void)
             perturb_volts = ccpars_load.perturb_volts;
         }
 
-        // Simulate voltage source and load response (with voltage perturbation added)
-
-        regSimulate(&reg, &reg_pars, perturb_volts);
-
         // Store and print to CSV file the enabled signals
 
         ccSigsStore(time);
+
+        // Simulate voltage source and load response (with voltage perturbation added)
+
+        regSimulate(&reg, &reg_pars, perturb_volts);
 
         // Check if any condition requires the converter to trip
 
@@ -279,7 +279,7 @@ void ccRunSimulation(void)
 
         time = reg.iter_period * ++iteration_idx;
 
-        ref_time = time - func_start_time - reg.ref_advance;
+        ref_time = time - func_start_time + reg.ref_advance;
 
         // If reference function has finished
 
@@ -299,7 +299,7 @@ void ccRunSimulation(void)
 
                     ccRunStartFunction(ccrun.func_idx);
 
-                    ref_time = time - func_start_time - reg.ref_advance;
+                    ref_time = time - func_start_time + reg.ref_advance;
                 }
                 else // else last function completed
                 {
