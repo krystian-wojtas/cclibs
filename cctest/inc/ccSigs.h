@@ -76,6 +76,7 @@ enum ccsig_idx
     ANA_V_REF,                  // Voltage reference
     ANA_V_REF_SAT,              // Voltage reference after magnet saturation compensation applied
     ANA_V_REF_LIMITED,          // Voltage reference after saturation compensation and limits applied
+    ANA_V_LOAD,                 // Voltage across load
     ANA_V_MEAS,                 // Measured voltage
 
     ANA_TRACK_DLY,              // Measured track delay
@@ -157,6 +158,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "V_REF",                  ANALOG,         "TRAIL_STEP" },
     { "V_REF_SAT",              ANALOG,         "TRAIL_STEP" },
     { "V_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
+    { "V_LOAD",                 ANALOG,         ""           },
     { "V_MEAS",                 ANALOG,         ""           },
 
     { "ANA_TRACK_DLY",          ANALOG,         "TRAIL_STEP" },

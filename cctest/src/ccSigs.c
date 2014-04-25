@@ -189,6 +189,7 @@ void ccSigsInit(void)
         // Voltage source simulation signals
 
         ccSigsEnableSignal(ANA_V_REF_LIMITED);
+        ccSigsEnableSignal(ANA_V_LOAD);
         ccSigsEnableSignal(ANA_V_MEAS);
         ccSigsEnableSignal(ANA_V_ERR);
         ccSigsEnableSignal(ANA_MAX_ABS_V_ERR);
@@ -224,7 +225,7 @@ void ccSigsInit(void)
 
         // Current regulation signals
 
-        if(ccrun.breg_flag == 1)
+        if(ccrun.ireg_flag == 1)
         {
             ccSigsEnableSignal(ANA_REG_MEAS);
             ccSigsEnableSignal(ANA_TRACK_DLY);
@@ -325,6 +326,7 @@ void ccSigsStore(double time)
 
         ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v_ref_sat);
         ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
+        ccSigsStoreAnalog (ANA_V_LOAD,         reg.v_sim.load);
         ccSigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
