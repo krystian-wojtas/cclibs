@@ -1,8 +1,0 @@
-# CCTEST global control file for function generation tests with normal time
-
-GLOBAL.RUN_DELAY       0.0
-GLOBAL.STOP_DELAY      0.0
-GLOBAL.ITER_PERIOD     1.0E-2
-GLOBAL.REG_MODE        VOLTAGE
-
-# EOF
