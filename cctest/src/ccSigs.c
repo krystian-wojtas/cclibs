@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "ccCmds.h"
 #include "ccTest.h"
@@ -84,6 +85,14 @@ static void ccSigsStoreAnalog(enum ccsig_idx idx, float ana_value)
 
     if(signals[idx].control == CC_ENABLED)
     {
+        // If value is bad then store zero and increment bad value counter
+
+        if(!isfinite(ana_value) || fabs(ana_value) > 1.0E6)
+        {
+            ana_value = 0.0;
+            signals[idx].num_bad_values++;
+        }
+
         signals[idx].value = ana_value;
 
         // If FLOT output enabled then also save value in the FLOT buffer
@@ -164,11 +173,12 @@ void ccSigsInit(void)
 
     flot_index = 0;
 
-    // Start with all signals disabled
+    // Start with all signals disabled and reset bad values counter
 
     for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
     {
-        signals[idx].control = CC_DISABLED;
+        signals[idx].control        = CC_DISABLED;
+        signals[idx].num_bad_values = 0;
     }
 
     // Voltage reference is always enabled
@@ -309,18 +319,18 @@ void ccSigsStore(double time)
         ccSigsStoreAnalog (ANA_B_REF_RST,      reg.ref_rst);
 
         ccSigsStoreAnalog( ANA_B_LOAD,         reg.b_sim.load);
-        ccSigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.unfiltered);
-        ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.filtered);
-        ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.extrapolated);
+        ccSigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.meas[REG_MEAS_UNFILTERED]);
+        ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.meas[REG_MEAS_FILTERED]);
+        ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.meas[REG_MEAS_EXTRAPOLATED]);
 
         ccSigsStoreAnalog (ANA_I_REF,          reg.ref);
         ccSigsStoreAnalog (ANA_I_REF_LIMITED,  reg.ref_limited);
         ccSigsStoreAnalog (ANA_I_REF_RST,      reg.ref_rst);
 
         ccSigsStoreAnalog (ANA_I_LOAD,         reg.i_sim.load);
-        ccSigsStoreAnalog (ANA_I_MEAS,         reg.i_meas.unfiltered);
-        ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i_meas.filtered);
-        ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i_meas.extrapolated);
+        ccSigsStoreAnalog (ANA_I_MEAS,         reg.i_meas.meas[REG_MEAS_UNFILTERED]);
+        ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i_meas.meas[REG_MEAS_FILTERED]);
+        ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i_meas.meas[REG_MEAS_EXTRAPOLATED]);
 
         ccSigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
 
@@ -332,12 +342,12 @@ void ccSigsStore(double time)
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
         ccSigsStoreAnalog( ANA_TRACK_DLY_FLTR, reg.rst_vars.filtered_track_delay_periods);
 
-        ccSigsStoreAnalog (ANA_B_ERR,          reg.err);
-        ccSigsStoreAnalog (ANA_I_ERR,          reg.err);
+        ccSigsStoreAnalog (ANA_B_ERR,          reg.b_err.err);
+        ccSigsStoreAnalog (ANA_I_ERR,          reg.i_err.err);
         ccSigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
 
-        ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.max_abs_err);
-        ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.b_err.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.i_err.max_abs_err);
         ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v_err.max_abs_err);
 
         ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.lim_b_meas.flags.trip);
@@ -615,4 +625,27 @@ void ccSigsFlot(FILE *f)
 
     fputs(flot[4],f);
 }
+/*---------------------------------------------------------------------------------------------------------*/
+uint32_t ccSigsReportBadValues(void)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will report the number of bad values submitted for all signals
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t    idx;
+    uint32_t    exit_status = EXIT_SUCCESS;
+
+    // Start with all signals disabled and reset bad values counter
+
+    for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
+    {
+        if(signals[idx].control == CC_ENABLED && signals[idx].num_bad_values > 0)
+        {
+            printf("Bad values for %-20s : %6u\n",signals[idx].name, signals[idx].num_bad_values);
+            exit_status = EXIT_FAILURE;
+        }
+    }
+
+    return(exit_status);
+}
+
 // EOF

@@ -34,77 +34,6 @@
 #include "ccSigs.h"
 #include "ccRun.h"
 
-    // If voltage source will be simulated
-
-/*    if(ccpars_global.sim_load == CC_ENABLED)
-    {
-        reg.mode = REG_NONE;                    // Reset reg.mode since regSetMode & regSetVoltageMode are
-                                                // change sensitive
-        // If voltage regulation enabled
-
-        if(ccpars_global.reg_mode == REG_VOLTAGE)
-        {
-            regSetVoltageMode(&reg, &reg_pars);
-        }
-        else
-        {
-            // Initialise limited reference to equal the starting value of the reference function
-
-            reg.ref_rst = reg.ref_limited = ccrun.fg_meta[0].range.start;
-
-            // Calculate track delay in iteration periods
-
-            switch(ccpars_global.reg_mode)
-            {
-            case REG_FIELD:  // Initialise field regulation
-
-                status = regRstInit(&reg_pars.b_rst_pars,
-                                    reg.iter_period, ccpars_reg_b.period_iters, &reg_pars.load_pars,
-                                    ccpars_reg_b.clbw, ccpars_reg_b.clbw2, ccpars_reg_b.z,
-                                    ccpars_reg_b.clbw3, ccpars_reg_b.clbw4,
-                                    regCalcPureDelay(&reg, &reg_pars),
-                                    ccpars_reg_b.track_delay_periods,
-                                    REG_FIELD, &ccpars_reg_b.rst);
-
-
-                // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
-                // corresponds to steady state reg.b_meas (last parameter is the rate of change)
-
-                regSetMode(&reg, &reg_pars, REG_FIELD, reg.b_meas.unfiltered, 0.0);
-                break;
-
-            case REG_CURRENT:   // Initialise current regulation
-
-                status = regRstInit(&reg_pars.i_rst_pars,
-                                    reg.iter_period, ccpars_reg_i.period_iters, &reg_pars.load_pars,
-                                    ccpars_reg_i.clbw, ccpars_reg_i.clbw2, ccpars_reg_i.z,
-                                    ccpars_reg_i.clbw3, ccpars_reg_i.clbw4,
-                                    regCalcPureDelay(&reg, &reg_pars),
-                                    ccpars_reg_i.track_delay_periods,
-                                    REG_CURRENT, &ccpars_reg_i.rst);
-
-                // regSetMode requires reg.v_ref_limited to be set to the voltage reference that
-                // corresponds to steady state reg.i_meas (last parameter is the rate of change)
-
-                regSetMode(&reg, &reg_pars, REG_CURRENT, reg.i_meas.unfiltered, 0.0);
-                break;
-            }
-
-            // Check for regulation initialisation failure - there is only one possible reason: S[0] is too small
-
-            if(status != REG_OK)
-            {
-                ccTestPrintError("RST regulator failed to initialise: S[0] is less than 1.0E-10");
-                return(EXIT_FAILURE);
-            }
-
-            // Estimate the ref advance time
-
-            regCalcRefAdvance(&reg, &reg_pars);
-        }
-    }*/
-
-
 ///*---------------------------------------------------------------------------------------------------------*/
 //static void ccRunAbort(double time)
 ///*---------------------------------------------------------------------------------------------------------*\
@@ -273,6 +202,14 @@ void ccRunSimulation(void)
             ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v_ref = reg.v_ref_sat = reg.v_ref_limited = 0.0;
 
             ccSigsStoreCursor(CSR_FUNC,"TRIP!");
+
+            puts("Trip");
+
+            // Run for the stop delay following the trip
+
+            func_run_f          = 0;
+            ccrun.func_idx      = ccrun.num_functions;
+            ccrun.func_duration = ref_time + ccpars_global.stop_delay;
         }
 
         // Calculate next iteration time

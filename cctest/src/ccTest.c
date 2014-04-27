@@ -26,6 +26,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <dirent.h>
 #include <ctype.h>
 #include <string.h>
 #include <libgen.h>
@@ -49,7 +52,7 @@ char *default_commands[] =
 {
     "GLOBAL GROUP   sandbox",
     "GLOBAL PROJECT FG",
-    "GLOBAL FILE    cctest",
+    "GLOBAL FILE    *",         // Default output file name will be the input file name
     NULL
 };
 
@@ -81,6 +84,8 @@ int main(int argc, char **argv)
 
     if(argc == 1)
     {
+        ccTestRecoverPath();
+
         cctest.input[0].line_number++;
 
         exit_status = ccTestParseLine("read");
@@ -294,5 +299,95 @@ uint32_t ccTestNoMoreArgs(char **remaining_line)
     }
 
     return(EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+uint32_t ccTestReadAllFiles(void)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function read the current working directory and the try to read each file in it.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    struct dirent   *files;
+    struct stat      dir_file_stat;
+    DIR             *dp;
+    char            *filename;
+
+    // Try to open current working directory
+
+    dp = opendir(".");
+
+    if(dp == NULL)
+    {
+        printf("Fatal - failed to open current working directory : %s (%d)", strerror(errno), errno);
+        exit(EXIT_FAILURE);
+    }
+
+    // Read contents of directory - this is not re-entrant because readdir_r() is not available in MinGW
+
+    while((files = readdir(dp)) != NULL)
+    {
+        filename = files->d_name;
+
+        // Get status of each file
+
+        if(stat(filename, &dir_file_stat) == -1)
+        {
+            printf("Fatal - failed to stat '%s' in current working directory : %s (%d)", filename, strerror(errno), errno);
+            exit(EXIT_FAILURE);
+        }
+
+        // If regulation file
+
+        if(S_ISREG(dir_file_stat.st_mode))
+        {
+            if(ccCmdsRead(0, &filename) == EXIT_FAILURE)
+            {
+                // Close director and report failure
+
+                closedir(dp);
+                return(EXIT_FAILURE);
+            }
+        }
+    }
+
+    if(errno != 0)
+    {
+        printf("Fatal - failed to read current working directory : %s (%d)", strerror(errno), errno);
+        exit(EXIT_FAILURE);
+    }
+
+    // Close directory and report success
+
+    closedir(dp);
+    return(EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void ccTestRecoverPath(void)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will try to recover the initial path where it is written by the CD command.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    FILE   *f;
+    char    path_filename[CC_PATH_LEN * 2];
+    char    cwd_buf[CC_PATH_LEN];
+
+    // Try to open the file with the path
+
+    sprintf(path_filename,"%s/%s",cctest.base_path,CC_CWD_FILE);
+
+    f = fopen(path_filename,"r");
+
+    if(f == NULL)
+    {
+        return;
+    }
+
+    // Try to read path from start of file - ignore errors
+
+    if(fgets(cwd_buf, CC_PATH_LEN, f) != NULL)
+    {
+        chdir(cwd_buf);
+    }
+
+    fclose(f);
 }
 // EOF

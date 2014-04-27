@@ -189,41 +189,43 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par)
 {
     uint32_t            idx;
 
-    fprintf(f,"%-*s %-*s",CC_MAX_CMD_NAME_LEN,cmd_name,CC_MAX_PAR_NAME_LEN,par->name);
-
-
-    for( idx = 0 ; idx < par->num_elements ; idx++)
+    if(par->num_elements > 0)
     {
-        if(idx > 0)
+        fprintf(f,"%-*s %-*s",CC_MAX_CMD_NAME_LEN,cmd_name,CC_MAX_PAR_NAME_LEN,par->name);
+
+        for( idx = 0 ; idx < par->num_elements ; idx++)
         {
-            fputc(',',f);
+            if(idx > 0)
+            {
+                fputc(',',f);
+            }
+
+            switch(par->type)
+            {
+            case PAR_UNSIGNED:
+
+                fprintf(f,"% d",par->value_p.i[idx]);
+                break;
+
+            case PAR_FLOAT:
+
+                fprintf(f,"% .6E",par->value_p.f[idx]);
+                break;
+
+            case PAR_STRING:
+
+                fprintf(f," %s",par->value_p.s[idx]);
+                break;
+
+            case PAR_ENUM:
+
+                fprintf(f," %s",ccParsEnumString(par->ccpars_enum, par->value_p.i[idx]));
+                break;
+            }
         }
 
-        switch(par->type)
-        {
-        case PAR_UNSIGNED:
-
-            fprintf(f,"% d",par->value_p.i[idx]);
-            break;
-
-        case PAR_FLOAT:
-
-            fprintf(f,"% .6E",par->value_p.f[idx]);
-            break;
-
-        case PAR_STRING:
-
-            fprintf(f," %s",par->value_p.s[idx]);
-            break;
-
-        case PAR_ENUM:
-
-            fprintf(f," %s",ccParsEnumString(par->ccpars_enum, par->value_p.i[idx]));
-            break;
-        }
+        fputc('\n',f);
     }
-
-    fputc('\n',f);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ccParsPrintDebug(FILE *f)
@@ -346,8 +348,10 @@ void ccParsPrintDebug(FILE *f)
             fprintf(f,"%-*s% d\n", PARS_INDENT, "BREG:alg_index", reg_pars.b_rst_pars.alg_index);
             fprintf(f,"%-*s% d\n", PARS_INDENT, "BREG:dead_beat", reg_pars.b_rst_pars.dead_beat);
 
-            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "BREG",
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "BREG:track_delay_periods",
                                reg_pars.b_rst_pars.track_delay_periods);
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "BREG:ref_delay_periods",
+                               reg_pars.b_rst_pars.ref_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
@@ -372,6 +376,8 @@ void ccParsPrintDebug(FILE *f)
 
             fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "IREG:track_delay_periods",
                                reg_pars.i_rst_pars.track_delay_periods);
+            fprintf(f,"%-*s% 16.9E\n", PARS_INDENT, "IREG:ref_delay_periods",
+                               reg_pars.i_rst_pars.ref_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {

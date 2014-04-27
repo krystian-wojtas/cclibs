@@ -311,9 +311,9 @@ uint32_t ccInitSimulation(void)
 
     // First set the V/I/B measurements to cover all three regulation modes
 
-    reg.v_meas            = ccrun.fg_meta[0].range.start * reg_pars.sim_vs_pars.gain; // Set v_meas to voltage on load
-    reg.i_meas.unfiltered = ccrun.fg_meta[0].range.start;                             // i_meas
-    reg.b_meas.unfiltered = ccrun.fg_meta[0].range.start;                             // b_meas
+    reg.v_meas = ccrun.fg_meta[0].range.start * reg_pars.sim_vs_pars.gain;  // Set v_meas to voltage on load
+    reg.i_meas.meas[REG_MEAS_UNFILTERED] = ccrun.fg_meta[0].range.start;    // i_meas
+    reg.b_meas.meas[REG_MEAS_UNFILTERED] = ccrun.fg_meta[0].range.start;    // b_meas
 
     // Initialise load model for simulation using the sim_tc_error factor to mismatch the regulation
 
@@ -349,8 +349,8 @@ uint32_t ccInitSimulation(void)
 
     // Initialise simulated measurement delay histories
 
-    regDelayInitVars(&reg.b_sim.delay, reg.b_meas.unfiltered);
-    regDelayInitVars(&reg.i_sim.delay, reg.i_meas.unfiltered);
+    regDelayInitVars(&reg.b_sim.delay, reg.b_meas.meas[REG_MEAS_UNFILTERED]);
+    regDelayInitVars(&reg.i_sim.delay, reg.i_meas.meas[REG_MEAS_UNFILTERED]);
     regDelayInitVars(&reg.v_sim.delay, reg.v_meas);
 
     // Initialise field measurement filter
@@ -366,9 +366,8 @@ uint32_t ccInitSimulation(void)
     regMeasFilterInitBuffer(&reg.b_meas, calloc((ccpars_meas.b_fir_lengths[0] + ccpars_meas.b_fir_lengths[1] +
                                                  ccpars_breg.period_iters),sizeof(uint32_t)));
 
-    regMeasFilterInit(&reg.b_meas, ccpars_meas.b_fir_lengths, ccpars_breg.period_iters, ccpars_meas.b_delay_iters);
-
-    regMeasFilterInitMax(&reg.b_meas, ccpars_limits.b.pos, ccpars_limits.b.neg);
+    regMeasFilterInit(&reg.b_meas, ccpars_meas.b_fir_lengths, ccpars_breg.period_iters,
+                      ccpars_limits.b.pos, ccpars_limits.b.neg, ccpars_meas.b_delay_iters);
 
     regMeasRegSelect(&reg.b_meas, ccpars_meas.b_reg_select);
 
@@ -385,9 +384,8 @@ uint32_t ccInitSimulation(void)
     regMeasFilterInitBuffer(&reg.i_meas, calloc((ccpars_meas.i_fir_lengths[0] + ccpars_meas.i_fir_lengths[1] +
                                                  ccpars_ireg.period_iters),sizeof(uint32_t)));
 
-    regMeasFilterInit(&reg.i_meas, ccpars_meas.i_fir_lengths, ccpars_ireg.period_iters, ccpars_meas.i_delay_iters);
-
-    regMeasFilterInitMax(&reg.i_meas, ccpars_limits.i.pos, ccpars_limits.i.neg);
+    regMeasFilterInit(&reg.i_meas, ccpars_meas.i_fir_lengths, ccpars_ireg.period_iters,
+                      ccpars_limits.i.pos, ccpars_limits.i.neg, ccpars_meas.i_delay_iters);
 
     regMeasRegSelect(&reg.i_meas, ccpars_meas.i_reg_select);
 
@@ -412,6 +410,7 @@ uint32_t ccInitRegulation(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t status = 0;
+    float    pure_delay_periods;
 
     // Reset reg.mode since regSetMode & regSetVoltageMode are change sensitive
 
@@ -421,11 +420,14 @@ uint32_t ccInitRegulation(void)
 
     if(ccrun.breg_flag == 1)
     {
+        pure_delay_periods = ccpars_breg.pure_delay_periods > 0.0 ? ccpars_breg.pure_delay_periods :
+                             regCalcPureDelay(&reg, &reg_pars, &reg.b_meas, ccpars_breg.period_iters);
+
         status = regRstInit(&reg_pars.b_rst_pars,
                             reg.iter_period, ccpars_breg.period_iters, &reg_pars.load_pars,
                             ccpars_breg.clbw, ccpars_breg.clbw2, ccpars_breg.z,
-                            ccpars_breg.clbw3, ccpars_breg.clbw4,
-                            regCalcPureDelay(&reg, &reg_pars, ccpars_breg.period_iters, REG_FIELD),
+                            ccpars_breg.clbw, ccpars_breg.clbw,
+                            pure_delay_periods,
                             ccpars_breg.track_delay_periods,
                             REG_FIELD, &ccpars_breg.rst);
 
@@ -440,11 +442,14 @@ uint32_t ccInitRegulation(void)
 
     if(ccrun.ireg_flag == 1)
     {
+        pure_delay_periods = ccpars_ireg.pure_delay_periods > 0.0 ? ccpars_ireg.pure_delay_periods :
+                             regCalcPureDelay(&reg, &reg_pars, &reg.i_meas, ccpars_ireg.period_iters);
+
         status = regRstInit(&reg_pars.i_rst_pars,
                             reg.iter_period, ccpars_ireg.period_iters, &reg_pars.load_pars,
                             ccpars_ireg.clbw, ccpars_ireg.clbw2, ccpars_ireg.z,
-                            ccpars_ireg.clbw3, ccpars_ireg.clbw4,
-                            regCalcPureDelay(&reg, &reg_pars, ccpars_ireg.period_iters, REG_CURRENT),
+                            ccpars_ireg.clbw, ccpars_ireg.clbw,
+                            pure_delay_periods,
                             ccpars_ireg.track_delay_periods,
                             REG_CURRENT, &ccpars_ireg.rst);
 
