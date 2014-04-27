@@ -6,7 +6,7 @@ BEGIN {
 
     if(ARGC < 2)
     {
-        printf "Usage: gawk -f %s file file file... 2> run.sh_list\n",ARGV[0]
+        printf "Usage: gawk -f %s file file file...\n",ARGV[0]
         exit -1
     }
 
@@ -21,11 +21,15 @@ BEGIN {
 #----------------------------------------------------------------
 function convert(ip, op, oppath,  n, i, of) 
 {
+     split(op,path,"/")
+
      gsub(/_V1/,"",op)
 
-     printf "Converting %-50s into %s/%s", ip, oppath, op
+     gsub(/\//,"_",op)
 
-     of = oppath "/" op
+     of = oppath "/" path[1] "/" op
+
+     printf "Converting %-50s into %s", ip, of
 
      printf "# CCTEST Table for %s\n\n",op > of
 
@@ -52,29 +56,24 @@ function convert(ip, op, oppath,  n, i, of)
          }
      }
 
-     printf "TIME %.3f", time[0] > of
+     printf "TABLE TIME %.3f", time[0] > of
 
      for(i=1 ; i < n ; i++)
      {
          printf ",%.3f", time[i] > of
      }
 
-     printf "\nREF  %s", ref[0] > of
+     printf "\nTABLE REF  %s", ref[0] > of
 
      for(i=1 ; i < n ; i++)
      {
          printf ",%s", ref[i] > of
      }
 
-     print "\n\n# EOF" > of
+     print "\n\nRUN\n\n# EOF" > of
      close(of)
      close(ip)
 
      print " ...  done"
-
-     type = tolower(substr(ip,1,2))
-
-     printf "\"$cctest\" -o $output_format -g pars/amps/global -f TABLE -d functions/amps/%s -m pars/limits -l pars/load_%s -s pars/vs -r pars/amps/reg  > \"$outpath/amps-%s-%s.$file_type\"  &&\n", op, type, toupper(type), toupper(substr(op,4)) >> "/dev/stderr"
-
 }
 # EOF
