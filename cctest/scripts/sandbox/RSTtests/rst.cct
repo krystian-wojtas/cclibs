@@ -21,24 +21,24 @@ LIMITS B_ERR_FAULT          0.0
                             
 LIMITS I_POS                4000.0
 LIMITS I_MIN                0.0
-LIMITS I_NEG                -400.0
-LIMITS I_RATE               1000.0
+LIMITS I_NEG                -4000.0
+LIMITS I_RATE               500.0
 LIMITS I_ACCELERATION       0.0
-LIMITS I_ERR_WARNING        0.0
-LIMITS I_ERR_FAULT          0.0
+LIMITS I_ERR_WARNING        1.0
+#LIMITS I_ERR_FAULT          10.0
 LIMITS I_QUADRANTS41        0.0,0.0
                             
 LIMITS V_POS                450.0
 LIMITS V_NEG                -450.0
 LIMITS V_RATE               5.0E5
 LIMITS V_ACCELERATION       0.0
-LIMITS V_ERR_WARNING        0.0
+LIMITS V_ERR_WARNING        10.0
 LIMITS V_ERR_FAULT          0.0
 LIMITS V_QUADRANTS41        0.0,0.0
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS        2.0
+VS V_REF_DELAY_ITERS        1.0
 VS BANDWIDTH                2000.0
 VS TAU_ZERO                 0.0
 VS Z                        0.9
@@ -48,8 +48,8 @@ VS Z                        0.9
 LOAD OHMS_SER               0.0
 LOAD OHMS_PAR               1.0E8
 LOAD OHMS_MAG               0.3
-LOAD HENRYS                 0.3
-LOAD HENRYS_SAT             0.3
+LOAD HENRYS                 0.2
+LOAD HENRYS_SAT             0.2
 LOAD I_SAT_START            0.0
 LOAD I_SAT_END              0.0
 LOAD GAUSS_PER_AMP          0.75
@@ -60,22 +60,22 @@ LOAD SIM_TC_ERROR           0.2
 # Measurement parameters
 
 MEAS B_REG_SELECT           EXTRAPOLATED
-MEAS I_REG_SELECT           EXTRAPOLATED
+MEAS I_REG_SELECT           UNFILTERED
 MEAS B_DELAY_ITERS          1.3
 MEAS I_DELAY_ITERS          1.3
 MEAS V_DELAY_ITERS          1.3
 MEAS B_FIR_LENGTHS          10, 7
-MEAS I_FIR_LENGTHS          10, 7
+MEAS I_FIR_LENGTHS          10, 1
 MEAS B_SIM_NOISE_PP         0.005
 MEAS I_SIM_NOISE_PP         0.005
 MEAS V_SIM_NOISE_PP         0.05
 MEAS TONE_HALF_PERIOD_ITERS 100
-MEAS B_SIM_TONE_AMP         0.001
-MEAS I_SIM_TONE_AMP         0.001
+MEAS B_SIM_TONE_AMP         0.0
+MEAS I_SIM_TONE_AMP         0.0
 
 # PPPL parameters
 
-PPPL INITIAL_REF                0
+PPPL INITIAL_REF               10
 PPPL ACCELERATION1          25000,   -25000,    -25000
 PPPL ACCELERATION2              0,        0,         0
 PPPL ACCELERATION3          -2000,    25000,     25000
@@ -84,18 +84,203 @@ PPPL RATE4                      0,        0,         0
 PPPL REF4                     100,       50,         0
 PPPL DURATION4                0.1,      0.2,      0.01
 
-# Test 1 
+# Sine wave parameters
+
+TEST INITIAL_REF            100.0
+TEST AMPLITUDE_PP           100.0
+TEST NUM_CYCLES             2
+TEST PERIOD                 0.5
+TEST WINDOW                 ENABLED
+
+# Test 0 - Open loop 
+
+GLOBAL FUNCTION             PPPL
+GLOBAL REG_MODE             VOLTAGE
+GLOBAL FILE                 volts-pppl
+RUN
+
+GLOBAL FUNCTION             SINE
+GLOBAL REG_MODE             VOLTAGE
+GLOBAL FILE                 volts-sine
+#RUN
+
+GLOBAL REG_MODE             CURRENT
+
+# Test 1 - unfiltered
              
-GLOBAL FILE                 amps-pppl1
+MEAS I_REG_SELECT           UNFILTERED
 
 IREG PERIOD_ITERS           10
-IREG TRACK_DELAY_PERIODS    1.0
 IREG CLBW                   50
 IREG CLBW2                  50
 IREG Z                      0.7
-IREG CLBW3                  50
 
+VS V_REF_DELAY_ITERS        1.0
+GLOBAL FILE                 amps-pppl-unf-0.38
 GLOBAL FUNCTION             PPPL
-# RUN
+#RUN
+
+VS V_REF_DELAY_ITERS        6.0
+GLOBAL FILE                 amps-pppl-unf-0.88
+GLOBAL FUNCTION             PPPL
+#RUN
+
+VS V_REF_DELAY_ITERS        11.0
+GLOBAL FILE                 amps-pppl-unf-1.38
+GLOBAL FUNCTION             PPPL
+#RUN
+
+VS V_REF_DELAY_ITERS        16.0
+GLOBAL FILE                 amps-pppl-unf-1.88
+GLOBAL FUNCTION             PPPL
+#RUN
+
+IREG CLBW                   5
+IREG CLBW2                  5
+
+VS V_REF_DELAY_ITERS        21.0
+GLOBAL FILE                 amps-pppl-unf-2.38
+GLOBAL FUNCTION             PPPL
+#RUN
+
+# Test 2 - filtered
+             
+MEAS I_REG_SELECT           FILTERED
+
+IREG CLBW                   50
+IREG CLBW2                  50
+IREG Z                      0.7
+
+VS V_REF_DELAY_ITERS        1.0
+GLOBAL FILE                 amps-pppl-fil-0.83
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        6.0
+GLOBAL FILE                 amps-pppl-fil-1.33
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        11.0
+GLOBAL FILE                 amps-pppl-fil-1.83
+GLOBAL FUNCTION             PPPL
+RUN
+
+IREG CLBW                   1
+IREG CLBW2                  1
+
+VS V_REF_DELAY_ITERS        13.0
+GLOBAL FILE                 amps-pppl-fil-2.03
+GLOBAL FUNCTION             PPPL
+RUN
+
+exit
+
+VS V_REF_DELAY_ITERS        11.0
+GLOBAL FILE                 amps-pppl-unf-1.38
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        16.0
+GLOBAL FILE                 amps-pppl-unf-1.88
+GLOBAL FUNCTION             PPPL
+RUN
+
+IREG CLBW                   5
+IREG CLBW2                  5
+
+VS V_REF_DELAY_ITERS        21.0
+GLOBAL FILE                 amps-pppl-unf-2.38
+GLOBAL FUNCTION             PPPL
+RUN
+
+exit
+MEAS I_REG_SELECT           FILTERED
+GLOBAL FUNCTION             SINE
+GLOBAL FILE                 amps-sine1-fil
+RUN
+
+GLOBAL FILE                 amps-pppl1-fil
+GLOBAL FUNCTION             PPPL
+RUN
+
+MEAS I_REG_SELECT           EXTRAPOLATED
+GLOBAL FUNCTION             SINE
+GLOBAL FILE                 amps-sine1-ext
+RUN
+
+GLOBAL FILE                 amps-pppl1-ext
+GLOBAL FUNCTION             PPPL
+RUN
+
+# Test 2 
+        
+IREG PERIOD_ITERS           100
+VS V_REF_DELAY_ITERS        4.0
+        
+IREG CLBW                   10
+IREG CLBW2                  10
+
+MEAS I_REG_SELECT           UNFILTERED
+GLOBAL FUNCTION             SINE
+GLOBAL FILE                 amps-sine2-unf
+RUN
+
+GLOBAL FILE                 amps-pppl2-unf
+GLOBAL FUNCTION             PPPL
+RUN
+
+MEAS I_REG_SELECT           FILTERED
+GLOBAL FUNCTION             SINE
+GLOBAL FILE                 amps-sine2-fil
+RUN
+
+GLOBAL FILE                 amps-pppl2-fil
+GLOBAL FUNCTION             PPPL
+RUN
+
+MEAS I_REG_SELECT           EXTRAPOLATED
+GLOBAL FUNCTION             SINE
+GLOBAL FILE                 amps-sine2-ext
+RUN
+
+GLOBAL FILE                 amps-pppl2-ext
+GLOBAL FUNCTION             PPPL
+RUN
+
+# Test 3 
+        
+VS V_REF_DELAY_ITERS        7.0
+        
+IREG PERIOD_ITERS           100
+IREG CLBW                   5
+IREG CLBW2                  5
+
+MEAS I_REG_SELECT           UNFILTERED
+GLOBAL FUNCTION             SINE
+GLOBAL FILE                 amps-sine3-unf
+RUN
+
+GLOBAL FILE                 amps-pppl3-unf
+GLOBAL FUNCTION             PPPL
+RUN
+
+MEAS I_REG_SELECT           FILTERED
+GLOBAL FUNCTION             SINE
+GLOBAL FILE                 amps-sine3-fil
+RUN
+
+GLOBAL FILE                 amps-pppl3-fil
+GLOBAL FUNCTION             PPPL
+RUN
+
+MEAS I_REG_SELECT           EXTRAPOLATED
+GLOBAL FUNCTION             SINE
+GLOBAL FILE                 amps-sine3-ext
+RUN
+
+GLOBAL FILE                 amps-pppl3-ext
+GLOBAL FUNCTION             PPPL
+RUN
 
 # EOF
