@@ -16,7 +16,7 @@
 
         $.each(analog_signals, function(sig_name, signal)
         {
-            signal.color     = i + 2 + (i > 8) + (i > 17);  // Skip color 11 and 18 as they are too pale
+            signal.color     = 2 + i + 2 * ((i > 7) + (i > 15));  // Skip colours that are too pale
             signal.index     = i++;
             signal.visible   = 1;
             signal.exp       = 0;
@@ -28,7 +28,7 @@
 
         $.each(digital_signals, function(sig_name, signal)
         {
-            signal.color = i + 2 + (i > 8) + (i > 17);  // Skip color 11 and 18 as they are too pale
+            signal.color = 2 + i + 2 * ((i > 7) + (i > 15));  // Skip colours that are too pale
             dig_legend.push([-(++i),sig_name]);
             signal.label = sig_name;
             visible_digital_signals.push(digital_signals[sig_name]);
@@ -38,10 +38,11 @@
 
         analog_options =
         {
-            series:         { shadowSize: 1, lines: { show: true, lineWidth: 1}, points: { radius: 2} },
+            series:         { shadowSize: 0, lines: { lineWidth: 1}, points: { radius: 2} },
             grid:           { color: "#444", borderWidth: 1, backgroundColor: "#FFF" },
             yaxis:          { labelWidth:220 },
-            legend:         { container: analog_legend_div, position: "nw", labelFormatter: function (label, series) { return '<a href="javascript:ToggleVisibility(' + series.index + ');">' + label + '</a>'; }},
+            legend:         { container: analog_legend_div, position: "nw", 
+            labelFormatter: function (label, series) { return '<a href="javascript:ToggleVisibility(' + series.index + ');">' + label + '</a>'; }},
             selection:      { mode: "xy", touch: Modernizr.touch, tapCallback: ZoomOut }
         };
 
@@ -49,7 +50,7 @@
 
         digital_options =
         {
-            series:    { shadowSize: 1, lines: { show: true, lineWidth: 1} },
+            series:    { shadowSize: 0, lines: { lineWidth: 1} },
             grid:      { color: "#444", borderWidth: 1, backgroundColor: "#FFF", axisMargin: 50 },
             yaxis:     { labelWidth:220, max: -0.25, min: -i-0.75, ticks: dig_legend },
             legend:    { show: false }
@@ -250,22 +251,40 @@
 //------------------------------------------------------------------------------------------------
     function ToggleMode(mode)
     {
-        if(mode == 0)
+        switch(mode)
         {
-            // ----- mode 0 : Toggle E-Scale flag -----
+        case 0: // ----- mode 0 : Toggle E-Scale flag -----
 
             escale_flag = 1 - escale_flag;
-        }
-        else
-        {
-            // ----- mode 1 : Toggle Derivative flag -----
+            break;
+            
+        case 1: // ----- mode 1 : Toggle Derivative flag -----
 
             derivative_flag = 1 - derivative_flag;
+            break;
         }
-
+        
         // ----- Zoom out to full scale -----
 
         FullScale();
+    }
+
+//------------------------------------------------------------------------------------------------
+    function ToggleThickLines()
+    {
+        // Toggle lines thickness from between 1 and 2
+        
+        analog_options.series.lines.lineWidth       = 3 - analog_options.series.lines.lineWidth;
+        analog_options_zoom.series.lines.lineWidth  = analog_options.series.lines.lineWidth;
+        digital_options.series.lines.lineWidth      = analog_options.series.lines.lineWidth;
+        digital_options_zoom.series.lines.lineWidth = analog_options.series.lines.lineWidth;
+
+        // Toggle points radius between 2 and 4
+    
+        analog_options.series.points.radius         = 6 - analog_options.series.points.radius;
+        analog_options_zoom.series.points.radius    = analog_options.series.points.radius;
+
+        PlotSignals();
     }
 
 //------------------------------------------------------------------------------------------------
@@ -364,14 +383,15 @@
 
   <!--  Control links above analog plot -->
 
-  <p id='links_line' style='font-size:14px'>
-    <a href='javascript:AllNoneVisible(1);'>Show all signals</a> |
-    <a href='javascript:AllNoneVisible(0);'>Hide all signals</a> |
-    <a href='javascript:ToggleMode(0);'>Toggle E-Scaling</a> |
-    <a href='javascript:ToggleMode(1);'>Toggle Derivative</a> |
+  <p id='links_line' style='font-size:14px'>&nbsp;
+    <a href='javascript:AllNoneVisible(1);'>Show all</a> |
+    <a href='javascript:AllNoneVisible(0);'>Hide all</a> |
+    <a href='javascript:ToggleMode(0);'>E-Scaling</a> |
+    <a href='javascript:ToggleMode(1);'>Derivative</a> |
+    <a href='javascript:ToggleThickLines();'>Thick lines</a> |
     <a href='javascript:FullScale();'>Full Scale</a> |
-    <a class='inline' href='#inline_pars'>Show pars</a> |
-    <a class='inline' href='#inline_debug'>Show debug</a> |
+    <a class='inline' href='#inline_pars'>Parameters</a> |
+    <a class='inline' href='#inline_debug'>Debug</a> |
     <a class='inline' href='#inline_about'>About</a> |
     <a class='inline' href='#inline_help'>Help</a>
   </p>
@@ -415,19 +435,22 @@
         <ul>
             <li><strong>Signal Visibility</strong><br/><br/>To toggle the visibility of an analog signal, click
                 on the signal's name in the legend.  To control the visiblity of all the analog signals, click
-                on the "Show All Signals" or "Hide All Signals" links.
+                on the "Show All" or "Hide All" links.
                 The visibility of digital signals cannot be controlled.</li><br/>
             <li><strong>Zooming in</strong><br/><br/>Select the zoom area using the left pointer button or your 
                 finger on a touch device.</li><br/>
             <li><strong>Zooming out</strong><br/><br/>Press the right pointer button or tap anywhere on the chart
                 on a touch device to zoom out to the previous zoom level. Select "Full Scale" to zoom
                 out to see all the signals.</li><br/>
-            <li><strong>E-Scaling</strong><br/><br/>Click on the "Toggle E-Scaling" link to toggle between normal
+            <li><strong>E-Scaling</strong><br/><br/>Click on the "E-Scaling" link to toggle between normal
                 scaling mode and exponential scaling mode.  In this mode, every signal is scaled by a
                 power of 10 to be within the range &plusmn;10. The scale factors are shown in the legend
                 with "E&plusmn;N" notation.</li><br/>
-            <li><strong>Derivative</strong><br/><br/>Click on the "Toggle Derivative" link to toggle between normal
+            <li><strong>Derivative</strong><br/><br/>Click on the "Derivative" link to toggle between normal
                 mode and derivative mode.  In Derivative mode, the first derivatives of all the signals are displayed.</li><br/>
+            <li><strong>Thick lines</strong><br/><br/>Click on the "Thick lines" link to toggle between normal
+                and thick lines (and points). This is useful when taking a screenshot that you want to paste 
+                into a presentation.</li><br/>
             <li><strong>Digital signals</strong><br/><br/>If the data includes digital signals they will be
                 displayed in the lower chart.  Zooming the analog signals will zoom the time-axis
                 for the digital signals automatically.</li>
