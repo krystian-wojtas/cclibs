@@ -36,10 +36,12 @@
 
 // Constants
 
+#define CC_VERSION                  2.0
 #define CC_PATH_LEN                 256
 #define CC_ABBREVIATED_ARG_LEN      20
 #define CC_INPUT_FILE_NEST_LIMIT    4
 #define CC_ARG_DELIMITER            ", \t\n"
+#define CC_CWD_FILE                 ".cctest_cwd"
 
 // Global i/o structure
 
@@ -67,6 +69,8 @@ char    *ccTestGetArgument      (char **remaining_line);
 void     ccTestPrintError       (const char * format, ...);
 char    *ccTestAbbreviatedArg   (char *arg);
 uint32_t ccTestNoMoreArgs       (char **remaining_line);
+uint32_t ccTestReadAllFiles     (void);
+void     ccTestRecoverPath      (void);
 
 #endif
 // EOF

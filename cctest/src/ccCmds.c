@@ -61,21 +61,59 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
   This function will try to set the current directory using the supplied parameter
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    char *arg;
+    char   *arg;
+    FILE   *f;
+    char   *wd;
+    char    path_filename[CC_PATH_LEN * 2];   // Name of file to write new working directory
+    char    cwd_buf[CC_PATH_LEN];
 
     arg = ccTestGetArgument(remaining_line);
 
-    if(ccTestNoMoreArgs(remaining_line) == EXIT_FAILURE)
+    // If no argument supplied then use the base path for cctest project
+
+    if(arg == NULL)
+    {
+        arg = cctest.base_path;
+    }
+    else if(ccTestNoMoreArgs(remaining_line) == EXIT_FAILURE)
     {
         return(EXIT_FAILURE);
     }
 
-    if(arg != NULL && chdir(arg) != 0)
+    // If changing directory fails, then report the error message
+
+    if(chdir(arg) != EXIT_SUCCESS)
     {
         ccTestPrintError("changing directory to '%s' : %s (%d)",
                           ccTestAbbreviatedArg(arg), strerror(errno), errno);
         return(EXIT_FAILURE);
     }
+
+    // Open file to save the current working directory
+
+    sprintf(path_filename,"%s/%s",cctest.base_path,CC_CWD_FILE);
+
+    f = fopen(path_filename,"w");
+
+    if(f == NULL)
+    {
+        printf("Fatal - failed to open '%s' : %s (%d)", path_filename, strerror(errno), errno);
+        exit(EXIT_FAILURE);
+    }
+
+    // Read the current working directory and write to the file
+
+    wd = getcwd(cwd_buf, sizeof(cwd_buf));
+
+    if(wd == NULL)
+    {
+        ccTestPrintError("getting current directory : %s (%d)", strerror(errno), errno);
+        return(EXIT_FAILURE);
+    }
+
+    fputs(wd,f);
+
+    fclose(f);
 
     return(EXIT_SUCCESS);
 }
@@ -148,6 +186,7 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
     char           input_ch;
     FILE          *f;
     char          *arg;
+    static char *  default_file_name = "cctest";
 
     // Check that input file nesting limit has not been exceeded
 
@@ -183,6 +222,7 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
         f = stdin;
         cctest.input_idx++;
         cctest.input[cctest.input_idx].line_number = 0;
+        cctest.input[cctest.input_idx].path        = default_file_name;
 
         // Display working directory and prompt
 
@@ -191,6 +231,13 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
     }
     else
     {
+        // If argument is "*" then read all files in current working directory
+
+        if(strcmp(arg, "*") == 0)
+        {
+            return(ccTestReadAllFiles());
+        }
+
         // Try to open named file
 
         f = fopen(arg, "r");
@@ -201,13 +248,13 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
              return(EXIT_FAILURE);
         }
 
+        printf("Reading parameters from '%s'\n", arg);
+
         // Stack new file information
 
         cctest.input_idx++;
         cctest.input[cctest.input_idx].line_number = 1;
-        cctest.input[cctest.input_idx].path = arg;
-
-        printf("Reading from '%s'\n", arg);
+        cctest.input[cctest.input_idx].path        = arg;
     }
 
     // Process all lines from the new file or from stdin
@@ -249,7 +296,7 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
         }
     }
 
-    // If reading a file then close it
+    // If reading from a file then close it
 
     if(f != stdin)
     {
@@ -262,10 +309,54 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsSave(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will
+  This function will save all the parameters to file
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    FILE *f;
+    char *arg;
+    char *default_filename = "cctest_pars";
+    struct cccmds *cmd;
 
+    arg = ccTestGetArgument(remaining_line);
+
+    // If no argument supplied then use the default filename
+
+    if(arg == NULL)
+    {
+        arg = default_filename;
+    }
+    else if(ccTestNoMoreArgs(remaining_line) == EXIT_FAILURE)
+    {
+        return(EXIT_FAILURE);
+    }
+
+    // Try to open named file to write
+
+    f = fopen(arg, "w");
+
+    if(f == NULL)
+    {
+         ccTestPrintError("opening file '%s' : %s (%d)", ccTestAbbreviatedArg(arg), strerror(errno), errno);
+         return(EXIT_FAILURE);
+    }
+
+    printf("Writing all parameters to '%s'...",arg);
+
+    fprintf(f,"# CCTEST %.1f\n",CC_VERSION);
+
+    for(cmd = cmds ; cmd->name != NULL ; cmd++)
+    {
+        if(cmd->pars != NULL)
+        {
+            fprintf(f, "\n# %s Parameters\n\n", cmd->name);
+
+            ccParsPrintAll(f, cmd->name, cmd->pars);
+        }
+    }
+
+    fputs("\n# EOF\n",f);
+    fclose(f);
+    puts("done.");
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -294,6 +385,8 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
   and load.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    char *filename;
+
     // No arguments expected
 
     if(ccTestNoMoreArgs(remaining_line))
@@ -324,13 +417,15 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
     // Open CSV output file
 
+    filename = strcmp(ccpars_global.file, "*") != 0 ? ccpars_global.file : cctest.input[cctest.input_idx].path;
+
     if(ccpars_global.csv_format != CC_NONE)
     {
         sprintf(cctest.csv_path, "%s/results/csv/%s/%s/%s.csv",
                                   cctest.base_path,
                                   ccpars_global.group,
                                   ccpars_global.project,
-                                  ccpars_global.file);
+                                  filename);
 
         cctest.csv_file = fopen(cctest.csv_path, "w");
 
@@ -351,7 +446,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
     {
         // Generate functions and simulate voltage source and load and regulate if required
 
-        printf("Running simulation... ");
+        printf("Running simulation to %s\n", filename);
 
         ccRunSimulation();
     }
@@ -361,13 +456,13 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
         if(ccpars_global.reverse_time == CC_DISABLED)
         {
-            printf("Generating function(s)... ");
+            printf("Generating function(s) to %s\n", filename);
 
             ccRunFuncGen();
         }
         else // Reverse time can be used with only one function
         {
-            printf("Generating function with reverse time... ");
+            printf("Generating function with reverse time to %s\n", filename);
 
             ccRunFuncGenReverseTime();
         }
@@ -391,7 +486,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
                            cctest.base_path,
                            ccpars_global.group,
                            ccpars_global.project,
-                           ccpars_global.file);
+                           filename);
 
         flot_file = fopen(flot_path, "w");
 
@@ -406,11 +501,9 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
         fclose(flot_file);
     }
 
-    // Report completion of task
+    // Report bad values that were sent to ccSigsStore()
 
-    puts("done.");
-
-    return(EXIT_SUCCESS);
+    return(ccSigsReportBadValues());
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsPar(uint32_t cmd_idx, char **remaining_line)
@@ -504,7 +597,29 @@ uint32_t ccCmdsPar(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsExit(uint32_t cmd_idx, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will stop execution of cctest
+  This function will stop reading from the open file or stop the program if reading from stdin
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    if(ccTestNoMoreArgs(remaining_line) == EXIT_FAILURE)
+    {
+        return(EXIT_FAILURE);
+    }
+
+    // If processing commands from the command line or stdin then quit immediately
+
+    if(cctest.input_idx == 0 || cctest.input[cctest.input_idx].line_number == 0)
+    {
+        ccCmdsQuit(0, remaining_line);
+    }
+
+    // Return failure to close current file
+
+    return(EXIT_FAILURE);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+uint32_t ccCmdsQuit(uint32_t cmd_idx, char **remaining_line)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will stop execution of cctest immediately
 \*---------------------------------------------------------------------------------------------------------*/
 {
     if(ccTestNoMoreArgs(remaining_line) == EXIT_FAILURE)

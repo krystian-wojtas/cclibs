@@ -80,6 +80,7 @@ uint32_t ccCmdsDebug (uint32_t cmd_idx, char **remaining_line);
 uint32_t ccCmdsRun   (uint32_t cmd_idx, char **remaining_line);
 uint32_t ccCmdsPar   (uint32_t cmd_idx, char **remaining_line);
 uint32_t ccCmdsExit  (uint32_t cmd_idx, char **remaining_line);
+uint32_t ccCmdsQuit  (uint32_t cmd_idx, char **remaining_line);
 
 // Command indexes - the order of enum cccmds_enum must match the cmds[] array below
 
@@ -132,8 +133,8 @@ CCCMDS_EXT struct cccmds cmds[] // The order must match enum cccmds_enum (above)
     { "SAVE",   ccCmdsSave ,  NULL       , "filename                  Save all parameters in named file" },
     { "DEBUG",  ccCmdsDebug,  NULL       , "                          Print all debug variables" },
     { "RUN",    ccCmdsRun  ,  NULL       , "                          Run function generation test or converter simulation" },
-    { "EXIT",   ccCmdsExit ,  NULL       , "                          Exit from program" },
-    { "QUIT",   ccCmdsExit ,  NULL       , "                          Exit from program" },
+    { "EXIT",   ccCmdsExit ,  NULL       , "                          Exit from current file or quit when from stdin" },
+    { "QUIT",   ccCmdsQuit ,  NULL       , "                          Quit program immediately" },
     { NULL }
 }
 #endif

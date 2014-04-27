@@ -128,6 +128,7 @@ struct signals
     float                       value;                  // Signal value
     char                       *cursor_label;           // Cursor signal label
     float                      *buf;                    // Signal buffer (for FLOT output)
+    uint32_t                    num_bad_values;         // Counter for bad values
 };
 
 CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same order as enum ccsig_idx (above)
@@ -200,10 +201,11 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
 
 // Function declarations
 
-void    ccSigsInit              (void);
-void    ccSigsStore             (double time);
-void    ccSigsStoreCursor       (enum ccsig_idx idx, char *cursor_label);
-void    ccSigsFlot              (FILE *f);
+void     ccSigsInit              (void);
+void     ccSigsStore             (double time);
+void     ccSigsStoreCursor       (enum ccsig_idx idx, char *cursor_label);
+void     ccSigsFlot              (FILE *f);
+uint32_t ccSigsReportBadValues   (void);
 
 #endif
 // EOF
