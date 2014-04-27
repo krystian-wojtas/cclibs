@@ -57,28 +57,20 @@ static void regDelayCalcDelay(struct reg_delay_pars *delay, uint32_t under_sampl
 
     if(under_sampled_flag)
     {
-        // If delay has a fractional part then round up delay to next integer
+        // If delay has a fractional part then round down delay
 
-        if(delay->delay_frac > 0.0)
-        {
-            delay->delay_frac = 0.0;
-            delay->delay_int++;
-        }
+        delay->delay_frac = 0.0;
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regDelayInitDelays(struct reg_delay *delay, uint32_t under_sampled_flag,
                         float delay_1_iters, float delay_2_iters)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function initialises the reg_delay structure parameters.  The buffer pointered to by buf must have
-  a length of (int)delay_in_iters.  If delay_in_iters is less than 1 then buf can be NULL.
-  If buf is NULL then the buffer pointer is preserved so once a buffer is linked the function can be called
-  with NULL without losing it. The undersampled_flag can be used to suppress the linear interpolation
-  between sampled.  When set it assumes that the signal settles to the new value immediately.
+  This function initialises the reg_delay structure parameters.  The undersampled_flag can be used to
+  suppress the linear interpolation between samples.  When set it assumes that the signal settles to
+  the new value immediately.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    // Initialise the delay parameters
-
     regDelayCalcDelay(&delay->delay_1, under_sampled_flag, delay_1_iters);
     regDelayCalcDelay(&delay->delay_2, under_sampled_flag, delay_2_iters);
 }
@@ -89,8 +81,6 @@ void regDelayInitVars(struct reg_delay *delay, float initial_signal)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    i;
-
-    // Initialise history to value of supplied signal
 
     for(i=0 ; i <= REG_DELAY_BUF_INDEX_MASK ; i++)
     {

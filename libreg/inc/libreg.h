@@ -82,6 +82,7 @@ struct reg_converter                                            // Global conver
     float                       ref;                            // Field or current reference
     float                       ref_limited;                    // Field or current reference after limits
     float                       ref_rst;                        // Field or current reference after back-calculation
+    float                       ref_delayed;                    // Field or current reference delayed by track_delay
 
     float                       v_ref;                          // Voltage reference before saturation or limits
     float                       v_ref_sat;                      // Voltage reference after saturation compensation
@@ -146,8 +147,7 @@ void     regSetSimLoad          (struct reg_converter *reg, struct reg_converter
 void     regSetMeas             (struct reg_converter *reg,  struct reg_converter_pars *reg_pars,
                                  float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
 float    regCalcPureDelay       (struct reg_converter *reg, struct reg_converter_pars *reg_pars,
-                                 enum reg_mode reg_mode, uint32_t period_iters);
-float    regCalcRefAdvance      (struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode);
+                                 struct reg_meas_filter *meas_filter, uint32_t reg_period_iters);
 void     regSetMode             (struct reg_converter *reg, struct reg_converter_pars *reg_pars, enum reg_mode reg_mode);
 uint32_t regConverter           (struct reg_converter *reg, struct reg_converter_pars *reg_pars, float *ref,
                                  float feedforward_v_ref, uint32_t feedforward_control,

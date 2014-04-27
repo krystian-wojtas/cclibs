@@ -208,16 +208,9 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
     float       d;
     float       y;
 
-    // Do nothing if bandwidth isn't valid
-
-    if(bandwidth <= 0.0)
-    {
-        return;
-    }
-
     // If voltage source model is too undersampled then do not attempt Tustin algorithm
 
-    if(bandwidth > 0.501 / sim_period)
+    if(bandwidth <= 0.0 || bandwidth > 0.501 / sim_period)
     {
         pars->den[0] = pars->num[0] = 1.0;
         pars->den[1] = pars->den[2] = pars->den[3] = pars->num[1] = pars->num[2] = pars->num[3] = 0.0;

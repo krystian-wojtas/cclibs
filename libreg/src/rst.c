@@ -462,15 +462,22 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
         pars->inv_s0           = 1.0 /  pars->rst.s[0];
     }
 
-    // Set track_delay
+    // Set track_delay to parameter supplied if manual RST coefficients used, or I or PI algorithm
 
-    if(pars->dead_beat > 0)
-    {
-        pars->track_delay_periods = (float)pars->dead_beat;
-    }
-    else
+    if(pars->alg_index == 0 || pars->alg_index >= 10)
     {
         pars->track_delay_periods = track_delay_periods;
+    }
+    else // else for PII the track delay can be calculated
+    {
+        if(pars->dead_beat > 0)
+        {
+            pars->track_delay_periods = (float)pars->dead_beat;
+        }
+        else
+        {
+            pars->track_delay_periods = 1.0 + pure_delay_periods;
+        }
     }
 
     // Return the status
@@ -586,14 +593,16 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
     return(ref);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regRstHistory(struct reg_rst_vars *vars)
+void regRstMeasTrackDelay(struct reg_rst_vars *vars, float period, float max_ref_rate)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function must be called after calling regRstCalcAct() to measure the track delay and to
-  adjust the RST history index.
+  This function must be called after calling regRstCalcAct() to measure the track delay.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t var_idx   = vars->history_index;
     float    delta_ref = regRstDeltaRef(vars);
+    float    ref_rate;
+    float    abs_ref_acc;
+    float    meas_track_delay_weight;
     float    meas_track_delay_periods;
 
     // Measure track delay if reference is changing
@@ -613,24 +622,51 @@ void regRstHistory(struct reg_rst_vars *vars)
         {
             meas_track_delay_periods = 0.9;
         }
-        else if(meas_track_delay_periods > 3.5)
+        else if(meas_track_delay_periods > 3.05)
         {
-            meas_track_delay_periods = 3.5;
+            meas_track_delay_periods = 3.05;
         }
         else
         {
+            // Calculate weighting for filtering of the new track delay value
+
+            if(max_ref_rate > 0.0)
+            {
+                // If max ref rate is know, a must better algorithm can be used
+
+                ref_rate    = delta_ref / period;
+                abs_ref_acc = fabs((ref_rate - vars->prev_ref_rate) / period);
+
+                meas_track_delay_weight = fabs(meas_track_delay_periods - vars->filtered_track_delay_periods);
+
+                meas_track_delay_weight = meas_track_delay_weight * meas_track_delay_weight *
+                                          fabs(ref_rate) / (max_ref_rate + abs_ref_acc * abs_ref_acc);
+
+                vars->prev_ref_rate = ref_rate;
+            }
+            else // otherwise just use a fixed weighting
+            {
+                meas_track_delay_weight = 1.0 / REG_TRACK_DELAY_FLTR_TC;
+            }
+
+            vars->meas_track_delay_weight = meas_track_delay_weight;
+
             // When not clipped, update the filtered measured track_delay
 
-            vars->filtered_track_delay_periods += (1.0 / REG_TRACK_DELAY_FLTR_TC) *
+            vars->filtered_track_delay_periods += meas_track_delay_weight *
                                           (meas_track_delay_periods - vars->filtered_track_delay_periods);
         }
     }
 
     vars->meas_track_delay_periods = meas_track_delay_periods;
-
-    // Adjust RST history index
-
-    vars->history_index = (var_idx + 1) & REG_RST_HISTORY_MASK;
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void regRstHistory(struct reg_rst_vars *vars)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function must be called after calling regRstCalcAct() to adjust the RST history index.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    vars->history_index = (vars->history_index + 1) & REG_RST_HISTORY_MASK;
 
     vars->delayed_ref_index = 0;
 }
@@ -654,14 +690,15 @@ float regRstDeltaRef(struct reg_rst_vars *vars)
            vars->ref[(vars->history_index - 2) & REG_RST_HISTORY_MASK]);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float track_delay)
+float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will return the reference delayed by track_delay.  It should be called after
+  This function will return the reference delayed by ref_delay_periods.  It should be called after
   regRstHistory() has been called.  It can be called every acquisition iteration between regulation
   iterations, or just on the regulation iterations, as required.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     int32_t  delay_int;
+    float    ref_delay_periods = pars->ref_delay_periods;
     float    float_delay_int;
     float    delay_frac;
     float    ref1;
@@ -669,22 +706,22 @@ float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, flo
 
     // Clip track delay
 
-    if(track_delay < 1.0)
+    if(ref_delay_periods < 1.0)
     {
-        track_delay = 1.0;
+        ref_delay_periods = 1.0;
     }
-    else if(track_delay > (REG_RST_HISTORY_MASK - 1.0))
+    else if(ref_delay_periods > (REG_RST_HISTORY_MASK - 1.0))
     {
-        track_delay = (REG_RST_HISTORY_MASK - 1.0);
+        ref_delay_periods = (REG_RST_HISTORY_MASK - 1.0);
     }
 
     // Adjust track delay to account for the acquisition iteration time between regulation iterations
 
-    track_delay -= (float)vars->delayed_ref_index++ * pars->inv_period_iters;
+    ref_delay_periods -= (float)vars->delayed_ref_index++ * pars->inv_period_iters;
 
     // Convert track delay to integer and fractional parts
 
-    delay_frac = modff(track_delay, &float_delay_int);
+    delay_frac = modff(ref_delay_periods, &float_delay_int);
 
     delay_int  = 1 + (int32_t)float_delay_int;  // Add 1 because history_index has been incremented
 
