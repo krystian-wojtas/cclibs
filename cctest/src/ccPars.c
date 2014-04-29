@@ -405,6 +405,7 @@ void ccParsPrintDebug(FILE *f)
         fprintf(f,"%-*s %s\n",   PARS_INDENT, "REG_MODE:",
                             ccParsEnumString(reg_mode,      ccpars_global.reg_mode[i]));
         fprintf(f,"%-*s% .6E\n", PARS_INDENT, "REG:ref_advance",     ccrun.ref_advance[i]);
+        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "REG:max_abs_err",     ccrun.max_abs_err[i]);
         fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:duration",    ccrun.fg_meta[i].duration);
         fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.start", ccrun.fg_meta[i].range.start);
         fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.end",   ccrun.fg_meta[i].range.end);

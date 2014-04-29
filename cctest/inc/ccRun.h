@@ -52,6 +52,7 @@ struct ccrun_vars
     struct reg_lim_ref  fg_lim_v_ref;               // Libreg voltage measurement limits structure for fg converter limits
     struct fg_meta      fg_meta[MAX_FUNCS];         // Reference function meta data for all functions
     float               ref_advance[MAX_FUNCS];     // Ref advance used with each function (for debugging)
+    float               max_abs_err[MAX_FUNCS];     // Max absolute regulation for each function (when regulation is active)
 };
 
 CCRUN_EXT struct ccrun_vars ccrun;

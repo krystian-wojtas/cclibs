@@ -226,6 +226,15 @@ void ccRunSimulation(void)
 
             if(ccrun.func_idx < ccrun.num_functions)
             {
+                // Record max absolute regulation error for debugging output
+
+                switch(reg.mode)
+                {
+                case REG_FIELD  : ccrun.max_abs_err[ccrun.func_idx] = reg.b_err.max_abs_err; break;
+                case REG_CURRENT: ccrun.max_abs_err[ccrun.func_idx] = reg.i_err.max_abs_err; break;
+                default:          ccrun.max_abs_err[ccrun.func_idx] = 0.0;                   break;
+                }
+
                 // If another function is in the list
 
                 if(++ccrun.func_idx < ccrun.num_functions)
