@@ -421,17 +421,26 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
     if(ccpars_global.csv_format != CC_NONE)
     {
-        sprintf(cctest.csv_path, "%s/results/csv/%s/%s/%s.csv",
+        char     csv_path[CC_PATH_LEN * 2];
+        char     csv_filename[CC_PATH_LEN * 2];
+
+        sprintf(csv_path, "%sresults/csv/%s/%s",
                                   cctest.base_path,
                                   ccpars_global.group,
-                                  ccpars_global.project,
-                                  filename);
+                                  ccpars_global.project);
 
-        cctest.csv_file = fopen(cctest.csv_path, "w");
+        if(ccTestMakePath(csv_path) == EXIT_FAILURE)
+        {
+            return(EXIT_FAILURE);
+        }
+
+        sprintf(csv_filename, "%s/%s.csv", csv_path, filename);
+
+        cctest.csv_file = fopen(csv_filename, "w");
 
         if(cctest.csv_file == NULL)
         {
-             ccTestPrintError("opening file '%s' : %s (%d)", cctest.csv_path, strerror(errno), errno);
+             ccTestPrintError("opening file '%s' : %s (%d)", csv_filename, strerror(errno), errno);
              return(EXIT_FAILURE);
         }
     }
@@ -481,18 +490,25 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
     {
         FILE    *flot_file;
         char     flot_path[CC_PATH_LEN * 2];
+        char     flot_filename[CC_PATH_LEN * 2];
 
-        sprintf(flot_path, "%s/results/webplots/%s/%s/%s.html",
+        sprintf(flot_path, "%sresults/webplots/%s/%s",
                            cctest.base_path,
                            ccpars_global.group,
-                           ccpars_global.project,
-                           filename);
+                           ccpars_global.project);
 
-        flot_file = fopen(flot_path, "w");
+        if(ccTestMakePath(flot_path) == EXIT_FAILURE)
+        {
+            return(EXIT_FAILURE);
+        }
+
+        sprintf(flot_filename, "%s/%s.html", flot_path, filename);
+
+        flot_file = fopen(flot_filename, "w");
 
         if(flot_file == NULL)
         {
-             ccTestPrintError("opening file '%s' : %s (%d)", flot_path, strerror(errno), errno);
+             ccTestPrintError("opening file '%s' : %s (%d)", flot_filename, strerror(errno), errno);
              return(EXIT_FAILURE);
         }
 

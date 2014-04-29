@@ -46,6 +46,18 @@
 #include "ccRef.h"
 #include "ccSigs.h"
 
+// mkdir command
+
+// On Windows the system() command in MinGW uses cmd.exe which finds the Windows mkdir in the path
+// instead of the msys/bin/mkdir. To work around this, a second copy of mkdir is created in msys/bin
+// which is used on Windows systems.
+
+#ifdef __MINGW32__
+#define MKDIR   "mkdir2"
+#else
+#define MKDIR   "mkdir"
+#endif
+
 // Default commands to run on start-up
 
 char *default_commands[] =
@@ -358,6 +370,43 @@ uint32_t ccTestReadAllFiles(void)
     // Close directory and report success
 
     closedir(dp);
+    return(EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+uint32_t ccTestMakePath(char *path)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will use mkdir -p to create a path if it doesn't exist
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    struct stat      path_stat;
+    char             mkdir_cmd[CC_PATH_LEN * 2];
+
+    // Get status of path
+
+    if(stat(path, &path_stat) == -1)
+    {
+        // If path doesn't exist then try to create it
+
+        sprintf(mkdir_cmd, MKDIR " -p %s", path);
+
+        printf("Creating path: %s\n", path);
+
+        if(system(mkdir_cmd) != 0)
+        {
+            return(EXIT_FAILURE);
+        }
+
+        return(EXIT_SUCCESS);
+    }
+
+    // Report error if the path is not a directory
+
+    if(!S_ISDIR(path_stat.st_mode))
+    {
+        ccTestPrintError("output path '%s' is not valid", path);
+        return(EXIT_FAILURE);
+    }
+
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/

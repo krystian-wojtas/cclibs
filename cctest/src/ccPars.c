@@ -102,6 +102,13 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
                 exit(EXIT_FAILURE);
             }
 
+            // Limit string lengths because they are used in path names
+
+            if(arg_len > 32)
+            {
+                ccTestPrintError("invalid string length (%u) for '%s...' (32 max)",ccTestAbbreviatedArg(arg));
+            }
+
             // Free and reallocate space for string argument
             // On first call, the point is NULL which is ignored by free()
 
