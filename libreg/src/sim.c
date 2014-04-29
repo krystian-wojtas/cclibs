@@ -348,8 +348,8 @@ float regSimVs(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float
   This function simulates the voltage source in response to the specified voltage reference.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t	i;
-    uint32_t	j;
+    uint32_t    i;
+    uint32_t    j;
     float       v_load;
 
     // Shift history of input and output
