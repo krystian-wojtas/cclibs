@@ -529,7 +529,7 @@ uint32_t ccRefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
 }
 /*---------------------------------------------------------------------------------------------------------*/
 enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t invert_limits,
-                                        float ref, float rate, float acceleration)
+                                        float ref, float rate, float acceleration, struct fg_meta *meta)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     float v_ref;
@@ -573,6 +573,10 @@ enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
 
         if(v_ref < ccrun.fg_lim_v_ref.min_clip || v_ref > ccrun.fg_lim_v_ref.max_clip)
         {
+            meta->error.data[0] = ccrun.fg_lim_v_ref.min_clip;
+            meta->error.data[1] = v_ref;
+            meta->error.data[2] = ccrun.fg_lim_v_ref.max_clip;
+
             return(FG_OUT_OF_VOLTAGE_LIMITS);
         }
     }
@@ -582,6 +586,11 @@ enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
 
         if(v_ref < -ccrun.fg_lim_v_ref.max_clip || v_ref > -ccrun.fg_lim_v_ref.min_clip)
         {
+            meta->error.data[0] = -ccrun.fg_lim_v_ref.max_clip;
+            meta->error.data[1] = v_ref;
+            meta->error.data[2] = -ccrun.fg_lim_v_ref.min_clip;
+            meta->error.data[3] = 1;
+
             return(FG_OUT_OF_VOLTAGE_LIMITS);
         }
     }

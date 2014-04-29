@@ -57,23 +57,6 @@ enum fg_limits_polarity
     FG_LIMITS_POL_AUTO                     // Limits should be tested based upon the polarity of the reference
 };
 
-// Reference limits structure
-
-struct fg_limits
-{
-    float       pos;                       // Positive reference limit
-    float       min;                       // Minimum absolute reference limit
-    float       neg;                       // Negative reference limit
-    float       rate;                      // Rate of change limit
-    float       acceleration;              // Acceleration limit
-    uint32_t    user_data;                 // User data available to user_check_limits() function
-
-    // User callback for checking reference
-
-    enum fg_error (*user_check_limits)(struct fg_limits *limits, uint32_t invert_limits,
-                                       float ref, float rate, float acceleration);
-};
-
 // Reference meta data structure
 // NB: The fg_meta_error sub-structure is useful in case the reference function was rejected.
 
@@ -94,6 +77,23 @@ struct fg_meta
         float   min;                       // Minimum value of the function
         float   max;                       // Maximum value of the function
     } range;
+};
+
+// Reference limits structure
+
+struct fg_limits
+{
+    float       pos;                       // Positive reference limit
+    float       min;                       // Minimum absolute reference limit
+    float       neg;                       // Negative reference limit
+    float       rate;                      // Rate of change limit
+    float       acceleration;              // Acceleration limit
+    uint32_t    user_data;                 // User data available to user_check_limits() function
+
+    // User callback for checking reference
+
+    enum fg_error (*user_check_limits)(struct fg_limits *limits, uint32_t invert_limits,
+                                       float ref, float rate, float acceleration, struct fg_meta *meta);
 };
 
 // External functions

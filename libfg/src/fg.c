@@ -114,12 +114,9 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
 
     if(ref > max || ref < min)
     {
-        if(meta != NULL)
-        {
-            meta->error.data[0] = max;
-            meta->error.data[1] = ref;
-            meta->error.data[2] = min;
-        }
+        meta->error.data[0] = max;
+        meta->error.data[1] = ref;
+        meta->error.data[2] = min;
 
         return(FG_OUT_OF_LIMITS);
     }
@@ -129,12 +126,9 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
     if(limits->rate >  0.0 &&
        fabs(rate)   > (limit =((1.0 + FG_CLIP_LIMIT_FACTOR) * limits->rate)))
     {
-        if(meta != NULL)
-        {
-            meta->error.data[0] = limits->rate;
-            meta->error.data[1] = limit;
-            meta->error.data[2] = rate;
-        }
+        meta->error.data[0] = limits->rate;
+        meta->error.data[1] = limit;
+        meta->error.data[2] = rate;
 
         return(FG_OUT_OF_RATE_LIMITS);
     }
@@ -144,12 +138,9 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
     if(limits->acceleration >  0.0 &&
        fabs(acceleration)   > (limit = ((1.0 + FG_CLIP_LIMIT_FACTOR) * limits->acceleration)))
     {
-        if(meta != NULL)
-        {
-            meta->error.data[0] = limits->acceleration;
-            meta->error.data[1] = limit;
-            meta->error.data[2] = acceleration;
-        }
+        meta->error.data[0] = limits->acceleration;
+        meta->error.data[1] = limit;
+        meta->error.data[2] = acceleration;
 
         return(FG_OUT_OF_ACCELERATION_LIMITS);
     }
@@ -158,7 +149,7 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
 
     if(limits->user_check_limits)
     {
-        return(limits->user_check_limits(limits, invert_limits, ref, rate, acceleration));
+        return(limits->user_check_limits(limits, invert_limits, ref, rate, acceleration, meta));
     }
 
     return(FG_OK);

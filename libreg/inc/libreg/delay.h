@@ -27,7 +27,7 @@
 
 #include <stdint.h>
 
-#define REG_DELAY_BUF_INDEX_MASK    15
+#define REG_DELAY_BUF_INDEX_MASK    31
 
 // Signal delay structure - supports two different delays in parallel
 

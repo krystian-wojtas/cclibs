@@ -440,6 +440,13 @@ void ccSigsFlot(FILE *f)
     double         start_func_time;
     struct cccmds *cmd;
 
+    // Warn user if FLOT data was truncated
+
+    if(flot_index >= MAX_FLOT_POINTS)
+    {
+        printf("Warning - FLOT data truncated to %u points\n",MAX_FLOT_POINTS);
+    }
+
     // Print start of FLOT html page including flot path to all the javascript libraries
 
     fprintf(f,flot[0],FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);

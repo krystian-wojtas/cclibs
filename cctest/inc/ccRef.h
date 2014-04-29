@@ -65,7 +65,7 @@ uint32_t        ccRefInitCTRIM          (struct fg_meta *fg_meta);
 uint32_t        ccRefStartGen           (struct fg_plep_pars *pars, const double *time, float *ref);
 
 enum fg_error   ccRefCheckConverterLimits (struct fg_limits *limits, uint32_t invert_limits,
-                                           float ref, float rate, float acceleration);
+                                           float ref, float rate, float acceleration, struct fg_meta *meta);
 
 // Reference functions structure
 
