@@ -249,9 +249,7 @@ uint32_t ccInitFunctions(void)
 
         if(ccpars_global.fg_limits == CC_ENABLED)
         {
-            ccrun.fg_limits->user_data = ccpars_global.reg_mode[func_idx];
-
-            switch(ccrun.fg_limits->user_data)
+            switch(ccpars_global.reg_mode[func_idx])
             {
                 case REG_FIELD:   ccrun.fg_limits = &ccpars_limits.b;       break;
                 case REG_CURRENT: ccrun.fg_limits = &ccpars_limits.i;       break;
@@ -259,6 +257,7 @@ uint32_t ccInitFunctions(void)
             }
 
             ccrun.fg_limits->user_check_limits = ccRefCheckConverterLimits;
+            ccrun.fg_limits->user_data = ccpars_global.reg_mode[func_idx];
         }
 
         // Try to arm the next function
