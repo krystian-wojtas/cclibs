@@ -1,8 +1,0 @@
-# CCTEST voltage source model file : PSB2GEV
-
-VS.BANDWIDTH     100
-VS.TAU_ZERO      0.0
-VS.Z             0.9
-
-# EOF
-
