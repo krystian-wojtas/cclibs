@@ -1,0 +1,80 @@
+# CCTEST - LHC experimental magnets (ATLAS and CMS)
+
+GLOBAL RUN_DELAY            1.0
+GLOBAL STOP_DELAY           10.0
+GLOBAL ITER_PERIOD          1.0E-4
+GLOBAL FUNCTION             RAMP
+GLOBAL REG_MODE             CURRENT
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL GROUP                tests
+GLOBAL PROJECT              LHC_EXP
+
+# -------------------- CMS ----------------------
+# CMS Limits parameters
+
+LIMITS I_POS                20000.0
+LIMITS I_MIN                1.0
+LIMITS I_NEG                0.0
+LIMITS I_RATE               10.59
+LIMITS I_ACCELERATION       0.0
+LIMITS I_ERR_WARNING        5.0
+LIMITS I_ERR_FAULT          10.0
+LIMITS I_QUADRANTS41        0.0,0.0
+                            
+LIMITS V_POS                27.0
+LIMITS V_NEG                -23.0
+LIMITS V_RATE               300.0
+LIMITS V_ACCELERATION       0.0
+LIMITS V_ERR_WARNING        0.0
+LIMITS V_ERR_FAULT          0.0
+LIMITS V_QUADRANTS41        0.0,0.0
+
+# CMS Voltage source parameters
+
+VS V_REF_DELAY_ITERS        10.0
+VS BANDWIDTH                100.0
+VS TAU_ZERO                 0.0
+VS Z                        0.9
+
+# CMS Load parameters 
+
+LOAD OHMS_SER               1.0E-4
+LOAD OHMS_PAR               4.4
+LOAD OHMS_MAG               0.0
+LOAD HENRYS                 14.0
+LOAD HENRYS_SAT             14.0
+LOAD SIM_TC_ERROR           0.1
+
+# Measurement parameters
+
+MEAS I_REG_SELECT           FILTERED
+MEAS I_DELAY_ITERS          13
+MEAS V_DELAY_ITERS          50
+MEAS I_FIR_LENGTHS          200,1
+MEAS I_SIM_NOISE_PP         0.00
+MEAS V_SIM_NOISE_PP         0.00
+MEAS TONE_HALF_PERIOD_ITERS 100
+MEAS I_SIM_TONE_AMP         0.000
+
+# Current regulation 
+
+IREG PERIOD_ITERS           1000
+IREG CLBW                   2
+IREG CLBW2                  2
+IREG Z                      0.5
+
+# RAMP function
+
+RAMP INITIAL_REF            30.0
+RAMP FINAL_REF              40.0
+RAMP ACCELERATION           10.0
+RAMP DECELERATION           2.0
+RAMP LINEAR_RATE            3.0
+
+GLOBAL FILE                 CMS
+RUN
+
+# -------------------- ATLAS ----------------------
+
+# EOF
