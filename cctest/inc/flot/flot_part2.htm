@@ -16,7 +16,7 @@
 
         $.each(analog_signals, function(sig_name, signal)
         {
-            signal.color     = 2 + i + 2 * ((i > 7) + (i > 15));  // Skip colours that are too pale
+            signal.color     = 2 + i + 2 * ((i > 7) + (i > 15) + (i > 23));  // Skip colours that are too pale
             signal.index     = i++;
             signal.visible   = 1;
             signal.exp       = 0;
@@ -217,7 +217,7 @@
             }
             else
             {
-                visible_analog_signals.push({ data: [[analog_xaxis.min,0], [analog_xaxis.max,0]], label: sig_name, color: "#CCC", index: signal.index});
+                visible_analog_signals.push({ lines: { show:false }, data: [[analog_xaxis.min,0], [analog_xaxis.max,0]], label: sig_name, color: "#CCC", index: signal.index});
             }
         });
 
