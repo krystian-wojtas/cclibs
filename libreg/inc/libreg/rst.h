@@ -41,8 +41,8 @@
 
 // Constants
 
-#define REG_N_RST_COEFFS        10                              // RST order + 1
-#define REG_RST_HISTORY_MASK    15                              // History buffer index mask
+#define REG_N_RST_COEFFS        10                              // RST order + 1 (must be <= REG_RST_HISTORY_MASK)
+#define REG_RST_HISTORY_MASK    15                              // History buffer index mask (must be 2^N-1)
 #define REG_AVE_V_REF_LEN       4                               // Number of iterations over which to average V_REF
 #define REG_TRACK_DELAY_FLTR_TC 100                             // Track delay measurement filter time constant (periods)
 
@@ -93,10 +93,8 @@ struct reg_rst_vars                                             // RST algorithm
 {
     uint32_t                    history_index;                  // Index to latest entry in the history
     uint32_t                    delayed_ref_index;              // Iteration counter for delayed reference
-    float                       meas_track_delay_weight;        // Weighting for new measurement of track delay
     float                       prev_ref_rate;                  // Ref rate from previous iteration
     float                       meas_track_delay_periods;       // Measured track_delay in regulation periods
-    float                       filtered_track_delay_periods;   // Filtered measured track_delay in regulation periods
     float                       ref [REG_RST_HISTORY_MASK+1];   // RST calculated reference history
     float                       meas[REG_RST_HISTORY_MASK+1];   // RST measurement history
     float                       act [REG_RST_HISTORY_MASK+1];   // RST actuation history

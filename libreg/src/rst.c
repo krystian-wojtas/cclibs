@@ -595,66 +595,30 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
 /*---------------------------------------------------------------------------------------------------------*/
 void regRstMeasTrackDelay(struct reg_rst_vars *vars, float period, float max_ref_rate)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function must be called after calling regRstCalcAct() to measure the track delay.
+  This function must be called after calling regRstCalcAct() and BEFORE calling regRstHistory() to measure
+  the track delay.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t var_idx   = vars->history_index;
-    float    delta_ref = regRstDeltaRef(vars);
-    float    ref_rate;
-    float    abs_ref_acc;
-    float    meas_track_delay_weight;
-    float    meas_track_delay_periods;
+    float    meas_track_delay_periods   = 0.0;
+    float    delta_ref                  = regRstDeltaRef(vars);
+    uint32_t var_idx                    = vars->history_index;
 
     // Measure track delay if reference is changing
 
-    if(delta_ref == 0.0)
-    {
-        meas_track_delay_periods = 0.0;
-    }
-    else
+    if(delta_ref != 0.0)
     {
         meas_track_delay_periods = 1.0 +
                 ((vars->ref[(var_idx - 1) & REG_RST_HISTORY_MASK]) - vars->meas[var_idx]) / delta_ref;
 
         // Clip to sane range to handle when delta_ref is small
 
-        if(meas_track_delay_periods < 0.9)
+        if(meas_track_delay_periods < 0.5)
         {
-            meas_track_delay_periods = 0.9;
+            meas_track_delay_periods = 0.5;
         }
-        else if(meas_track_delay_periods > 3.05)
+        else if(meas_track_delay_periods > 3.5)
         {
-            meas_track_delay_periods = 3.05;
-        }
-        else
-        {
-            // Calculate weighting for filtering of the new track delay value
-
-            if(max_ref_rate > 0.0)
-            {
-                // If max ref rate is know, a must better algorithm can be used
-
-                ref_rate    = delta_ref / period;
-                abs_ref_acc = fabs((ref_rate - vars->prev_ref_rate) / period);
-
-                meas_track_delay_weight = fabs(meas_track_delay_periods - vars->filtered_track_delay_periods);
-
-                meas_track_delay_weight = meas_track_delay_weight * meas_track_delay_weight *
-                                          fabs(ref_rate) / (max_ref_rate + abs_ref_acc * abs_ref_acc);
-
-                vars->prev_ref_rate = ref_rate;
-            }
-            else // otherwise just use a fixed weighting
-            {
-                meas_track_delay_weight = 1.0 / REG_TRACK_DELAY_FLTR_TC;
-            }
-
-            vars->meas_track_delay_weight = meas_track_delay_weight;
-
-            // When not clipped, update the filtered measured track_delay
-
-            vars->filtered_track_delay_periods += meas_track_delay_weight *
-                                          (meas_track_delay_periods - vars->filtered_track_delay_periods);
+            meas_track_delay_periods = 3.5;
         }
     }
 
@@ -663,7 +627,8 @@ void regRstMeasTrackDelay(struct reg_rst_vars *vars, float period, float max_ref
 /*---------------------------------------------------------------------------------------------------------*/
 void regRstHistory(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function must be called after calling regRstCalcAct() to adjust the RST history index.
+  This function must be called after calling regRstCalcAct() and regRstMeasTrackDelay() to adjust the
+  RST history index.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     vars->history_index = (vars->history_index + 1) & REG_RST_HISTORY_MASK;
