@@ -64,7 +64,7 @@ char *default_commands[] =
 {
     "GLOBAL GROUP   sandbox",
     "GLOBAL PROJECT FG",
-    "GLOBAL FILE    *",         // Default output file name will be the input file name
+    "GLOBAL FILE    cctest",
     NULL
 };
 
