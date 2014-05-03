@@ -80,7 +80,6 @@ enum ccsig_idx
     ANA_V_MEAS,                 // Measured voltage
 
     ANA_TRACK_DLY,              // Measured track delay
-    ANA_TRACK_DLY_FLTR,         // Filtered track delay
 
     ANA_B_ERR,                  // Field regulation error
     ANA_I_ERR,                  // Current regulation error
@@ -154,7 +153,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "I_MEAS_FLTR",            ANALOG,         ""           },
     { "I_MEAS_EXTR",            ANALOG,         ""           },
 
-    { "ANA_REG_MEAS",           ANALOG,         "TRAIL_STEP" },
+    { "REG_MEAS",               ANALOG,         "TRAIL_STEP" },
 
     { "V_REF",                  ANALOG,         "TRAIL_STEP" },
     { "V_REF_SAT",              ANALOG,         "TRAIL_STEP" },
@@ -162,8 +161,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "V_LOAD",                 ANALOG,         ""           },
     { "V_MEAS",                 ANALOG,         ""           },
 
-    { "ANA_TRACK_DLY",          ANALOG,         "TRAIL_STEP" },
-    { "ANA_TRACK_DLY_FLTR",     ANALOG,         "TRAIL_STEP" },
+    { "TRACK_DLY",              ANALOG,         "TRAIL_STEP" },
 
     { "B_ERR",                  ANALOG,         "TRAIL_STEP" },
     { "I_ERR",                  ANALOG,         "TRAIL_STEP" },
