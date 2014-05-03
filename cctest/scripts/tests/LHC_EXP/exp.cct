@@ -73,7 +73,7 @@ PLEP LINEAR_RATE            4
 
 GLOBAL FUNCTION             PLEP
 GLOBAL FILE                 CMS
-#RUN
+RUN
 
 # -------------------- ATLAS ----------------------
 

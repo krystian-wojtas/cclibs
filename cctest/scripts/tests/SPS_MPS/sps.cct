@@ -31,7 +31,7 @@ LIMITS V_QUADRANTS41        0.0,0.0
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS        1.0
+VS V_REF_DELAY_ITERS        0.5
 VS BANDWIDTH                10000.0
 VS TAU_ZERO                 0.0
 VS Z                        0.9
@@ -56,7 +56,6 @@ MEAS I_SIM_TONE_AMP         0.0
 # Current regulation 
 
 IREG PERIOD_ITERS           3
-IREG PURE_DELAY_PERIODS     0.7
 IREG CLBW                   40
 IREG CLBW2                  40
 IREG Z                      0.5
@@ -71,7 +70,9 @@ LOAD I_SAT_END              6000.0
 
 CD   functions/amps/RB
 READ *
+#READ RB_CNGS_2009_AFTER_FT
 CD   ../../..
+#EXIT
 
 # Main focusing quadrupole functions
 
