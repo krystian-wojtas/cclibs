@@ -214,7 +214,6 @@ void ccSigsInit(void)
         {
             ccSigsEnableSignal(ANA_REG_MEAS);
             ccSigsEnableSignal(ANA_TRACK_DLY);
-            ccSigsEnableSignal(ANA_TRACK_DLY_FLTR);
             ccSigsEnableSignal(ANA_B_REF);
             ccSigsEnableSignal(ANA_B_REF_LIMITED);
             ccSigsEnableSignal(ANA_B_REF_RST);
@@ -239,7 +238,6 @@ void ccSigsInit(void)
         {
             ccSigsEnableSignal(ANA_REG_MEAS);
             ccSigsEnableSignal(ANA_TRACK_DLY);
-            ccSigsEnableSignal(ANA_TRACK_DLY_FLTR);
             ccSigsEnableSignal(ANA_I_REF);
             ccSigsEnableSignal(ANA_I_REF_LIMITED);
             ccSigsEnableSignal(ANA_I_REF_RST);
@@ -314,18 +312,44 @@ void ccSigsStore(double time)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        ccSigsStoreAnalog (ANA_B_REF,          reg.ref);
-        ccSigsStoreAnalog (ANA_B_REF_LIMITED,  reg.ref_limited);
-        ccSigsStoreAnalog (ANA_B_REF_RST,      reg.ref_rst);
+        switch(reg.mode)
+        {
+        case REG_FIELD:
+
+            ccSigsStoreAnalog (ANA_B_REF,          reg.ref);
+            ccSigsStoreAnalog (ANA_B_REF_LIMITED,  reg.ref_limited);
+            ccSigsStoreAnalog (ANA_B_REF_RST,      reg.ref_rst);
+            ccSigsStoreAnalog (ANA_I_REF,          0.0);
+            ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
+            ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
+            break;
+
+        case REG_CURRENT:
+
+
+            ccSigsStoreAnalog (ANA_B_REF,          0.0);
+            ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
+            ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
+            ccSigsStoreAnalog (ANA_I_REF,          reg.ref);
+            ccSigsStoreAnalog (ANA_I_REF_LIMITED,  reg.ref_limited);
+            ccSigsStoreAnalog (ANA_I_REF_RST,      reg.ref_rst);
+            break;
+
+        default:
+
+            ccSigsStoreAnalog (ANA_B_REF,          0.0);
+            ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
+            ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
+            ccSigsStoreAnalog (ANA_I_REF,          0.0);
+            ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
+            ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
+            break;
+        }
 
         ccSigsStoreAnalog( ANA_B_LOAD,         reg.b_sim.load);
         ccSigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.meas[REG_MEAS_UNFILTERED]);
         ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.meas[REG_MEAS_FILTERED]);
         ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.meas[REG_MEAS_EXTRAPOLATED]);
-
-        ccSigsStoreAnalog (ANA_I_REF,          reg.ref);
-        ccSigsStoreAnalog (ANA_I_REF_LIMITED,  reg.ref_limited);
-        ccSigsStoreAnalog (ANA_I_REF_RST,      reg.ref_rst);
 
         ccSigsStoreAnalog (ANA_I_LOAD,         reg.i_sim.load);
         ccSigsStoreAnalog (ANA_I_MEAS,         reg.i_meas.meas[REG_MEAS_UNFILTERED]);
@@ -340,7 +364,6 @@ void ccSigsStore(double time)
         ccSigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
-        ccSigsStoreAnalog( ANA_TRACK_DLY_FLTR, reg.rst_vars.filtered_track_delay_periods);
 
         ccSigsStoreAnalog (ANA_B_ERR,          reg.b_err.err);
         ccSigsStoreAnalog (ANA_I_ERR,          reg.i_err.err);
