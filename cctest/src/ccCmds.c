@@ -115,7 +115,9 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
 
     fclose(f);
 
-    return(EXIT_SUCCESS);
+    // Print new current working directory
+
+    return(ccCmdsPwd(0, remaining_line));
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsPwd(uint32_t cmd_idx, char **remaining_line)
