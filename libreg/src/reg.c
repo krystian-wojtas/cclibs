@@ -147,8 +147,13 @@ void regSetMode(struct reg_converter      *reg,
             reg->ref_advance = reg->iter_period *
                               (reg_pars->sim_vs_pars.v_ref_delay_iters + reg_pars->sim_vs_pars.step_rsp_time_iters);
 
-            // Clear field and current regulation errors
+            // Clear field and current regulation variables
 
+            reg->ref         = 0.0;
+            reg->ref_limited = 0.0;
+            reg->ref_rst     = 0.0;
+            reg->meas        = 0.0;
+            reg->rst_vars.meas_track_delay_periods = 0.0;
             regErrResetLimitsVars(&reg->i_err);
             regErrResetLimitsVars(&reg->b_err);
         }
@@ -171,6 +176,7 @@ void regSetMode(struct reg_converter      *reg,
                                              (reg->b_meas.meas_delay_iters[REG_MEAS_UNFILTERED] -
                                               reg->b_meas.meas_delay_iters[reg->b_meas.reg_select]) /
                                               (float)(rst_pars->period_iters);
+                regErrResetLimitsVars(&reg->i_err);
             }
             else
             {
@@ -185,6 +191,7 @@ void regSetMode(struct reg_converter      *reg,
                                              (reg->i_meas.meas_delay_iters[REG_MEAS_UNFILTERED] -
                                               reg->i_meas.meas_delay_iters[reg->i_meas.reg_select]) /
                                               (float)(rst_pars->period_iters);
+                regErrResetLimitsVars(&reg->b_err);
             }
 
             // Prepare RST histories - assuming that v_ref has been constant when calculating rate
@@ -192,8 +199,6 @@ void regSetMode(struct reg_converter      *reg,
             reg->period_iters      = rst_pars->period_iters;
             reg->period            = rst_pars->period;
             reg->iteration_counter = reg->period_iters;
-
-            rst_vars->filtered_track_delay_periods = rst_pars->track_delay_periods;
 
             if(reg->mode == REG_NONE)
             {
