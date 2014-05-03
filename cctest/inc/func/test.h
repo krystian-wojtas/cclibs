@@ -55,9 +55,9 @@ CCPARS_TEST_EXT struct ccpars_test ccpars_test
         {
             FG_TEST_COSINE,  // Overwritten by init function (SINE, COSINE, STEPS or SQUARE)
             2.0,             // TEST AMPLITUDE_PP
-            1.0,             // TEST NUM_CYCLES
-            1.0,             // TEST PERIOD
-            CC_DISABLED      // TEST WINDOW
+            3.0,             // TEST NUM_CYCLES
+            2.0,             // TEST PERIOD
+            CC_ENABLED       // TEST WINDOW
         }
 }
 #endif

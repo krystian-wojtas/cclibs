@@ -61,9 +61,9 @@ struct ccpars_limits
 CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 #ifdef GLOBALS
 = {//  POS   MIN    NEG    RATE   ACC   ERR_WRN ERR_FLT  Quadrant41 
-    { 1.0E1, 0.0, -1.0E1, 1.0E1, 1.0E6 }, 0.0,   0.0,                 // LIMITS.B_limits
-    { 1.0E1, 0.0, -1.0E1, 1.0E1, 1.0E6 }, 0.0,   0.0,  { 0.0, 0.0 },  // LIMITS.I_limits
-    { 1.0E1, 0.0, -1.0E1, 1.0E1, 1.0E6 }, 0.0,   0.0,  { 0.0, 0.0 },  // LIMITS.V_limits
+    { 1.0E1, 0.0, -1.0E1, 5.0E0, 1.0E6 }, 0.0,   0.0,                 // LIMITS.B_limits
+    { 1.0E1, 0.0, -1.0E1, 5.0E0, 1.0E6 }, 0.0,   0.0,  { 0.0, 0.0 },  // LIMITS.I_limits
+    { 1.0E2, 0.0, -1.0E2, 1.0E3, 1.0E6 }, 0.0,   0.0,  { 0.0, 0.0 },  // LIMITS.V_limits
     CC_DISABLED                                                       // LIMITS.INVERT_LIMITS
 }
 #endif

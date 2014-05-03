@@ -53,8 +53,8 @@ CCPARS_REG_EXT struct ccpars_reg_pars ccpars_breg
         10,                  // BREG.PERIOD_ITERS
         0.0,                 // BREG.PURE_DELAY_PERIODS
         0.0,                 // BREG.TRACK_DELAY_PERIODS
-        1.0,                 // BREG.CLBW
-        1.0,                 // BREG.CLBW2
+        10.0,                // BREG.CLBW
+        10.0,                // BREG.CLBW2
         0.5,                 // BREG.Z
         { {  0.0  },         // BREG.R
           {  0.0  },         // BREG.S
@@ -69,8 +69,8 @@ CCPARS_REG_EXT struct ccpars_reg_pars ccpars_ireg
         10,                  // IREG.PERIOD_ITERS
         0.0,                 // IREG.PURE_DELAY_PERIODS
         0.0,                 // IREG.TRACK_DELAY_PERIODS
-        1.0,                 // IREG.CLBW
-        1.0,                 // IREG.CLBW2
+        10.0,                // IREG.CLBW
+        10.0,                // IREG.CLBW2
         0.5,                 // IREG.Z
         { {  0.0  },         // IREG.R
           {  0.0  },         // IREG.S

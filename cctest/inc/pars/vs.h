@@ -51,7 +51,7 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 #ifdef GLOBALS
 = {//   Default value               Parameter
         1.0,                     // VS.V_REF_DELAY_ITERS
-        0.0,                     // VS.BANDWIDTH
+        200.0,                   // VS.BANDWIDTH
         0.9,                     // VS.Z
         0.0,                     // VS.TAU_ZERO
         {  { 1.0 },              // VS.SIM_NUM
