@@ -210,7 +210,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
 
     // If voltage source model is too undersampled then do not attempt Tustin algorithm
 
-    if(bandwidth <= 0.0 || bandwidth > 0.501 / sim_period)
+    if(bandwidth <= 0.0 || bandwidth > 0.4 / sim_period)
     {
         pars->den[0] = pars->num[0] = 1.0;
         pars->den[1] = pars->den[2] = pars->den[3] = pars->num[1] = pars->num[2] = pars->num[3] = 0.0;
@@ -317,7 +317,13 @@ uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *
 
     // Consider simulation to be under-sampled if step response time is less than 60% of one iteration
 
-    return(pars->step_rsp_time_iters < 0.6);
+    if(pars->step_rsp_time_iters < 0.6)
+    {
+        pars->step_rsp_time_iters = 0.0;
+        return(1);                              // Report that model is under-sampled
+    }
+
+    return(0);                                  // Report that model is not under-sampled
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_load)
