@@ -277,14 +277,6 @@ uint32_t ccInitFunctions(void)
 uint32_t ccInitSimulation(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    // Check that VS V_REF_DELAY_ITERS is at least 1
-
-    if(ccpars_vs.v_ref_delay_iters < 1.0)
-    {
-        ccTestPrintError("VS V_REF_DELAY_ITERS (%g) must be >= 1.0",ccpars_vs.v_ref_delay_iters);
-        return(EXIT_FAILURE);
-    }
-
     // By default use voltage source simulation transfer function directly
 
     reg_pars.sim_vs_pars = ccpars_vs.sim_vs_pars;
@@ -326,25 +318,22 @@ uint32_t ccInitSimulation(void)
     reg.v_ref         = regSimVsInitHistory(&reg_pars.sim_vs_pars, &reg.sim_vs_vars, reg.v_meas);
 
     // Initialise measurement delay structures for simulated field, current and voltage in the
-    // load and the measurements of these values in the load. The delay is adjusted by -1.0
-    // iterations because the the simulation is used at the start of the next iteration, so
-    // one iteration period has elapsed anyway. For this reason, v_ref_delay_iters must be
-    // at least 1.
+    // load and the measurements of these values in the load.
 
     regDelayInitDelays(&reg.b_sim.delay,
                        reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
-                       ccpars_vs.v_ref_delay_iters - 1.0,
-                       ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters - 1.0);
+                       ccpars_vs.v_ref_delay_iters,
+                       ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters);
 
     regDelayInitDelays(&reg.i_sim.delay,
                        reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
-                       ccpars_vs.v_ref_delay_iters - 1.0,
-                       ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0);
+                       ccpars_vs.v_ref_delay_iters,
+                       ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters);
 
     regDelayInitDelays(&reg.v_sim.delay,
                        reg_pars.sim_load_pars.vs_undersampled_flag,
-                       ccpars_vs.v_ref_delay_iters - 1.0,
-                       ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0);
+                       ccpars_vs.v_ref_delay_iters,
+                       ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters);
 
     // Initialise simulated measurement delay histories
 
