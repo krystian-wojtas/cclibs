@@ -481,23 +481,29 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
         if(reg->mode == REG_FIELD)
         {
-            reg->ref_delayed = regRstDelayedRef(&reg_pars->b_rst_pars, &reg->rst_vars);
+            if(reg->b_err_rate == REG_ERR_RATE_MEASUREMENT || reg_flag == 1)
+            {
+                reg->ref_delayed = regRstDelayedRef(&reg_pars->b_rst_pars, &reg->rst_vars);
 
-            regErrCheckLimits(&reg->b_err, !feedforward_control, max_abs_err_control,
-                              reg->ref_delayed, reg->b_meas.meas[REG_MEAS_UNFILTERED]);
+                regErrCheckLimits(&reg->b_err, !feedforward_control, max_abs_err_control,
+                                  reg->ref_delayed, reg->b_meas.meas[REG_MEAS_UNFILTERED]);
 
-            reg->err         = reg->b_err.err;
-            reg->max_abs_err = reg->b_err.max_abs_err;
+                reg->err         = reg->b_err.err;
+                reg->max_abs_err = reg->b_err.max_abs_err;
+            }
         }
         else
         {
-            reg->ref_delayed = regRstDelayedRef(&reg_pars->i_rst_pars, &reg->rst_vars);
+            if(reg->i_err_rate == REG_ERR_RATE_MEASUREMENT || reg_flag == 1)
+            {
+                reg->ref_delayed = regRstDelayedRef(&reg_pars->i_rst_pars, &reg->rst_vars);
 
-            regErrCheckLimits(&reg->i_err, !feedforward_control, max_abs_err_control,
-                              reg->ref_delayed, reg->i_meas.meas[REG_MEAS_UNFILTERED]);
+                regErrCheckLimits(&reg->i_err, !feedforward_control, max_abs_err_control,
+                                  reg->ref_delayed, reg->i_meas.meas[REG_MEAS_UNFILTERED]);
 
-            reg->err         = reg->i_err.err;
-            reg->max_abs_err = reg->i_err.max_abs_err;
+                reg->err         = reg->i_err.err;
+                reg->max_abs_err = reg->i_err.max_abs_err;
+            }
         }
 
         reg->iteration_counter--;

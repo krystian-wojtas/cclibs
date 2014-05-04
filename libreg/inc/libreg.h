@@ -44,6 +44,14 @@
 #include <libreg/rst.h>
 #include <libreg/sim.h>
 
+// Regulation error rate control enum
+
+enum reg_err_rate
+{
+    REG_ERR_RATE_REGULATION,
+    REG_ERR_RATE_MEASUREMENT
+};
+
 // Global power converter regulation structures
 
 struct reg_sim_meas                                             // Measurement simulation structure
@@ -109,6 +117,9 @@ struct reg_converter                                            // Global conver
     // Regulation variables structures
 
     struct reg_rst_vars         rst_vars;                       // Field or current regulation RST variables
+
+    enum reg_err_rate           b_err_rate;                     // Rate control for field regulation error calculation
+    enum reg_err_rate           i_err_rate;                     // Rate control for current regulation error calculation
 
     struct reg_err              b_err;                          // Field regulation error
     struct reg_err              i_err;                          // Current regulation error
