@@ -34,11 +34,24 @@
 #define CCPARS_REG_EXT extern
 #endif
 
+// Error rate control enum
+
+CCPARS_EXT struct ccpars_enum err_rate[]
+#ifdef GLOBALS
+= {
+    { REG_ERR_RATE_REGULATION,   "REGULATION"     },
+    { REG_ERR_RATE_MEASUREMENT,  "MEASUREMENT"    },
+    { 0,                          NULL            },
+}
+#endif
+;
+
 // Field and current Regulation parameters
 
 struct ccpars_reg_pars
 {
     uint32_t            period_iters;               // Regulation period in iteration periods
+    enum reg_err_rate   err_rate;                   // Regulation error rate control
     float               pure_delay_periods;         // Regulation pure delay in periods (0 to use automatic calculation)
     float               track_delay_periods;        // Regulation track delay in periods (0 to use automatic calculation)
     float               clbw;                       // Regulation closed loop bandwidth (real pole)
@@ -49,32 +62,34 @@ struct ccpars_reg_pars
 
 CCPARS_REG_EXT struct ccpars_reg_pars ccpars_breg
 #ifdef GLOBALS
-= {//   Default value           Parameter
-        10,                  // BREG.PERIOD_ITERS
-        0.0,                 // BREG.PURE_DELAY_PERIODS
-        0.0,                 // BREG.TRACK_DELAY_PERIODS
-        10.0,                // BREG.CLBW
-        10.0,                // BREG.CLBW2
-        0.5,                 // BREG.Z
-        { {  0.0  },         // BREG.R
-          {  0.0  },         // BREG.S
-          {  0.0  } },       // BREG.T
+= {//   Default value                  Parameter
+        10,                         // BREG PERIOD_ITERS
+        REG_ERR_RATE_REGULATION,    // BREG ERR_RATE
+        0.0,                        // BREG PURE_DELAY_PERIODS
+        0.0,                        // BREG TRACK_DELAY_PERIODS
+        10.0,                       // BREG CLBW
+        10.0,                       // BREG CLBW2
+        0.5,                        // BREG Z
+        { {  0.0  },                // BREG R
+          {  0.0  },                // BREG S
+          {  0.0  } },              // BREG T
 }
 #endif
 ;
 
 CCPARS_REG_EXT struct ccpars_reg_pars ccpars_ireg
 #ifdef GLOBALS
-= {//   Default value           Parameter
-        10,                  // IREG.PERIOD_ITERS
-        0.0,                 // IREG.PURE_DELAY_PERIODS
-        0.0,                 // IREG.TRACK_DELAY_PERIODS
-        10.0,                // IREG.CLBW
-        10.0,                // IREG.CLBW2
-        0.5,                 // IREG.Z
-        { {  0.0  },         // IREG.R
-          {  0.0  },         // IREG.S
-          {  0.0  } },       // IREG.T
+= {//   Default value                  Parameter
+        10,                         // IREG PERIOD_ITERS
+        REG_ERR_RATE_REGULATION,    // IREG ERR_RATE
+        0.0,                        // IREG PURE_DELAY_PERIODS
+        0.0,                        // IREG TRACK_DELAY_PERIODS
+        10.0,                       // IREG CLBW
+        10.0,                       // IREG CLBW2
+        0.5,                        // IREG Z
+        { {  0.0  },                // IREG R
+          {  0.0  },                // IREG S
+          {  0.0  } },              // IREG T
 }
 #endif
 ;
@@ -90,6 +105,7 @@ CCPARS_REG_EXT struct ccpars breg_pars[]
 #ifdef GLOBALS
 = {// "Signal name"         type,         max_n_els,  min_n_els,*enum,          *value,                            num_defaults
     { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                1, NULL,        { .i = &ccpars_breg.period_iters        }, 1 },
+    { "ERR_RATE",           PAR_ENUM,     1,                1, err_rate,    { .i = &ccpars_breg.err_rate            }, 1 },
     { "PURE_DELAY_PERIODS", PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.pure_delay_periods  }, 1 },
     { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.track_delay_periods }, 1 },
     { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw                }, 1 },
@@ -107,6 +123,7 @@ CCPARS_REG_EXT struct ccpars ireg_pars[]
 #ifdef GLOBALS
 = {// "Signal name"         type,         max_n_els,  min_n_els,*enum,          *value,                            num_defaults
     { "PERIOD_ITERS",       PAR_UNSIGNED, 1,                1, NULL,        { .i = &ccpars_ireg.period_iters        }, 1 },
+    { "ERR_RATE",           PAR_ENUM,     1,                1, err_rate,    { .i = &ccpars_ireg.err_rate            }, 1 },
     { "PURE_DELAY_PERIODS", PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.pure_delay_periods  }, 1 },
     { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.track_delay_periods }, 1 },
     { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw                }, 1 },

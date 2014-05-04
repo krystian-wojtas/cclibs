@@ -424,6 +424,8 @@ uint32_t ccInitRegulation(void)
             ccTestPrintError("FIELD RST regulator failed to initialise: S[0] is less than 1.0E-10");
             return(EXIT_FAILURE);
         }
+
+        reg.b_err_rate = ccpars_breg.err_rate;
     }
 
     // Initialise CURRENT regulator if current regulation used by at least one function
@@ -446,6 +448,8 @@ uint32_t ccInitRegulation(void)
             ccTestPrintError("CURRENT RST regulator failed to initialise: S[0] is less than 1.0E-10");
             return(EXIT_FAILURE);
         }
+
+        reg.i_err_rate = ccpars_ireg.err_rate;
     }
 
     return(EXIT_SUCCESS);
