@@ -109,10 +109,9 @@ GLOBAL REG_MODE             VOLTAGE
 GLOBAL FILE                 volts-steps
 RUN
 
-GLOBAL REG_MODE             CURRENT
-
 # Test 1 - unfiltered
              
+GLOBAL REG_MODE             CURRENT
 MEAS I_REG_SELECT           UNFILTERED
 
 IREG PERIOD_ITERS           10
@@ -154,6 +153,25 @@ IREG Z                      0.5
 VS V_REF_DELAY_ITERS        1.0
 GLOBAL FILE                 amps-pppl-fil-0.83
 GLOBAL FUNCTION             PPPL
+RUN
+
+# PLP verse CTRIM closed-loop tests
+
+TRIM INITIAL_REF            10
+TRIM FINAL_REF              100
+TRIM DURATION               0.3
+
+GLOBAL FUNCTION             CTRIM
+GLOBAL FILE                 amps-ctrim-fil-0.83
+RUN
+
+PLEP   INITIAL_REF         10
+PLEP   FINAL_REF           100
+PLEP   ACCELERATION        5000
+PLEP   LINEAR_RATE         400
+
+GLOBAL FUNCTION             PLEP
+GLOBAL FILE                 amps-plep-fil-0.83
 RUN
 
 IREG Z                      0.2
