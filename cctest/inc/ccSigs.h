@@ -38,7 +38,7 @@
 
 // Constants
 
-#define FLOT_PATH               "../../"
+#define FLOT_PATH               "../.."
 
 // Signal constants
 
