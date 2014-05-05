@@ -1,0 +1,130 @@
+# CCTEST - RAMP tests script
+
+GLOBAL ITER_PERIOD          1.0E-4
+GLOBAL FUNCTION             RAMP
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL GROUP                sandbox
+GLOBAL PROJECT              RampTests
+
+# Voltage source parameters
+
+VS V_REF_DELAY_ITERS        1.0
+VS BANDWIDTH                2000
+VS TAU_ZERO                 0.0
+VS Z                        0.9
+   
+# Load parameters
+
+LOAD OHMS_SER               0.2
+LOAD OHMS_PAR               1.0E8
+LOAD OHMS_MAG               0.2
+LOAD HENRYS                 1.0
+LOAD HENRYS_SAT             0.5
+LOAD I_SAT_START            5.0
+LOAD I_SAT_END              9.0
+LOAD SIM_TC_ERROR           0.1
+
+# Measurement parameters
+
+MEAS I_REG_SELECT           UNFILTERED
+MEAS I_DELAY_ITERS          1.3
+MEAS V_DELAY_ITERS          1.3
+MEAS I_FIR_LENGTHS          1,1
+MEAS I_SIM_NOISE_PP         0.0
+MEAS V_SIM_NOISE_PP         0.0
+MEAS TONE_HALF_PERIOD_ITERS 10
+MEAS I_SIM_TONE_AMP         0.0
+
+# IREG parameters
+
+IREG PERIOD_ITERS           10
+IREG CLBW                   200
+IREG CLBW2                  200
+IREG Z                      0.5
+
+# - Voltage RAMP UP -
+
+GLOBAL RUN_DELAY            0.01
+GLOBAL STOP_DELAY           0.01
+GLOBAL REG_MODE             VOLTAGE
+
+RAMP INITIAL_REF     		-1.0
+RAMP FINAL_REF              1.0
+RAMP ACCELERATION           5000.0
+RAMP DECELERATION           1000.0
+RAMP LINEAR_RATE            15.0
+
+GLOBAL FILE 				volts-ramp_up_high
+READ 						volts_limits_high
+RUN
+
+GLOBAL FILE 				volts-ramp_up_low
+READ 						volts_limits_low
+RUN
+
+# - Voltage RAMP DOWN -
+
+RAMP INITIAL_REF            1.0
+RAMP FINAL_REF              -1.0
+RAMP ACCELERATION           5000.0
+RAMP DECELERATION           1000.0
+
+GLOBAL FILE 				volts-ramp_down_high
+READ 						volts_limits_high
+RUN
+
+GLOBAL FILE 				volts-ramp_down_low
+READ 						volts_limits_low
+RUN
+
+# - Current RAMP UP -
+
+GLOBAL RUN_DELAY            0.1
+GLOBAL STOP_DELAY           0.1
+GLOBAL REG_MODE             CURRENT
+
+RAMP INITIAL_REF            -5.0
+RAMP FINAL_REF              10.0
+RAMP ACCELERATION           400.0
+RAMP DECELERATION           200.0
+RAMP LINEAR_RATE            20.0
+
+GLOBAL FILE 				amps-ramp_up_high
+READ 						amps_limits_high
+RUN
+
+GLOBAL FILE 				amps-ramp_up_low
+READ 						amps_limits_low
+RUN
+
+GLOBAL ABORT_TIME      		0.44
+GLOBAL FILE 				amps-ramp_up_abort
+READ 						amps_limits_abort
+RUN
+GLOBAL ABORT_TIME      		0.0
+
+# - Current RAMP DOWN -
+
+RAMP INITIAL_REF            10.0
+RAMP FINAL_REF              -5.0
+RAMP ACCELERATION           400.0
+RAMP DECELERATION           200.0
+RAMP LINEAR_RATE            0.0
+
+GLOBAL FILE 				amps-ramp_down_high
+READ 						amps_limits_high
+RUN
+
+GLOBAL FILE 				amps-ramp_down_low
+READ 						amps_limits_low
+RUN
+
+GLOBAL ABORT_TIME      		0.44
+GLOBAL FILE 				amps-ramp_down_abort
+READ 						amps_limits_abort
+RUN
+GLOBAL ABORT_TIME      		0.0
+
+# EOF
+
