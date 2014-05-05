@@ -38,7 +38,7 @@
 
         analog_options =
         {
-            series:         { shadowSize: 0, lines: { lineWidth: 1}, points: { radius: 2} },
+            series:         { shadowSize: 0, lines: { lineWidth: 1}, points: { radius: 2}, downsample: { threshold: 2000} },
             grid:           { color: "#444", borderWidth: 1, backgroundColor: "#FFF" },
             yaxis:          { labelWidth:220 },
             legend:         { container: analog_legend_div, position: "nw", 
@@ -65,6 +65,7 @@
         // ----- Save x-axis setting for analog plot for when all signals are invisible -----
 
         analog_xaxis = analog_plot.getAxes().xaxis;
+        analog_xaxis.range = (analog_xaxis.max - analog_xaxis.min) * analog_options.series.downsample.threshold;
 
         // ----- Link colorbox pop-ups to inline links -----
 
@@ -182,7 +183,8 @@
 
         if(stack_depth == 0)
         {
-            analog_options_zoom = analog_options;
+            analog_options_zoom  = analog_options;
+            digital_options_zoom = digital_options;
         }
 
         // ----- Create list of visible signals -----
@@ -195,7 +197,6 @@
                 {
                     if(escale_flag == 1)
                     {
-
                         visible_analog_signals.push({data: signal.deriv_escale, label: sig_name + " '" + signal.exp_deriv, color: signal.color, lines: signal.lines, points: signal.points, index: signal.index});
                     }
                     else
@@ -240,8 +241,6 @@
 
         stack_depth   = 0;
         options_stack = [];
-        analog_options_zoom  = analog_options;
-        digital_options_zoom = digital_options;
 
         // ----- Replot charts -----
 
@@ -338,6 +337,8 @@
                                            xaxis: { min: ranges.xaxis.from, max: ranges.xaxis.to },
                                            yaxis: { min: ranges.yaxis.from, max: ranges.yaxis.to } });
 
+            analog_options_zoom.series.downsample.threshold = Math.floor(analog_xaxis.range / ((ranges.xaxis.to - ranges.xaxis.from));
+            
             analog_plot = $.plot(analog_chart_div, visible_analog_signals, analog_options_zoom);
 
             if (visible_digital_signals.length > 0)
