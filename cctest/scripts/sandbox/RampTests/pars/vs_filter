@@ -1,9 +1,0 @@
-# CCTEST voltage source model file : ACAPULCO with FGC3 in PSB
-
-VS.BANDWIDTH      10000
-VS.TAU_ZERO       0.0
-VS.Z              0.9
-VS.V_SIM_NOISE_PP 0.05
-
-# EOF
-
