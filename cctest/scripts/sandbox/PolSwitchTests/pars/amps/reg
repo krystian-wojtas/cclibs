@@ -1,9 +1,0 @@
-# CCTEST regulation file: RPTG D1
-
-REG.PERIOD_ITERS            20
-REG.TRACK_DELAY_PERIODS     1
-REG.CLBW                    5
-REG.CLBW2                   5
-REG.Z                       0.5
-
-# EOF
