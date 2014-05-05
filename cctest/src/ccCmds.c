@@ -287,9 +287,9 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
         {
             printf(CC_PROMPT);
         }
-        else // else when reading from file, break out if error reported
+        else // else when reading from file, break out if error reported and stop on error is enabled
         {
-            if(exit_status == EXIT_FAILURE)
+            if(ccpars_global.stop_on_error == CC_ENABLED && exit_status == EXIT_FAILURE)
             {
                 break;
             }
