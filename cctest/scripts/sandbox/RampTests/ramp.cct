@@ -120,7 +120,7 @@ GLOBAL FILE 				amps-ramp_down_low
 READ 						amps_limits_low
 RUN
 
-GLOBAL ABORT_TIME      		0.44
+GLOBAL ABORT_TIME      		0.40
 GLOBAL FILE 				amps-ramp_down_abort
 READ 						amps_limits_abort
 RUN

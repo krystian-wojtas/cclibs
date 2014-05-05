@@ -117,6 +117,14 @@ uint32_t ccInitRun(void)
         return(EXIT_FAILURE);
     }
 
+    // Check if GLOBAL ABORT_TIME is specified that FG_LIMITS is ENABLED
+
+    if(ccpars_global.abort_time > 0.0 && ccpars_global.fg_limits == CC_DISABLED)
+    {
+        ccTestPrintError("GLOBAL FG_LIMITS must be ENABLED if ABORT_TIME is defined");
+        return(EXIT_FAILURE);
+    }
+
     // If voltage perturbation is not required then set perturb_time to far beyond end of simulation
 
     if(ccpars_load.perturb_time <= 0.0 || ccpars_load.perturb_volts == 0.0)

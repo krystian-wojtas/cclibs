@@ -34,55 +34,58 @@
 #include "ccSigs.h"
 #include "ccRun.h"
 
-///*---------------------------------------------------------------------------------------------------------*/
-//static void ccRunAbort(double time)
-///*---------------------------------------------------------------------------------------------------------*\
-//  This will initialise a RAMP function that will take over the from the running function and will smoothly
-//  ramp to the minimum reference value given in the limits. This is only supported when regulating current
-//  or field.  In this example, the rate of change is calculated from the ref values in the RST history.
-//\*---------------------------------------------------------------------------------------------------------*/
-//{
-//    struct fg_ramp_config  config;
-//
-//    // Set up RAMP configuration from limits (either current or field according to mode)
-//
-//    config.final        = ccrun.fg_limits->min;
-//    config.linear_rate  = ccrun.fg_limits->rate;
-//    config.acceleration = ccrun.fg_limits->acceleration;
-//
-//    // If acceleration limit is not set then base the acceleration limit on the rate limit
-//
-//    if(config.acceleration <= 0.0)
-//    {
-//        config.acceleration = 10.0 * config.linear_rate / reg.period;
-//    }
-//
-//    // Make ramp symmetric with deceleration = acceleration
-//
-//    config.deceleration = config.acceleration;
-//
-//    // Initialise a RAMP to take over the running function.  This will update fg_meta.duration which
-//    // controls the length of the run in ccrunSimulation()
-//
-//    fgRampCalc(&config,
-//               &ccpars_ramp.ramp_pars,
-//                ccrun.reg_time,                                            // time of last RST calculation
-//                regRstPrevRef(&reg.rst_vars),                              // last reference value
-//                regRstDeltaRef(&reg.rst_vars) / reg.period,                // last reference rate
-//               &fg_meta);
-//
-//    // Check that abort duration is not too large (limit to 50000 iterations)
-//    // This can be a problem if the exponential decay is included and the exp_final parameter is too close
-//    // to zero.
-//
-//    if(((fg_meta.duration - time) / reg.iter_period) > 50000)
-//    {
-//        fprintf(stderr,"Error : Aborting requires more than 50000 iterations : duration = %.1f\n",fg_meta.duration);
-//        exit(EXIT_FAILURE);
-//    }
-//
-//    ref_function_type = FG_RAMP;
-//}
+/*---------------------------------------------------------------------------------------------------------*/
+static uint32_t ccRunAbort(double time)
+/*---------------------------------------------------------------------------------------------------------*\
+  This will initialise a RAMP function that will take over the from the running function and will smoothly
+  ramp to the minimum reference value given in the limits. This is only supported when regulating current
+  or field.  In this example, the rate of change is calculated from the ref values in the RST history.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    struct fg_ramp_config  config;
+    struct fg_meta         meta;
+
+    // Set up RAMP configuration from limits (either current or field according to mode)
+
+    config.final        = ccrun.fg_limits->min;
+    config.linear_rate  = ccrun.fg_limits->rate;
+    config.acceleration = ccrun.fg_limits->acceleration;
+
+    // If acceleration limit is not set then base the acceleration limit on the rate limit
+
+    if(config.acceleration <= 0.0)
+    {
+        config.acceleration = 10.0 * config.linear_rate / reg.period;
+    }
+
+    // Make ramp symmetric with deceleration = acceleration
+
+    config.deceleration = config.acceleration;
+
+    // Initialise a RAMP to take over the running function.
+
+    fgRampCalc(&config,
+               &ccpars_ramp.ramp_pars,
+                ccrun.reg_time,                                            // time of last RST calculation
+                regRstPrevRef(&reg.rst_vars),                              // last reference value
+                regRstDeltaRef(&reg.rst_vars) / reg.period,                // last reference rate
+               &meta);
+
+    // Check that abort duration is not too large (limit to 50000 iterations)
+    // This can be a problem if the exponential decay is included and the exp_final parameter is too close
+    // to zero.
+
+    if(((meta.duration - time) / reg.iter_period) > 50000)
+    {
+        ccTestPrintError("aborting requires more than 50000 iterations : duration = %.1f\n",meta.duration);
+        return(EXIT_FAILURE);
+    }
+
+    ccrun.fgen_func = funcs[FG_RAMP].fgen_func;
+    ccrun.fg_pars   = funcs[FG_RAMP].fg_pars;
+
+    return(EXIT_SUCCESS);
+}
 /*---------------------------------------------------------------------------------------------------------*/
 static void ccRunStartFunction(uint32_t func_idx)
 /*---------------------------------------------------------------------------------------------------------*\
@@ -155,15 +158,20 @@ void ccRunSimulation(void)
                         ) == 1)
         {
             // Record time of iterations when current or field regulation algorithm runs.
-            // This is used by START function and ABORT to initialise a new PLEP.
+            // This is used by START function.
 
             ccrun.reg_time = time;
 
            // Check for function abort based on the abort time
 
-            if(abort_f == 0 && time >= ccpars_global.abort_time)
+            if(abort_f == 0 && ccpars_global.abort_time > 0.0 && time >= ccpars_global.abort_time)
             {
-//                ccrunAbort(time);
+                // If attempt to abort fails then stop simulation
+
+                if(ccRunAbort(time) == EXIT_FAILURE)
+                {
+                    break;
+                }
 
                 abort_f = 1;
             }
@@ -251,7 +259,7 @@ void ccRunSimulation(void)
                 {
                     // Set duration to the stop delay and continue to use the last function
 
-                    ccrun.func_duration += ccpars_global.stop_delay;
+                    ccrun.func_duration = ref_time + ccpars_global.stop_delay;
                 }
             }
             else // else stop delay is complete so break out of loop
