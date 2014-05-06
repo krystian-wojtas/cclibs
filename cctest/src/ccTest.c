@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 
     // Get path to cctest project root
 
-    sprintf(cctest.base_path, "%s/../../",dirname(argv[0]));
+    ccTestSetBasePath(argv[0]);
 
     // Set default group, project and filename
 
@@ -438,5 +438,27 @@ void ccTestRecoverPath(void)
     }
 
     fclose(f);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void ccTestSetBasePath(char *argv0)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will try to recover the initial path where it is written by the CD command.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    sprintf(cctest.base_path, "%s/../..",dirname(argv0));
+
+    if(chdir(cctest.base_path) != EXIT_SUCCESS)
+    {
+        printf("Fatal - changing directory to '%s' : %s (%d)\n", cctest.base_path, strerror(errno), errno);
+        exit(EXIT_FAILURE);
+    }
+
+    if(getcwd(cctest.base_path, sizeof(cctest.base_path)) == NULL)
+    {
+        printf("Fatal - getting current directory : %s (%d)\n", strerror(errno), errno);
+        exit(EXIT_FAILURE);
+    }
+
+    puts(cctest.base_path);
 }
 // EOF

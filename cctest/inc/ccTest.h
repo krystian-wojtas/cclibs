@@ -71,6 +71,7 @@ uint32_t ccTestNoMoreArgs       (char **remaining_line);
 uint32_t ccTestReadAllFiles     (void);
 uint32_t ccTestMakePath         (char *path);
 void     ccTestRecoverPath      (void);
+void     ccTestSetBasePath      (char *argv0);
 
 #endif
 // EOF

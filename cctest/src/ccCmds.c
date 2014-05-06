@@ -97,7 +97,7 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
 
     if(f == NULL)
     {
-        printf("Fatal - failed to open '%s' : %s (%d)", path_filename, strerror(errno), errno);
+        printf("Fatal - failed to open '%s' : %s (%d)\n", path_filename, strerror(errno), errno);
         exit(EXIT_FAILURE);
     }
 
