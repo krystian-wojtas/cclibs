@@ -426,7 +426,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
         char     csv_path[CC_PATH_LEN * 2];
         char     csv_filename[CC_PATH_LEN * 2];
 
-        sprintf(csv_path, "%sresults/csv/%s/%s",
+        sprintf(csv_path, "%s/results/csv/%s/%s",
                                   cctest.base_path,
                                   ccpars_global.group,
                                   ccpars_global.project);
@@ -494,7 +494,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
         char     flot_path[CC_PATH_LEN * 2];
         char     flot_filename[CC_PATH_LEN * 2];
 
-        sprintf(flot_path, "%sresults/webplots/%s/%s",
+        sprintf(flot_path, "%s/results/webplots/%s/%s",
                            cctest.base_path,
                            ccpars_global.group,
                            ccpars_global.project);

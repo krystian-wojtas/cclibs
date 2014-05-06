@@ -458,7 +458,5 @@ void ccTestSetBasePath(char *argv0)
         printf("Fatal - getting current directory : %s (%d)\n", strerror(errno), errno);
         exit(EXIT_FAILURE);
     }
-
-    puts(cctest.base_path);
 }
 // EOF
