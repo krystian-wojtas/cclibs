@@ -337,7 +337,7 @@
                                            xaxis: { min: ranges.xaxis.from, max: ranges.xaxis.to },
                                            yaxis: { min: ranges.yaxis.from, max: ranges.yaxis.to } });
 
-            analog_options_zoom.series.downsample.threshold = Math.floor(analog_xaxis.range / ((ranges.xaxis.to - ranges.xaxis.from));
+            analog_options_zoom.series.downsample.threshold = Math.floor(analog_xaxis.range / (ranges.xaxis.to - ranges.xaxis.from));
             
             analog_plot = $.plot(analog_chart_div, visible_analog_signals, analog_options_zoom);
 
