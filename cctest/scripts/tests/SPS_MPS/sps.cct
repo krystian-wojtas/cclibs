@@ -9,6 +9,7 @@ GLOBAL FG_LIMITS            DISABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL GROUP                tests
 GLOBAL PROJECT              SPS_MPS
+GLOBAL FILE                 *
 
 # Limits parameters
 
@@ -20,7 +21,7 @@ LIMITS I_ACCELERATION       5.0E6
 LIMITS I_ERR_WARNING        0.0
 LIMITS I_ERR_FAULT          0.0
 LIMITS I_QUADRANTS41        0.0,0.0
-                            
+
 LIMITS V_POS                30000.0
 LIMITS V_NEG                -27000.0
 LIMITS V_RATE               0.0
