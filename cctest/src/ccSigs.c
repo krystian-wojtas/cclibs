@@ -472,7 +472,7 @@ void ccSigsFlot(FILE *f)
 
     // Print start of FLOT html page including flot path to all the javascript libraries
 
-    fprintf(f,flot[0],FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
+    fprintf(f,flot[0],FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
 
     // Time of end of FLOT data
 
