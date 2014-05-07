@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 
     // Get path to cctest project root
 
-    ccTestSetBasePath(argv[0]);
+    ccTestGetBasePath(argv[0]);
 
     // Set default group, project and filename
 
@@ -440,23 +440,37 @@ void ccTestRecoverPath(void)
     fclose(f);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccTestSetBasePath(char *argv0)
+void ccTestGetBasePath(char *argv0)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will try to recover the initial path where it is written by the CD command.
+  This function will try to get the absolute path to the cctest project directory
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    char    cwd[CC_PATH_LEN];
+
+    // Get path to cctest executable - this might be absolute or relative depending on the platform
+
     sprintf(cctest.base_path, "%s/../..",dirname(argv0));
 
-    if(chdir(cctest.base_path) != EXIT_SUCCESS)
-    {
-        printf("Fatal - changing directory to '%s' : %s (%d)\n", cctest.base_path, strerror(errno), errno);
-        exit(EXIT_FAILURE);
-    }
+    puts(cctest.base_path);
 
-    if(getcwd(cctest.base_path, sizeof(cctest.base_path)) == NULL)
+    // If path is relative
+
+    if(cctest.base_path[0] == '.')
     {
-        printf("Fatal - getting current directory : %s (%d)\n", strerror(errno), errno);
-        exit(EXIT_FAILURE);
+        // Get absolute path to current working directory
+
+        if(getcwd(cwd, sizeof(cwd)) == NULL)
+        {
+            printf("Fatal - getting current directory : %s (%d)\n", strerror(errno), errno);
+            exit(EXIT_FAILURE);
+        }
+
+        puts(cwd);
+
+        strncat(cwd,cctest.base_path,CC_PATH_LEN);
+        strncpy(cctest.base_path,cwd,CC_PATH_LEN);
+
+        puts(cctest.base_path);
     }
 }
 // EOF
