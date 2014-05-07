@@ -422,7 +422,7 @@ uint32_t ccInitRegulation(void)
         status = regRstInit(&reg_pars.b_rst_pars,
                             reg.iter_period, ccpars_breg.period_iters, &reg_pars.load_pars,
                             ccpars_breg.clbw, ccpars_breg.clbw2, ccpars_breg.z,
-                            ccpars_breg.clbw, ccpars_breg.clbw,
+                            ccpars_breg.clbw3, ccpars_breg.clbw4,
                             pure_delay_periods,
                             ccpars_breg.track_delay_periods,
                             REG_FIELD, &ccpars_breg.rst);
@@ -446,7 +446,7 @@ uint32_t ccInitRegulation(void)
         status = regRstInit(&reg_pars.i_rst_pars,
                             reg.iter_period, ccpars_ireg.period_iters, &reg_pars.load_pars,
                             ccpars_ireg.clbw, ccpars_ireg.clbw2, ccpars_ireg.z,
-                            ccpars_ireg.clbw, ccpars_ireg.clbw,
+                            ccpars_ireg.clbw3, ccpars_ireg.clbw4,
                             pure_delay_periods,
                             ccpars_ireg.track_delay_periods,
                             REG_CURRENT, &ccpars_ireg.rst);

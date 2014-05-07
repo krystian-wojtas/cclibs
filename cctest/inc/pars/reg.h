@@ -56,6 +56,8 @@ struct ccpars_reg_pars
     float               track_delay_periods;        // Regulation track delay in periods (0 to use automatic calculation)
     float               clbw;                       // Regulation closed loop bandwidth (real pole)
     float               clbw2;                      // Regulation closed loop bandwidth (conjugate poles)
+    float               clbw3;                      // Regulation closed loop bandwidth (2nd real pole)
+    float               clbw4;                      // Regulation closed loop bandwidth (3rd real pole)
     float               z;                          // Regulation conjugate poles damping factor (0.5-0.8)
     struct reg_rst      rst;                        // Regulation RST coefficient
 };
@@ -69,6 +71,8 @@ CCPARS_REG_EXT struct ccpars_reg_pars ccpars_breg
         0.0,                        // BREG TRACK_DELAY_PERIODS
         10.0,                       // BREG CLBW
         10.0,                       // BREG CLBW2
+        10.0,                       // BREG CLBW3
+        10.0,                       // BREG CLBW4
         0.5,                        // BREG Z
         { {  0.0  },                // BREG R
           {  0.0  },                // BREG S
@@ -86,6 +90,8 @@ CCPARS_REG_EXT struct ccpars_reg_pars ccpars_ireg
         0.0,                        // IREG TRACK_DELAY_PERIODS
         10.0,                       // IREG CLBW
         10.0,                       // IREG CLBW2
+        10.0,                       // IREG CLBW3
+        10.0,                       // IREG CLBW4
         0.5,                        // IREG Z
         { {  0.0  },                // IREG R
           {  0.0  },                // IREG S
@@ -110,6 +116,8 @@ CCPARS_REG_EXT struct ccpars breg_pars[]
     { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.track_delay_periods }, 1 },
     { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw                }, 1 },
     { "CLBW2",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw2               }, 1 },
+    { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw3               }, 1 },
+    { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw4               }, 1 },
     { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.z                   }, 1 },
     { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_breg.rst.r               }, 0 },
     { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_breg.rst.s               }, 0 },
@@ -128,6 +136,8 @@ CCPARS_REG_EXT struct ccpars ireg_pars[]
     { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.track_delay_periods }, 1 },
     { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw                }, 1 },
     { "CLBW2",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw2               }, 1 },
+    { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw3               }, 1 },
+    { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw4               }, 1 },
     { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.z                   }, 1 },
     { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_ireg.rst.r               }, 0 },
     { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .f =  ccpars_ireg.rst.s               }, 0 },
