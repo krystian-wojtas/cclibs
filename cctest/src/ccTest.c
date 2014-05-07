@@ -379,7 +379,7 @@ uint32_t ccTestMakePath(char *path)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     struct stat      path_stat;
-    char             mkdir_cmd[CC_PATH_LEN * 2];
+    char             mkdir_cmd[CC_PATH_LEN];
 
     // Get status of path
 
@@ -387,7 +387,7 @@ uint32_t ccTestMakePath(char *path)
     {
         // If path doesn't exist then try to create it
 
-        sprintf(mkdir_cmd, MKDIR " -p %s", path);
+        snprintf(mkdir_cmd, CC_PATH_LEN, MKDIR " -p %s", path);
 
         printf("Creating path: %s\n", path);
 
@@ -416,14 +416,14 @@ void ccTestRecoverPath(void)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     FILE   *f;
-    char    path_filename[CC_PATH_LEN * 2];
+    char    path_filename[CC_PATH_LEN];
     char    cwd_buf[CC_PATH_LEN];
 
     // Try to open the file with the path
 
-    sprintf(path_filename,"%s/%s",cctest.base_path,CC_CWD_FILE);
+    snprintf(path_filename, CC_PATH_LEN, "%s/%s", cctest.base_path, CC_CWD_FILE);
 
-    f = fopen(path_filename,"r");
+    f = fopen(path_filename, "r");
 
     if(f == NULL)
     {
@@ -445,18 +445,18 @@ void ccTestGetBasePath(char *argv0)
   This function will try to get the absolute path to the cctest project directory
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    char    cwd[CC_PATH_LEN];
+    // Get path to cctest executable
 
-    // Get path to cctest executable - this might be absolute or relative depending on the platform
+    snprintf(cctest.base_path, CC_PATH_LEN, "%s/../..",dirname(argv0));
 
-    sprintf(cctest.base_path, "%s/../..",dirname(argv0));
+    // If not Windows, path may be relative or absolute
 
-    puts(cctest.base_path);
-
-    // If path is relative
-
-    if(cctest.base_path[0] == '.')
+#ifndef __MINGW32__
+    if(cctest.base_path[0] != '/')
     {
+        char    cwd[CC_PATH_LEN];
+        char    base_path[CC_PATH_LEN];
+
         // Get absolute path to current working directory
 
         if(getcwd(cwd, sizeof(cwd)) == NULL)
@@ -465,12 +465,11 @@ void ccTestGetBasePath(char *argv0)
             exit(EXIT_FAILURE);
         }
 
-        puts(cwd);
+        // Concatenate with relative project path
 
-        strncat(cwd,cctest.base_path,CC_PATH_LEN);
-        strncpy(cctest.base_path,cwd,CC_PATH_LEN);
-
-        puts(cctest.base_path);
+        snprintf(base_path, CC_PATH_LEN, "%s/%s", cwd, cctest.base_path );
+        strcpy(cctest.base_path, base_path);
     }
+#endif
 }
 // EOF
