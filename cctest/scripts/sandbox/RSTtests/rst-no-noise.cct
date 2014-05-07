@@ -96,17 +96,17 @@ TEST WINDOW                 ENABLED
 
 GLOBAL FUNCTION             PPPL
 GLOBAL REG_MODE             VOLTAGE
-GLOBAL FILE                 volts-pppl
+GLOBAL FILE                 nn-volts-pppl
 RUN
 
 GLOBAL FUNCTION             SINE
 GLOBAL REG_MODE             VOLTAGE
-GLOBAL FILE                 volts-sine
+GLOBAL FILE                 nn-volts-sine
 RUN
 
 GLOBAL FUNCTION             STEPS
 GLOBAL REG_MODE             VOLTAGE
-GLOBAL FILE                 volts-steps
+GLOBAL FILE                 nn-volts-steps
 RUN
 
 # Test 1 - unfiltered
@@ -117,31 +117,33 @@ MEAS I_REG_SELECT           UNFILTERED
 IREG PERIOD_ITERS           10
 IREG CLBW                   50
 IREG CLBW2                  50
+IREG CLBW3                  50
+IREG CLBW4                  50
 IREG Z                      0.5
 
 VS V_REF_DELAY_ITERS        1.0
-GLOBAL FILE                 amps-pppl-unf-0.38
+GLOBAL FILE                 nn-amps-pppl-unf-0.38
 GLOBAL FUNCTION             PPPL
 RUN
 
 VS V_REF_DELAY_ITERS        6.0
-GLOBAL FILE                 amps-pppl-unf-0.88
+GLOBAL FILE                 nn-amps-pppl-unf-0.88
 GLOBAL FUNCTION             PPPL
 RUN
 
 VS V_REF_DELAY_ITERS        9.0
-GLOBAL FILE                 amps-pppl-unf-1.18
+GLOBAL FILE                 nn-amps-pppl-unf-1.18
 GLOBAL FUNCTION             PPPL
 RUN
 
 VS V_REF_DELAY_ITERS        15.0
-GLOBAL FILE                 amps-pppl-unf-1.78
+GLOBAL FILE                 nn-amps-pppl-unf-1.78
 GLOBAL FUNCTION             PPPL
 RUN
 
 IREG Z                      0.25
 VS V_REF_DELAY_ITERS        18.0
-GLOBAL FILE                 amps-pppl-unf-2.08
+GLOBAL FILE                 nn-amps-pppl-unf-2.08
 GLOBAL FUNCTION             PPPL
 RUN
 
@@ -151,7 +153,7 @@ MEAS I_REG_SELECT           FILTERED
 
 IREG Z                      0.5
 VS V_REF_DELAY_ITERS        1.0
-GLOBAL FILE                 amps-pppl-fil-0.83
+GLOBAL FILE                 nn-amps-pppl-fil-0.83
 GLOBAL FUNCTION             PPPL
 RUN
 
@@ -162,7 +164,7 @@ TRIM FINAL_REF              100
 TRIM DURATION               0.3
 
 GLOBAL FUNCTION             CTRIM
-GLOBAL FILE                 amps-ctrim-fil-0.83
+GLOBAL FILE                 nn-amps-ctrim-fil-0.83
 RUN
 
 PLEP   INITIAL_REF         10
@@ -171,27 +173,27 @@ PLEP   ACCELERATION        5000
 PLEP   LINEAR_RATE         400
 
 GLOBAL FUNCTION             PLEP
-GLOBAL FILE                 amps-plep-fil-0.83
+GLOBAL FILE                 nn-amps-plep-fil-0.83
 RUN
 
 IREG Z                      0.2
 IREG CLBW2                  20
 VS V_REF_DELAY_ITERS        4.0
-GLOBAL FILE                 amps-pppl-fil-1.13
+GLOBAL FILE                 nn-amps-pppl-fil-1.13
 GLOBAL FUNCTION             PPPL
 RUN
 
 IREG Z                      0.5
 IREG CLBW2                  50
 VS V_REF_DELAY_ITERS        11.0
-GLOBAL FILE                 amps-pppl-fil-1.83
+GLOBAL FILE                 nn-amps-pppl-fil-1.83
 GLOBAL FUNCTION             PPPL
 RUN
 
 IREG CLBW2                  20
 IREG Z                      0.1
 VS V_REF_DELAY_ITERS        13.0
-GLOBAL FILE                 amps-pppl-fil-2.03
+GLOBAL FILE                 nn-amps-pppl-fil-2.03
 GLOBAL FUNCTION             PPPL
 RUN
 
@@ -202,20 +204,20 @@ MEAS I_REG_SELECT           EXTRAPOLATED
 IREG CLBW2                  50
 IREG Z                      0.5
 VS V_REF_DELAY_ITERS        1.0
-GLOBAL FILE                 amps-pppl-ext-0.26
+GLOBAL FILE                 nn-amps-pppl-ext-0.26
 GLOBAL FUNCTION             PPPL
 RUN
 
 VS V_REF_DELAY_ITERS        7.0
-GLOBAL FILE                 amps-pppl-ext-0.86
+GLOBAL FILE                 nn-amps-pppl-ext-0.86
 GLOBAL FUNCTION             PPPL
 RUN
 
-IREG CLBW                   1
-IREG CLBW2                  1
+IREG CLBW                   50
+IREG CLBW2                  50
 IREG Z                      0.1
 VS V_REF_DELAY_ITERS        10.0
-GLOBAL FILE                 amps-pppl-ext-1.16
+GLOBAL FILE                 nn-amps-pppl-ext-1.16
 GLOBAL FUNCTION             PPPL
 RUN
 
@@ -223,7 +225,7 @@ IREG CLBW                   50
 IREG CLBW2                  50
 IREG Z                      0.2
 VS V_REF_DELAY_ITERS        16.0
-GLOBAL FILE                 amps-pppl-ext-1.76
+GLOBAL FILE                 nn-amps-pppl-ext-1.76
 GLOBAL FUNCTION             PPPL
 RUN
 

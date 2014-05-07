@@ -118,6 +118,8 @@ MEAS I_REG_SELECT           UNFILTERED
 IREG PERIOD_ITERS           10
 IREG CLBW                   50
 IREG CLBW2                  50
+IREG CLBW3                  50
+IREG CLBW4                  50
 IREG Z                      0.5
 
 VS V_REF_DELAY_ITERS        1.0
@@ -195,6 +197,8 @@ RUN
 
 IREG CLBW                   1
 IREG CLBW2                  1
+IREG CLBW3                  1
+IREG CLBW4                  1
 IREG Z                      0.1
 VS V_REF_DELAY_ITERS        10.0
 GLOBAL FILE                 amps-pppl-ext-1.16
@@ -203,6 +207,8 @@ RUN
 
 IREG CLBW                   50
 IREG CLBW2                  50
+IREG CLBW3                  50
+IREG CLBW4                  50
 IREG Z                      0.2
 VS V_REF_DELAY_ITERS        16.0
 GLOBAL FILE                 amps-pppl-ext-1.76
