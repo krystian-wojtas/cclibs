@@ -64,7 +64,7 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
     char   *arg;
     FILE   *f;
     char   *wd;
-    char    path_filename[CC_PATH_LEN * 2];   // Name of file to write new working directory
+    char    path_filename[CC_PATH_LEN];   // Name of file to write new working directory
     char    cwd_buf[CC_PATH_LEN];
 
     arg = ccTestGetArgument(remaining_line);
@@ -91,7 +91,7 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
 
     // Open file to save the current working directory
 
-    sprintf(path_filename,"%s/%s",cctest.base_path,CC_CWD_FILE);
+    snprintf(path_filename, CC_PATH_LEN, "%s/%s", cctest.base_path, CC_CWD_FILE);
 
     f = fopen(path_filename,"w");
 
@@ -423,20 +423,20 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
     if(ccpars_global.csv_format != CC_NONE)
     {
-        char     csv_path[CC_PATH_LEN * 2];
-        char     csv_filename[CC_PATH_LEN * 2];
+        char     csv_path[CC_PATH_LEN];
+        char     csv_filename[CC_PATH_LEN];
 
-        sprintf(csv_path, "%s/results/csv/%s/%s",
-                                  cctest.base_path,
-                                  ccpars_global.group,
-                                  ccpars_global.project);
+        snprintf(csv_path, CC_PATH_LEN, "%s/results/csv/%s/%s",
+                 cctest.base_path,
+                 ccpars_global.group,
+                 ccpars_global.project);
 
         if(ccTestMakePath(csv_path) == EXIT_FAILURE)
         {
             return(EXIT_FAILURE);
         }
 
-        sprintf(csv_filename, "%s/%s.csv", csv_path, filename);
+        snprintf(csv_filename, CC_PATH_LEN, "%s/%s.csv", csv_path, filename);
 
         cctest.csv_file = fopen(csv_filename, "w");
 
@@ -491,20 +491,20 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
     if(ccpars_global.flot_control == CC_ENABLED)
     {
         FILE    *flot_file;
-        char     flot_path[CC_PATH_LEN * 2];
-        char     flot_filename[CC_PATH_LEN * 2];
+        char     flot_path[CC_PATH_LEN];
+        char     flot_filename[CC_PATH_LEN];
 
-        sprintf(flot_path, "%s/results/webplots/%s/%s",
-                           cctest.base_path,
-                           ccpars_global.group,
-                           ccpars_global.project);
+        snprintf(flot_path, CC_PATH_LEN, "%s/results/webplots/%s/%s",
+                 cctest.base_path,
+                 ccpars_global.group,
+                 ccpars_global.project);
 
         if(ccTestMakePath(flot_path) == EXIT_FAILURE)
         {
             return(EXIT_FAILURE);
         }
 
-        sprintf(flot_filename, "%s/%s.html", flot_path, filename);
+        snprintf(flot_filename, CC_PATH_LEN, "%s/%s.html", flot_path, filename);
 
         flot_file = fopen(flot_filename, "w");
 
