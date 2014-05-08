@@ -61,6 +61,7 @@ struct ccpars
     struct ccpars_enum *ccpars_enum;
     union
     {
+        double         *d;
         float          *f;
         uint32_t       *i;
         char          **s;
