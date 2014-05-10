@@ -65,9 +65,9 @@ enum reg_mode                                                   // Converter reg
 
 struct reg_rst                                                  // RST polynomial arrays and track delay
 {
-    float                       r[REG_N_RST_COEFFS];            // R polynomial coefficients (meas)
-    float                       s[REG_N_RST_COEFFS];            // S polynomial coefficients (act)
-    float                       t[REG_N_RST_COEFFS];            // T polynomial coefficients (ref)
+    double                      r[REG_N_RST_COEFFS];            // R polynomial coefficients (meas)
+    double                      s[REG_N_RST_COEFFS];            // S polynomial coefficients (act)
+    double                      t[REG_N_RST_COEFFS];            // T polynomial coefficients (ref)
 };
 
 struct reg_rst_pars                                             // RST algorithm parameters
