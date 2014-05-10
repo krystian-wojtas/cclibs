@@ -1,0 +1,19 @@
+# -----------------------------------------------------------------------------------------------------------
+# Filename: Makefile
+#
+# Purpose:  Makefile for libterm
+# -----------------------------------------------------------------------------------------------------------
+
+build_home  = ../../..
+
+lib         = $(exec_path)/libterm.a
+
+inc_path    = inc
+
+src_path    = src
+
+source      = $(wildcard $(src_path)/*.c)
+
+include $(build_home)/sw/make/general
+
+# EOF
