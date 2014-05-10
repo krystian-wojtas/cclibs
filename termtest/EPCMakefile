@@ -1,0 +1,28 @@
+# -----------------------------------------------------------------------------------------------------------
+# Filename: Makefile
+#
+# Purpose:  Makefile for termtest
+# -----------------------------------------------------------------------------------------------------------
+
+build_home  = ../../..
+
+exec        = $(exec_path)/termtest
+
+# Source files
+
+src_path    = src
+
+source      = $(wildcard $(src_path)/*.c)
+
+# Libraries
+
+libs        += term
+lib_path    += $(build_home)/sw/lib/term/$(target_os)/$(target_cpu)
+inc_path    += $(build_home)/sw/lib/term/inc
+
+#Generic Makefile
+
+include $(build_home)/sw/make/general
+
+
+# EOF
