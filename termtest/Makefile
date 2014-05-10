@@ -61,7 +61,7 @@ include $(wildcard $(dep_path)/*.d)
 
 # C objects
 
-$(obj_path)/%.o: %.c $(inc_path)/flot.h
+$(obj_path)/%.o: %.c
 	@[ -d $(@D) ]       || mkdir -p $(@D)
 	@[ -d $(dep_path) ] || mkdir -p $(dep_path)
 	$(CC) $(CFLAGS) -MD -MF $(@:$(obj_path)/%.o=$(dep_path)/%.d) $(includes) -c -o $@ $<
