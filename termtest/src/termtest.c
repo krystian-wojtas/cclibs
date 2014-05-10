@@ -100,8 +100,8 @@ void ResetTerm(void)
 
     printf(TERM_SAVE_POS TERM_CSI "22;1" TERM_GOTO);  // Save cursor and jump to info zone (from lines 22-24)
 
-    printf("+---------+---------+---------+---------+---------+---------+---------+---------\n\r");
-    printf("Keyboard character:                     Line length:" TERM_RESTORE_POS);
+    printf("+---------+---------+---------+---------+---------+---------+---------+---------");
+    printf(TERM_CSI "23;1" TERM_GOTO "Keyboard character:                     Line length:" TERM_RESTORE_POS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ProcessLine(char *line, uint16_t line_len)
