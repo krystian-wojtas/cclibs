@@ -458,6 +458,7 @@ void ccSigsFlot(FILE *f)
     uint32_t       func_idx;
     uint32_t       iteration_idx;
     uint32_t       sig_idx;
+    uint32_t       n_points = 0;
     double         time;
     double         end_flot_time;
     double         start_func_time;
@@ -505,6 +506,7 @@ void ccSigsFlot(FILE *f)
                     if(time < end_flot_time)
                     {
                         fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);
+                        n_points++;
                     }
                 }
                 break;
@@ -516,6 +518,7 @@ void ccSigsFlot(FILE *f)
                 if(time < end_flot_time)
                 {
                     fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref);
+                    n_points++;
 
                     for(iteration_idx = 0 ; iteration_idx < ccpars_pppl.pppl_pars.num_segs ; iteration_idx++)
                     {
@@ -524,6 +527,7 @@ void ccSigsFlot(FILE *f)
                         if(time < end_flot_time)
                         {
                             fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pppl_pars.a0[iteration_idx]);
+                            n_points++;
                         }
                     }
                 }
@@ -536,6 +540,7 @@ void ccSigsFlot(FILE *f)
                 if(time < end_flot_time)
                 {
                     fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref);
+                    n_points++;
 
                     for(iteration_idx = 0 ; iteration_idx <= FG_PLEP_N_SEGS ; iteration_idx++)
                     {
@@ -544,6 +549,7 @@ void ccSigsFlot(FILE *f)
                         if(time < end_flot_time)
                         {
                             fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.plep_pars.normalisation * ccpars_plep.plep_pars.ref[iteration_idx]);
+                            n_points++;
                         }
                     }
                 }
@@ -585,6 +591,7 @@ void ccSigsFlot(FILE *f)
                     }
 
                     fprintf(f,"[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
+                    n_points++;
                 }
             }
             fputs("]\n },\n",f);
@@ -626,6 +633,7 @@ void ccSigsFlot(FILE *f)
                     }
 
                     fprintf(f,"[%.6f,%.2f],", time, signals[sig_idx].buf[iteration_idx] + dig_offset);
+                    n_points++;
                 }
             }
             fputs("]\n },\n",f);
@@ -648,6 +656,8 @@ void ccSigsFlot(FILE *f)
     // Print debug variable to become a colorbox pop-up
 
     fputs(flot[3],f);
+
+    fprintf(f,"%-*s %u\n\n", PARS_INDENT, "FLOT:n_points", n_points);
 
     ccParsPrintDebug(f);
 
