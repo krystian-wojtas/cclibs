@@ -553,22 +553,23 @@ uint32_t ccCmdsPar(uint32_t cmd_idx, char **remaining_line)
         {
              // If command argument matches start or all of a command
 
-             if(strncasecmp(par->name, arg, arg_len) == 0)
-             {
-                 // If first match, remember command index
+            if(strncasecmp(par->name, arg, arg_len) == 0)
+            {
+                // If argument exactly matches a parameter name then take use it
+
+                if(strlen(par->name) == arg_len)
+                {
+                    par_matched = par;
+                    break;
+                }
+
+                // If first partial match, remember command index
 
                 if(par_matched == NULL)
                 {
                     par_matched = par;
-
-                    // If argument exactly matches a parameter name then take use it
-
-                    if(strlen(par->name) == arg_len)
-                    {
-                        break;
-                    }
                 }
-                else // else second match so report error
+                else // else second partial match so report error
                 {
                     ccTestPrintError("ambiguous %s parameter '%s'", cmds[cmd_idx].name, arg);
                     return(EXIT_FAILURE);

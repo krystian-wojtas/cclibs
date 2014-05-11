@@ -46,6 +46,7 @@ enum ccpars_type
 {
     PAR_UNSIGNED,
     PAR_FLOAT,
+    PAR_DOUBLE,
     PAR_STRING,
     PAR_ENUM
 };

@@ -81,12 +81,24 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
         case PAR_FLOAT:
 
-            par->value_p.f[par->num_elements] = strtod(arg, &remaining_arg);
+            par->value_p.f[par->num_elements] = (float)strtod(arg, &remaining_arg);
 
             if(*remaining_arg != '\0' || errno != 0)
             {
-                ccTestPrintError("invalid float for %s %s[%u]: '%s'",
-                        cmd_name, par->name, par->num_elements, arg);
+                ccTestPrintError("invalid float for %s %s[%u]: '%s' : '%s' : %s (%d)",
+                        cmd_name, par->name, par->num_elements, arg, remaining_arg, strerror(errno), errno);
+                return(EXIT_FAILURE);
+            }
+            break;
+
+        case PAR_DOUBLE:
+
+            par->value_p.d[par->num_elements] = strtod(arg, &remaining_arg);
+
+            if(*remaining_arg != '\0' || errno != 0)
+            {
+                ccTestPrintError("invalid double for %s %s[%u]: '%s' : '%s' : %s (%d)",
+                        cmd_name, par->name, par->num_elements, arg, remaining_arg, strerror(errno), errno);
                 return(EXIT_FAILURE);
             }
             break;
@@ -217,6 +229,11 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par)
             case PAR_FLOAT:
 
                 fprintf(f,"% .6E",par->value_p.f[idx]);
+                break;
+
+            case PAR_DOUBLE:
+
+                fprintf(f,"% .15E",par->value_p.d[idx]);
                 break;
 
             case PAR_STRING:

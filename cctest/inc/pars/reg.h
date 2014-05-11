@@ -119,9 +119,9 @@ CCPARS_REG_EXT struct ccpars breg_pars[]
     { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw3               }, 1 },
     { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw4               }, 1 },
     { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.z                   }, 1 },
-    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.r               }, 0 },
-    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.s               }, 0 },
-    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.t               }, 0 },
+    { "R",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.r               }, 0 },
+    { "S",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.s               }, 0 },
+    { "T",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.t               }, 0 },
     { NULL }
 }
 #endif
@@ -139,9 +139,9 @@ CCPARS_REG_EXT struct ccpars ireg_pars[]
     { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw3               }, 1 },
     { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw4               }, 1 },
     { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.z                   }, 1 },
-    { "R",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.r               }, 0 },
-    { "S",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.s               }, 0 },
-    { "T",                  PAR_FLOAT,    REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.t               }, 0 },
+    { "R",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.r               }, 0 },
+    { "S",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.s               }, 0 },
+    { "T",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.t               }, 0 },
     { NULL }
 }
 #endif
