@@ -82,10 +82,14 @@ $(inc_path)/flot.h: $(inc_path)/flot/flot_header.h $(inc_path)/flot/flot_footer.
 # Make flot output files
 
 flot:
+	./scripts/sandbox/run_all.sh
 	./scripts/tests/run_all.sh
 
 sandbox:
 	./scripts/sandbox/run_all.sh
+
+tests:
+	./scripts/tests/run_all.sh
 
 # Make test output the new reference
 
@@ -105,15 +109,6 @@ test:
 	done ;\
 	exit $$status
 
-# Install to dropbox
-
-dropbox:
-	cp $(exec) $(dropbox_path)
-	rsync -av scripts/sandbox/RSTtests $(dropbox_path)/scripts --exclude=*.sh
-	rsync -av --delete --delete-excluded results/webplots/flot      $(dropbox_path)/results/webplots/ --exclude=.git
-	rsync -av --delete --delete-excluded results/webplots/colorbox  $(dropbox_path)/results/webplots/ --exclude=.git
-	rsync -av --delete --delete-excluded results/webplots/modernizr $(dropbox_path)/results/webplots/ --exclude=.git
-
 # Refresh flot related files to sdcard projects folder (for debian on Nexus 10)
 
 sdrefresh:
@@ -123,6 +118,6 @@ sdrefresh:
 
 # List targets
 
-.PHONY: all clean reference test flot sandbox dropbox sdrefresh
+.PHONY: all clean reference test flot sandbox tests sdrefresh
 
 # EOF
