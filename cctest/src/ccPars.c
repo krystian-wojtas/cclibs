@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <string.h>
+#include <float.h>
 #include <errno.h>
 
 // Include cctest program header files
@@ -43,12 +44,16 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
   a command parameter.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-
+    double               double_value;
     char                *remaining_arg;
     char                *arg;
     size_t               arg_len;
     struct ccpars_enum  *par_enum;
     struct ccpars_enum  *par_enum_matched;
+
+    // Reset errno because strtod does not set it to zero on success
+
+    errno = 0;
 
     // Try to parse the arguments to set the parameter values
 
@@ -73,22 +78,31 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
             if(*remaining_arg != '\0' || errno != 0)
             {
-                ccTestPrintError("invalid integer for %s %s[%u]: '%s'",
-                        cmd_name, par->name, par->num_elements, arg);
+                ccTestPrintError("invalid integer for %s %s[%u]: '%s' : %s (%d)",
+                        cmd_name, par->name, par->num_elements, arg, strerror(errno), errno);
                 return(EXIT_FAILURE);
             }
             break;
 
         case PAR_FLOAT:
 
-            par->value_p.f[par->num_elements] = (float)strtod(arg, &remaining_arg);
+            double_value = strtod(arg, &remaining_arg);
+
+            // Protect against double value that cannot fit in a float
+
+            if(double_value >= FLT_MAX || double_value <= -FLT_MAX)
+            {
+                errno = ERANGE;
+            }
 
             if(*remaining_arg != '\0' || errno != 0)
             {
-                ccTestPrintError("invalid float for %s %s[%u]: '%s' : '%s' : %s (%d)",
-                        cmd_name, par->name, par->num_elements, arg, remaining_arg, strerror(errno), errno);
+                ccTestPrintError("invalid float for %s %s[%u]: '%s' : %s (%d)",
+                        cmd_name, par->name, par->num_elements, arg, strerror(errno), errno);
                 return(EXIT_FAILURE);
             }
+
+            par->value_p.f[par->num_elements] = (float)double_value;
             break;
 
         case PAR_DOUBLE:
@@ -97,8 +111,8 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
             if(*remaining_arg != '\0' || errno != 0)
             {
-                ccTestPrintError("invalid double for %s %s[%u]: '%s' : '%s' : %s (%d)",
-                        cmd_name, par->name, par->num_elements, arg, remaining_arg, strerror(errno), errno);
+                ccTestPrintError("invalid double for %s %s[%u]: '%s' : %s (%d)",
+                        cmd_name, par->name, par->num_elements, arg, strerror(errno), errno);
                 return(EXIT_FAILURE);
             }
             break;
@@ -233,7 +247,7 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par)
 
             case PAR_DOUBLE:
 
-                fprintf(f,"% .15E",par->value_p.d[idx]);
+                fprintf(f,"% .16E",par->value_p.d[idx]);
                 break;
 
             case PAR_STRING:
@@ -366,25 +380,25 @@ void ccParsPrintDebug(FILE *f)
 
         if(ccrun.breg_flag == 1)
         {
-            fprintf(f,"%-*s% 22.15E\n", PARS_INDENT, "BREG:pure_delay_periods",
+            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "BREG:pure_delay_periods",
                                reg_pars.b_rst_pars.pure_delay_periods);
 
             fprintf(f,"%-*s% d\n", PARS_INDENT, "BREG:alg_index", reg_pars.b_rst_pars.alg_index);
             fprintf(f,"%-*s% d\n", PARS_INDENT, "BREG:dead_beat", reg_pars.b_rst_pars.dead_beat);
 
-            fprintf(f,"%-*s% 22.15E\n", PARS_INDENT, "BREG:track_delay_periods",
+            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "BREG:track_delay_periods",
                                reg_pars.b_rst_pars.track_delay_periods);
-            fprintf(f,"%-*s% 22.15E\n", PARS_INDENT, "BREG:ref_delay_periods",
+            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "BREG:ref_delay_periods",
                                reg_pars.b_rst_pars.ref_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
-                fprintf(f,"%-*s% 22.15E  % 22.15E  % 22.15E\n", PARS_INDENT, "BREG:R:S:T",
+                fprintf(f,"%-*s% 20.16E  % 20.16E  % 20.16E\n", PARS_INDENT, "BREG:R:S:T",
                                reg_pars.b_rst_pars.rst.r[i],
                                reg_pars.b_rst_pars.rst.s[i],
                                reg_pars.b_rst_pars.rst.t[i]);
             }
-            fprintf(f,"%-*s% 22.15E\n\n", PARS_INDENT, "BREG:t0_correction",
+            fprintf(f,"%-*s% 20.16E\n\n", PARS_INDENT, "BREG:t0_correction",
                                reg_pars.b_rst_pars.t0_correction);
         }
 
@@ -392,25 +406,25 @@ void ccParsPrintDebug(FILE *f)
 
         if(ccrun.ireg_flag == 1)
         {
-            fprintf(f,"%-*s% 22.15E\n", PARS_INDENT, "IREG:pure_delay_periods",
+            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "IREG:pure_delay_periods",
                                reg_pars.i_rst_pars.pure_delay_periods);
 
             fprintf(f,"%-*s% d\n", PARS_INDENT, "IREG:alg_index", reg_pars.i_rst_pars.alg_index);
             fprintf(f,"%-*s% d\n", PARS_INDENT, "IREG:dead_beat", reg_pars.i_rst_pars.dead_beat);
 
-            fprintf(f,"%-*s% 22.15E\n", PARS_INDENT, "IREG:track_delay_periods",
+            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "IREG:track_delay_periods",
                                reg_pars.i_rst_pars.track_delay_periods);
-            fprintf(f,"%-*s% 22.15E\n", PARS_INDENT, "IREG:ref_delay_periods",
+            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "IREG:ref_delay_periods",
                                reg_pars.i_rst_pars.ref_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
-                fprintf(f,"%-*s% 22.15E  % 22.15E  % 22.15E\n", PARS_INDENT, "IREG:R:S:T",
+                fprintf(f,"%-*s% 20.16E  % 20.16E  % 20.16E\n", PARS_INDENT, "IREG:R:S:T",
                                reg_pars.i_rst_pars.rst.r[i],
                                reg_pars.i_rst_pars.rst.s[i],
                                reg_pars.i_rst_pars.rst.t[i]);
             }
-            fprintf(f,"%-*s% 22.15E\n\n", PARS_INDENT, "IREG:t0_correction",
+            fprintf(f,"%-*s% 20.16E\n\n", PARS_INDENT, "IREG:t0_correction",
                                reg_pars.i_rst_pars.t0_correction);
         }
     }
