@@ -55,7 +55,7 @@ all: $(exec)
 # Clean output files
 
 clean:
-	rm -f $(exec) $(dep_path)/*.d $(obj_path)/*.o 
+	rm -f $(exec) $(dep_path)/*.d $(obj_path)/*.o $(inc_path)/flot.h
 
 $(exec): $(objects) $(libfg) $(libreg)
 	@[ -d $(@D) ] || mkdir -p $(@D)
