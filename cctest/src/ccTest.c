@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     char   **cmd;
     char     line[40];
 
-    puts("\nWelcome to cctest\n");
+    printf("\nWelcome to cctest v%.2f\n", CC_VERSION);
 
     // Get path to cctest project root
 

@@ -642,7 +642,7 @@ void ccSigsFlot(FILE *f)
 
     // Print command parameter values to become a colorbox pop-up
 
-    fputs(flot[2],f);
+    fprintf(f, flot[2], CC_VERSION);    // Version is embedded in the About pop-up title: "About cctest vx.xx"
 
     for(cmd = cmds ; cmd->name != NULL ; cmd++)
     {
