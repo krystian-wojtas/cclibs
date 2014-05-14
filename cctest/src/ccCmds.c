@@ -344,7 +344,7 @@ uint32_t ccCmdsSave(uint32_t cmd_idx, char **remaining_line)
 
     printf("Writing all parameters to '%s'...",arg);
 
-    fprintf(f,"# CCTEST %.1f\n",CC_VERSION);
+    fprintf(f,"# CCTEST v%.2f\n",CC_VERSION);
 
     for(cmd = cmds ; cmd->name != NULL ; cmd++)
     {
@@ -457,7 +457,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
     {
         // Generate functions and simulate voltage source and load and regulate if required
 
-        printf("Running simulation to %s\n", filename);
+        printf("Running simulation to %s/%s/%s\n", ccpars_global.group, ccpars_global.project, filename);
 
         ccRunSimulation();
     }
@@ -467,13 +467,15 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
         if(ccpars_global.reverse_time == CC_DISABLED)
         {
-            printf("Generating function(s) to %s\n", filename);
+            printf("Generating function(s) to %s/%s/%s\n",
+                    ccpars_global.group, ccpars_global.project, filename);
 
             ccRunFuncGen();
         }
         else // Reverse time can be used with only one function
         {
-            printf("Generating function with reverse time to %s\n", filename);
+            printf("Generating function with reverse time to %s/%s/%s\n",
+                    ccpars_global.group, ccpars_global.project, filename);
 
             ccRunFuncGenReverseTime();
         }
