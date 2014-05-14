@@ -87,6 +87,9 @@ struct reg_rst_pars                                             // RST algorithm
     float                       t0_correction;                  // Correction to t[0] for rounding errors
     float                       inv_corrected_t0;               // Store 1/(T[0]+ t0_correction)
     struct reg_rst              rst;                            // RST polynomials
+    double                      a   [REG_N_RST_COEFFS];         // Plant numerator
+    double                      b   [REG_N_RST_COEFFS];         // Plant denominator
+    double                      asbr[REG_N_RST_COEFFS];         // A.S + B.R
 };
 
 struct reg_rst_vars                                             // RST algorithm variables
