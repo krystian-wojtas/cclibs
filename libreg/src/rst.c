@@ -25,8 +25,24 @@
 #include <math.h>
 #include "libreg/rst.h"
 
+// Constants
+
 #define TWO_PI          6.28318530717958647693
 
+/*---------------------------------------------------------------------------------------------------------*/
+static double RegVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    int32_t    p_idx;
+    double     product = 0.0;
+
+    for(p_idx = 0 ; m_idx >= 0 && p_idx <= p_order; m_idx--, p_idx++)
+    {
+        product += p[p_idx] * m[m_idx];
+    }
+
+    return(product);
+}
 /*---------------------------------------------------------------------------------------------------------*/
 static void regRstInitPII(struct reg_rst_pars  *pars,
                           struct reg_load_pars *load,
@@ -55,19 +71,21 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
   coefficients themselves are stored as single precision.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    double t1;                   // -period / load_Tc
-    double a1;                   // -exp(t1)
-    double a2;                   // a2 = 1 + a1 = 1 - exp(t1) - use Maclaurin expansion for small t1
-    double b0;
-    double b1;
-    double b0_b1;
-    double c1;
-    double c2;
-    double c3;
-    double d1;
-    double d2;
-    double q1;
-    double q2;
+    uint32_t    s_order;
+    uint32_t    r_order;
+    double      t1;                   // -period / load_Tc
+    double      a1;                   // -exp(t1)
+    double      a2;                   // a2 = 1 + a1 = 1 - exp(t1) - use Maclaurin expansion for small t1
+    double      b0;
+    double      b1;
+    double      b0_b1;
+    double      c1;
+    double      c2;
+    double      c3;
+    double      d1;
+    double      d2;
+    double      q1;
+    double      q2;
 
     // Calculate a2 = 1 - exp(t1) using Maclaurin series if t1 is small
 
@@ -152,6 +170,14 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         b0    *= load->gauss_per_amp;
         b1    *= load->gauss_per_amp;
     }
+
+    // Save plant coefficients
+
+    pars->b[0] = b0;
+    pars->b[1] = b1;
+
+    pars->a[0] = 1.0;
+    pars->a[1] = a1;
 
     // Calculate intermediate values
 
@@ -300,8 +326,74 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[5] = c1*c2*c3*d2;
 
         pars->dead_beat = 3;
+        r_order = 3;
+        s_order = 8;
         break;
     }
+
+//    for(i = 0, s_ ; s_order >= 0)
+//    RegVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx)
+    // Calculate AS x BR
+
+    //to check that A*S+B*R=z*(z+c1)*(z^2+d1*z+d2)*(z+b1/b0)
+    //A*S+B*R
+    //(5th) [1  0  0  0  0  0][s0] + [0  0  0  0  0  0 ][0]
+    //(4th) [a1 1  0  0  0  0][s1] + [0  0  0  0  0  0 ][0]
+    //(3rd) [0  a1 1  0  0  0][s2] + [0  0  b0 0  0  0 ][r0]
+    //(2nd) [0  0  a1 1  0  0][s3] + [0  0  b1 b0 0  0 ][r1]
+    //(1st) [0  0  0  a1 1  0][s4] + [0  0  0  b1 b0 0 ][r2] s4=0
+    //(0th) [0  0  0  0  a1 1][s5] + [0  0  0  0  b1 b0][r3] s5=0, r3=0
+
+
+    //to check that A*S+B*R=z^2*(z+c1)*(z^2+d1*z+d2)
+    //A*S+B*R
+    //(5th) [1  0  0  0  0  0][s0] + [0  0  0  0  0  0 ][0]
+    //(4th) [a1 1  0  0  0  0][s1] + [0  0  0  0  0  0 ][0]
+    //(3rd) [0  a1 1  0  0  0][s2] + [0  0  b0 0  0  0 ][r0]
+    //(2nd) [0  0  a1 1  0  0][s3] + [0  0  b1 b0 0  0 ][r1]
+    //(1st) [0  0  0  a1 1  0][s4] + [0  0  0  b1 b0 0 ][r2] s4=0
+    //(0th) [0  0  0  0  a1 1][s5] + [0  0  0  0  b1 b0][r3] s5=0, r3=0
+
+
+    //to check that A*S+B*R=z^2*(z+c1)*(z+c2)*(z^2+d1*z+d2)*(z+b1/b0)
+    //A*S+B*R
+    //(7th) [1  0  0  0  0  0  0  0][s0] + [0 0 0 0 0  0  0  0 ][0]
+    //(6th) [a1 1  0  0  0  0  0  0][s1] + [0 0 0 0 0  0  0  0 ][0]
+    //(5th) [0  a1 1  0  0  0  0  0][s2] + [0 0 0 0 0  0  0  0 ][0]
+    //(4th) [0  0  a1 1  0  0  0  0][s3] + [0 0 0 0 0  0  0  0 ][0]
+    //(3rd) [0  0  0  a1 1  0  0  0][s4] + [0 0 0 0 b0 0  0  0 ][r0]
+    //(2nd) [0  0  0  0  a1 1  0  0][s5] + [0 0 0 0 b1 b0 0  0 ][r1] s5=0
+    //(1st) [0  0  0  0  0  a1 1  0][s6] + [0 0 0 0 0  b1 b0 0 ][r2] s6=0
+    //(0th) [0  0  0  0  0  0  a1 1][s7] + [0 0 0 0 0  0  b1 b0][r3] s7=0, r3=0
+
+
+    //to check that A*S+B*R=z^3*(z+c1)*(z+c2)*(z^2+d1*z+d2)
+    //A*S+B*R
+    //(7th) [1  0  0  0  0  0  0  0][s0] + [0 0 0 0 0  0  0  0 ][0]
+    //(6th) [a1 1  0  0  0  0  0  0][s1] + [0 0 0 0 0  0  0  0 ][0]
+    //(5th) [0  a1 1  0  0  0  0  0][s2] + [0 0 0 0 0  0  0  0 ][0]
+    //(4th) [0  0  a1 1  0  0  0  0][s3] + [0 0 0 0 0  0  0  0 ][0]
+    //(3rd) [0  0  0  a1 1  0  0  0][s4] + [0 0 0 0 b0 0  0  0 ][r0]
+    //(2nd) [0  0  0  0  a1 1  0  0][s5] + [0 0 0 0 b1 b0 0  0 ][r1] s5=0
+    //(1st) [0  0  0  0  0  a1 1  0][s6] + [0 0 0 0 0  b1 b0 0 ][r2] s6=0
+    //(0th) [0  0  0  0  0  0  a1 1][s7] + [0 0 0 0 0  0  b1 b0][r3] s7=0, r3=0
+
+
+    //to check that A*S+B*R=z^3*(z+c1)*(z+c2)*(z+c3)*(z^2+d1*z+d2)*(z+b1/b0)
+    //A*S+B*R
+    //(9th) [1  0  0  0  0  0  0  0  0 0][s0] + [0 0 0 0 0 0 0  0  0  0 ][0]
+    //(8th) [a1 1  0  0  0  0  0  0  0 0][s1] + [0 0 0 0 0 0 0  0  0  0 ][0]
+    //(7th) [0  a1 1  0  0  0  0  0  0 0][s2] + [0 0 0 0 0 0 0  0  0  0 ][0]
+    //(6th) [0  0  a1 1  0  0  0  0  0 0][s3] + [0 0 0 0 0 0 0  0  0  0 ][0]
+    //(5th) [0  0  0  a1 1  0  0  0  0 0][s4] + [0 0 0 0 0 0 0  0  0  0 ][0]
+    //(4th) [0  0  0  0  a1 1  0  0  0 0][s5] + [0 0 0 0 0 0 0  0  0  0 ][0]
+    //(3rd) [0  0  0  0  0  a1 1  0  0 0][s6] + [0 0 0 0 0 0 b0 0  0  0 ][r0] s6=0
+    //(2nd) [0  0  0  0  0  0  a1 1  0 0][s7] + [0 0 0 0 0 0 b1 b0 0  0 ][r1] s7=0
+    //(1st) [0  0  0  0  0  0  0  a1 1 0][s8] + [0 0 0 0 0 0 0  b1 b0 0 ][r2] s8=0, r3=0
+    //(0th) [0  0  0  0  0  0  0  0 a1 1][s9] + [0 0 0 0 0 0 0  0  b1 b0][r3] s9=0, r3=0
+
+
+
 }
 /*---------------------------------------------------------------------------------------------------------*/
 static void regRstInitPI(struct reg_rst_pars  *pars,
@@ -407,11 +499,11 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
     }
     else
     {
-        // Reset RST coefficients
+        // Reset R, S, T, A, B and ASBR coefficients
 
         for(i=0 ; i < REG_N_RST_COEFFS ; i++)
         {
-            pars->rst.r[i] = pars->rst.s[i] = pars->rst.t[i] = 0.0;
+            pars->rst.r[i] = pars->rst.s[i] = pars->rst.t[i] = pars->a[i] = pars->b[i] = pars->asbr[i] = 0.0;
         }
 
         // Calculate RST coefficients and track delay according to CLBW2 and load inductance
