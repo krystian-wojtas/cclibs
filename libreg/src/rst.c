@@ -71,8 +71,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
   coefficients themselves are stored as single precision.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t    s_order;
-    uint32_t    r_order;
+    uint32_t    idx;
+    int32_t     s_idx = 0;
+    int32_t     r_idx = 0;
     double      t1;                   // -period / load_Tc
     double      a1;                   // -exp(t1)
     double      a2;                   // a2 = 1 + a1 = 1 - exp(t1) - use Maclaurin expansion for small t1
@@ -207,6 +208,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[3] = c1*d2;
 
         pars->dead_beat = 1;
+        r_idx = 3;
+        s_idx = 5;
         break;
 
     case 2:                 // Algorithm 2 : Pure delay fraction 0.401 - 0.999 : not dead-beat
@@ -236,6 +239,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[3] = c1*d2 / b0_b1;
 
         pars->dead_beat = 0;
+        r_idx = 3;
+        s_idx = 5;
         break;
 
     case 3:                 // Algorithm 3 : Pure delay fraction 1.0 - 1.401 : dead-beat (2)
@@ -260,6 +265,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[4] = c1*c2*d2;
 
         pars->dead_beat = 2;
+        r_idx = 3;
+        s_idx = 7;
         break;
 
     case 4:                 // Algorithm 4 : Pure delay fraction 1.401 - 1.999 : not dead-beat
@@ -298,6 +305,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[4] = c1*c2*d2 / b0_b1;
 
         pars->dead_beat = 0;
+        r_idx = 3;
+        s_idx = 7;
         break;
 
     case 5:                 // Algorithm 5 : Pure delay fraction 2.0 - 2.401 : dead-beat (3)
@@ -326,13 +335,17 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[5] = c1*c2*c3*d2;
 
         pars->dead_beat = 3;
-        r_order = 3;
-        s_order = 8;
+        r_idx = 3;
+        s_idx = 9;
         break;
     }
 
-//    for(i = 0, s_ ; s_order >= 0)
-//    RegVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx)
+    for(idx = 0 ; s_idx >= 0 || r_idx >= 0 ; s_idx--, r_idx--, idx++)
+    {
+        pars->asbr[idx] = RegVectorMultiply(pars->a, pars->rst.s, 1, s_idx) +
+                          RegVectorMultiply(pars->b, pars->rst.r, 2, r_idx);
+    }
+
     // Calculate AS x BR
 
     //to check that A*S+B*R=z*(z+c1)*(z^2+d1*z+d2)*(z+b1/b0)
