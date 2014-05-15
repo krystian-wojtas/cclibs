@@ -343,7 +343,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     for(idx = 0 ; s_idx >= 0 || r_idx >= 0 ; s_idx--, r_idx--, idx++)
     {
         pars->asbr[idx] = RegVectorMultiply(pars->a, pars->rst.s, 1, s_idx) +
-                          RegVectorMultiply(pars->b, pars->rst.r, 2, r_idx);
+                          RegVectorMultiply(pars->b, pars->rst.r, 1, r_idx);
     }
 
     // Calculate AS x BR
