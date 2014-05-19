@@ -410,9 +410,21 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
     if(ccpars_global.sim_load == CC_ENABLED)
     {
         if(ccInitLimits()     == EXIT_FAILURE ||
-           ccInitSimulation() == EXIT_FAILURE ||
-           ccInitRegulation() == EXIT_FAILURE)      // InitRegulation must be after InitSimulation
+           ccInitSimulation() == EXIT_FAILURE)
         {
+            return(EXIT_FAILURE);
+        }
+        // Initialise regulation after simulation
+
+        if(ccInitRegulation() == EXIT_FAILURE)
+        {
+            // If STOP_ON_ERROR is DISABLED then dump debug data automatically to stdout
+
+            if(ccpars_global.stop_on_error == CC_DISABLED)
+            {
+                ccParsPrintDebug(stdout);
+            }
+
             return(EXIT_FAILURE);
         }
     }

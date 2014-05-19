@@ -37,6 +37,12 @@
 #include "ccRef.h"
 #include "ccRun.h"
 
+// Constants
+
+#define INT_FORMAT          "% d"
+#define FLOAT_FORMAT        "% .6E"
+#define DOUBLE_FORMAT       "% 20.16E"
+
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
@@ -237,17 +243,17 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par)
             {
             case PAR_UNSIGNED:
 
-                fprintf(f,"% d",par->value_p.i[idx]);
+                fprintf(f, INT_FORMAT, par->value_p.i[idx]);
                 break;
 
             case PAR_FLOAT:
 
-                fprintf(f,"% .6E",par->value_p.f[idx]);
+                fprintf(f, FLOAT_FORMAT, par->value_p.f[idx]);
                 break;
 
             case PAR_DOUBLE:
 
-                fprintf(f,"% .16E",par->value_p.d[idx]);
+                fprintf(f, DOUBLE_FORMAT, par->value_p.d[idx]);
                 break;
 
             case PAR_STRING:
@@ -311,27 +317,27 @@ static void ccParsPrintDebugLoad(FILE *f, char *prefix, struct reg_load_pars *lo
 {
     // Report internally calculated load parameters
 
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "ohms_ser"),   load_pars->ohms_ser);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "ohms_par"),   load_pars->ohms_par);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "ohms_mag"),   load_pars->ohms_mag);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "henrys"),     load_pars->henrys);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "inv_henrys"), load_pars->inv_henrys);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "ohms"),       load_pars->ohms);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "tc"),         load_pars->tc);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "gain0"),      load_pars->gain0);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "gain1"),      load_pars->gain1);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "gain2"),      load_pars->gain2);
-    fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "gain3"),      load_pars->gain3);
-    fprintf(f,"%s% .6E\n\n",ccParsDebugLabel(prefix, "gain10"),     load_pars->gain10);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "ohms_ser"),   load_pars->ohms_ser);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "ohms_par"),   load_pars->ohms_par);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "ohms_mag"),   load_pars->ohms_mag);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "henrys"),     load_pars->henrys);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "inv_henrys"), load_pars->inv_henrys);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "ohms"),       load_pars->ohms);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "tc"),         load_pars->tc);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain0"),      load_pars->gain0);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain1"),      load_pars->gain1);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain2"),      load_pars->gain2);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain3"),      load_pars->gain3);
+    fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel(prefix, "gain10"),     load_pars->gain10);
 
     if(load_pars->sat.i_end > 0.0)
     {
-        fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "sat.henrys"),   load_pars->sat.henrys);
-        fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "sat.i_delta"),  load_pars->sat.i_delta);
-        fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "sat.b_end"),    load_pars->sat.b_end);
-        fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "sat.b_factor"), load_pars->sat.b_factor);
-        fprintf(f,"%s% .6E\n",  ccParsDebugLabel(prefix, "sat.l_rate"),   load_pars->sat.l_rate);
-        fprintf(f,"%s% .6E\n\n",ccParsDebugLabel(prefix, "sat.l_clip"),   load_pars->sat.l_clip);
+        fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "sat.henrys"),   load_pars->sat.henrys);
+        fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "sat.i_delta"),  load_pars->sat.i_delta);
+        fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "sat.b_end"),    load_pars->sat.b_end);
+        fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "sat.b_factor"), load_pars->sat.b_factor);
+        fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "sat.l_rate"),   load_pars->sat.l_rate);
+        fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel(prefix, "sat.l_clip"),   load_pars->sat.l_clip);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -344,60 +350,60 @@ void ccParsPrintDebug(FILE *f)
     {
         ccParsPrintDebugLoad(f, "LOAD", &reg_pars.load_pars);
 
-        fprintf(f,"%s% d\n",    ccParsDebugLabel("SIMLOAD", "vs_undersampled_flag"),
+        fprintf(f,"%s" INT_FORMAT "\n",    ccParsDebugLabel("SIMLOAD", "vs_undersampled_flag"),
                 reg_pars.sim_load_pars.vs_undersampled_flag);
-        fprintf(f,"%s% d\n",    ccParsDebugLabel("SIMLOAD", "load_undersampled_flag"),
+        fprintf(f,"%s" INT_FORMAT "\n",    ccParsDebugLabel("SIMLOAD", "load_undersampled_flag"),
                 reg_pars.sim_load_pars.load_undersampled_flag);
-        fprintf(f,"%s% .6E\n\n",ccParsDebugLabel("SIMLOAD", "period_tc_ratio"),
+        fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel("SIMLOAD", "period_tc_ratio"),
                 reg_pars.sim_load_pars.period_tc_ratio);
 
         if(reg_pars.sim_load_pars.tc_error != 0.0)
         {
-            fprintf(f,"%s% .6E\n",ccParsDebugLabel("SIMLOAD", "tc_error"), reg_pars.sim_load_pars.tc_error);
+            fprintf(f,"%s" FLOAT_FORMAT "\n",ccParsDebugLabel("SIMLOAD", "tc_error"), reg_pars.sim_load_pars.tc_error);
 
             ccParsPrintDebugLoad(f, "SIMLOAD", &reg_pars.sim_load_pars.load_pars);
         }
 
         // Report internally calculated voltage source parameters
 
-        fprintf(f,"%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:numerator",
+        fprintf(f,"%-*s" FLOAT_FORMAT "," FLOAT_FORMAT "," FLOAT_FORMAT "," FLOAT_FORMAT "\n", PARS_INDENT, "SIMVS:numerator",
                      reg_pars.sim_vs_pars.num[0],
                      reg_pars.sim_vs_pars.num[1],
                      reg_pars.sim_vs_pars.num[2],
                      reg_pars.sim_vs_pars.num[3]);
 
-        fprintf(f,"%-*s% .6E,% .6E,% .6E,% .6E\n", PARS_INDENT, "SIMVS:denominator",
+        fprintf(f,"%-*s" FLOAT_FORMAT "," FLOAT_FORMAT "," FLOAT_FORMAT "," FLOAT_FORMAT "\n", PARS_INDENT, "SIMVS:denominator",
                      reg_pars.sim_vs_pars.den[0],
                      reg_pars.sim_vs_pars.den[1],
                      reg_pars.sim_vs_pars.den[2],
                      reg_pars.sim_vs_pars.den[3]);
 
-        fprintf(f,"%-*s% .6E\n",   PARS_INDENT, "SIMVS:step_rsp_time_iters",reg_pars.sim_vs_pars.step_rsp_time_iters);
-        fprintf(f,"%-*s% .6E\n\n", PARS_INDENT, "SIMVS:gain",               reg_pars.sim_vs_pars.gain);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS:step_rsp_time_iters",reg_pars.sim_vs_pars.step_rsp_time_iters);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS:gain",               reg_pars.sim_vs_pars.gain);
 
         // Report internally calculated field regulation parameters
 
         if(ccrun.breg_flag == 1)
         {
-            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "BREG:pure_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG:pure_delay_periods",
                                reg_pars.b_rst_pars.pure_delay_periods);
 
-            fprintf(f,"%-*s% d\n", PARS_INDENT, "BREG:alg_index", reg_pars.b_rst_pars.alg_index);
-            fprintf(f,"%-*s% d\n", PARS_INDENT, "BREG:dead_beat", reg_pars.b_rst_pars.dead_beat);
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "BREG:alg_index", reg_pars.b_rst_pars.alg_index);
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "BREG:dead_beat", reg_pars.b_rst_pars.dead_beat);
 
-            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "BREG:track_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG:track_delay_periods",
                                reg_pars.b_rst_pars.track_delay_periods);
-            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "BREG:ref_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG:ref_delay_periods",
                                reg_pars.b_rst_pars.ref_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
-                fprintf(f,"%-*s% 20.16E  % 20.16E  % 20.16E\n", PARS_INDENT, "BREG:R:S:T",
+                fprintf(f,"%-*s" DOUBLE_FORMAT "  " DOUBLE_FORMAT "  " DOUBLE_FORMAT "\n", PARS_INDENT, "BREG:R:S:T",
                                reg_pars.b_rst_pars.rst.r[i],
                                reg_pars.b_rst_pars.rst.s[i],
                                reg_pars.b_rst_pars.rst.t[i]);
             }
-            fprintf(f,"%-*s% 20.16E\n\n", PARS_INDENT, "BREG:t0_correction",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n\n", PARS_INDENT, "BREG:t0_correction",
                                reg_pars.b_rst_pars.t0_correction);
         }
 
@@ -405,28 +411,38 @@ void ccParsPrintDebug(FILE *f)
 
         if(ccrun.ireg_flag == 1)
         {
-            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "IREG:pure_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG:pure_delay_periods",
                                reg_pars.i_rst_pars.pure_delay_periods);
 
-            fprintf(f,"%-*s% d\n", PARS_INDENT, "IREG:alg_index", reg_pars.i_rst_pars.alg_index);
-            fprintf(f,"%-*s% d\n", PARS_INDENT, "IREG:dead_beat", reg_pars.i_rst_pars.dead_beat);
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG:alg_index", reg_pars.i_rst_pars.alg_index);
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG:dead_beat", reg_pars.i_rst_pars.dead_beat);
 
-            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "IREG:track_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG:track_delay_periods",
                                reg_pars.i_rst_pars.track_delay_periods);
-            fprintf(f,"%-*s% 20.16E\n", PARS_INDENT, "IREG:ref_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG:ref_delay_periods",
                                reg_pars.i_rst_pars.ref_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
-                fprintf(f,"%-*s% 20.16E % 20.16E % 20.16E % 20.16E % 20.16E % 20.16E\n", PARS_INDENT, "IREG:R:S:T:A:B:AS+BR",
+                fprintf(f,"%-*s" FLOAT_FORMAT " " DOUBLE_FORMAT " " FLOAT_FORMAT " " DOUBLE_FORMAT
+                             " " DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT "\n",
+                                 PARS_INDENT, "IREG:R:S:T:A:B:AS+BR:JURY",
                                reg_pars.i_rst_pars.rst.r[i],
                                reg_pars.i_rst_pars.rst.s[i],
                                reg_pars.i_rst_pars.rst.t[i],
                                reg_pars.i_rst_pars.a[i],
                                reg_pars.i_rst_pars.b[i],
-                               reg_pars.i_rst_pars.asbr[i]);
+                               reg_pars.i_rst_pars.asbr[i],
+                               reg_pars.i_rst_pars.jury[i]);
             }
-            fprintf(f,"%-*s% 20.16E\n\n", PARS_INDENT, "IREG:t0_correction",
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG:jurys_result", reg_pars.i_rst_pars.jurys_result);
+            fprintf(f,"%-*s" DOUBLE_FORMAT " " DOUBLE_FORMAT "\n", PARS_INDENT, "IREG:sum_even_s:sum_odd_s",
+                               reg_pars.i_rst_pars.sum_even_s, reg_pars.i_rst_pars.sum_odd_s);
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n",   PARS_INDENT, "IREG:sum_even_s+sum_odd_s",
+                               reg_pars.i_rst_pars.sum_even_s + reg_pars.i_rst_pars.sum_odd_s);
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n",   PARS_INDENT, "IREG:sum_even_s-sum_odd_s",
+                               reg_pars.i_rst_pars.sum_even_s - reg_pars.i_rst_pars.sum_odd_s);
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n\n", PARS_INDENT, "IREG:t0_correction",
                                reg_pars.i_rst_pars.t0_correction);
         }
     }
@@ -444,13 +460,13 @@ void ccParsPrintDebug(FILE *f)
                             ccParsEnumString(function_type, ccpars_global.function[i]));
         fprintf(f,"%-*s %s\n",   PARS_INDENT, "REG_MODE:",
                             ccParsEnumString(reg_mode,      ccpars_global.reg_mode[i]));
-        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "REG:ref_advance",     ccrun.ref_advance[i]);
-        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "REG:max_abs_err",     ccrun.max_abs_err[i]);
-        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:duration",    ccrun.fg_meta[i].duration);
-        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.start", ccrun.fg_meta[i].range.start);
-        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.end",   ccrun.fg_meta[i].range.end);
-        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.min",   ccrun.fg_meta[i].range.min);
-        fprintf(f,"%-*s% .6E\n", PARS_INDENT, "FG_META:range.max",   ccrun.fg_meta[i].range.max);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG:ref_advance",     ccrun.ref_advance[i]);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG:max_abs_err",     ccrun.max_abs_err[i]);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:duration",    ccrun.fg_meta[i].duration);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:range.start", ccrun.fg_meta[i].range.start);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:range.end",   ccrun.fg_meta[i].range.end);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:range.min",   ccrun.fg_meta[i].range.min);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:range.max",   ccrun.fg_meta[i].range.max);
     }
 }
 // EOF

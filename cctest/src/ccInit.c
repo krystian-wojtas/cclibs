@@ -429,7 +429,7 @@ uint32_t ccInitRegulation(void)
 
         if(status != REG_OK)
         {
-            ccTestPrintError("FIELD RST regulator failed to initialise: S[0] is less than 1.0E-10");
+            ccTestPrintError("failed to initialise FIELD RST regulator: S has unstable poles - try reducing CLBW");
             return(EXIT_FAILURE);
         }
 
@@ -453,7 +453,7 @@ uint32_t ccInitRegulation(void)
 
         if(status != REG_OK)
         {
-            ccTestPrintError("CURRENT RST regulator failed to initialise: S[0] is less than 1.0E-10");
+            ccTestPrintError("failed to initialise CURRENT RST regulator: S has unstable poles - try reducing CLBW");
             return(EXIT_FAILURE);
         }
 
