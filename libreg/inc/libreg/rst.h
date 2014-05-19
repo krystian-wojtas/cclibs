@@ -83,13 +83,17 @@ struct reg_rst_pars                                             // RST algorithm
     float                       pure_delay_periods;             // Pure delay in regulation periods
     float                       track_delay_periods;            // Track delay in regulation periods
     float                       ref_delay_periods;              // Ref delay in regulation periods
-    float                       inv_s0;                         // Store 1/S[0]
-    float                       t0_correction;                  // Correction to t[0] for rounding errors
-    float                       inv_corrected_t0;               // Store 1/(T[0]+ t0_correction)
+    double                      inv_s0;                         // Store 1/S[0]
+    double                      t0_correction;                  // Correction to t[0] for rounding errors
+    double                      inv_corrected_t0;               // Store 1/(T[0]+ t0_correction)
     struct reg_rst              rst;                            // RST polynomials
     double                      a   [REG_N_RST_COEFFS];         // Plant numerator
     double                      b   [REG_N_RST_COEFFS];         // Plant denominator
     double                      asbr[REG_N_RST_COEFFS];         // A.S + B.R
+    double                      jury[REG_N_RST_COEFFS];         // Jury's test results for S polynomial
+    int32_t                     jurys_result;                   // Jury's test result index (0=OK)
+    double                      sum_even_s;                     // Sum of even S coefficients: s[0]+s[2]+s[4]+...
+    double                      sum_odd_s;                      // Sum of odd S coefficients:  s[1]+s[3]+s[5]+...
 };
 
 struct reg_rst_vars                                             // RST algorithm variables
@@ -109,7 +113,7 @@ extern "C" {
 
 // RST regulation functions
 
-uint32_t regRstInit             (struct reg_rst_pars *pars, double iter_period, uint32_t period_iters,
+enum reg_status regRstInit      (struct reg_rst_pars *pars, double iter_period, uint32_t period_iters,
                                  struct reg_load_pars *load, float clbw, float clbw2, float z, float clbw3, float clbw4,
                                  float pure_delay_periods, float track_delay_periods, enum reg_mode reg_mode,
                                  struct reg_rst *manual);

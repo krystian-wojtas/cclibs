@@ -22,26 +22,105 @@
             In Longchamp notation, R and S are exchanged.
 \*---------------------------------------------------------------------------------------------------------*/
 
+#include <stdio.h>
 #include <math.h>
 #include "libreg/rst.h"
 
 // Constants
 
-#define TWO_PI          6.28318530717958647693
+#define TWO_PI              6.28318530717958647693
+#define FLOAT_THRESHOLD     1.0E-10
+
+// Static function declarations
+
+static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx);
 
 /*---------------------------------------------------------------------------------------------------------*/
-static double RegVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx)
+static int32_t regJuryTest(struct reg_rst_pars *pars)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    int32_t    p_idx;
-    double     product = 0.0;
+    int32_t     i;
+    int32_t     n;
+    int32_t     jury_idx = 0;
+    double      d;
+    double      a[REG_N_RST_COEFFS];
+    double      b[REG_N_RST_COEFFS];
 
-    for(p_idx = 0 ; m_idx >= 0 && p_idx <= p_order; m_idx--, p_idx++)
+    // Jury's test -1: s[0] > 0 for stability
+
+    pars->jury[0] = pars->rst.s[0];
+
+    if(pars->jury[0] < FLOAT_THRESHOLD)
     {
-        product += p[p_idx] * m[m_idx];
+        return(-1);
     }
 
-    return(product);
+    // Skip trailing zero coefficients - note that s[0] cannot be zero because of Jury test above
+
+    n = REG_N_RST_COEFFS;
+
+    while(--n >= 0 && pars->rst.s[n] == 0.0);
+
+    // Transfer s[] to b[] and sum even and odd coefficients of s[] separately
+
+    for(i = 0, pars->sum_odd_s = 0.0, pars->sum_even_s = 0.0 ; i <= n ; i++)
+    {
+        b[i] = pars->rst.s[i];
+
+        if((i & 1) == 0)
+        {
+            pars->sum_even_s += b[i];
+        }
+        else
+        {
+            pars->sum_odd_s += b[i];
+        }
+    }
+
+    // Jury's test -2 : s(1) > 0 for stability - allow for floating point rounding errors
+
+    if((pars->sum_even_s + pars->sum_odd_s) < -FLOAT_THRESHOLD)
+    {
+        return(-2);
+    }
+
+    // Jury's test -3 : (-1)^n . s(-1) > 0 for stability
+
+    if(pars->sum_even_s < pars->sum_odd_s)
+    {
+        return(-3);
+    }
+
+    // Run Jury Stability Test
+
+    do
+    {
+        for(i = 0 ; i <= n ; i++)
+        {
+            a[i] = b[i];
+        }
+
+        d = a[n] / a[0];
+
+        for(i = 0 ; i < n ; i++)
+        {
+            b[i] = a[i] - d * a[n - i];
+        }
+
+        pars->jury[++jury_idx] = b[0];
+
+        // Jury's tests 1 - (n-2) : First element of every row of Jury's array > 0 for stability
+
+        if(b[0] <= 0.0)
+        {
+            return(jury_idx);
+        }
+
+    } while(--n > 2);
+
+    // All roots lie in the unit circle
+
+    return(0);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 static void regRstInitPII(struct reg_rst_pars  *pars,
@@ -102,9 +181,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         a2 = -(t1 * (1.0 + 0.5 * t1));  // This is more precise for small t1
     }
 
-    // Select the algorithm to use according to the pure delay
+    b0_b1 = load->gain1 * a2;
 
-    b0_b1 = 0.0;
+    // Select the algorithm to use according to the pure delay
 
     if(pars->pure_delay_periods < 0.401)
     {
@@ -125,7 +204,6 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         // Option 2 - pure delay 0.401 - 0.999
 
         pars->alg_index = 2;
-        b0_b1 = load->gain1 * a2;
         b0 = b0_b1 * (1.0 - pars->pure_delay_periods);
         b1 = b0_b1 * pars->pure_delay_periods;
     }
@@ -134,7 +212,6 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         // Option 3 - pure delay 1.0 - 1.401
 
         pars->alg_index = 3;
-        b0_b1 = load->gain1 * a2;
         b0 = b0_b1 * (2.0 - pars->pure_delay_periods);
         b1 = b0_b1 * (pars->pure_delay_periods - 1.0);
     }
@@ -143,7 +220,6 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         // Option 4 - pure delay 1.401 - 1.999
 
         pars->alg_index = 4;
-        b0_b1 = load->gain1 * a2;
         b0 = b0_b1 * (2.0 - pars->pure_delay_periods);
         b1 = b0_b1 * (pars->pure_delay_periods - 1.0);
     }
@@ -152,7 +228,6 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         // Option 5 - pure delay 2.00 - 2.401
 
         pars->alg_index = 5;
-        b0_b1 = load->gain1 * a2;
         b0 = b0_b1 * (3.0 - pars->pure_delay_periods);
         b1 = b0_b1 * (pars->pure_delay_periods - 2.0);
     }
@@ -183,9 +258,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     // Calculate intermediate values
 
     c1 = -exp(-pars->period * TWO_PI * clbw);
-    q1 =  exp(-pars->period * TWO_PI * clbw2 * z);
-    d1 = -2.0 * q1 * cos(pars->period * TWO_PI * clbw2 * sqrt(1.0 - z * z));
-    d2 =  q1 * q1;
+    q1 = -exp(-pars->period * TWO_PI * clbw2 * z);
+    d1 = 2.0 * q1 * cos(pars->period * TWO_PI * clbw2 * sqrt(1.0 - z * z));
+    d2 = q1 * q1;
 
     // Calculate RST coefficients
 
@@ -208,7 +283,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[3] = c1*d2;
 
         pars->dead_beat = 1;
-        r_idx = 3;
+        r_idx = 4;
         s_idx = 5;
         break;
 
@@ -239,13 +314,13 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[3] = c1*d2 / b0_b1;
 
         pars->dead_beat = 0;
-        r_idx = 3;
+        r_idx = 4;
         s_idx = 5;
         break;
 
     case 3:                 // Algorithm 3 : Pure delay fraction 1.0 - 1.401 : dead-beat (2)
 
-        c2 = exp(-pars->period * TWO_PI * clbw3);
+        c2 = -exp(-pars->period * TWO_PI * clbw3);
         q1 = 2.0 - a1 + c1 + c2 + d1;
 
         pars->rst.r[0] = q1*(2.0 - a1) + d2 + c1*c2 + d1*(c1 + c2) + 2.0*a1 - 1.0;
@@ -265,13 +340,13 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[4] = c1*c2*d2;
 
         pars->dead_beat = 2;
-        r_idx = 3;
+        r_idx = 5;
         s_idx = 7;
         break;
 
     case 4:                 // Algorithm 4 : Pure delay fraction 1.401 - 1.999 : not dead-beat
 
-        c2 = exp(-pars->period * TWO_PI * clbw3);
+        c2 = -exp(-pars->period * TWO_PI * clbw3);
 
         pars->rst.r[0] = (4*a1 + 2*c1 + 2*c2 + 2*d1 + d2 + 3*a1*c1 + 3*a1*c2 + 3*a1*d1 + 2*a1*d2 + c1*c2 + c1*d1 + c2*d1 +
                           2*a1*c1*c2 + 2*a1*c1*d1 + a1*c1*d2 + 2*a1*c2*d1 + a1*c2*d2 - c1*c2*d2 + a1*c1*c2*d1 + 3)/(b0_b1*(a1 + 1)*(a1 + 1)) + 
@@ -305,14 +380,14 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[4] = c1*c2*d2 / b0_b1;
 
         pars->dead_beat = 0;
-        r_idx = 3;
+        r_idx = 5;
         s_idx = 7;
         break;
 
     case 5:                 // Algorithm 5 : Pure delay fraction 2.0 - 2.401 : dead-beat (3)
 
-        c2 = exp(-pars->period * TWO_PI * clbw3);
-        c3 = exp(-pars->period * TWO_PI * clbw4);
+        c2 = -exp(-pars->period * TWO_PI * clbw3);
+        c3 = -exp(-pars->period * TWO_PI * clbw4);
         q1 = 2.0 - a1 + c1 + c2 + c3 + d1;
         q2 = (2.0 - a1)*q1 + 2.0*a1 - 1 + d2 + c1*c2 + c1*c3 + c2*c3 + c1*d1 + c2*d1 + c3*d1;
 
@@ -335,78 +410,30 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->rst.t[5] = c1*c2*c3*d2;
 
         pars->dead_beat = 3;
-        r_idx = 3;
+        r_idx = 6;
         s_idx = 9;
         break;
     }
 
-    for(idx = 0 ; s_idx >= 0 || r_idx >= 0 ; s_idx--, r_idx--, idx++)
+    for(idx = s_idx ; s_idx >= 0 || r_idx >= 0 ; s_idx--, r_idx--, idx--)
     {
-        pars->asbr[idx] = RegVectorMultiply(pars->a, pars->rst.s, 1, s_idx) +
-                          RegVectorMultiply(pars->b, pars->rst.r, 1, r_idx);
+        pars->asbr[idx] = regVectorMultiply(pars->a, pars->rst.s, 1, s_idx) +
+                          regVectorMultiply(pars->b, pars->rst.r, 1, r_idx);
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    int32_t    p_idx;
+    double     product = 0.0;
+
+    for(p_idx = 0 ; m_idx >= 0 && p_idx <= p_order; m_idx--, p_idx++)
+    {
+        product += p[p_idx] * m[m_idx];
     }
 
-    // Calculate AS x BR
-
-    //to check that A*S+B*R=z*(z+c1)*(z^2+d1*z+d2)*(z+b1/b0)
-    //A*S+B*R
-    //(5th) [1  0  0  0  0  0][s0] + [0  0  0  0  0  0 ][0]
-    //(4th) [a1 1  0  0  0  0][s1] + [0  0  0  0  0  0 ][0]
-    //(3rd) [0  a1 1  0  0  0][s2] + [0  0  b0 0  0  0 ][r0]
-    //(2nd) [0  0  a1 1  0  0][s3] + [0  0  b1 b0 0  0 ][r1]
-    //(1st) [0  0  0  a1 1  0][s4] + [0  0  0  b1 b0 0 ][r2] s4=0
-    //(0th) [0  0  0  0  a1 1][s5] + [0  0  0  0  b1 b0][r3] s5=0, r3=0
-
-
-    //to check that A*S+B*R=z^2*(z+c1)*(z^2+d1*z+d2)
-    //A*S+B*R
-    //(5th) [1  0  0  0  0  0][s0] + [0  0  0  0  0  0 ][0]
-    //(4th) [a1 1  0  0  0  0][s1] + [0  0  0  0  0  0 ][0]
-    //(3rd) [0  a1 1  0  0  0][s2] + [0  0  b0 0  0  0 ][r0]
-    //(2nd) [0  0  a1 1  0  0][s3] + [0  0  b1 b0 0  0 ][r1]
-    //(1st) [0  0  0  a1 1  0][s4] + [0  0  0  b1 b0 0 ][r2] s4=0
-    //(0th) [0  0  0  0  a1 1][s5] + [0  0  0  0  b1 b0][r3] s5=0, r3=0
-
-
-    //to check that A*S+B*R=z^2*(z+c1)*(z+c2)*(z^2+d1*z+d2)*(z+b1/b0)
-    //A*S+B*R
-    //(7th) [1  0  0  0  0  0  0  0][s0] + [0 0 0 0 0  0  0  0 ][0]
-    //(6th) [a1 1  0  0  0  0  0  0][s1] + [0 0 0 0 0  0  0  0 ][0]
-    //(5th) [0  a1 1  0  0  0  0  0][s2] + [0 0 0 0 0  0  0  0 ][0]
-    //(4th) [0  0  a1 1  0  0  0  0][s3] + [0 0 0 0 0  0  0  0 ][0]
-    //(3rd) [0  0  0  a1 1  0  0  0][s4] + [0 0 0 0 b0 0  0  0 ][r0]
-    //(2nd) [0  0  0  0  a1 1  0  0][s5] + [0 0 0 0 b1 b0 0  0 ][r1] s5=0
-    //(1st) [0  0  0  0  0  a1 1  0][s6] + [0 0 0 0 0  b1 b0 0 ][r2] s6=0
-    //(0th) [0  0  0  0  0  0  a1 1][s7] + [0 0 0 0 0  0  b1 b0][r3] s7=0, r3=0
-
-
-    //to check that A*S+B*R=z^3*(z+c1)*(z+c2)*(z^2+d1*z+d2)
-    //A*S+B*R
-    //(7th) [1  0  0  0  0  0  0  0][s0] + [0 0 0 0 0  0  0  0 ][0]
-    //(6th) [a1 1  0  0  0  0  0  0][s1] + [0 0 0 0 0  0  0  0 ][0]
-    //(5th) [0  a1 1  0  0  0  0  0][s2] + [0 0 0 0 0  0  0  0 ][0]
-    //(4th) [0  0  a1 1  0  0  0  0][s3] + [0 0 0 0 0  0  0  0 ][0]
-    //(3rd) [0  0  0  a1 1  0  0  0][s4] + [0 0 0 0 b0 0  0  0 ][r0]
-    //(2nd) [0  0  0  0  a1 1  0  0][s5] + [0 0 0 0 b1 b0 0  0 ][r1] s5=0
-    //(1st) [0  0  0  0  0  a1 1  0][s6] + [0 0 0 0 0  b1 b0 0 ][r2] s6=0
-    //(0th) [0  0  0  0  0  0  a1 1][s7] + [0 0 0 0 0  0  b1 b0][r3] s7=0, r3=0
-
-
-    //to check that A*S+B*R=z^3*(z+c1)*(z+c2)*(z+c3)*(z^2+d1*z+d2)*(z+b1/b0)
-    //A*S+B*R
-    //(9th) [1  0  0  0  0  0  0  0  0 0][s0] + [0 0 0 0 0 0 0  0  0  0 ][0]
-    //(8th) [a1 1  0  0  0  0  0  0  0 0][s1] + [0 0 0 0 0 0 0  0  0  0 ][0]
-    //(7th) [0  a1 1  0  0  0  0  0  0 0][s2] + [0 0 0 0 0 0 0  0  0  0 ][0]
-    //(6th) [0  0  a1 1  0  0  0  0  0 0][s3] + [0 0 0 0 0 0 0  0  0  0 ][0]
-    //(5th) [0  0  0  a1 1  0  0  0  0 0][s4] + [0 0 0 0 0 0 0  0  0  0 ][0]
-    //(4th) [0  0  0  0  a1 1  0  0  0 0][s5] + [0 0 0 0 0 0 0  0  0  0 ][0]
-    //(3rd) [0  0  0  0  0  a1 1  0  0 0][s6] + [0 0 0 0 0 0 b0 0  0  0 ][r0] s6=0
-    //(2nd) [0  0  0  0  0  0  a1 1  0 0][s7] + [0 0 0 0 0 0 b1 b0 0  0 ][r1] s7=0
-    //(1st) [0  0  0  0  0  0  0  a1 1 0][s8] + [0 0 0 0 0 0 0  b1 b0 0 ][r2] s8=0, r3=0
-    //(0th) [0  0  0  0  0  0  0  0 a1 1][s9] + [0 0 0 0 0 0 0  0  b1 b0][r3] s9=0, r3=0
-
-
-
+    return(product);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 static void regRstInitPI(struct reg_rst_pars  *pars,
@@ -464,23 +491,24 @@ static void regRstInitI(struct reg_rst_pars  *pars,
     pars->rst.t[0] = 1.0 + c1;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t regRstInit(struct reg_rst_pars  *pars,
-                    double                iter_period,
-                    uint32_t              period_iters,
-                    struct reg_load_pars *load,
-                    float                 clbw,
-                    float                 clbw2,
-                    float                 z,
-                    float                 clbw3,
-                    float                 clbw4,
-                    float                 pure_delay_periods,
-                    float                 track_delay_periods,
-                    enum reg_mode         reg_mode,
-                    struct reg_rst       *manual)
+enum reg_status regRstInit(struct reg_rst_pars  *pars,
+                           double                iter_period,
+                           uint32_t              period_iters,
+                           struct reg_load_pars *load,
+                           float                 clbw,
+                           float                 clbw2,
+                           float                 z,
+                           float                 clbw3,
+                           float                 clbw4,
+                           float                 pure_delay_periods,
+                           float                 track_delay_periods,
+                           enum reg_mode         reg_mode,
+                           struct reg_rst       *manual)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function prepares coefficients for the RST regulation algorithm based on the paper EDMS 686163 by
-  Hugues Thiesen with extensions from Martin Veenstra and Michele Martino, to allow a pure loop delay to
-  be accommodated. The function returns REG_OK on success and REG_FAULT if s[0] is too small (<1E-10).
+  This function prepares coefficients for the RST regulation algorithm based on the paper CERN EDMS 686163
+  by Hugues Thiesen with extensions from Martin Veenstra and Michele Martino, to allow a pure loop delay to
+  be accommodated. The function returns REG_OK on success and REG_FAULT if s[0] is too small (<1E-10) or
+  is unstable (has poles outside the unit circle).
 
   Notes:    The algorithms can calculate the RST coefficients from the parameters
             clbw/clbw2/z/clbw3/clbw4/pure_delay_periods and the load parameters.
@@ -516,8 +544,10 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
 
         for(i=0 ; i < REG_N_RST_COEFFS ; i++)
         {
-            pars->rst.r[i] = pars->rst.s[i] = pars->rst.t[i] = pars->a[i] = pars->b[i] = pars->asbr[i] = 0.0;
+            pars->rst.r[i] = pars->rst.s[i] = pars->rst.t[i] = pars->a[i] = pars->b[i] = pars->asbr[i] = pars->jury[i] = 0.0;
         }
+
+        pars->sum_even_s = pars->sum_odd_s = 0.0;
 
         // Calculate RST coefficients and track delay according to CLBW2 and load inductance
 
@@ -535,9 +565,11 @@ uint32_t regRstInit(struct reg_rst_pars  *pars,
         }
     }
 
-    // Check that S[0] isn't too small
+    //Check that s polynomial is stable using Jury test
 
-    if(fabs(pars->rst.s[0]) < 1.0E-10)
+    pars->jurys_result = regJuryTest(pars);
+
+    if(pars->jurys_result != 0 && 0)
     {
         // RST coefficients are invalid and cannot be used
 
@@ -617,17 +649,17 @@ float regRstCalcAct(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
     // Use RST coefficients to calculate new actuation from reference
 
     var_idx = vars->history_index;
-    act     = (double)pars->t0_correction * ref + 
-              (double)pars->rst.t[0] * ref - 
-              (double)pars->rst.r[0] * meas;
+    act     = pars->rst.t[0]      * (double)ref -
+              pars->rst.r[0]      * (double)meas +
+              pars->t0_correction * (double)ref;
 
     for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
     {
         var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
 
-        act += (double)pars->rst.t[par_idx] * vars->ref [var_idx] -
-               (double)pars->rst.r[par_idx] * vars->meas[var_idx] -
-               (double)pars->rst.s[par_idx] * vars->act [var_idx];
+        act += pars->rst.t[par_idx] * (double)vars->ref [var_idx] -
+               pars->rst.r[par_idx] * (double)vars->meas[var_idx] -
+               pars->rst.s[par_idx] * (double)vars->act [var_idx];
     }
     
     act *= pars->inv_s0;
@@ -674,15 +706,15 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
     // Use RST coefficients to calculate new actuation from reference
 
     var_idx = vars->history_index;
-    ref     = (double)pars->rst.s[0] * act + (double)pars->rst.r[0] * meas;
+    ref     = pars->rst.s[0] * (double)act + pars->rst.r[0] * (double)meas;
 
     for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
     {
         var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
 
-        ref += (double)pars->rst.s[par_idx] * vars->act [var_idx] +
-               (double)pars->rst.r[par_idx] * vars->meas[var_idx] -
-               (double)pars->rst.t[par_idx] * vars->ref [var_idx];
+        ref += pars->rst.s[par_idx] * (double)vars->act [var_idx] +
+               pars->rst.r[par_idx] * (double)vars->meas[var_idx] -
+               pars->rst.t[par_idx] * (double)vars->ref [var_idx];
     }
     
     ref *= pars->inv_corrected_t0;
