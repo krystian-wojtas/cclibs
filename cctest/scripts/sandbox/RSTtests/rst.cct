@@ -3,6 +3,7 @@
 GLOBAL RUN_DELAY            0.1
 GLOBAL STOP_DELAY           0.1
 GLOBAL ITER_PERIOD          1.0E-4
+GLOBAL STOP_ON_ERROR        DISABLED
 GLOBAL REG_MODE             CURRENT
 GLOBAL FG_LIMITS            DISABLED
 GLOBAL SIM_LOAD             ENABLED
@@ -66,8 +67,8 @@ MEAS I_DELAY_ITERS          1.3
 MEAS V_DELAY_ITERS          1.3
 MEAS B_FIR_LENGTHS          10, 7
 MEAS I_FIR_LENGTHS          10, 1
-MEAS B_SIM_NOISE_PP         0.005
-MEAS I_SIM_NOISE_PP         0.005
+MEAS B_SIM_NOISE_PP         0.05
+MEAS I_SIM_NOISE_PP         0.05
 MEAS V_SIM_NOISE_PP         0.05
 MEAS TONE_HALF_PERIOD_ITERS 100
 MEAS B_SIM_TONE_AMP         0.0
@@ -116,10 +117,10 @@ GLOBAL REG_MODE             CURRENT
 MEAS I_REG_SELECT           UNFILTERED
 
 IREG PERIOD_ITERS           10
-IREG CLBW                   50
-IREG CLBW2                  50
-IREG CLBW3                  50
-IREG CLBW4                  50
+IREG CLBW                   90
+IREG CLBW2                  90
+IREG CLBW3                  90
+IREG CLBW4                  90
 IREG Z                      0.5
 
 VS V_REF_DELAY_ITERS        1.0
@@ -142,7 +143,6 @@ GLOBAL FILE                 amps-pppl-unf-1.78
 GLOBAL FUNCTION             PPPL
 RUN
 
-IREG Z                      0.25
 VS V_REF_DELAY_ITERS        18.0
 GLOBAL FILE                 amps-pppl-unf-2.08
 GLOBAL FUNCTION             PPPL
@@ -152,28 +152,21 @@ RUN
              
 MEAS I_REG_SELECT           FILTERED
 
-IREG Z                      0.5
 VS V_REF_DELAY_ITERS        1.0
 GLOBAL FILE                 amps-pppl-fil-0.83
 GLOBAL FUNCTION             PPPL
 RUN
 
-IREG Z                      0.2
-IREG CLBW2                  20
 VS V_REF_DELAY_ITERS        4.0
 GLOBAL FILE                 amps-pppl-fil-1.13
 GLOBAL FUNCTION             PPPL
 RUN
 
-IREG Z                      0.5
-IREG CLBW2                  50
 VS V_REF_DELAY_ITERS        11.0
 GLOBAL FILE                 amps-pppl-fil-1.83
 GLOBAL FUNCTION             PPPL
 RUN
 
-IREG CLBW2                  20
-IREG Z                      0.1
 VS V_REF_DELAY_ITERS        13.0
 GLOBAL FILE                 amps-pppl-fil-2.03
 GLOBAL FUNCTION             PPPL
@@ -183,8 +176,6 @@ RUN
              
 MEAS I_REG_SELECT           EXTRAPOLATED
 
-IREG CLBW2                  50
-IREG Z                      0.5
 VS V_REF_DELAY_ITERS        1.0
 GLOBAL FILE                 amps-pppl-ext-0.26
 GLOBAL FUNCTION             PPPL
@@ -195,18 +186,19 @@ GLOBAL FILE                 amps-pppl-ext-0.86
 GLOBAL FUNCTION             PPPL
 RUN
 
-IREG Z                      0.1
 VS V_REF_DELAY_ITERS        10.0
 GLOBAL FILE                 amps-pppl-ext-1.16
 GLOBAL FUNCTION             PPPL
 RUN
 
-IREG Z                      0.2
 VS V_REF_DELAY_ITERS        16.0
 GLOBAL FILE                 amps-pppl-ext-1.76
 GLOBAL FUNCTION             PPPL
 RUN
 
-# Algorithm 5 is unstable with extrapolated measurement
+VS V_REF_DELAY_ITERS        19.0
+GLOBAL FILE                 amps-pppl-ext-2.06
+GLOBAL FUNCTION             PPPL
+RUN
 
 # EOF

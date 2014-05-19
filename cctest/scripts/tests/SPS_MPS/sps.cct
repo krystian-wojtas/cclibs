@@ -4,6 +4,7 @@ GLOBAL RUN_DELAY            0.1
 GLOBAL STOP_DELAY           0.1
 GLOBAL ITER_PERIOD          1.0E-3
 GLOBAL FUNCTION             TABLE
+GLOBAL STOP_ON_ERROR        ENABLED
 GLOBAL REG_MODE             CURRENT
 GLOBAL FG_LIMITS            DISABLED
 GLOBAL SIM_LOAD             ENABLED
@@ -57,8 +58,8 @@ MEAS I_SIM_TONE_AMP         0.0
 # Current regulation 
 
 IREG PERIOD_ITERS           3
-IREG CLBW                   40
-IREG CLBW2                  40
+IREG CLBW                   30
+IREG CLBW2                  30
 IREG Z                      0.5
 
 # Main dipole functions
