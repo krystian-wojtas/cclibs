@@ -95,7 +95,7 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
   This function initialises the load simulation with the current i_init.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    vars->voltage = i_init / pars->load_pars.gain3;
+    vars->voltage = i_init / pars->load_pars.gain2;
 
     if(pars->load_undersampled_flag == 0)
     {
@@ -150,19 +150,19 @@ float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
     float increment;
     float prev_integrator;
 
-    // When load is not undersampled the inductive transients are modelled with an integrator
+    // When load is not under sampled the inductive transients are modelled with an integrator
 
     if(pars->load_undersampled_flag == 0)
     {
         int_gain = pars->period_tc_ratio / regLoadCalcSatFactor(&pars->load_pars,vars->mag_current);
 
-        // If voltage source simulation is not undersampled use first-order interpolation of voltage
+        // If voltage source simulation is not under sampled use first-order interpolation of voltage
 
         if(pars->vs_undersampled_flag == 0)
         {
             increment = int_gain * (pars->load_pars.gain1 * 0.5 * (v_load + vars->voltage) - vars->integrator);
         }
-        else // else when voltage source simulation is undersampled use final voltage for complete sample
+        else // else when voltage source simulation is under sampled use final voltage for complete sample
         {
             increment = int_gain * (pars->load_pars.gain1 * v_load - vars->integrator);
         }
@@ -175,11 +175,12 @@ float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
         vars->compensation = (vars->integrator - prev_integrator) - increment;  // Algebraically 0, in fact holds the
                                                                                 // floating-point error compensation
         vars->current      = vars->integrator + pars->load_pars.gain0 * v_load;
-        vars->mag_current  = vars->integrator * pars->load_pars.gain2;
+        vars->mag_current  = vars->integrator * pars->load_pars.ohms1;
     }
-    else // else when load is undersampled the inductive transients are ignored and ohms law is used
+    else // else when load is under sampled the inductive transients are ignored and ohms law is used
     {
-        vars->mag_current = vars->current = v_load * pars->load_pars.gain3;
+        vars->current     = v_load * pars->load_pars.gain2;
+        vars->mag_current = vars->current * pars->load_pars.ohms2;
     }
 
     // Remember load voltage for next iteration

@@ -41,8 +41,9 @@ struct reg_load_pars
     float                       tc;                             // Time constant for load pole
     float                       gain0;                          // Load gain 0
     float                       gain1;                          // Load gain 1
-    float                       gain2;                          // Load gain 2
-    float                       gain3;                          // Load gain 3 (steady state gain)
+    float                       ohms1;                          // Load gain 2
+    float                       gain2;                          // Load gain 3 (steady state gain)
+    float                       ohms2;                          // Load gain 4
     float                       gain10;                         // Load gain 1/Load gain 0 : Rp insignificance factor
                                                                 // if gain10 > ~10 then Rp is insignificant
     struct reg_load_sat

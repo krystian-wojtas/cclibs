@@ -323,11 +323,12 @@ static void ccParsPrintDebugLoad(FILE *f, char *prefix, struct reg_load_pars *lo
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "henrys"),     load_pars->henrys);
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "inv_henrys"), load_pars->inv_henrys);
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "ohms"),       load_pars->ohms);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "ohms1"),      load_pars->ohms1);
+    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "ohms2"),      load_pars->ohms2);
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "tc"),         load_pars->tc);
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain0"),      load_pars->gain0);
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain1"),      load_pars->gain1);
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain2"),      load_pars->gain2);
-    fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain3"),      load_pars->gain3);
     fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel(prefix, "gain10"),     load_pars->gain10);
 
     if(load_pars->sat.i_end > 0.0)

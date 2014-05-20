@@ -62,30 +62,37 @@ void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, flo
 {
    // Save the load parameters
 
-    load->ohms_ser  = ohms_ser;
-    load->ohms_par  = ohms_par;
-    load->ohms_mag  = ohms_mag;
-    load->henrys    = henrys;
+    load->ohms_ser      = ohms_ser;
+    load->ohms_par      = ohms_par;
+    load->ohms_mag      = ohms_mag;
+    load->henrys        = henrys;
     load->gauss_per_amp = gauss_per_amp;
 
     // Calculate load related parameters
 
     if(ohms_par > 1.0E-10)     // Rp greater than zero (magnet included in circuit)
     {
-        load->gain2 = 1.0 + ohms_ser / ohms_par;
-        load->gain0 = 1.0 / (ohms_par * load->gain2);
-        load->gain3 = 1.0 / (ohms_ser + ohms_mag / (1.0 + ohms_mag / ohms_par));
-        load->gain1 = load->gain3 - load->gain0;
-        load->ohms  = ohms_mag + ohms_ser / load->gain2;
+        load->ohms1 = 1.0 + ohms_ser / ohms_par;
+        load->ohms2 = 1.0 / (1.0 + ohms_mag / ohms_par);
+        load->ohms  = ohms_mag + ohms_ser / load->ohms1;
+
+        load->gain0 = 1.0 / (ohms_par * load->ohms1);
+        load->gain2 = 1.0 / (ohms_ser + ohms_mag / (1.0 + ohms_mag / ohms_par));
+        load->gain1 = load->gain2 - load->gain0;
+
         load->tc    = load->henrys / load->ohms;
     }
     else                       // Rp is effectively zero (i.e. no magnet in the circuit)
     {
-        load->gain0 = 1.0 / ohms_ser;
-        load->gain1 = 0.0;
-        load->gain3 = load->gain0;
-        load->ohms  = ohms_ser;
-        load->tc    = 1.0E-20;
+        load->ohms2  = 0.0;
+        load->ohms   = ohms_ser;
+
+        load->gain0  = 1.0 / ohms_ser;
+        load->gain1  = 0.0;
+        load->gain2  = load->gain0;
+
+        load->tc     = 1.0E-20;
+        load->henrys = 0.0;
     }
 
     // gain10 is not used in the library but indicates to the application the significance of
@@ -120,7 +127,7 @@ float regLoadCurrentToField(struct reg_load_pars *load, float i_meas)
     float di_start;
     float di_end;
 
-    // Field follows a linear - parabola - linear relationship with curent due to magnet saturation
+    // Field follows a linear - parabola - linear relationship with current due to magnet saturation
 
     abs_i_meas = fabs(i_meas);
 
