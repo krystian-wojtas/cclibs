@@ -531,7 +531,7 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
 
     // Use delays to estimate the voltage across the load and the measurement of this voltage
 
-    regDelayCalc(&reg->v_sim.delay, reg->sim_load_vars.voltage, &reg->v_sim.load, &reg->v_sim.meas);
+    regDelayCalc(&reg->v_sim.circuit_delay, reg->sim_load_vars.voltage, &reg->v_sim.circuit, &reg->v_sim.meas);
 
     // Store simulated voltage measurement without noise as the delayed ref for the v_err calculation
 
@@ -539,11 +539,12 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
 
     // Use delays to estimate the current in the load and the measurement of this current
 
-    regDelayCalc(&reg->i_sim.delay, reg->sim_load_vars.current, &reg->i_sim.load, &reg->i_sim.meas);
+    regDelayCalc(&reg->i_sim.magnet_delay,  reg->sim_load_vars.mag_current, &reg->i_sim.magnet, NULL);
+    regDelayCalc(&reg->i_sim.circuit_delay, reg->sim_load_vars.current,     &reg->i_sim.circuit, &reg->i_sim.meas);
 
     // Use delays to estimate the field in the load and the measurement of this field
 
-    regDelayCalc(&reg->b_sim.delay, reg->sim_load_vars.field, &reg->b_sim.load, &reg->b_sim.meas);
+    regDelayCalc(&reg->b_sim.magnet_delay, reg->sim_load_vars.field, &reg->b_sim.magnet, &reg->b_sim.meas);
 
     // Simulate noise and tone on measurement of field, current and voltage
 

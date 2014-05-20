@@ -57,7 +57,7 @@ enum ccsig_idx
     ANA_B_REF_LIMITED,          // Field reference after limits applied
     ANA_B_REF_RST,              // Field reference stored in RST history (limited and after back-calculation)
 
-    ANA_B_LOAD,                 // Field in the load
+    ANA_B_MAGNET,               // Field in the magnet
     ANA_B_MEAS,                 // Unfiltered field measurement
     ANA_B_MEAS_FLTR,            // Filtered field measurement
     ANA_B_MEAS_EXTR,            // Extrapolated field measurement
@@ -66,7 +66,8 @@ enum ccsig_idx
     ANA_I_REF_LIMITED,          // Current reference after limits applied
     ANA_I_REF_RST,              // Current reference stored in RST history (limited and after back-calculation)
 
-    ANA_I_LOAD,                 // Current in the load
+    ANA_I_MAGNET,               // Current in the magnet
+    ANA_I_CIRCUIT,              // Current in the circuit
     ANA_I_MEAS,                 // Unfiltered measured current
     ANA_I_MEAS_FLTR,            // Filtered measured current
     ANA_I_MEAS_EXTR,            // Extrapolated measured current
@@ -76,7 +77,7 @@ enum ccsig_idx
     ANA_V_REF,                  // Voltage reference
     ANA_V_REF_SAT,              // Voltage reference after magnet saturation compensation applied
     ANA_V_REF_LIMITED,          // Voltage reference after saturation compensation and limits applied
-    ANA_V_LOAD,                 // Voltage across load
+    ANA_V_CIRCUIT,              // Voltage across circuit
     ANA_V_MEAS,                 // Measured voltage
 
     ANA_TRACK_DLY,              // Measured track delay
@@ -139,7 +140,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "B_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "B_REF_RST",              ANALOG,         "TRAIL_STEP" },
 
-    { "B_LOAD",                 ANALOG,         ""           },
+    { "B_MAGNET",               ANALOG,         ""           },
     { "B_MEAS",                 ANALOG,         ""           },
     { "B_MEAS_FLTR",            ANALOG,         ""           },
     { "B_MEAS_EXTR",            ANALOG,         ""           },
@@ -148,7 +149,8 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "I_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "I_REF_RST",              ANALOG,         "TRAIL_STEP" },
 
-    { "I_LOAD",                 ANALOG,         ""           },
+    { "I_MAGNET",               ANALOG,         ""           },
+    { "I_CIRCUIT",              ANALOG,         ""           },
     { "I_MEAS",                 ANALOG,         ""           },
     { "I_MEAS_FLTR",            ANALOG,         ""           },
     { "I_MEAS_EXTR",            ANALOG,         ""           },
@@ -158,7 +160,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "V_REF",                  ANALOG,         "TRAIL_STEP" },
     { "V_REF_SAT",              ANALOG,         "TRAIL_STEP" },
     { "V_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
-    { "V_LOAD",                 ANALOG,         ""           },
+    { "V_CIRCUIT",              ANALOG,         ""           },
     { "V_MEAS",                 ANALOG,         ""           },
 
     { "TRACK_DLY",              ANALOG,         "TRAIL_STEP" },

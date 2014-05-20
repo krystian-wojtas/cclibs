@@ -199,7 +199,7 @@ void ccSigsInit(void)
         // Voltage source simulation signals
 
         ccSigsEnableSignal(ANA_V_REF_LIMITED);
-        ccSigsEnableSignal(ANA_V_LOAD);
+        ccSigsEnableSignal(ANA_V_CIRCUIT);
         ccSigsEnableSignal(ANA_V_MEAS);
         ccSigsEnableSignal(ANA_V_ERR);
         ccSigsEnableSignal(ANA_MAX_ABS_V_ERR);
@@ -217,7 +217,7 @@ void ccSigsInit(void)
             ccSigsEnableSignal(ANA_B_REF);
             ccSigsEnableSignal(ANA_B_REF_LIMITED);
             ccSigsEnableSignal(ANA_B_REF_RST);
-            ccSigsEnableSignal(ANA_B_LOAD);
+            ccSigsEnableSignal(ANA_B_MAGNET);
             ccSigsEnableSignal(ANA_B_MEAS);
             ccSigsEnableSignal(ANA_B_MEAS_FLTR);
             ccSigsEnableSignal(ANA_B_MEAS_EXTR);
@@ -252,7 +252,11 @@ void ccSigsInit(void)
 
         // Current simulation signals
 
-        ccSigsEnableSignal(ANA_I_LOAD);
+        if(reg_pars.sim_load_pars.load_undersampled_flag == 0)
+        {
+            ccSigsEnableSignal(ANA_I_MAGNET);
+        }
+        ccSigsEnableSignal(ANA_I_CIRCUIT);
         ccSigsEnableSignal(ANA_I_MEAS);
         ccSigsEnableSignal(ANA_I_MEAS_FLTR);
         ccSigsEnableSignal(ANA_I_MEAS_EXTR);
@@ -346,12 +350,13 @@ void ccSigsStore(double time)
             break;
         }
 
-        ccSigsStoreAnalog( ANA_B_LOAD,         reg.b_sim.load);
+        ccSigsStoreAnalog( ANA_B_MAGNET,       reg.b_sim.magnet);
         ccSigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.meas[REG_MEAS_UNFILTERED]);
         ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.meas[REG_MEAS_FILTERED]);
         ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.meas[REG_MEAS_EXTRAPOLATED]);
 
-        ccSigsStoreAnalog (ANA_I_LOAD,         reg.i_sim.load);
+        ccSigsStoreAnalog (ANA_I_MAGNET,       reg.i_sim.magnet);
+        ccSigsStoreAnalog (ANA_I_CIRCUIT,      reg.i_sim.circuit);
         ccSigsStoreAnalog (ANA_I_MEAS,         reg.i_meas.meas[REG_MEAS_UNFILTERED]);
         ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i_meas.meas[REG_MEAS_FILTERED]);
         ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i_meas.meas[REG_MEAS_EXTRAPOLATED]);
@@ -360,7 +365,7 @@ void ccSigsStore(double time)
 
         ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v_ref_sat);
         ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
-        ccSigsStoreAnalog (ANA_V_LOAD,         reg.v_sim.load);
+        ccSigsStoreAnalog (ANA_V_CIRCUIT,      reg.v_sim.circuit);
         ccSigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
@@ -460,7 +465,6 @@ void ccSigsFlot(FILE *f)
     uint32_t       sig_idx;
     uint32_t       n_points = 0;
     double         time;
-    double         end_flot_time;
     double         start_func_time;
     struct cccmds *cmd;
 
@@ -478,7 +482,6 @@ void ccSigsFlot(FILE *f)
     // Time of end of FLOT data
 
     start_func_time = 0.0;
-    end_flot_time   = flot_index * reg.iter_period;
 
     // For each function
 
@@ -503,11 +506,8 @@ void ccSigsFlot(FILE *f)
                 {
                     time = start_func_time + ccpars_global.run_delay + ccpars_table.time[iteration_idx];
 
-                    if(time < end_flot_time)
-                    {
-                        fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);
-                        n_points++;
-                    }
+                    fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);
+                    n_points++;
                 }
                 break;
 
@@ -515,21 +515,15 @@ void ccSigsFlot(FILE *f)
 
                 time = start_func_time + ccpars_global.run_delay;
 
-                if(time < end_flot_time)
+                fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref);
+                n_points++;
+
+                for(iteration_idx = 0 ; iteration_idx < ccpars_pppl.pppl_pars.num_segs ; iteration_idx++)
                 {
-                    fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref);
+                    time = start_func_time + ccpars_pppl.pppl_pars.time[iteration_idx];
+
+                    fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pppl_pars.a0[iteration_idx]);
                     n_points++;
-
-                    for(iteration_idx = 0 ; iteration_idx < ccpars_pppl.pppl_pars.num_segs ; iteration_idx++)
-                    {
-                        time = start_func_time + ccpars_pppl.pppl_pars.time[iteration_idx];
-
-                        if(time < end_flot_time)
-                        {
-                            fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pppl_pars.a0[iteration_idx]);
-                            n_points++;
-                        }
-                    }
                 }
                 break;
 
@@ -537,21 +531,15 @@ void ccSigsFlot(FILE *f)
 
                 time = start_func_time + ccpars_global.run_delay;
 
-                if(time < end_flot_time)
+                fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref);
+                n_points++;
+
+                for(iteration_idx = 0 ; iteration_idx <= FG_PLEP_N_SEGS ; iteration_idx++)
                 {
-                    fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref);
+                    time = start_func_time + ccpars_plep.plep_pars.time[iteration_idx];
+
+                    fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.plep_pars.normalisation * ccpars_plep.plep_pars.ref[iteration_idx]);
                     n_points++;
-
-                    for(iteration_idx = 0 ; iteration_idx <= FG_PLEP_N_SEGS ; iteration_idx++)
-                    {
-                        time = start_func_time + ccpars_plep.plep_pars.time[iteration_idx];
-
-                        if(time < end_flot_time)
-                        {
-                            fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.plep_pars.normalisation * ccpars_plep.plep_pars.ref[iteration_idx]);
-                            n_points++;
-                        }
-                    }
                 }
                 break;
             }
