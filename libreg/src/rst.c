@@ -242,6 +242,13 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     if(pars->reg_mode == REG_FIELD)
     {
+        // If parallel resistor is significant, stop now because we don't handle it correctly.
+
+        if(load->ohms_par < 1.0E6)
+        {
+            return;
+        }
+
         b0_b1 *= load->gauss_per_amp;
         b0    *= load->gauss_per_amp;
         b1    *= load->gauss_per_amp;
