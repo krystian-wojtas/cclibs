@@ -422,6 +422,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         break;
     }
 
+    // Calculate A.S + B.R to allow analysis using Matlab
+
     for(idx = s_idx ; s_idx >= 0 || r_idx >= 0 ; s_idx--, r_idx--, idx--)
     {
         pars->asbr[idx] = regVectorMultiply(pars->a, pars->rst.s, 1, s_idx) +
