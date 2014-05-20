@@ -121,7 +121,8 @@ void ccRunSimulation(void)
 
     // Prepare to generation the first function
 
-    ccrun.func_idx = 0;
+    ccrun.func_idx        = 0;
+    ccrun.vs_tripped_flag = 0;
 
     ccRunStartFunction(0);
 
