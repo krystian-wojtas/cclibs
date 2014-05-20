@@ -72,7 +72,11 @@ void regDelayInitDelays(struct reg_delay *delay, uint32_t under_sampled_flag,
 \*---------------------------------------------------------------------------------------------------------*/
 {
     regDelayCalcDelay(&delay->delay_1, under_sampled_flag, delay_1_iters);
-    regDelayCalcDelay(&delay->delay_2, under_sampled_flag, delay_2_iters);
+
+    if(delay_2_iters > 0.0)
+    {
+        regDelayCalcDelay(&delay->delay_2, under_sampled_flag, delay_2_iters);
+    }
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regDelayInitVars(struct reg_delay *delay, float initial_signal)
@@ -109,7 +113,11 @@ void regDelayCalc(struct reg_delay *delay, float signal, float *delayed_signal_1
     delay->buf[++delay->buf_index & REG_DELAY_BUF_INDEX_MASK] = signal;
 
     regDelayCalcSignal(delay, &delay->delay_1, delayed_signal_1);
-    regDelayCalcSignal(delay, &delay->delay_2, delayed_signal_2);
+
+    if(delayed_signal_2 != 0)
+    {
+        regDelayCalcSignal(delay, &delay->delay_2, delayed_signal_2);
+    }
 }
 // EOF
 
