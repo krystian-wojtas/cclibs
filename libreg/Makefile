@@ -61,6 +61,9 @@ $(obj_path)/%.o: %.c
 
 # Special targets
 
-.PHONY: all clean
+doxygen:
+	doxygen .doxygen
+
+.PHONY: all clean doxygen
 
 # EOF
