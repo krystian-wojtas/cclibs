@@ -578,7 +578,7 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
 
     pars->jurys_result = regJuryTest(pars);
 
-    if(pars->jurys_result != 0 && 0)
+    if(pars->jurys_result != 0)
     {
         // RST coefficients are invalid and cannot be used
 
