@@ -207,6 +207,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
     float       w;
     float       b;
     float       d;
+    float       de;
     float       y;
 
     // If voltage source model is too undersampled then do not attempt Tustin algorithm
@@ -242,19 +243,20 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
 
     d  = 2.0 * tau_zero / (sim_period * b);
     y  = PI * sim_period * b * natural_freq;
+    de = 1.0 / (y * y + 2.0 * z * y + 1.0);
 
     // Numerator (b0, b1, b2, b3) coefficients
 
-    pars->num[0] = y * y * (1.0 + d);
-    pars->num[1] = y * y * 2.0;
-    pars->num[2] = y * y * (1.0 - d);
+    pars->num[0] = (y * y * (1.0 + d)) * de;
+    pars->num[1] = (y * y * 2.0) * de;
+    pars->num[2] = (y * y * (1.0 - d)) * de;
     pars->num[3] = 0.0;
 
     // Denominator (a0, a1, a2, a3) coefficient
 
-    pars->den[0] = y * y + 2.0 * z * y + 1.0;
-    pars->den[1] = y * y * 2.0 - 2.0;
-    pars->den[2] = y * y - 2.0 * z * y + 1.0;
+    pars->den[0] = 1.0;
+    pars->den[1] = (y * y * 2.0 - 2.0) * de;
+    pars->den[2] = (y * y - 2.0 * z * y + 1.0) * de;
     pars->den[3] = 0.0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -312,13 +314,13 @@ uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *
     }
     else
     {
-        pars->step_rsp_time_iters = (float)i + (0.5 - prev_step_response) /
-                                               (step_response - prev_step_response);
+        pars->step_rsp_time_iters = (float)i - 1.0 + (0.5 - prev_step_response) /
+                                                     (step_response - prev_step_response);
     }
 
     // Consider simulation to be under-sampled if step response time is less than 60% of one iteration
 
-    if(pars->step_rsp_time_iters < 0.6)
+    if(pars->step_rsp_time_iters < 0.0)
     {
         pars->step_rsp_time_iters = 0.0;
         return(1);                              // Report that model is under-sampled
