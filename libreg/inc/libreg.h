@@ -54,87 +54,87 @@ enum reg_err_rate
 
 // Global power converter regulation structures
 
-struct reg_sim_meas                                     // Measurement simulation structure
+struct reg_sim_meas                                     ///< Measurement simulation structure
 {
-    struct reg_delay            magnet_delay;           // Simulated magnet value delay parameters
-    struct reg_delay            circuit_delay;          // Simulated circuit value delay parameters
-    struct reg_noise_and_tone   noise_and_tone;         // Simulated noise and tone parameters
-    float                       magnet;                 // Simulated magnet value
-    float                       circuit;                // Simulated circuit value
-    float                       meas;                   // Simulated measurement of circuit with noise and tone
+    struct reg_delay            magnet_delay;           ///< Simulated magnet value delay parameters
+    struct reg_delay            circuit_delay;          ///< Simulated circuit value delay parameters
+    struct reg_noise_and_tone   noise_and_tone;         ///< Simulated noise and tone parameters
+    float                       magnet;                 ///< Simulated magnet value
+    float                       circuit;                ///< Simulated circuit value
+    float                       meas;                   ///< Simulated measurement of circuit with noise and tone
 };
 
-struct reg_converter                                    // Global converter regulation structure
+struct reg_converter                                    ///< Global converter regulation structure
 {
-    enum reg_mode               mode;                   // Regulation mode: Field, current or voltage
-    double                      iter_period;            // Iteration period
+    enum reg_mode               mode;                   ///< Regulation mode: Field, current or voltage
+    double                      iter_period;            ///< Iteration period
 
     // Field, current and voltage measurements
 
-    struct reg_meas_filter      b_meas;                 // Unfiltered and filtered field measurement (real or sim)
-    struct reg_meas_filter      i_meas;                 // Unfiltered and filtered current measurement (real or sim)
-    float                       v_meas;                 // Unfiltered voltage measurement (real or sim)
+    struct reg_meas_filter      b_meas;                 ///< Unfiltered and filtered field measurement (real or sim)
+    struct reg_meas_filter      i_meas;                 ///< Unfiltered and filtered current measurement (real or sim)
+    float                       v_meas;                 ///< Unfiltered voltage measurement (real or sim)
 
     // Field and current measurement rate
 
-    struct reg_meas_rate        b_rate;                 // Estimation of the rate of the field measurement
-    struct reg_meas_rate        i_rate;                 // Estimation of the rate of the current measurement
+    struct reg_meas_rate        b_rate;                 ///< Estimation of the rate of the field measurement
+    struct reg_meas_rate        i_rate;                 ///< Estimation of the rate of the current measurement
 
     // Reference and regulation variables
 
-    double                      period;                 // Regulation period
-    uint32_t                    period_iters;           // Regulation period (in iterations)
-    uint32_t                    iteration_counter;      // Iteration counter
-    double                      time;                   // Time of last regulation iteration
-    float                       ref_advance;            // Time to advance reference
-    float                       meas;                   // Field or current regulated measurement
+    double                      period;                 ///< Regulation period
+    uint32_t                    period_iters;           ///< Regulation period (in iterations)
+    uint32_t                    iteration_counter;      ///< Iteration counter
+    double                      time;                   ///< Time of last regulation iteration
+    float                       ref_advance;            ///< Time to advance reference
+    float                       meas;                   ///< Field or current regulated measurement
 
-    float                       ref;                    // Field or current reference
-    float                       ref_limited;            // Field or current reference after limits
-    float                       ref_rst;                // Field or current reference after back-calculation
-    float                       ref_delayed;            // Field or current reference delayed by track_delay
+    float                       ref;                    ///< Field or current reference
+    float                       ref_limited;            ///< Field or current reference after limits
+    float                       ref_rst;                ///< Field or current reference after back-calculation
+    float                       ref_delayed;            ///< Field or current reference delayed by track_delay
 
-    float                       v_ref;                  // Voltage reference before saturation or limits
-    float                       v_ref_sat;              // Voltage reference after saturation compensation
-    float                       v_ref_limited;          // Voltage reference after saturation and limits
+    float                       v_ref;                  ///< Voltage reference before saturation or limits
+    float                       v_ref_sat;              ///< Voltage reference after saturation compensation
+    float                       v_ref_limited;          ///< Voltage reference after saturation and limits
 
-    float                       err;                    // Regulation error (field or current)
-    float                       max_abs_err;            // Max absolute regulation error (field or current)
+    float                       err;                    ///< Regulation error (field or current)
+    float                       max_abs_err;            ///< Max absolute regulation error (field or current)
 
     // Measurement and reference limits and flags
 
-    struct reg_lim_meas         lim_i_meas;             // Current measurement limits
-    struct reg_lim_meas         lim_b_meas;             // Field measurement limits
+    struct reg_lim_meas         lim_i_meas;             ///< Current measurement limits
+    struct reg_lim_meas         lim_b_meas;             ///< Field measurement limits
 
-    struct reg_lim_ref          lim_v_ref;              // Voltage reference limits
-    struct reg_lim_ref          lim_i_ref;              // Current reference limits
-    struct reg_lim_ref          lim_b_ref;              // Field reference limits
+    struct reg_lim_ref          lim_v_ref;              ///< Voltage reference limits
+    struct reg_lim_ref          lim_i_ref;              ///< Current reference limits
+    struct reg_lim_ref          lim_b_ref;              ///< Field reference limits
 
-    struct                                              // Reference (field, current or voltage) limit flags
+    struct                                              ///< Reference (field, current or voltage) limit flags
     {
-        uint32_t                ref_clip;               // Reference is being clipped
-        uint32_t                ref_rate;               // Reference rate of change is being clipped
+        uint32_t                ref_clip;               ///< Reference is being clipped
+        uint32_t                ref_rate;               ///< Reference rate of change is being clipped
     } flags;
 
     // Regulation variables structures
 
-    struct reg_rst_vars         rst_vars;               // Field or current regulation RST variables
+    struct reg_rst_vars         rst_vars;               ///< Field or current regulation RST variables
 
-    enum reg_err_rate           b_err_rate;             // Rate control for field regulation error calculation
-    enum reg_err_rate           i_err_rate;             // Rate control for current regulation error calculation
+    enum reg_err_rate           b_err_rate;             ///< Rate control for field regulation error calculation
+    enum reg_err_rate           i_err_rate;             ///< Rate control for current regulation error calculation
 
-    struct reg_err              b_err;                  // Field regulation error
-    struct reg_err              i_err;                  // Current regulation error
-    struct reg_err              v_err;                  // Voltage regulation error
+    struct reg_err              b_err;                  ///< Field regulation error
+    struct reg_err              i_err;                  ///< Current regulation error
+    struct reg_err              v_err;                  ///< Voltage regulation error
 
     // Simulation variables structures
 
-    struct reg_sim_vs_vars      sim_vs_vars;            // Voltage source simulation variables
-    struct reg_sim_load_vars    sim_load_vars;          // Load simulation variables
+    struct reg_sim_vs_vars      sim_vs_vars;            ///< Voltage source simulation variables
+    struct reg_sim_load_vars    sim_load_vars;          ///< Load simulation variables
 
-    struct reg_sim_meas         b_sim;                  // Simulated magnet field value and measurement
-    struct reg_sim_meas         i_sim;                  // Simulated circuit and magnet current values and measurement
-    struct reg_sim_meas         v_sim;                  // Simulated circuit voltage and measurement
+    struct reg_sim_meas         b_sim;                  ///< Simulated magnet field value and measurement
+    struct reg_sim_meas         i_sim;                  ///< Simulated circuit and magnet current values and measurement
+    struct reg_sim_meas         v_sim;                  ///< Simulated circuit voltage and measurement
 };
 
 // The parameter structures that are time consuming to calculate are included in the following structure
