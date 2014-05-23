@@ -226,8 +226,9 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
         cctest.input[cctest.input_idx].line_number = 0;
         cctest.input[cctest.input_idx].path        = default_file_name;
 
-        // Display working directory and prompt
+        // Try to recover and display saved working directory
 
+        ccTestRecoverPath();
         ccCmdsPwd(0, remaining_line);
         printf(CC_PROMPT);
     }
@@ -502,7 +503,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
     // Write FLOT data if required
 
-    if(ccpars_global.flot_control == CC_ENABLED)
+    if(ccpars_global.flot_output == CC_ENABLED)
     {
         FILE    *flot_file;
         char     flot_path[CC_PATH_LEN];
@@ -531,6 +532,54 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
         ccSigsFlot(flot_file);
 
         fclose(flot_file);
+    }
+
+    // Write Debug file if required
+
+    if(ccpars_global.debug_output == CC_ENABLED)
+    {
+        FILE    *debug_file;
+        char     debug_path[CC_PATH_LEN];
+        char     debug_filename[CC_PATH_LEN];
+        struct cccmds *cmd;
+
+        snprintf(debug_path, CC_PATH_LEN, "%s/results/debug/%s/%s",
+                 cctest.base_path,
+                 ccpars_global.group,
+                 ccpars_global.project);
+
+        if(ccTestMakePath(debug_path) == EXIT_FAILURE)
+        {
+            return(EXIT_FAILURE);
+        }
+
+        snprintf(debug_filename, CC_PATH_LEN, "%s/%s.ccd", debug_path, filename);
+
+        debug_file = fopen(debug_filename, "w");
+
+        if(debug_file == NULL)
+        {
+             ccTestPrintError("opening file '%s' : %s (%d)", debug_filename, strerror(errno), errno);
+             return(EXIT_FAILURE);
+        }
+
+        // Print debug data to debug file
+
+        ccParsPrintDebug(debug_file);
+
+        // Print parameters to debug file
+
+        for(cmd = cmds ; cmd->name != NULL ; cmd++)
+        {
+            fputc('\n', debug_file);
+
+            if(cmd->enabled == 1)
+            {
+                ccParsPrintAll(debug_file, cmd->name, cmd->pars);
+            }
+        }
+
+        fclose(debug_file);
     }
 
     // Report bad values that were sent to ccSigsStore()

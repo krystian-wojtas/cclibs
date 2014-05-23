@@ -127,7 +127,8 @@ struct ccpars_global
     uint32_t            sim_load;           // Enable load simulation
     uint32_t            stop_on_error;      // Enable stop on error - this will stop reading the file
     uint32_t            csv_format;         // CSV output data format
-    uint32_t            flot_control;       // FLOT webplot output control (ENABLED or DISABLED)
+    uint32_t            flot_output;        // FLOT webplot output control (ENABLED or DISABLED)
+    uint32_t            debug_output;       // Debug output control (ENABLED or DISABLED)
     char *              group;              // Test group name (e.g. sandbox or tests)
     char *              project;            // Project name (e.g. SPS_MPS)
     char *              file;               // Results filename root (exclude .csv or .html)
@@ -149,6 +150,7 @@ CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
         CC_ENABLED,          // GLOBAL STOP_ON_ERROR
         CC_NONE,             // GLOBAL CSV_FORMAT
         CC_ENABLED,          // GLOBAL FLOT_OUTPUT
+        CC_DISABLED,         // GLOBAL DEBUG_OUTPUT
 }
 #endif
 ;
@@ -170,6 +172,7 @@ enum global_pars_index_enum
     GLOBAL_STOP_ON_ERROR     ,
     GLOBAL_CSV_FORMAT        ,
     GLOBAL_FLOT_OUTPUT       ,
+    GLOBAL_DEBUG_OUTPUT      ,
     GLOBAL_GROUP             ,
     GLOBAL_PROJECT           ,
     GLOBAL_FILE
@@ -190,7 +193,8 @@ CCPARS_GLOBAL_EXT struct ccpars global_pars[]
     { "SIM_LOAD",          PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.sim_load           }, 1 },
     { "STOP_ON_ERROR",     PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.stop_on_error      }, 1 },
     { "CSV_FORMAT",        PAR_ENUM,         1, 1, csv_format,       { .i = &ccpars_global.csv_format         }, 1 },
-    { "FLOT_OUTPUT",       PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.flot_control       }, 1 },
+    { "FLOT_OUTPUT",       PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.flot_output        }, 1 },
+    { "DEBUG_OUTPUT",      PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.debug_output       }, 1 },
     { "GROUP",             PAR_STRING,       1, 1, NULL,             { .s = &ccpars_global.group              }, 1 },
     { "PROJECT",           PAR_STRING,       1, 1, NULL,             { .s = &ccpars_global.project            }, 1 },
     { "FILE",              PAR_STRING,       1, 1, NULL,             { .s = &ccpars_global.file               }, 1 },
