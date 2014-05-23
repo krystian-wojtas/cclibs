@@ -61,7 +61,7 @@ static void ccSigsEnableSignal(enum ccsig_idx idx)
 
     // If FLOT output enabled then allocate buffer memory for non-Cursor signals
 
-    if(ccpars_global.flot_control == CC_ENABLED && signals[idx].type != CURSOR && signals[idx].buf == NULL)
+    if(ccpars_global.flot_output == CC_ENABLED && signals[idx].type != CURSOR && signals[idx].buf == NULL)
     {
         // Allocate space for overflow point since flot_index will stop at MAX_FLOT_POINTS
 
@@ -97,7 +97,7 @@ static void ccSigsStoreAnalog(enum ccsig_idx idx, float ana_value)
 
         // If FLOT output enabled then also save value in the FLOT buffer
 
-        if(ccpars_global.flot_control == CC_ENABLED)
+        if(ccpars_global.flot_output == CC_ENABLED)
         {
             signals[idx].buf[flot_index] = ana_value;
         }
@@ -138,7 +138,7 @@ static void ccSigsStoreDigital(enum ccsig_idx idx, uint32_t dig_value)
 
         // If FLOT output enabled then also save value in the FLOT buffer
 
-        if(ccpars_global.flot_control == CC_ENABLED)
+        if(ccpars_global.flot_output == CC_ENABLED)
         {
             signals[idx].buf[flot_index] = signals[idx].value;
         }
