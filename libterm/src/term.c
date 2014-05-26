@@ -448,7 +448,7 @@ static void TermShiftRemains(void)
 
     // Clear last character and move cursor the required number of columns to the left
 
-    fprintf(term_s.file, " " TERM_CSI "%hu" TERM_LEFT, (1 + term_s.line_end - term_s.line_idx));
+    fprintf(term_s.file, " " TERM_CSI "%hu" TERM_LEFT, (uint16_t)(1 + term_s.line_end - term_s.line_idx));
 }
 /*---------------------------------------------------------------------------------------------------------*/
 static void TermRepeatLine(void)
