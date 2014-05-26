@@ -51,14 +51,6 @@ struct termios stdin_config;            // Original stdin configuration used by 
 struct winsize window;                  // Window size is window.ws_row x window.ws_col
 
 /*---------------------------------------------------------------------------------------------------------*/
-static void SigWinch(int sig)
-/*---------------------------------------------------------------------------------------------------------*/
-{
-    // Read new window size
-
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &window);
-}
-/*---------------------------------------------------------------------------------------------------------*/
 static void ResetStdinConfig(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
@@ -130,6 +122,20 @@ static void ResetTerm(void)
 
     printf(TERM_CSI "%hu;1" TERM_GOTO "Keyboard character:                     Line length:" TERM_RESTORE_POS,
            window.ws_row - RTD_REPORT);
+
+    fflush(stdout);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static void SigWinch(int sig)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    // Read new window size
+
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &window);
+
+    // Reset the terminal window
+
+    ResetTerm();
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ProcessLine(char *line, uint16_t line_len)
@@ -176,7 +182,7 @@ int main(int argc, char **argv)
 
     TermLibInit(stdout, ProcessLine, PROMPT);
 
-    ResetTerm();
+    SigWinch(0);
 
     // Loop forever to process keyboard characters
 
@@ -190,7 +196,8 @@ int main(int argc, char **argv)
 
         // Report character value in the info zone on the terminal
 
-        printf(TERM_SAVE_POS TERM_CSI "23;21" TERM_GOTO TERM_CSI TERM_BOLD TERM_SGR "%3u" TERM_RESTORE_POS, keyboard_ch);
+        printf(TERM_SAVE_POS TERM_CSI "%hu;21" TERM_GOTO TERM_CSI TERM_BOLD TERM_SGR "%3u" TERM_RESTORE_POS,
+                window.ws_row - RTD_REPORT, keyboard_ch);
 
         // Catch CTRL-C to exit
 
