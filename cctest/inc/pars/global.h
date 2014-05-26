@@ -150,7 +150,7 @@ CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
         CC_ENABLED,          // GLOBAL STOP_ON_ERROR
         CC_NONE,             // GLOBAL CSV_FORMAT
         CC_ENABLED,          // GLOBAL FLOT_OUTPUT
-        CC_DISABLED,         // GLOBAL DEBUG_OUTPUT
+        CC_ENABLED,          // GLOBAL DEBUG_OUTPUT
 }
 #endif
 ;

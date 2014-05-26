@@ -56,11 +56,8 @@ enum reg_err_rate
 
 struct reg_sim_meas                                     ///< Measurement simulation structure
 {
-    struct reg_delay            magnet_delay;           ///< Simulated magnet value delay parameters
-    struct reg_delay            circuit_delay;          ///< Simulated circuit value delay parameters
+    struct reg_delay            meas_delay;             ///< Measurement delay parameters
     struct reg_noise_and_tone   noise_and_tone;         ///< Simulated noise and tone parameters
-    float                       magnet;                 ///< Simulated magnet value
-    float                       circuit;                ///< Simulated circuit value
     float                       meas;                   ///< Simulated measurement of circuit with noise and tone
 };
 

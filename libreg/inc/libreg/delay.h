@@ -29,20 +29,14 @@
 
 #define REG_DELAY_BUF_INDEX_MASK    31
 
-// Signal delay structure - supports two different delays in parallel
-
-struct reg_delay_pars
-{
-    int32_t                     delay_int;                      // Integer delays in iteration periods
-    float                       delay_frac;                     // Fractional delays in iteration periods
-};
+// Signal delay structure
 
 struct reg_delay
 {
-    int32_t                     buf_index;                      // Index into circular buffer
-    float                       buf[REG_DELAY_BUF_INDEX_MASK+1];// Circular buffer for signal
-    struct reg_delay_pars       delay_1;                        // Delay 1 parameters
-    struct reg_delay_pars       delay_2;                        // Delay 2 parameters
+    int32_t                     buf_index;                         ///< Index into circular buffer
+    float                       buf[REG_DELAY_BUF_INDEX_MASK+1];   ///< Circular buffer for signal
+    int32_t                     delay_int;                         ///< Integer delays in iteration periods
+    float                       delay_frac;                        ///< Fractional delays in iteration periods
 };
 
 // Signal delay functions
@@ -51,9 +45,9 @@ struct reg_delay
 extern "C" {
 #endif
 
-void    regDelayInitDelays  (struct reg_delay *delay, uint32_t under_sampled_flag, float delay_1_iters, float delay_2_iters);
+void    regDelayInitDelay   (struct reg_delay *delay, uint32_t under_sampled_flag, float delay_iters);
 void    regDelayInitVars    (struct reg_delay *delay, float initial_signal);
-void    regDelayCalc        (struct reg_delay *delay, float signal, float *delayed_signal_1, float *delayed_signal_2);
+float   regDelayCalc        (struct reg_delay *delay, float signal);
 
 #ifdef __cplusplus
 }

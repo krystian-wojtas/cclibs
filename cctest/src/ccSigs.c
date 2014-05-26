@@ -179,6 +179,7 @@ void ccSigsInit(void)
     {
         signals[idx].control        = CC_DISABLED;
         signals[idx].num_bad_values = 0;
+        signals[idx].time_offset    = 0.0;
     }
 
     // Voltage reference is always enabled
@@ -189,6 +190,13 @@ void ccSigsInit(void)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
+        // Set time offset for circuit simulation signals
+
+        signals[ANA_B_MAGNET ].time_offset =
+        signals[ANA_I_MAGNET ].time_offset =
+        signals[ANA_I_CIRCUIT].time_offset =
+        signals[ANA_V_CIRCUIT].time_offset = ccpars_vs.v_ref_delay_iters * ccpars_global.iter_period;
+
         // Enable cursor signals only if CSV output is for the Labview Dataviewer (LVDV)
 
         if(ccpars_global.csv_format == CC_LVDV)
@@ -350,13 +358,13 @@ void ccSigsStore(double time)
             break;
         }
 
-        ccSigsStoreAnalog( ANA_B_MAGNET,       reg.b_sim.magnet);
+        ccSigsStoreAnalog( ANA_B_MAGNET,       reg.sim_load_vars.magnet_field);
         ccSigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.meas[REG_MEAS_UNFILTERED]);
         ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.meas[REG_MEAS_FILTERED]);
         ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.meas[REG_MEAS_EXTRAPOLATED]);
 
-        ccSigsStoreAnalog (ANA_I_MAGNET,       reg.i_sim.magnet);
-        ccSigsStoreAnalog (ANA_I_CIRCUIT,      reg.i_sim.circuit);
+        ccSigsStoreAnalog (ANA_I_MAGNET,       reg.sim_load_vars.magnet_current);
+        ccSigsStoreAnalog (ANA_I_CIRCUIT,      reg.sim_load_vars.circuit_current);
         ccSigsStoreAnalog (ANA_I_MEAS,         reg.i_meas.meas[REG_MEAS_UNFILTERED]);
         ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i_meas.meas[REG_MEAS_FILTERED]);
         ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i_meas.meas[REG_MEAS_EXTRAPOLATED]);
@@ -365,7 +373,7 @@ void ccSigsStore(double time)
 
         ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v_ref_sat);
         ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
-        ccSigsStoreAnalog (ANA_V_CIRCUIT,      reg.v_sim.circuit);
+        ccSigsStoreAnalog (ANA_V_CIRCUIT,      reg.sim_load_vars.circuit_voltage);
         ccSigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
@@ -466,6 +474,7 @@ void ccSigsFlot(FILE *f)
     uint32_t       n_points = 0;
     double         time;
     double         start_func_time;
+    float          time_offset;
     struct cccmds *cmd;
 
     // Warn user if FLOT data was truncated
@@ -556,6 +565,8 @@ void ccSigsFlot(FILE *f)
     {
         if(signals[sig_idx].control == CC_ENABLED && signals[sig_idx].type == ANALOG)
         {
+            time_offset = signals[sig_idx].time_offset;
+
             fprintf(f,"\"%s\": { lines: { steps:%s }, points: { show:false },\ndata:[",
                     signals[sig_idx].name,
                     signals[sig_idx].meta_data[0] == 'T' ? "true" : "false");
@@ -571,7 +582,7 @@ void ccSigsFlot(FILE *f)
                 {
                     if(ccpars_global.reverse_time == CC_DISABLED)
                     {
-                        time = reg.iter_period * iteration_idx;
+                        time = reg.iter_period * iteration_idx + time_offset;
                     }
                     else
                     {

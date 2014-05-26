@@ -75,7 +75,7 @@ void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, float sim_period)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     // Derive ratio of the simulation period and the time constant of the load's primary pole.
-    // If this is greater than 3.0 then the load is considered to be undersampled and ohms law will be used
+    // If this is greater than 3.0 then the load is considered to be under-sampled and ohms law will be used
     // when simulating the load.
 
     sim_load_pars->period_tc_ratio        = sim_period / sim_load_pars->load_pars.tc;
@@ -95,15 +95,15 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
   This function initialises the load simulation with the current i_init.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    vars->voltage = i_init / pars->load_pars.gain2;
+    vars->circuit_voltage = i_init / pars->load_pars.gain2;
 
     if(pars->load_undersampled_flag == 0)
     {
-        vars->integrator = vars->voltage * pars->load_pars.gain1;
+        vars->integrator   = vars->circuit_voltage * pars->load_pars.gain1;
         vars->compensation = 0.0;
     }
 
-    regSimLoad(pars, vars, vars->voltage);
+    regSimLoad(pars, vars, vars->circuit_voltage);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init)
@@ -113,18 +113,18 @@ void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_va
 {
     if(pars->load_undersampled_flag == 0)
     {
-        vars->integrator   = v_init * pars->load_pars.gain1;
-        vars->voltage      = v_init;
-        vars->compensation = 0.0;
+        vars->integrator      = v_init * pars->load_pars.gain1;
+        vars->circuit_voltage = v_init;
+        vars->compensation    = 0.0;
     }
 
     regSimLoad(pars, vars, v_init);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_load)
+float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_circuit)
 /*---------------------------------------------------------------------------------------------------------*\
   This function simulates the current in the load in response to the specified load voltage.  The algorithm
-  depends upon whether the voltage source simulation and the load are undersampled.
+  depends upon whether the voltage source simulation and the load are under-sampled.
 
   The computation of the integrator (vars->integrator) makes use of the Kahan Summation Algorithm which
   largely improves the precision on the sum, especially in that specific function where the increment is
@@ -154,17 +154,17 @@ float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
 
     if(pars->load_undersampled_flag == 0)
     {
-        int_gain = pars->period_tc_ratio / regLoadCalcSatFactor(&pars->load_pars,vars->mag_current);
+        int_gain = pars->period_tc_ratio / regLoadCalcSatFactor(&pars->load_pars,vars->magnet_current);
 
         // If voltage source simulation is not under sampled use first-order interpolation of voltage
 
         if(pars->vs_undersampled_flag == 0)
         {
-            increment = int_gain * (pars->load_pars.gain1 * 0.5 * (v_load + vars->voltage) - vars->integrator);
+            increment = int_gain * (pars->load_pars.gain1 * 0.5 * (v_circuit + vars->circuit_voltage) - vars->integrator);
         }
-        else // else when voltage source simulation is under sampled use final voltage for complete sample
+        else // else when voltage source simulation is under sampled use initial voltage for complete sample
         {
-            increment = int_gain * (pars->load_pars.gain1 * v_load - vars->integrator);
+            increment = int_gain * (pars->load_pars.gain1 * vars->circuit_voltage - vars->integrator);
         }
 
         // Computation of the integrator using Kahan Summation
@@ -174,24 +174,24 @@ float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
         vars->integrator   = prev_integrator + increment;
         vars->compensation = (vars->integrator - prev_integrator) - increment;  // Algebraically 0, in fact holds the
                                                                                 // floating-point error compensation
-        vars->current      = vars->integrator + pars->load_pars.gain0 * v_load;
-        vars->mag_current  = vars->integrator * pars->load_pars.ohms1;
+        vars->circuit_current = vars->integrator + pars->load_pars.gain0 * v_circuit;
+        vars->magnet_current  = vars->integrator * pars->load_pars.ohms1;
     }
     else // else when load is under sampled the inductive transients are ignored and ohms law is used
     {
-        vars->current     = v_load * pars->load_pars.gain2;
-        vars->mag_current = vars->current * pars->load_pars.ohms2;
+        vars->circuit_current = v_circuit * pars->load_pars.gain2;
+        vars->magnet_current  = vars->circuit_current * pars->load_pars.ohms2;
     }
 
     // Remember load voltage for next iteration
 
-    vars->voltage = v_load;
+    vars->circuit_voltage = v_circuit;
 
     // Simulate magnet field based on magnet current
 
-    vars->field = regLoadCurrentToField(&pars->load_pars, vars->mag_current);
+    vars->magnet_field = regLoadCurrentToField(&pars->load_pars, vars->magnet_current);
 
-    return(vars->current);
+    return(vars->circuit_current);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidth, float z, float tau_zero)
@@ -329,24 +329,24 @@ uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *
     return(0);                                  // Report that model is not under-sampled
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_load)
+float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_circuit)
 /*---------------------------------------------------------------------------------------------------------*\
   This function initialises the voltage source simulation history to be in steady-state with the given
-  v_load value.  The function returns the corresponding steady state v_ref.  Note that the gain must
+  v_circuit value.  The function returns the corresponding steady state v_ref.  Note that the gain must
   be calculated before calling this function using regSimVsInitGain().
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t        idx;
     float           v_ref;
 
-    // Initialise history arrays for v_ref and v_load
+    // Initialise history arrays for v_ref and v_circuit
 
-    v_ref = v_load / pars->gain;
+    v_ref = v_circuit / pars->gain;
 
     for(idx = 0 ; idx < REG_N_VS_SIM_COEFFS ; idx++)
     {
-        vars->v_ref [idx] = v_ref;
-        vars->v_load[idx] = v_load;
+        vars->v_ref [idx]    = v_ref;
+        vars->v_circuit[idx] = v_circuit;
     }
 
     return(v_ref);
@@ -359,33 +359,33 @@ float regSimVs(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float
 {
     uint32_t    i;
     uint32_t    j;
-    float       v_load;
+    float       v_circuit;
 
     // Shift history of input and output
 
     for(i = REG_N_VS_SIM_COEFFS-2, j = REG_N_VS_SIM_COEFFS-1 ; j ; i--,j--)
     {
-        vars->v_ref [j] = vars->v_ref [i];
-        vars->v_load[j] = vars->v_load[i];
+        vars->v_ref [j]    = vars->v_ref [i];
+        vars->v_circuit[j] = vars->v_circuit[i];
     }
 
     vars->v_ref[0] = v_ref;
 
-    v_load = pars->num[0] * v_ref;
+    v_circuit = pars->num[0] * v_ref;
 
     for(i = 1 ; i < REG_N_VS_SIM_COEFFS ; i++)
     {
-        v_load += pars->num[i] * vars->v_ref[i] - pars->den[i] * vars->v_load[i];
+        v_circuit += pars->num[i] * vars->v_ref[i] - pars->den[i] * vars->v_circuit[i];
     }
 
     if(pars->den[0] != 0.0)     // Protect against divide by zero
     {
-        v_load /= pars->den[0];
+        v_circuit /= pars->den[0];
     }
 
-    vars->v_load[0] = v_load;
+    vars->v_circuit[0] = v_circuit;
 
-    return(v_load);
+    return(v_circuit);
 }
 // EOF
 

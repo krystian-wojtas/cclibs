@@ -185,13 +185,13 @@ void ccRunSimulation(void)
             perturb_volts = ccpars_load.perturb_volts;
         }
 
-        // Store and print to CSV file the enabled signals
-
-        ccSigsStore(time);
-
         // Simulate voltage source and load response (with voltage perturbation added)
 
         regSimulate(&reg, &reg_pars, perturb_volts);
+
+        // Store and print to CSV file the enabled signals
+
+        ccSigsStore(time);
 
         // Check if any condition requires the converter to trip
 

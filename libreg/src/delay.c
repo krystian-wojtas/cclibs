@@ -27,14 +27,14 @@
 #include "libreg/delay.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-static void regDelayCalcDelay(struct reg_delay_pars *delay, uint32_t under_sampled_flag, float delay_iters)
+void regDelayInitDelay(struct reg_delay *delay, uint32_t under_sampled_flag, float delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function converts the delay in iterations into integer and fractional parts, taking into account
-  the under_sampled flag. When the signal is under sampled, it is assumed to jump to the final value
-  for an iteration immediately - so the delay is round up to the next integer value.
+  This function initialises the reg_delay structure parameters.  The undersampled_flag can be used to
+  suppress the linear interpolation between samples.  When set it assumes that the signal settles to
+  the new value immediately.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float delay_int;      // double variable required for modf() function
+    float delay_int;
 
     // Clip delay
 
@@ -63,22 +63,6 @@ static void regDelayCalcDelay(struct reg_delay_pars *delay, uint32_t under_sampl
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regDelayInitDelays(struct reg_delay *delay, uint32_t under_sampled_flag,
-                        float delay_1_iters, float delay_2_iters)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function initialises the reg_delay structure parameters.  The undersampled_flag can be used to
-  suppress the linear interpolation between samples.  When set it assumes that the signal settles to
-  the new value immediately.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    regDelayCalcDelay(&delay->delay_1, under_sampled_flag, delay_1_iters);
-
-    if(delay_2_iters > 0.0)
-    {
-        regDelayCalcDelay(&delay->delay_2, under_sampled_flag, delay_2_iters);
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
 void regDelayInitVars(struct reg_delay *delay, float initial_signal)
 /*---------------------------------------------------------------------------------------------------------*\
   This function can be called to initialise the reg_delay structure variables.
@@ -92,32 +76,20 @@ void regDelayInitVars(struct reg_delay *delay, float initial_signal)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void regDelayCalcSignal(struct reg_delay *delay, struct reg_delay_pars *pars, float *delayed_signal)
+float regDelayCalc(struct reg_delay *delay, float signal)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function calculates the delayed signal value.
+  This function should be called after the delay structure has been initialised.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float s0 = delay->buf[(delay->buf_index - pars->delay_int    ) & REG_DELAY_BUF_INDEX_MASK];
-    float s1 = delay->buf[(delay->buf_index - pars->delay_int - 1) & REG_DELAY_BUF_INDEX_MASK];
+    float s0;
+    float s1;
 
-    *delayed_signal = s0 + pars->delay_frac * (s1 - s0);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void regDelayCalc(struct reg_delay *delay, float signal, float *delayed_signal_1, float *delayed_signal_2)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function should be called after the delay structure has been initialised.  It returns a
-  status to indicate if the delayed_signal can be used.  This will be zero initially (invalid) until
-  the history buffer is full and then it becomes 1, at which point the delayed_signal can be used.
-\*---------------------------------------------------------------------------------------------------------*/
-{
     delay->buf[++delay->buf_index & REG_DELAY_BUF_INDEX_MASK] = signal;
 
-    regDelayCalcSignal(delay, &delay->delay_1, delayed_signal_1);
+    s0 = delay->buf[(delay->buf_index - delay->delay_int    ) & REG_DELAY_BUF_INDEX_MASK];
+    s1 = delay->buf[(delay->buf_index - delay->delay_int - 1) & REG_DELAY_BUF_INDEX_MASK];
 
-    if(delayed_signal_2 != 0)
-    {
-        regDelayCalcSignal(delay, &delay->delay_2, delayed_signal_2);
-    }
+    return(s0 + delay->delay_frac * (s1 - s0));
 }
 // EOF
 

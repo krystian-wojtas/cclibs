@@ -53,10 +53,10 @@ void regSetSimLoad(struct reg_converter *reg, struct reg_converter_pars *reg_par
         break;
     }
 
-    reg->v_meas = reg->sim_load_vars.voltage;
+    reg->v_meas = reg->sim_load_vars.circuit_voltage;
     
-    reg->i_meas.meas[REG_MEAS_FILTERED] = reg->i_meas.meas[REG_MEAS_UNFILTERED] = reg->sim_load_vars.current;
-    reg->b_meas.meas[REG_MEAS_FILTERED] = reg->b_meas.meas[REG_MEAS_UNFILTERED] = reg->sim_load_vars.field;
+    reg->i_meas.meas[REG_MEAS_FILTERED] = reg->i_meas.meas[REG_MEAS_UNFILTERED] = reg->sim_load_vars.circuit_current;
+    reg->b_meas.meas[REG_MEAS_FILTERED] = reg->b_meas.meas[REG_MEAS_UNFILTERED] = reg->sim_load_vars.magnet_field;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSetMeas(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
@@ -519,32 +519,25 @@ void regSimulate(struct reg_converter *reg, struct reg_converter_pars *reg_pars,
   regConverter().  A voltage perturbation can be included in the simulation via the v_perturbation parameter.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float sim_advanced_v_load;      // Simulated v_load without V_REF_DELAY
+    float v_circuit;      // Simulated v_circuit without V_REF_DELAY
 
     // Simulate voltage source response to v_ref without taking into account V_REF_DELAY
 
-    sim_advanced_v_load = regSimVs(&reg_pars->sim_vs_pars, &reg->sim_vs_vars, reg->v_ref_limited);
+    v_circuit = regSimVs(&reg_pars->sim_vs_pars, &reg->sim_vs_vars, reg->v_ref_limited);
 
-    // Simulate load current and field in response to sim_advanced_v_load plus the perturbation
+    // Simulate load current and field in response to sim_advanced_v_circuit plus the perturbation
 
-    regSimLoad(&reg_pars->sim_load_pars, &reg->sim_load_vars, sim_advanced_v_load + v_perturbation);
+    regSimLoad(&reg_pars->sim_load_pars, &reg->sim_load_vars, v_circuit + v_perturbation);
 
     // Use delays to estimate the voltage across the load and the measurement of this voltage
 
-    regDelayCalc(&reg->v_sim.circuit_delay, reg->sim_load_vars.voltage, &reg->v_sim.circuit, &reg->v_sim.meas);
+    reg->b_sim.meas = regDelayCalc(&reg->b_sim.meas_delay, reg->sim_load_vars.magnet_field);
+    reg->i_sim.meas = regDelayCalc(&reg->i_sim.meas_delay, reg->sim_load_vars.circuit_current);
+    reg->v_sim.meas = regDelayCalc(&reg->v_sim.meas_delay, reg->sim_load_vars.circuit_voltage);
 
     // Store simulated voltage measurement without noise as the delayed ref for the v_err calculation
 
     reg->v_err.delayed_ref = reg->v_sim.meas;
-
-    // Use delays to estimate the current in the load and the measurement of this current
-
-    regDelayCalc(&reg->i_sim.magnet_delay,  reg->sim_load_vars.mag_current, &reg->i_sim.magnet, NULL);
-    regDelayCalc(&reg->i_sim.circuit_delay, reg->sim_load_vars.current,     &reg->i_sim.circuit, &reg->i_sim.meas);
-
-    // Use delays to estimate the field in the load and the measurement of this field
-
-    regDelayCalc(&reg->b_sim.magnet_delay, reg->sim_load_vars.field, &reg->b_sim.magnet, &reg->b_sim.meas);
 
     // Simulate noise and tone on measurement of field, current and voltage
 
