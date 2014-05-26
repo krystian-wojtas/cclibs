@@ -201,7 +201,7 @@ static uint16_t TermLevel2(char keyboard_ch)
 /*---------------------------------------------------------------------------------------------------------*/
 static uint16_t TermLevel3(char keyboard_ch)
 /*---------------------------------------------------------------------------------------------------------*\
-  Level 3:  Orignial Key was a Function with sequence terminated by 0x7E (~).  However, the function will
+  Level 3:  Original Key was a Function with sequence terminated by 0x7E (~).  However, the function will
   also accept a new [ESC] to allow an escape route in case of corrupted reception.
 \*---------------------------------------------------------------------------------------------------------*/
 {

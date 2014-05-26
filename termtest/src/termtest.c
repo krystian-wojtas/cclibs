@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     termtest.c                                                                  Copyright CERN 2011
+  File:     termtest.c                                                                  Copyright CERN 2014
 
   License:  This program is free software: you can redistribute it and/or modify
             it under the terms of the GNU Lesser General Public License as published by
@@ -25,26 +25,41 @@
             part for static information.  This uses the ability to save the cursor position, then
             move and write a field, and then restore the cursor position.  The program also shows how
             to use the terminal control sequences that can set text or background colour, bold and
-            underline.  These use the sequency TERM_CSI + formatting codes + TERM_SGR.
+            underline.  These use the sequence TERM_CSI + formatting codes + TERM_SGR.
 \*---------------------------------------------------------------------------------------------------------*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
+#include <signal.h>
+#include <sys/ioctl.h>
 
 #include "libterm.h"                    // Include libterm header file
 
 // Constants
 
 #define PROMPT          '>'             // Prompt can only be a single character
+#define N_RTD_LINES     3               // Number of real-time display lines
+#define RTD_RULER       2               // Ruler line row (from bottom)
+#define RTD_REPORT      1               // Report line for new character (from bottom)
+#define RTD_RESULT      0               // Resulting input line (from bottom)
 
 // Global variables
 
 struct termios stdin_config;            // Original stdin configuration used by ResetStdinConfig()
+struct winsize window;                  // Window size is window.ws_row x window.ws_col
 
 /*---------------------------------------------------------------------------------------------------------*/
-void ResetStdinConfig(void)
+static void SigWinch(int sig)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    // Read new window size
+
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &window);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static void ResetStdinConfig(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     TermInit();                                  // Initialise terminal on stdout (clear screen, etc...)
@@ -52,12 +67,20 @@ void ResetStdinConfig(void)
     tcsetattr(STDIN_FILENO, 0, &stdin_config);   // Restore stdin configuation
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ResetTerm(void)
+static void ResetTerm(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
+    uint16_t    i;
+
+    if(window.ws_row < (N_RTD_LINES + 1))
+    {
+        puts("Too few rows - exiting");
+        exit(-1);
+    }
+
     TermInit();                                 // Initialise terminal on stdout (clear screen, etc...)
 
-    printf(TERM_SET_SCROLL_LINES, 1, 21);       // Set scroll zone to be from lines 1 to 21
+    printf(TERM_SET_SCROLL_LINES, 1, window.ws_row - N_RTD_LINES);  // Set scroll zone
 
     // Print example formatting and help information in the scolled zone and end with prompt
 
@@ -98,10 +121,15 @@ void ResetTerm(void)
 
     // Prepare information zone in non-scolled lines at the bottom of the terminal
 
-    printf(TERM_SAVE_POS TERM_CSI "22;1" TERM_GOTO);  // Save cursor and jump to info zone (from lines 22-24)
+    printf(TERM_SAVE_POS TERM_CSI "%hu;1" TERM_GOTO, window.ws_row - RTD_RULER);
 
-    printf("+---------+---------+---------+---------+---------+---------+---------+---------");
-    printf(TERM_CSI "23;1" TERM_GOTO "Keyboard character:                     Line length:" TERM_RESTORE_POS);
+    for(i = 0 ; i < window.ws_col ; i++)
+    {
+        putchar('-');
+    }
+
+    printf(TERM_CSI "%hu;1" TERM_GOTO "Keyboard character:                     Line length:" TERM_RESTORE_POS,
+           window.ws_row - RTD_REPORT);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ProcessLine(char *line, uint16_t line_len)
@@ -109,11 +137,13 @@ void ProcessLine(char *line, uint16_t line_len)
 {
     // Report line length in info zone
 
-    printf(TERM_SAVE_POS TERM_CSI "23;54" TERM_GOTO TERM_CSI TERM_BOLD TERM_SGR "%3hu", line_len);
+    printf(TERM_SAVE_POS TERM_CSI "%hu;54" TERM_GOTO TERM_CSI TERM_BOLD TERM_SGR "%3hu",
+           window.ws_row - RTD_REPORT, line_len);
 
     // Report line buffer in info zone
 
-    printf(TERM_CSI "24;1" TERM_GOTO TERM_CLR_LINE "%s" TERM_RESTORE_POS, line);
+    printf(TERM_CSI "%hu;1" TERM_GOTO TERM_CLR_LINE "%s" TERM_RESTORE_POS, window.ws_row - RTD_RESULT, line);
+
 }
 /*---------------------------------------------------------------------------------------------------------*/
 int main(int argc, char **argv)
@@ -122,6 +152,10 @@ int main(int argc, char **argv)
     int            keyboard_ch;
     uint16_t       term_level;
     struct termios stdin_config_raw;
+
+    // Catch SIGWINCH
+
+    signal(SIGWINCH, SigWinch);
 
     // Configure stdin to receive keyboard characters one at a time and without echo
 
@@ -187,7 +221,5 @@ int main(int argc, char **argv)
         // to refresh the terminal.
     }
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: termtest.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
 
