@@ -113,7 +113,7 @@ static void ResetTerm(void)
 
     // Prepare information zone in non-scolled lines at the bottom of the terminal
 
-    printf(TERM_SAVE_POS TERM_CSI "%hu;1" TERM_GOTO, window.ws_row - RTD_RULER);
+    printf(TERM_SAVE_POS TERM_CSI "%hu;1" TERM_GOTO, (uint16_t)(window.ws_row - RTD_RULER));
 
     for(i = 0 ; i < window.ws_col ; i++)
     {
@@ -121,7 +121,7 @@ static void ResetTerm(void)
     }
 
     printf(TERM_CSI "%hu;1" TERM_GOTO "Keyboard character:                     Line length:" TERM_RESTORE_POS,
-           window.ws_row - RTD_REPORT);
+           (uint16_t)(window.ws_row - RTD_REPORT));
 
     fflush(stdout);
 }
@@ -144,11 +144,12 @@ void ProcessLine(char *line, uint16_t line_len)
     // Report line length in info zone
 
     printf(TERM_SAVE_POS TERM_CSI "%hu;54" TERM_GOTO TERM_CSI TERM_BOLD TERM_SGR "%3hu",
-           window.ws_row - RTD_REPORT, line_len);
+           (uint16_t)(window.ws_row - RTD_REPORT), line_len);
 
     // Report line buffer in info zone
 
-    printf(TERM_CSI "%hu;1" TERM_GOTO TERM_CLR_LINE "%s" TERM_RESTORE_POS, window.ws_row - RTD_RESULT, line);
+    printf(TERM_CSI "%hu;1" TERM_GOTO TERM_CLR_LINE "%s" TERM_RESTORE_POS, 
+           (uint16_t)(window.ws_row - RTD_RESULT), line);
 
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -197,7 +198,7 @@ int main(int argc, char **argv)
         // Report character value in the info zone on the terminal
 
         printf(TERM_SAVE_POS TERM_CSI "%hu;21" TERM_GOTO TERM_CSI TERM_BOLD TERM_SGR "%3u" TERM_RESTORE_POS,
-                window.ws_row - RTD_REPORT, keyboard_ch);
+                (uint16_t)(window.ws_row - RTD_REPORT), keyboard_ch);
 
         // Catch CTRL-C to exit
 
