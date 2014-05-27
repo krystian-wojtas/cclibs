@@ -1,5 +1,5 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     libfg/table.h                                                               Copyright CERN 2014
+/*
+  Copyright CERN 2014
 
   License:  This file is part of libfg.
 
@@ -15,19 +15,24 @@
 
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
-  Purpose:  Header file for table.c : Linearly interpolated table functions
-
-  Contact:  cclibs-devs@cern.ch
-
-  Notes:    The same TABLE configuration can be used with the SPLINE function to smoothly iterpolate
-            the table of points.
-
-            The fgTableGen function receives time as a pointer to constant float rather than as a float value.
-            This allows the user to initialise an array of pointers to functions with the pointer to the
-            fgTableGen function.  If time is passed by value then the compiler promotes the float to double
-            and prevents the correct initialisation.
-\*---------------------------------------------------------------------------------------------------------*/
+/**
+ * @file    table.h
+ * @author  cclibs-devs@cern.ch
+ * @date    May 2014
+ * @brief   Header file for table.c : Linearly interpolated table functions
+ *
+ * The same TABLE configuration can be used with the SPLINE function to smoothly iterpolate
+ * the table of points.
+ *
+ * The fgTableGen function receives time as a pointer to constant float rather than as a float value.
+ * This allows the user to initialise an array of pointers to functions with the pointer to the
+ * fgTableGen function.  If time is passed by value then the compiler promotes the float to double
+ * and prevents the correct initialisation.
+ *
+ * @see http://cern.ch/cclibs
+ */
 
 #ifndef LIBFG_TABLE_H
 #define LIBFG_TABLE_H
