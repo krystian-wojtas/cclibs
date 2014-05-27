@@ -38,18 +38,18 @@ struct reg_sim_load_pars                                        // Load simulati
 {
     float                       tc_error;                       // Simulated load time constant error
     float                       period_tc_ratio;                // Simulation period / load time constant
-    uint32_t                    load_undersampled_flag;         // Simulated load is undersampled flag
-    uint32_t                    vs_undersampled_flag;           // Simulated voltage source is undersampled flag
+    uint32_t                    load_undersampled_flag;         // Simulated load is under-sampled flag
+    uint32_t                    vs_undersampled_flag;           // Simulated voltage source is under-sampled flag
 
     struct reg_load_pars load_pars;                             // Simulated load parameters
 };
 
 struct reg_sim_load_vars                                        // Load simulation variables
 {
-    float                       voltage;                        // Load voltage from voltage source simulation
-    float                       field;                          // Simulated magnet field
-    float                       current;                        // Simulated circuit current
-    float                       mag_current;                    // Simulated magnet current
+    float                       circuit_voltage;                // Circuit voltage (without V_REF_DELAY)
+    float                       circuit_current;                // Circuit current (without V_REF_DELAY)
+    float                       magnet_current;                 // Magnet current  (without V_REF_DELAY)
+    float                       magnet_field;                   // Magnet field    (without V_REF_DELAY)
     float volatile              integrator;                     // Integrator for simulated current
     float                       compensation;                   // Compensation for Kahan Summation
 };
@@ -65,8 +65,8 @@ struct reg_sim_vs_pars                                          // Voltage sourc
 
 struct reg_sim_vs_vars                                          // Voltage source simulation variables
 {
-    float                       v_ref [REG_N_VS_SIM_COEFFS];    // Voltage reference history
-    float                       v_load[REG_N_VS_SIM_COEFFS];    // Simulated load voltage history
+    float                       v_ref    [REG_N_VS_SIM_COEFFS]; // Voltage reference history
+    float                       v_circuit[REG_N_VS_SIM_COEFFS]; // Simulated circuit voltage history
 };
 
 #ifdef __cplusplus

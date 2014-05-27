@@ -15,6 +15,7 @@ inc_path        = inc
 lib             = $(exec_path)/libfg.a
 obj_path        = $(os)/$(cpu)/obj
 src_path        = src
+doxygen_path    = html
 
 vpath %.c $(src_path)
 vpath %.h $(inc_path)
@@ -43,7 +44,7 @@ all: $(lib)
 # Clean output files
 
 clean:
-	rm -f $(dep_path)/*.d $(obj_path)/*.o $(lib)
+	rm -rf $(doxygen_path) $(dep_path)/*.d $(obj_path)/*.o $(lib) 
 
 $(lib): $(objects)
 	@[ -d $(@D) ] || mkdir -p $(@D)
@@ -62,6 +63,9 @@ $(obj_path)/%.o: %.c
 
 # Special targets
 
-.PHONY: all clean
+doxygen:
+	doxygen .doxygen
+	
+.PHONY: all clean doxygen
 
 # EOF

@@ -236,7 +236,7 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par)
         {
             if(idx > 0)
             {
-                fputc(',',f);
+                fputc(' ',f);
             }
 
             switch(par->type)
@@ -290,7 +290,7 @@ static char * ccParsDebugLabel(char *prefix, char *variable)
 
     if(idx < PARS_INDENT)
     {
-        *(label++) = ':';
+        *(label++) = ' ';
         idx++;
     }
 
@@ -302,6 +302,7 @@ static char * ccParsDebugLabel(char *prefix, char *variable)
     }
 
     // Trailing spaces
+
     while(idx++ < PARS_INDENT)
     {
         *(label++) = ' ';
@@ -367,44 +368,39 @@ void ccParsPrintDebug(FILE *f)
 
         // Report internally calculated voltage source parameters
 
-        fprintf(f,"%-*s" FLOAT_FORMAT "," FLOAT_FORMAT "," FLOAT_FORMAT "," FLOAT_FORMAT "\n", PARS_INDENT, "SIMVS:numerator",
-                     reg_pars.sim_vs_pars.num[0],
-                     reg_pars.sim_vs_pars.num[1],
-                     reg_pars.sim_vs_pars.num[2],
-                     reg_pars.sim_vs_pars.num[3]);
+        for(i = 0 ; i < REG_N_VS_SIM_COEFFS ; i++)
+        {
+            fprintf(f,"%-*s" DOUBLE_FORMAT "  " DOUBLE_FORMAT "\n", PARS_INDENT, "SIMVS num:den",
+                     reg_pars.sim_vs_pars.num[i],
+                     reg_pars.sim_vs_pars.den[i]);
+        }
 
-        fprintf(f,"%-*s" FLOAT_FORMAT "," FLOAT_FORMAT "," FLOAT_FORMAT "," FLOAT_FORMAT "\n", PARS_INDENT, "SIMVS:denominator",
-                     reg_pars.sim_vs_pars.den[0],
-                     reg_pars.sim_vs_pars.den[1],
-                     reg_pars.sim_vs_pars.den[2],
-                     reg_pars.sim_vs_pars.den[3]);
-
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS:step_rsp_time_iters",reg_pars.sim_vs_pars.step_rsp_time_iters);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS:gain",               reg_pars.sim_vs_pars.gain);
+        fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS step_rsp_time_iters",reg_pars.sim_vs_pars.step_rsp_time_iters);
+        fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",               reg_pars.sim_vs_pars.gain);
 
         // Report internally calculated field regulation parameters
 
         if(ccrun.breg_flag == 1)
         {
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG:pure_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG pure_delay_periods",
                                reg_pars.b_rst_pars.pure_delay_periods);
 
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "BREG:alg_index", reg_pars.b_rst_pars.alg_index);
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "BREG:dead_beat", reg_pars.b_rst_pars.dead_beat);
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "BREG alg_index", reg_pars.b_rst_pars.alg_index);
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "BREG dead_beat", reg_pars.b_rst_pars.dead_beat);
 
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG:track_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG track_delay_periods",
                                reg_pars.b_rst_pars.track_delay_periods);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG:ref_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG ref_delay_periods",
                                reg_pars.b_rst_pars.ref_delay_periods);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
-                fprintf(f,"%-*s" DOUBLE_FORMAT "  " DOUBLE_FORMAT "  " DOUBLE_FORMAT "\n", PARS_INDENT, "BREG:R:S:T",
+                fprintf(f,"%-*s" DOUBLE_FORMAT "  " DOUBLE_FORMAT "  " DOUBLE_FORMAT "\n", PARS_INDENT, "BREG R:S:T",
                                reg_pars.b_rst_pars.rst.r[i],
                                reg_pars.b_rst_pars.rst.s[i],
                                reg_pars.b_rst_pars.rst.t[i]);
             }
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n\n", PARS_INDENT, "BREG:t0_correction",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n\n", PARS_INDENT, "BREG t0_correction",
                                reg_pars.b_rst_pars.t0_correction);
         }
 
@@ -412,39 +408,31 @@ void ccParsPrintDebug(FILE *f)
 
         if(ccrun.ireg_flag == 1)
         {
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG:pure_delay_periods",
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG alg_index",    reg_pars.i_rst_pars.alg_index);
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG dead_beat",    reg_pars.i_rst_pars.dead_beat);
+            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG jurys_result", reg_pars.i_rst_pars.jurys_result);
+
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG pure_delay_periods",
                                reg_pars.i_rst_pars.pure_delay_periods);
-
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG:alg_index", reg_pars.i_rst_pars.alg_index);
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG:dead_beat", reg_pars.i_rst_pars.dead_beat);
-
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG:track_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG track_delay_periods",
                                reg_pars.i_rst_pars.track_delay_periods);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG:ref_delay_periods",
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG ref_delay_periods",
                                reg_pars.i_rst_pars.ref_delay_periods);
+            fprintf(f,"%-*s" DOUBLE_FORMAT "\n\n", PARS_INDENT, "IREG t0_correction",
+                               reg_pars.i_rst_pars.t0_correction);
 
             for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
             {
-                fprintf(f,"%-*s" FLOAT_FORMAT " " DOUBLE_FORMAT " " FLOAT_FORMAT " " DOUBLE_FORMAT
-                             " " DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT "\n",
-                                 PARS_INDENT, "IREG:R:S:T:A:B:AS+BR:JURY",
+                fprintf(f,"%-*s" DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT " "
+                                 DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT "\n",
+                                 PARS_INDENT, "IREG R:S:T:A:B:AS+BR",
                                reg_pars.i_rst_pars.rst.r[i],
                                reg_pars.i_rst_pars.rst.s[i],
                                reg_pars.i_rst_pars.rst.t[i],
                                reg_pars.i_rst_pars.a[i],
                                reg_pars.i_rst_pars.b[i],
-                               reg_pars.i_rst_pars.asbr[i],
-                               reg_pars.i_rst_pars.jury[i]);
+                               reg_pars.i_rst_pars.asbr[i]);
             }
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG:jurys_result", reg_pars.i_rst_pars.jurys_result);
-            fprintf(f,"%-*s" DOUBLE_FORMAT " " DOUBLE_FORMAT "\n", PARS_INDENT, "IREG:sum_even_s:sum_odd_s",
-                               reg_pars.i_rst_pars.sum_even_s, reg_pars.i_rst_pars.sum_odd_s);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n",   PARS_INDENT, "IREG:sum_even_s+sum_odd_s",
-                               reg_pars.i_rst_pars.sum_even_s + reg_pars.i_rst_pars.sum_odd_s);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n",   PARS_INDENT, "IREG:sum_even_s-sum_odd_s",
-                               reg_pars.i_rst_pars.sum_even_s - reg_pars.i_rst_pars.sum_odd_s);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n\n", PARS_INDENT, "IREG:t0_correction",
-                               reg_pars.i_rst_pars.t0_correction);
         }
     }
 
@@ -452,22 +440,17 @@ void ccParsPrintDebug(FILE *f)
 
     for(i = 0 ; i < ccrun.num_functions ; i++)
     {
-        if(i > 0)
-        {
-            fputc('\n',f);
-        }
-
-        fprintf(f,"%-*s %s\n",   PARS_INDENT, "FUNCTION:",
+        fprintf(f,"\n%-*s %s\n",  PARS_INDENT, "REF function",
                             ccParsEnumString(function_type, ccpars_global.function[i]));
-        fprintf(f,"%-*s %s\n",   PARS_INDENT, "REG_MODE:",
+        fprintf(f,"%-*s %s\n",   PARS_INDENT, "REF reg_mode",
                             ccParsEnumString(reg_mode,      ccpars_global.reg_mode[i]));
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG:ref_advance",     ccrun.ref_advance[i]);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG:max_abs_err",     ccrun.max_abs_err[i]);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:duration",    ccrun.fg_meta[i].duration);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:range.start", ccrun.fg_meta[i].range.start);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:range.end",   ccrun.fg_meta[i].range.end);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:range.min",   ccrun.fg_meta[i].range.min);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META:range.max",   ccrun.fg_meta[i].range.max);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG ref_advance",     ccrun.ref_advance[i]);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG max_abs_err",     ccrun.max_abs_err[i]);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META duration",    ccrun.fg_meta[i].duration);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.start", ccrun.fg_meta[i].range.start);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.end",   ccrun.fg_meta[i].range.end);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.min",   ccrun.fg_meta[i].range.min);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.max",   ccrun.fg_meta[i].range.max);
     }
 }
 // EOF

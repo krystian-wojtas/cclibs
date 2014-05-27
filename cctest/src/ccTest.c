@@ -96,8 +96,6 @@ int main(int argc, char **argv)
 
     if(argc == 1)
     {
-        ccTestRecoverPath();
-
         cctest.input[0].line_number++;
 
         exit_status = ccTestParseLine("read");

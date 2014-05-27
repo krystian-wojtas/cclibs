@@ -123,8 +123,9 @@ struct signals
     char                       *name;                   // Signal name
     enum ccsig_type             type;                   // Signal type (CURSON, ANALOG, DIGITAL)
     char                       *meta_data;              // LVDV meta data (CURSOR, TRAIL_STEP)
-    enum cc_enabled_disabled    control;                   // Signal in use flag (ENABLED/DISABLED)
+    enum cc_enabled_disabled    control;                // Signal in use flag (ENABLED/DISABLED)
     float                       dig_offset;             // Digital trace offset
+    float                       time_offset;            // Time offset for trace
     float                       value;                  // Signal value
     char                       *cursor_label;           // Cursor signal label
     float                      *buf;                    // Signal buffer (for FLOT output)
@@ -140,7 +141,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "B_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "B_REF_RST",              ANALOG,         "TRAIL_STEP" },
 
-    { "B_MAGNET",               ANALOG,         ""           },
+    { "B_MAGNET",               ANALOG,         "TRAIL_STEP" },
     { "B_MEAS",                 ANALOG,         ""           },
     { "B_MEAS_FLTR",            ANALOG,         ""           },
     { "B_MEAS_EXTR",            ANALOG,         ""           },
@@ -149,8 +150,8 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "I_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "I_REF_RST",              ANALOG,         "TRAIL_STEP" },
 
-    { "I_MAGNET",               ANALOG,         ""           },
-    { "I_CIRCUIT",              ANALOG,         ""           },
+    { "I_MAGNET",               ANALOG,         "TRAIL_STEP" },
+    { "I_CIRCUIT",              ANALOG,         "TRAIL_STEP" },
     { "I_MEAS",                 ANALOG,         ""           },
     { "I_MEAS_FLTR",            ANALOG,         ""           },
     { "I_MEAS_EXTR",            ANALOG,         ""           },
@@ -160,7 +161,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "V_REF",                  ANALOG,         "TRAIL_STEP" },
     { "V_REF_SAT",              ANALOG,         "TRAIL_STEP" },
     { "V_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
-    { "V_CIRCUIT",              ANALOG,         ""           },
+    { "V_CIRCUIT",              ANALOG,         "TRAIL_STEP" },
     { "V_MEAS",                 ANALOG,         ""           },
 
     { "TRACK_DLY",              ANALOG,         "TRAIL_STEP" },

@@ -31,7 +31,7 @@
 #define TERM_BELL                       '\a'                    // Bell character
 #define TERM_BACKSPACE                  '\b'                    // Backspace character
 #define TERM_RESET                      "\r      \33c"          // Spaces provide delay before reset
-#define TERM_INIT                       "\33[2J  \a \33[?7h \r" // Clear screen, enable line wrap, ring bell
+#define TERM_INIT                       "\33[2J   \33[?7h \r"   // Clear screen, enable line wrap
 #define TERM_SAVE_POS                   "\33" "7"               // Save cursor position
 #define TERM_RESTORE_POS                "\33" "8"               // Restore cursor position
 #define TERM_CLR_SCREEN                 "\33[2J"                // Clear complete screen

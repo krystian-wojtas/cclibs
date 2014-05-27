@@ -19,6 +19,7 @@
   Purpose:  Generate linearly interpolated table functions
 \*---------------------------------------------------------------------------------------------------------*/
 
+#include "string.h"
 #include "libfg/table.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
@@ -59,11 +60,20 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 
     pars->delay        = delay;                             // Run delay
     pars->n_elements   = config->ref_n_elements;            // Reference array length
-    pars->ref          = config->ref;                       // Reference value array
     pars->time         = config->time;                      // Reference time array
     pars->seg_idx      = 0;                                 // Reset segment index
     pars->prev_seg_idx = 0;                                 // Reset previous segment index
     min_time_step     *= (1.0 - FG_CLIP_LIMIT_FACTOR);      // Adjust min time step to avoid rounding errs
+
+    if(pars->ref == NULL)
+    {
+        pars->ref = config->ref;                            // Reference value array
+    }
+
+    if(pars->time == NULL)
+    {
+        pars->time = config->time;                          // Reference time array
+    }
 
     // Check time vector and calculate min/max for table
 
@@ -97,6 +107,18 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
                 return(fg_error);
             }
         }
+    }
+
+    // Copy data if pars arrays are different to config arrays
+
+    if(pars->ref != config->ref)
+    {
+        memcpy(pars->ref, config->ref, pars->n_elements * sizeof(pars->ref[0]));
+    }
+
+    if(pars->time != config->time)
+    {
+        memcpy(pars->time, config->time, pars->n_elements * sizeof(pars->time[0]));
     }
 
     // Complete meta data

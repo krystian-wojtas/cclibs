@@ -325,35 +325,25 @@ uint32_t ccInitSimulation(void)
     reg.v_ref_limited =
     reg.v_ref         = regSimVsInitHistory(&reg_pars.sim_vs_pars, &reg.sim_vs_vars, reg.v_meas);
 
-    // Initialise measurement delay structures for simulated field, current and voltage in the
-    // magnet and/or circuit and the measurements of these circuit values.
+    // Initialise measurement delay structures for simulated measurement of the field, current and voltage.
 
-    regDelayInitDelays(&reg.b_sim.magnet_delay,
-                       reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
-                       ccpars_vs.v_ref_delay_iters,
-                       ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters);
+    regDelayInitDelay(&reg.b_sim.meas_delay,
+                      reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
+                      ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters - 1.0);
 
-    regDelayInitDelays(&reg.i_sim.magnet_delay,
-                       reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
-                       ccpars_vs.v_ref_delay_iters,
-                       ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters);
+    regDelayInitDelay(&reg.i_sim.meas_delay,
+                      reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
+                      ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0);
 
-    regDelayInitDelays(&reg.i_sim.circuit_delay,
-                       reg_pars.sim_load_pars.vs_undersampled_flag && reg_pars.sim_load_pars.load_undersampled_flag,
-                       ccpars_vs.v_ref_delay_iters,
-                       ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters);
-
-    regDelayInitDelays(&reg.v_sim.circuit_delay,
-                       reg_pars.sim_load_pars.vs_undersampled_flag,
-                       ccpars_vs.v_ref_delay_iters,
-                       ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters);
+    regDelayInitDelay(&reg.v_sim.meas_delay,
+                      reg_pars.sim_load_pars.vs_undersampled_flag,
+                      ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0);
 
     // Initialise simulated measurement delay histories
 
-    regDelayInitVars(&reg.b_sim.magnet_delay,  reg.b_meas.meas[REG_MEAS_UNFILTERED]);
-    regDelayInitVars(&reg.i_sim.magnet_delay,  reg.i_meas.meas[REG_MEAS_UNFILTERED]);
-    regDelayInitVars(&reg.i_sim.circuit_delay, reg.i_meas.meas[REG_MEAS_UNFILTERED]);
-    regDelayInitVars(&reg.v_sim.circuit_delay, reg.v_meas);
+    regDelayInitVars(&reg.b_sim.meas_delay, reg.b_meas.meas[REG_MEAS_UNFILTERED]);
+    regDelayInitVars(&reg.i_sim.meas_delay, reg.i_meas.meas[REG_MEAS_UNFILTERED]);
+    regDelayInitVars(&reg.v_sim.meas_delay, reg.v_meas);
 
     // Initialise field measurement filter
 
