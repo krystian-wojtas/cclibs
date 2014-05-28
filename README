@@ -5,6 +5,10 @@ For more information consult http://cern.ch/cclibs
 
 Please let us know if you use cclibs in your projects: cclibs-devs@cern.ch
 
-This is the initial release on github.  Many changes and improvements are incoming.
+If you would like to be notified about new releases then write to this address and ask to be added to the cclibs-users mailing list.
+
+Major changes are being implemented in libreg at the moment, including API changes. The final API should be available from July 2014.
 
 Quentin
+
+May 2014
