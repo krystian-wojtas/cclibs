@@ -30,7 +30,7 @@ static float regMeasFirFilter(struct reg_meas_filter *filter)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     int32_t input_integer;
-    float   input_meas = filter->meas[REG_MEAS_UNFILTERED];
+    float   input_meas = filter->signal[REG_MEAS_UNFILTERED];
 
     // Clip unfiltered input measurement value to avoid crazy roll-overs in the integer stage
 
@@ -93,17 +93,17 @@ void regMeasFilter(struct reg_meas_filter *filter)
     {
         // Bypass the filter - simply set the output values to the input value
         
-        filter->meas[REG_MEAS_EXTRAPOLATED] = filter->meas[REG_MEAS_FILTERED] = filter->meas[REG_MEAS_UNFILTERED];
+        filter->signal[REG_MEAS_EXTRAPOLATED] = filter->signal[REG_MEAS_FILTERED] = filter->signal[REG_MEAS_UNFILTERED];
     }
     else // Filter is running
     {
-        filter->meas[REG_MEAS_FILTERED] = regMeasFirFilter(filter);
+        filter->signal[REG_MEAS_FILTERED] = regMeasFirFilter(filter);
 
         // Prepare to extrapolate to estimate the measurement without a delay
 
         old_filtered_value = filter->extrapolation_buf[filter->extrapolation_index];
 
-        filter->extrapolation_buf[filter->extrapolation_index] = filter->meas[REG_MEAS_FILTERED];
+        filter->extrapolation_buf[filter->extrapolation_index] = filter->signal[REG_MEAS_FILTERED];
 
         // Do not use modulus (%) operator to wrap fir_index as it is very slow in TMS320C32 DSP
 
@@ -114,8 +114,8 @@ void regMeasFilter(struct reg_meas_filter *filter)
 
         // Extrapolate filtered measurement
 
-        filter->meas[REG_MEAS_EXTRAPOLATED] = filter->meas[REG_MEAS_FILTERED] + filter->extrapolation_factor *
-                                             (filter->meas[REG_MEAS_FILTERED] - old_filtered_value);
+        filter->signal[REG_MEAS_EXTRAPOLATED] = filter->signal[REG_MEAS_FILTERED] + filter->extrapolation_factor *
+                                             (filter->signal[REG_MEAS_FILTERED] - old_filtered_value);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -138,7 +138,7 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
   work with integers to avoid rounding errors. The meas_delay_iters parameter must define the delay in
   the "unfiltered" measurement - this is the hardware filtering delay.
 
-  The filter history buffers will be initialised using filter->meas[REG_MEAS_UNFILTERED] as the input
+  The filter history buffers will be initialised using filter->signal[REG_MEAS_UNFILTERED] as the input
   and then it will be restarted. This can be done at background level while the filter is being called
   in real-time, but the filter will be bypassed during the initialisation process, so expect a perturbation
   and potential instability.
@@ -173,13 +173,13 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
 
     // Set measurement delays
     
-    filter->meas_delay_iters[REG_MEAS_UNFILTERED]   = meas_delay_iters;
-    filter->meas_delay_iters[REG_MEAS_FILTERED]     = meas_delay_iters + 0.5 * (float)(total_fir_len - 2);
-    filter->meas_delay_iters[REG_MEAS_EXTRAPOLATED] = 0.0;
+    filter->delay_iters[REG_MEAS_UNFILTERED]   = meas_delay_iters;
+    filter->delay_iters[REG_MEAS_FILTERED]     = meas_delay_iters + 0.5 * (float)(total_fir_len - 2);
+    filter->delay_iters[REG_MEAS_EXTRAPOLATED] = 0.0;
 
     // Calculate extrapolation factor so that it cancels the filtered measurement delay
 
-    filter->extrapolation_factor = filter->meas_delay_iters[REG_MEAS_FILTERED] / (float)extrapolation_len_iters;
+    filter->extrapolation_factor = filter->delay_iters[REG_MEAS_FILTERED] / (float)extrapolation_len_iters;
     
     // Calculate float/integer scalings for FIR filter stages
 
@@ -192,7 +192,7 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
 
     memset(filter->fir_buf[0], 0, total_fir_len * sizeof(int32_t));
 
-    // Initialise FIR filter stages to the value in filter->meas[REG_MEAS_UNFILTERED]
+    // Initialise FIR filter stages to the value in filter->signal[REG_MEAS_UNFILTERED]
 
     while(total_fir_len--)
     {
@@ -203,10 +203,10 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
 
     while(extrapolation_len_iters--)
     {
-        *(extrapolation_buf++) = filter->meas[REG_MEAS_FILTERED];
+        *(extrapolation_buf++) = filter->signal[REG_MEAS_FILTERED];
     }
 
-    filter->meas[REG_MEAS_EXTRAPOLATED] = filter->meas[REG_MEAS_FILTERED];
+    filter->signal[REG_MEAS_EXTRAPOLATED] = filter->signal[REG_MEAS_FILTERED];
 
     // Restart the filter
 

@@ -68,8 +68,8 @@ struct reg_meas_filter                                            // Measurement
     float                 extrapolation_factor;                   // Extrapolation factor
 
     enum reg_meas_select  reg_select;                             // Regulation measurement selector
-    float                 meas_delay_iters[REG_MEAS_NUM_SIGNALS]; // Delay for each signal in iterations
-    float                 meas[REG_MEAS_NUM_SIGNALS];             // Array of measurement with different filtering
+    float                 delay_iters[REG_MEAS_NUM_SIGNALS];      // Delay for each signal in iterations
+    float                 signal[REG_MEAS_NUM_SIGNALS];           // Array of measurement with different filtering
 };
 
 struct reg_meas_rate                                              // Measurement rate estimate structure
