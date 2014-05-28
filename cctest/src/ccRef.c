@@ -546,7 +546,7 @@ enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
 
     if(limits->user_data == REG_FIELD)
     {
-        i_ref  = regLoadFieldToCurrent(&reg_pars.load_pars, ref);
+        i_ref  = regLoadFieldToCurrent(&reg.load_pars, ref);
         rate  *= i_ref / ref;
     }
     else
@@ -556,8 +556,8 @@ enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
 
     // Use load model to estimate voltage required for this current and rate of change of current
 
-    v_ref = i_ref * reg_pars.load_pars.ohms +
-            rate  * reg_pars.load_pars.henrys * regLoadCalcSatFactor(&reg_pars.load_pars, i_ref);
+    v_ref = i_ref * reg.load_pars.ohms +
+            rate  * reg.load_pars.henrys * regLoadCalcSatFactor(&reg.load_pars, i_ref);
 
     // Calculate the voltage limits for the current i_ref, taking into account invert_limits
 

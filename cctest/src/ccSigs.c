@@ -260,7 +260,7 @@ void ccSigsInit(void)
 
         // Current simulation signals
 
-        if(reg_pars.sim_load_pars.load_undersampled_flag == 0)
+        if(reg.sim_load_pars.load_undersampled_flag == 0)
         {
             ccSigsEnableSignal(ANA_I_MAGNET);
         }
@@ -359,15 +359,15 @@ void ccSigsStore(double time)
         }
 
         ccSigsStoreAnalog( ANA_B_MAGNET,       reg.sim_load_vars.magnet_field);
-        ccSigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.meas[REG_MEAS_UNFILTERED]);
-        ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.meas[REG_MEAS_FILTERED]);
-        ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.meas[REG_MEAS_EXTRAPOLATED]);
+        ccSigsStoreAnalog( ANA_B_MEAS,         reg.b.meas.signal[REG_MEAS_UNFILTERED]);
+        ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b.meas.signal[REG_MEAS_FILTERED]);
+        ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b.meas.signal[REG_MEAS_EXTRAPOLATED]);
 
         ccSigsStoreAnalog (ANA_I_MAGNET,       reg.sim_load_vars.magnet_current);
         ccSigsStoreAnalog (ANA_I_CIRCUIT,      reg.sim_load_vars.circuit_current);
-        ccSigsStoreAnalog (ANA_I_MEAS,         reg.i_meas.meas[REG_MEAS_UNFILTERED]);
-        ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i_meas.meas[REG_MEAS_FILTERED]);
-        ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i_meas.meas[REG_MEAS_EXTRAPOLATED]);
+        ccSigsStoreAnalog (ANA_I_MEAS,         reg.i.meas.signal[REG_MEAS_UNFILTERED]);
+        ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i.meas.signal[REG_MEAS_FILTERED]);
+        ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i.meas.signal[REG_MEAS_EXTRAPOLATED]);
 
         ccSigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
 
@@ -378,31 +378,31 @@ void ccSigsStore(double time)
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
 
-        ccSigsStoreAnalog (ANA_B_ERR,          reg.b_err.err);
-        ccSigsStoreAnalog (ANA_I_ERR,          reg.i_err.err);
+        ccSigsStoreAnalog (ANA_B_ERR,          reg.b.err.err);
+        ccSigsStoreAnalog (ANA_I_ERR,          reg.i.err.err);
         ccSigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
 
-        ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.b_err.max_abs_err);
-        ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.i_err.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.b.err.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.i.err.max_abs_err);
         ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v_err.max_abs_err);
 
-        ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.lim_b_meas.flags.trip);
-        ccSigsStoreDigital(DIG_B_MEAS_LOW,     reg.lim_b_meas.flags.low);
-        ccSigsStoreDigital(DIG_B_MEAS_ZERO,    reg.lim_b_meas.flags.zero);
+        ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.b.lim_meas.flags.trip);
+        ccSigsStoreDigital(DIG_B_MEAS_LOW,     reg.b.lim_meas.flags.low);
+        ccSigsStoreDigital(DIG_B_MEAS_ZERO,    reg.b.lim_meas.flags.zero);
 
-        ccSigsStoreDigital(DIG_B_REF_CLIP,     reg.lim_b_ref.flags.clip);
-        ccSigsStoreDigital(DIG_B_REF_RATE_CLIP,reg.lim_b_ref.flags.rate);
-        ccSigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b_err.warning.flag);
-        ccSigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b_err.fault.flag);
+        ccSigsStoreDigital(DIG_B_REF_CLIP,     reg.b.lim_ref.flags.clip);
+        ccSigsStoreDigital(DIG_B_REF_RATE_CLIP,reg.b.lim_ref.flags.rate);
+        ccSigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b.err.warning.flag);
+        ccSigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b.err.fault.flag);
 
-        ccSigsStoreDigital(DIG_I_MEAS_TRIP, reg.lim_i_meas.flags.trip);
-        ccSigsStoreDigital(DIG_I_MEAS_LOW,  reg.lim_i_meas.flags.low);
-        ccSigsStoreDigital(DIG_I_MEAS_ZERO, reg.lim_i_meas.flags.zero);
+        ccSigsStoreDigital(DIG_I_MEAS_TRIP, reg.i.lim_meas.flags.trip);
+        ccSigsStoreDigital(DIG_I_MEAS_LOW,  reg.i.lim_meas.flags.low);
+        ccSigsStoreDigital(DIG_I_MEAS_ZERO, reg.i.lim_meas.flags.zero);
 
-        ccSigsStoreDigital(DIG_I_REF_CLIP,     reg.lim_i_ref.flags.clip);
-        ccSigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.lim_i_ref.flags.rate);
-        ccSigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i_err.warning.flag);
-        ccSigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i_err.fault.flag);
+        ccSigsStoreDigital(DIG_I_REF_CLIP,     reg.i.lim_ref.flags.clip);
+        ccSigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.i.lim_ref.flags.rate);
+        ccSigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i.err.warning.flag);
+        ccSigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i.err.fault.flag);
 
         ccSigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v_err.fault.flag);
         ccSigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v_err.warning.flag);

@@ -97,7 +97,7 @@ static void ccRunStartFunction(uint32_t func_idx)
     ccrun.fgen_func     = funcs[ccpars_global.function[func_idx]].fgen_func;
     ccrun.fg_pars       = funcs[ccpars_global.function[func_idx]].fg_pars;
 
-    regSetMode(&reg, &reg_pars, ccpars_global.reg_mode[func_idx]);
+    regSetMode(&reg, ccpars_global.reg_mode[func_idx]);
 
     ccrun.ref_advance[func_idx] = reg.ref_advance;
 
@@ -134,7 +134,7 @@ void ccRunSimulation(void)
     {
         // Set measurements to simulated values
 
-        regSetMeas(&reg, &reg_pars,
+        regSetMeas(&reg,
                    0.0,         // v_meas from ADC
                    0.0,         // i_meas from ADC
                    0.0,         // b_meas from field measurement system
@@ -151,7 +151,6 @@ void ccRunSimulation(void)
         // algorithm is executed.
 
         if(regConverter(&reg,
-                        &reg_pars,
                         &ref,                           // V_REF, I_REF or B_REF according to reg.mode
                         ccrun.feedforward_v_ref,        // V_REF when feedforward_control is 1
                         ccrun.feedforward_control,      // 1=Feed-forward  0=Feedback
@@ -187,7 +186,7 @@ void ccRunSimulation(void)
 
         // Simulate voltage source and load response (with voltage perturbation added)
 
-        regSimulate(&reg, &reg_pars, perturb_volts);
+        regSimulate(&reg, perturb_volts);
 
         // Store and print to CSV file the enabled signals
 
@@ -196,17 +195,17 @@ void ccRunSimulation(void)
         // Check if any condition requires the converter to trip
 
         if(ccrun.vs_tripped_flag       == 0 &&
-          (reg.lim_b_meas.flags.trip   == 1 ||
-           reg.lim_i_meas.flags.trip   == 1 ||
-           reg.b_err.fault.flag        == 1 ||
-           reg.i_err.fault.flag        == 1 ||
+          (reg.b.lim_meas.flags.trip   == 1 ||
+           reg.i.lim_meas.flags.trip   == 1 ||
+           reg.b.err.fault.flag        == 1 ||
+           reg.i.err.fault.flag        == 1 ||
            reg.v_err.fault.flag        == 1))
         {
             // Simulate converter trip - switch to voltage regulation mode and set v_ref to zero
 
             ccrun.vs_tripped_flag = 1;
 
-            regSetMode(&reg, &reg_pars, REG_VOLTAGE);
+            regSetMode(&reg, REG_VOLTAGE);
 
             ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v_ref = reg.v_ref_sat = reg.v_ref_limited = 0.0;
 
@@ -239,8 +238,8 @@ void ccRunSimulation(void)
 
                 switch(reg.mode)
                 {
-                case REG_FIELD  : ccrun.max_abs_err[ccrun.func_idx] = reg.b_err.max_abs_err; break;
-                case REG_CURRENT: ccrun.max_abs_err[ccrun.func_idx] = reg.i_err.max_abs_err; break;
+                case REG_FIELD  : ccrun.max_abs_err[ccrun.func_idx] = reg.b.err.max_abs_err; break;
+                case REG_CURRENT: ccrun.max_abs_err[ccrun.func_idx] = reg.i.err.max_abs_err; break;
                 default:          ccrun.max_abs_err[ccrun.func_idx] = 0.0;                   break;
                 }
 

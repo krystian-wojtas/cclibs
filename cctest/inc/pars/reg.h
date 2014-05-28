@@ -103,7 +103,6 @@ CCPARS_REG_EXT struct ccpars_reg_pars ccpars_ireg
 // Libreg structures
 
 CCPARS_REG_EXT struct reg_converter reg;            // Libreg converter regulation structure
-CCPARS_REG_EXT struct reg_converter_pars reg_pars;  // Libreg converter regulation parameters structure
 
 // Define Field and Current regulation parameters description structures
 
