@@ -8,3 +8,4 @@ obj/
 ti/
 webplots/
 debug/
+.DS_Store
