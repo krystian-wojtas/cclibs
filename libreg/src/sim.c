@@ -26,15 +26,12 @@
 
 #include <math.h>
 #include "libreg/sim.h"
-#include <stdio.h>
-
-#define PI 3.141592653589793238462
 
 /*---------------------------------------------------------------------------------------------------------*/
 void regSimLoadTcError(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars,
                        float sim_load_tc_error)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function initialises the load simulation parameters structure based on the load parameters and the
+  This function initializes the load simulation parameters structure based on the load parameters and the
   simulation load time constant error (sim_load_tc_error).
 \*---------------------------------------------------------------------------------------------------------*/
 {
@@ -230,7 +227,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
     if(z < 0.7)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
     {
         f_pw = natural_freq * sqrt(1.0 - 2.0 * z2);
-        w  = PI * sim_period * f_pw;
+        w  = M_PI * sim_period * f_pw;
         b  = tan(w) / w;
     }
     else              // else heavily damped, there is no resonance peak: f_pw = 0 (minimises approximation error)
@@ -242,7 +239,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
     // Calculate intermediate variables
 
     d  = 2.0 * tau_zero / (sim_period * b);
-    y  = PI * sim_period * b * natural_freq;
+    y  = M_PI * sim_period * b * natural_freq;
     de = 1.0 / (y * y + 2.0 * z * y + 1.0);
 
     // Numerator (b0, b1, b2, b3) coefficients
