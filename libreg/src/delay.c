@@ -27,7 +27,7 @@
 #include "libreg/delay.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
-void regDelayInitDelay(struct reg_delay *delay, uint32_t under_sampled_flag, float delay_iters)
+void regDelayInitDelay(struct reg_delay *delay, float delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
   This function initialises the reg_delay structure parameters.  The undersampled_flag can be used to
   suppress the linear interpolation between samples.  When set it assumes that the signal settles to
@@ -50,17 +50,7 @@ void regDelayInitDelay(struct reg_delay *delay, uint32_t under_sampled_flag, flo
     // Calculate integer and fractional parts of the delay in iterations
 
     delay->delay_frac = modff(delay_iters, &delay_int);
-
     delay->delay_int  = (int32_t)delay_int;
-
-    // If signal is under sampled then assume it settles immediately
-
-    if(under_sampled_flag)
-    {
-        // If delay has a fractional part then round down delay
-
-        delay->delay_frac = 0.0;
-    }
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regDelayInitVars(struct reg_delay *delay, float initial_signal)
@@ -76,7 +66,7 @@ void regDelayInitVars(struct reg_delay *delay, float initial_signal)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regDelayCalc(struct reg_delay *delay, float signal)
+float regDelayCalc(struct reg_delay *delay, float signal, uint32_t under_sampled_flag)
 /*---------------------------------------------------------------------------------------------------------*\
   This function should be called after the delay structure has been initialised.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -89,7 +79,14 @@ float regDelayCalc(struct reg_delay *delay, float signal)
     s0 = delay->buf[(delay->buf_index - delay->delay_int    ) & REG_DELAY_BUF_INDEX_MASK];
     s1 = delay->buf[(delay->buf_index - delay->delay_int - 1) & REG_DELAY_BUF_INDEX_MASK];
 
-    return(s0 + delay->delay_frac * (s1 - s0));
+    if(under_sampled_flag == 0)
+    {
+        return(s0 + delay->delay_frac * (s1 - s0));
+    }
+
+    // When under-sampled, jump to final value at the start of each period
+
+    return(s0);
 }
 // EOF
 
