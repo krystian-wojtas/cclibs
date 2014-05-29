@@ -73,31 +73,40 @@ struct reg_signal
     struct reg_sim_meas         sim;                    ///< Simulated measurement with noise and tone
 };
 
+struct reg_voltage
+{
+    float                       meas;                   ///< Unfiltered voltage measurement (real or sim)
+    struct reg_lim_ref          lim_ref;                ///< Voltage reference limits
+    struct reg_rst_pars         rst_pars;               ///< Regulation RST parameters
+    enum   reg_err_rate         err_rate;               ///< Rate control for regulation error calculation
+    struct reg_err              err;                    ///< Voltage regulation error
+    struct reg_sim_meas         sim;                    ///< Simulated voltage measurement with noise and tone
+    float                       ref;                    ///< Voltage reference before saturation or limits
+    float                       ref_sat;                ///< Voltage reference after saturation compensation
+    float                       ref_limited;            ///< Voltage reference after saturation and limits
+};
+
 struct reg_converter                                    ///< Global converter regulation structure
 {
-    double                      iter_period;            ///< Iteration period
+    double                      iter_period;            ///< Iteration (measurement) period
 
-    // Reference and regulation variables
+    // Regulation reference and measurement variables and parameters
 
-    enum reg_mode               mode;                   ///< Regulation mode: Field, current or voltage
-    struct reg_signal           *r;                     ///< Pointer to active regulation structure (reg.i or reg.b)
+    enum   reg_mode             mode;                   ///< Regulation mode: Field, Current or Voltage
+    struct reg_signal          *r;                      ///< Pointer to active regulation structure (reg.i or reg.b)
 
     uint32_t                    iteration_counter;      ///< Iteration counter (within each regulation period)
     uint32_t                    period_iters;           ///< Regulation period (in iterations)
     double                      period;                 ///< Regulation period
     double                      time;                   ///< Time of last regulation iteration
+    float                       ref_advance;            ///< Time to advance reference function
 
     float                       meas;                   ///< Field or current regulated measurement
-    float                       ref_advance;            ///< Time to advance reference
 
     float                       ref;                    ///< Field or current reference
     float                       ref_limited;            ///< Field or current reference after limits
     float                       ref_rst;                ///< Field or current reference after back-calculation
     float                       ref_delayed;            ///< Field or current reference delayed by track_delay
-
-    float                       v_ref;                  ///< Voltage reference before saturation or limits
-    float                       v_ref_sat;              ///< Voltage reference after saturation compensation
-    float                       v_ref_limited;          ///< Voltage reference after saturation and limits
 
     struct                                              ///< Reference (field, current or voltage) limit flags
     {
@@ -105,21 +114,14 @@ struct reg_converter                                    ///< Global converter re
         uint32_t                ref_rate;               ///< Reference rate of change is being clipped
     } flags;
 
-    // Field and current regulation structures
+    struct reg_rst_vars         rst_vars;               ///< Field or current regulation RST variables
+
+    // Field, current and voltage regulation structures
 
     struct reg_signal           b;                      ///< Field regulation parameters and variables
     struct reg_signal           i;                      ///< Current regulation parameters and variables
-
-    // Regulation variables structures
-
-    struct reg_rst_vars         rst_vars;               ///< Field or current regulation RST variables
-
-    // Voltage reference, measurement and regulation error
-
-    struct reg_lim_ref          lim_v_ref;              ///< Voltage reference limits
-    float                       v_meas;                 ///< Unfiltered voltage measurement (real or sim)
-    struct reg_err              v_err;                  ///< Voltage regulation error
-    struct reg_sim_meas         v_sim;                  ///< Simulated voltage measurement with noise and tone
+    struct reg_voltage          v;                      ///< Voltage regulation parameters and variables
+                                                        ///< (Voltage is regulated by voltage source)
 
     // Load parameters and variables structures
 

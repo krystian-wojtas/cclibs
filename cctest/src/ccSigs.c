@@ -318,7 +318,7 @@ void ccSigsStore(double time)
 {
     // Voltage reference is always stored
 
-    ccSigsStoreAnalog(ANA_V_REF, reg.v_ref);
+    ccSigsStoreAnalog(ANA_V_REF, reg.v.ref);
 
     // Store other signals when simulating load - if they are not enabled then they are ignored
 
@@ -371,20 +371,20 @@ void ccSigsStore(double time)
 
         ccSigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
 
-        ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v_ref_sat);
-        ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
+        ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v.ref_sat);
+        ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v.ref_limited);
         ccSigsStoreAnalog (ANA_V_CIRCUIT,      reg.sim_load_vars.circuit_voltage);
-        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
+        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v.meas);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
 
         ccSigsStoreAnalog (ANA_B_ERR,          reg.b.err.err);
         ccSigsStoreAnalog (ANA_I_ERR,          reg.i.err.err);
-        ccSigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
+        ccSigsStoreAnalog (ANA_V_ERR,          reg.v.err.err);
 
         ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.b.err.max_abs_err);
         ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.i.err.max_abs_err);
-        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v_err.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v.err.max_abs_err);
 
         ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.b.lim_meas.flags.trip);
         ccSigsStoreDigital(DIG_B_MEAS_LOW,     reg.b.lim_meas.flags.low);
@@ -404,10 +404,10 @@ void ccSigsStore(double time)
         ccSigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i.err.warning.flag);
         ccSigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i.err.fault.flag);
 
-        ccSigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v_err.fault.flag);
-        ccSigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v_err.warning.flag);
-        ccSigsStoreDigital(DIG_V_REF_CLIP,     reg.lim_v_ref.flags.clip);
-        ccSigsStoreDigital(DIG_V_REF_RATE_CLIP,reg.lim_v_ref.flags.rate);
+        ccSigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v.err.fault.flag);
+        ccSigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v.err.warning.flag);
+        ccSigsStoreDigital(DIG_V_REF_CLIP,     reg.v.lim_ref.flags.clip);
+        ccSigsStoreDigital(DIG_V_REF_RATE_CLIP,reg.v.lim_ref.flags.rate);
     }
 
     // Increment FLOT data index, but clip to max number of FLOT points

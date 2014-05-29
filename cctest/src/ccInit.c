@@ -215,7 +215,7 @@ uint32_t ccInitLimits(void)
         regLimRefInit (&reg.i.lim_ref, ccpars_limits.i.pos, ccpars_limits.i.neg, ccpars_limits.i.rate,
                        ccpars_limits.invert_limits);
 
-        regLimVrefInit(&reg.lim_v_ref, ccpars_limits.v.pos, ccpars_limits.v.neg, ccpars_limits.v.rate,
+        regLimVrefInit(&reg.v.lim_ref, ccpars_limits.v.pos, ccpars_limits.v.neg, ccpars_limits.v.rate,
                        ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41, ccpars_limits.invert_limits);
 
         // Initialise field, current and voltage regulation error warning/fault thresholds
@@ -224,7 +224,7 @@ uint32_t ccInitLimits(void)
 
         regErrInitLimits(&reg.i.err, ccpars_limits.i_err_warning, ccpars_limits.i_err_fault);
 
-        regErrInitLimits(&reg.v_err, ccpars_limits.v_err_warning, ccpars_limits.v_err_fault);
+        regErrInitLimits(&reg.v.err, ccpars_limits.v_err_warning, ccpars_limits.v_err_fault);
     }
 
     return(EXIT_SUCCESS);
@@ -310,7 +310,7 @@ uint32_t ccInitSimulation(void)
 
     // First set the V/I/B measurements to cover all three regulation modes
 
-    reg.v_meas = ccrun.fg_meta[0].range.start * reg.sim_vs_pars.gain;  // Set v_meas to voltage on load
+    reg.v.meas = ccrun.fg_meta[0].range.start * reg.sim_vs_pars.gain;  // Set v_meas to voltage on load
     reg.i.meas.signal[REG_MEAS_UNFILTERED] = ccrun.fg_meta[0].range.start;    // i_meas
     reg.b.meas.signal[REG_MEAS_UNFILTERED] = ccrun.fg_meta[0].range.start;    // b_meas
 
@@ -321,29 +321,23 @@ uint32_t ccInitSimulation(void)
     // Initialise voltage source model history to allow simulation to start with a non-zero voltage
     // This is not needed in a real converter controller because the voltage always starts at zero
 
-    reg.v_ref_sat     =
-    reg.v_ref_limited =
-    reg.v_ref         = regSimVsInitHistory(&reg.sim_vs_pars, &reg.sim_vs_vars, reg.v_meas);
+    reg.v.ref_sat     =
+    reg.v.ref_limited =
+    reg.v.ref         = regSimVsInitHistory(&reg.sim_vs_pars, &reg.sim_vs_vars, reg.v.meas);
 
     // Initialise measurement delay structures for simulated measurement of the field, current and voltage.
+    // The -1.0 is because the simulated measurement applies to the following iteration, so 1 iteration
+    // of delay is always present.
 
-    regDelayInitDelay(&reg.b.sim.meas_delay,
-                      reg.sim_load_pars.vs_undersampled_flag && reg.sim_load_pars.load_undersampled_flag,
-                      ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters - 1.0);
-
-    regDelayInitDelay(&reg.i.sim.meas_delay,
-                      reg.sim_load_pars.vs_undersampled_flag && reg.sim_load_pars.load_undersampled_flag,
-                      ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0);
-
-    regDelayInitDelay(&reg.v_sim.meas_delay,
-                      reg.sim_load_pars.vs_undersampled_flag,
-                      ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0);
+    regDelayInitDelay(&reg.b.sim.meas_delay, ccpars_vs.v_ref_delay_iters + ccpars_meas.b_delay_iters - 1.0);
+    regDelayInitDelay(&reg.i.sim.meas_delay, ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0);
+    regDelayInitDelay(&reg.v.sim.meas_delay, ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0);
 
     // Initialise simulated measurement delay histories
 
     regDelayInitVars(&reg.b.sim.meas_delay, reg.b.meas.signal[REG_MEAS_UNFILTERED]);
     regDelayInitVars(&reg.i.sim.meas_delay, reg.i.meas.signal[REG_MEAS_UNFILTERED]);
-    regDelayInitVars(&reg.v_sim.meas_delay, reg.v_meas);
+    regDelayInitVars(&reg.v.sim.meas_delay, reg.v.meas);
 
     // Initialise field measurement filter
 
@@ -389,7 +383,7 @@ uint32_t ccInitSimulation(void)
     regMeasSetNoiseAndTone(&reg.i.sim.noise_and_tone, ccpars_meas.i_sim_noise_pp, ccpars_meas.i_sim_tone_amp,
                            ccpars_meas.tone_half_period_iters);
 
-    regMeasSetNoiseAndTone(&reg.v_sim.noise_and_tone, ccpars_meas.v_sim_noise_pp, 0.0, 0);
+    regMeasSetNoiseAndTone(&reg.v.sim.noise_and_tone, ccpars_meas.v_sim_noise_pp, 0.0, 0);
 
     // Run first simulation to initialise measurement variables
 

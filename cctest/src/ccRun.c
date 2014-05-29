@@ -199,7 +199,7 @@ void ccRunSimulation(void)
            reg.i.lim_meas.flags.trip   == 1 ||
            reg.b.err.fault.flag        == 1 ||
            reg.i.err.fault.flag        == 1 ||
-           reg.v_err.fault.flag        == 1))
+           reg.v.err.fault.flag        == 1))
         {
             // Simulate converter trip - switch to voltage regulation mode and set v_ref to zero
 
@@ -207,7 +207,7 @@ void ccRunSimulation(void)
 
             regSetMode(&reg, REG_VOLTAGE);
 
-            ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v_ref = reg.v_ref_sat = reg.v_ref_limited = 0.0;
+            ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v.ref = reg.v.ref_sat = reg.v.ref_limited = 0.0;
 
             ccSigsStoreCursor(CSR_FUNC,"TRIP!");
 
@@ -294,7 +294,7 @@ void ccRunFuncGen(void)
     {
         // Generate reference value using libfg function
 
-        func_run_f = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &reg.v_ref);
+        func_run_f = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &reg.v.ref);
 
         // Store and print to CSV file the enabled signals
 
@@ -368,7 +368,7 @@ void ccRunFuncGenReverseTime(void)
 
         // Generate reference value using libfg function
 
-        ccrun.fgen_func(ccrun.fg_pars, &time, &reg.v_ref);
+        ccrun.fgen_func(ccrun.fg_pars, &time, &reg.v.ref);
 
         // Store and print enabled signals
 

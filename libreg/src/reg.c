@@ -38,7 +38,7 @@ void regSetSimLoad(struct reg_converter *reg, enum reg_mode reg_mode, float sim_
     {
     default:
 
-        regSimLoadSetVoltage(&reg->sim_load_pars, &reg->sim_load_vars, reg->v_meas);
+        regSimLoadSetVoltage(&reg->sim_load_pars, &reg->sim_load_vars, reg->v.meas);
         break;
 
     case REG_CURRENT:
@@ -52,24 +52,24 @@ void regSetSimLoad(struct reg_converter *reg, enum reg_mode reg_mode, float sim_
         break;
     }
 
-    reg->v_meas = reg->sim_load_vars.circuit_voltage;
+    reg->v.meas = reg->sim_load_vars.circuit_voltage;
     
     reg->i.meas.signal[REG_MEAS_FILTERED] = reg->i.meas.signal[REG_MEAS_UNFILTERED] = reg->sim_load_vars.circuit_current;
     reg->b.meas.signal[REG_MEAS_FILTERED] = reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->sim_load_vars.magnet_field;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regSetMeas(struct reg_converter *reg, float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control)
+void regSetMeas(struct reg_converter *reg, float v_meas, float i_meas, float b_meas, uint32_t use_sim_meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will set the unfiltered measured values in the reg structure based on the sim_meas_control.
   When active, the measurements will be based on the voltage source and load simulation calculated by
   regSimulate().
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    if(sim_meas_control == 0)
+    if(use_sim_meas == 0)
     {
         // Use measured values for voltage, current and field
 
-        reg->v_meas = v_meas;
+        reg->v.meas = v_meas;
         reg->i.meas.signal[REG_MEAS_UNFILTERED] = i_meas;
         reg->b.meas.signal[REG_MEAS_UNFILTERED] = b_meas;
     }
@@ -77,7 +77,7 @@ void regSetMeas(struct reg_converter *reg, float v_meas, float i_meas, float b_m
     {
         // Use simulated measurements
 
-        reg->v_meas = reg->v_sim.signal;
+        reg->v.meas = reg->v.sim.signal;
         reg->i.meas.signal[REG_MEAS_UNFILTERED] = reg->i.sim.signal;
         reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->b.sim.signal;
     }
@@ -118,23 +118,23 @@ void regSetMode(struct reg_converter *reg, enum reg_mode reg_mode)
             {
                 case REG_FIELD:
 
-                    reg->v_ref = regRstAverageVref(&reg->rst_vars);
-                    reg->v_ref_sat = reg->v_ref;
+                    reg->v.ref = regRstAverageVref(&reg->rst_vars);
+                    reg->v.ref_sat = reg->v.ref;
                     break;
 
                 case REG_CURRENT:
 
-                    reg->v_ref = regRstAverageVref(&reg->rst_vars);
-                    reg->v_ref_sat = regLoadVrefSat(&reg->load_pars, reg->rst_vars.meas[0], reg->v_ref);
+                    reg->v.ref = regRstAverageVref(&reg->rst_vars);
+                    reg->v.ref_sat = regLoadVrefSat(&reg->load_pars, reg->rst_vars.meas[0], reg->v.ref);
                     break;
 
                 default:    // VOLTAGE or NONE
 
-                    reg->v_ref_sat = reg->v_ref;
+                    reg->v.ref_sat = reg->v.ref;
                     break;
             }
 
-            reg->v_ref_limited = reg->v_ref_sat;
+            reg->v.ref_limited = reg->v.ref_sat;
 
             // Calculate the ref advance for voltage mode
 
@@ -162,7 +162,7 @@ void regSetMode(struct reg_converter *reg, enum reg_mode reg_mode)
 
             r = reg->r       = (reg_mode == REG_FIELD ? &reg->b : &reg->i);
             rst_pars         = &r->rst_pars;
-            v_ref            = (reg->mode == REG_CURRENT ? regLoadInverseVrefSat(&reg->load_pars, reg->i.meas.signal[REG_MEAS_UNFILTERED], reg->v_ref_limited) : reg->v_ref_limited);
+            v_ref            = (reg->mode == REG_CURRENT ? regLoadInverseVrefSat(&reg->load_pars, reg->i.meas.signal[REG_MEAS_UNFILTERED], reg->v.ref_limited) : reg->v.ref_limited);
             rate             = (reg->mode != REG_NONE    ? regMeasRate(&r->rate, rst_pars->period) : 0.0);
             reg->meas        = r->meas.signal[r->meas.reg_select];
             reg->ref_advance = rst_pars->track_delay_periods * rst_pars->period - r->meas.delay_iters[r->meas.reg_select] * reg->iter_period;
@@ -218,7 +218,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
     // Calculate and check the voltage regulation limits
 
-    regErrCheckLimits(&reg->v_err, 1, 1, reg->v_err.delayed_ref, reg->v_meas);
+    regErrCheckLimits(&reg->v.err, 1, 1, reg->v.err.delayed_ref, reg->v.meas);
 
     // Check current measurement limits
 
@@ -233,7 +233,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
     // Calculate voltage reference limits for the measured current (V limits can depend on current)
 
-    regLimVrefCalc(&reg->lim_v_ref, reg->i.meas.signal[REG_MEAS_UNFILTERED]);
+    regLimVrefCalc(&reg->v.lim_ref, reg->i.meas.signal[REG_MEAS_UNFILTERED]);
 
     // Filter the field and current measurements and prepare to estimate measurement rate
 
@@ -247,14 +247,14 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
     if(reg->mode == REG_VOLTAGE)
     {
-        reg->v_ref = reg->v_ref_sat = *ref;              // Don't apply magnet saturation compensation
+        reg->v.ref = reg->v.ref_sat = *ref;              // Don't apply magnet saturation compensation
 
-        reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->iter_period, reg->v_ref, reg->v_ref_limited);
+        reg->v.ref_limited = regLimRef(&reg->v.lim_ref, reg->iter_period, reg->v.ref, reg->v.ref_limited);
 
-        reg->flags.ref_clip = reg->lim_v_ref.flags.clip;
-        reg->flags.ref_rate = reg->lim_v_ref.flags.rate;
+        reg->flags.ref_clip = reg->v.lim_ref.flags.clip;
+        reg->flags.ref_rate = reg->v.lim_ref.flags.rate;
 
-        *ref = reg->v_ref_limited;
+        *ref = reg->v.ref_limited;
 
         reg_flag = 1;
     }
@@ -284,23 +284,23 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 
                 // Calculate voltage reference using RST algorithm
 
-                reg->v_ref = regRstCalcAct(&r->rst_pars, &reg->rst_vars, reg->ref_limited, reg->meas);
+                reg->v.ref = regRstCalcAct(&r->rst_pars, &reg->rst_vars, reg->ref_limited, reg->meas);
 
                 // Calculate magnet saturation compensation
 
-                reg->v_ref_sat = (reg->mode == REG_CURRENT ? regLoadVrefSat(&reg->load_pars, unfiltered_meas, reg->v_ref) : reg->v_ref);
+                reg->v.ref_sat = (reg->mode == REG_CURRENT ? regLoadVrefSat(&reg->load_pars, unfiltered_meas, reg->v.ref) : reg->v.ref);
 
                 // Apply voltage reference clip and rate limits
 
-                reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->period, reg->v_ref_sat, reg->v_ref_limited);
+                reg->v.ref_limited = regLimRef(&reg->v.lim_ref, reg->period, reg->v.ref_sat, reg->v.ref_limited);
 
                 // If voltage reference has been clipped
 
-                if(reg->lim_v_ref.flags.clip || reg->lim_v_ref.flags.rate)
+                if(reg->v.lim_ref.flags.clip || reg->v.lim_ref.flags.rate)
                 {
                     // Back calculate the new v_ref before the saturation compensation
 
-                    v_ref = (reg->mode == REG_CURRENT ? regLoadInverseVrefSat(&reg->load_pars, unfiltered_meas, reg->v_ref_limited) : reg->v_ref_limited);
+                    v_ref = (reg->mode == REG_CURRENT ? regLoadInverseVrefSat(&reg->load_pars, unfiltered_meas, reg->v.ref_limited) : reg->v.ref_limited);
 
                     // Back calculate new current reference to keep RST histories balanced
 
@@ -323,26 +323,26 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
               // Open-loop: Use feedforward_v_ref
 
                 reg->flags.ref_clip = 0;
-                reg->v_ref = feedforward_v_ref;
+                reg->v.ref = feedforward_v_ref;
 
                 // Calculate v_ref with saturation compensation applied when regulating current
 
-                reg->v_ref_sat = (reg->mode == REG_CURRENT ? regLoadVrefSat(&reg->load_pars, unfiltered_meas, feedforward_v_ref) : feedforward_v_ref);
+                reg->v.ref_sat = (reg->mode == REG_CURRENT ? regLoadVrefSat(&reg->load_pars, unfiltered_meas, feedforward_v_ref) : feedforward_v_ref);
 
                 // Apply voltage reference limits
 
-                reg->v_ref_limited = regLimRef(&reg->lim_v_ref, reg->period, reg->v_ref_sat, reg->v_ref_limited);
+                reg->v.ref_limited = regLimRef(&reg->v.lim_ref, reg->period, reg->v.ref_sat, reg->v.ref_limited);
 
                 // If v_ref was clipped then back calculate the new uncompensated v_ref
 
-                if(reg->lim_v_ref.flags.clip || reg->lim_v_ref.flags.rate)
+                if(reg->v.lim_ref.flags.clip || reg->v.lim_ref.flags.rate)
                 {
-                    v_ref = (reg->mode == REG_CURRENT ? regLoadInverseVrefSat(&reg->load_pars, unfiltered_meas, reg->v_ref_limited) : reg->v_ref_limited);
+                    v_ref = (reg->mode == REG_CURRENT ? regLoadInverseVrefSat(&reg->load_pars, unfiltered_meas, reg->v.ref_limited) : reg->v.ref_limited);
                     reg->flags.ref_rate = 1;
                 }
                 else
                 {
-                    v_ref = reg->v_ref;
+                    v_ref = reg->v.ref;
                     reg->flags.ref_rate = 0;
                 }
 
@@ -377,7 +377,7 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
 void regSimulate(struct reg_converter *reg, float v_perturbation)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will simulate the voltage source and load and the measurements of the voltage, current
-  and field. The voltage reference comes from reg->v_ref_limited which is calculated by calling
+  and field. The voltage reference comes from reg->v.ref_limited which is calculated by calling
   regConverter().  A voltage perturbation can be included in the simulation via the v_perturbation parameter.
 \*---------------------------------------------------------------------------------------------------------*/
 {
@@ -385,7 +385,7 @@ void regSimulate(struct reg_converter *reg, float v_perturbation)
 
     // Simulate voltage source response to v_ref without taking into account V_REF_DELAY
 
-    v_circuit = regSimVs(&reg->sim_vs_pars, &reg->sim_vs_vars, reg->v_ref_limited);
+    v_circuit = regSimVs(&reg->sim_vs_pars, &reg->sim_vs_vars, reg->v.ref_limited);
 
     // Simulate load current and field in response to sim_advanced_v_circuit plus the perturbation
 
@@ -393,18 +393,21 @@ void regSimulate(struct reg_converter *reg, float v_perturbation)
 
     // Use delays to estimate the measurement of the magnet's field and the circuit's current and voltage
 
-    reg->b.sim.signal = regDelayCalc(&reg->b.sim.meas_delay, reg->sim_load_vars.magnet_field);
-    reg->i.sim.signal = regDelayCalc(&reg->i.sim.meas_delay, reg->sim_load_vars.circuit_current);
-    reg->v_sim.signal = regDelayCalc(&reg->v_sim.meas_delay, reg->sim_load_vars.circuit_voltage);
+    reg->b.sim.signal = regDelayCalc(&reg->b.sim.meas_delay, reg->sim_load_vars.magnet_field,
+                                      reg->sim_load_pars.vs_undersampled_flag && reg->sim_load_pars.load_undersampled_flag);
+    reg->i.sim.signal = regDelayCalc(&reg->i.sim.meas_delay, reg->sim_load_vars.circuit_current,
+                                      reg->sim_load_pars.vs_undersampled_flag && reg->sim_load_pars.load_undersampled_flag);
+    reg->v.sim.signal = regDelayCalc(&reg->v.sim.meas_delay, reg->sim_load_vars.circuit_voltage,
+                                      reg->sim_load_pars.vs_undersampled_flag);
 
     // Store simulated voltage measurement without noise as the delayed ref for the v_err calculation
 
-    reg->v_err.delayed_ref = reg->v_sim.signal;
+    reg->v.err.delayed_ref = reg->v.sim.signal;
 
     // Simulate noise and tone on simulated measurement of the magnet's field and the circuit's current and voltage
 
     reg->b.sim.signal += regMeasNoiseAndTone(&reg->b.sim.noise_and_tone);
     reg->i.sim.signal += regMeasNoiseAndTone(&reg->i.sim.noise_and_tone);
-    reg->v_sim.signal += regMeasNoiseAndTone(&reg->v_sim.noise_and_tone);
+    reg->v.sim.signal += regMeasNoiseAndTone(&reg->v.sim.noise_and_tone);
 }
 // EOF
