@@ -72,7 +72,7 @@ CCPARS_TEST_EXT struct ccpars test_pars[]
     { "AMPLITUDE_PP", PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.amplitude_pp }, 1 },
     { "NUM_CYCLES",   PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.num_cycles   }, 1 },
     { "PERIOD",       PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.period       }, 1 },
-    { "WINDOW",       PAR_ENUM,    1,        0, enabled_disabled, { .i = &ccpars_test.config.window_flag  }, 1 },
+    { "WINDOW",       PAR_ENUM,    1,        0, enabled_disabled, { .i = &ccpars_test.config.use_window   }, 1 },
     { NULL }
 }
 #endif
