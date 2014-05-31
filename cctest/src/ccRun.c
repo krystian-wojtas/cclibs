@@ -67,8 +67,8 @@ static uint32_t ccRunAbort(double time)
     fgRampCalc(&config,
                &ccpars_ramp.ramp_pars,
                 ccrun.reg_time,                                            // time of last RST calculation
-                regRstPrevRef(&reg.rst_vars),                              // last reference value
-                regRstDeltaRef(&reg.rst_vars) / reg.period,                // last reference rate
+                regRstPrevRefRT(&reg.rst_vars),                              // last reference value
+                regRstDeltaRefRT(&reg.rst_vars) / reg.period,                // last reference rate
                &meta);
 
     // Check that abort duration is not too large (limit to 50000 iterations)
@@ -97,7 +97,7 @@ static void ccRunStartFunction(uint32_t func_idx)
     ccrun.fgen_func     = funcs[ccpars_global.function[func_idx]].fgen_func;
     ccrun.fg_pars       = funcs[ccpars_global.function[func_idx]].fg_pars;
 
-    regSetMode(&reg, ccpars_global.reg_mode[func_idx]);
+    regConvSetModeRT(&reg, ccpars_global.reg_mode[func_idx]);
 
     ccrun.ref_advance[func_idx] = reg.ref_advance;
 
@@ -134,7 +134,7 @@ void ccRunSimulation(void)
     {
         // Set measurements to simulated values
 
-        regSetMeas(&reg,
+        regConvSetMeasRT(&reg,
                    0.0,         // v_meas from ADC
                    0.0,         // i_meas from ADC
                    0.0,         // b_meas from field measurement system
@@ -150,7 +150,7 @@ void ccRunSimulation(void)
         // Regulate converter - this returns 1 on iterations when the current or field regulation
         // algorithm is executed.
 
-        if(regConverter(&reg,
+        if(regConverterRT(&reg,
                         &ref,                           // V_REF, I_REF or B_REF according to reg.mode
                         ccrun.feedforward_v_ref,        // V_REF when feedforward_control is 1
                         ccrun.feedforward_control,      // 1=Feed-forward  0=Feedback
@@ -186,7 +186,7 @@ void ccRunSimulation(void)
 
         // Simulate voltage source and load response (with voltage perturbation added)
 
-        regSimulate(&reg, perturb_volts);
+        regConvSimulateRT(&reg, perturb_volts);
 
         // Store and print to CSV file the enabled signals
 
@@ -205,7 +205,7 @@ void ccRunSimulation(void)
 
             ccrun.vs_tripped_flag = 1;
 
-            regSetMode(&reg, REG_VOLTAGE);
+            regConvSetModeRT(&reg, REG_VOLTAGE);
 
             ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v.ref = reg.v.ref_sat = reg.v.ref_limited = 0.0;
 

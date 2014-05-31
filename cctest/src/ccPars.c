@@ -343,7 +343,7 @@ static void ccParsPrintDebugLoad(FILE *f, char *prefix, struct reg_load_pars *lo
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccParsPrintDebugReg(FILE *f, char *prefix, struct reg_signal *r)
+static void ccParsPrintDebugReg(FILE *f, char *prefix, struct reg_conv_signal *r)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t i;

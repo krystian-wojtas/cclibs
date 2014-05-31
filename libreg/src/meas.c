@@ -22,103 +22,11 @@
 #include <string.h>
 #include "libreg.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
-static float regMeasFirFilter(struct reg_meas_filter *filter)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function implements the classical two-stage box-car FIR filter used by regMeasFilter() and
-  regMeasFilterInitHistory().
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    int32_t input_integer;
-    float   input_meas = filter->signal[REG_MEAS_UNFILTERED];
+static float regMeasFirFilterRT(struct reg_meas_filter *filter);
 
-    // Clip unfiltered input measurement value to avoid crazy roll-overs in the integer stage
-
-    if(input_meas > filter->max_meas_value)
-    {
-        input_meas = filter->max_meas_value;
-    }
-    else if(input_meas < -filter->max_meas_value)
-    {
-        input_meas = -filter->max_meas_value;
-    }
-
-    // Filter stage 1
-
-    input_integer = (int32_t)(filter->float_to_integer * input_meas);
-
-    filter->fir_accumulator[0] += (input_integer - filter->fir_buf[0][filter->fir_index[0]]);
-
-    filter->fir_buf[0][filter->fir_index[0]] = input_integer;
-
-    // Do not use modulus (%) operator to wrap fir_index as it is very slow in TMS320C32 DSP
-
-    if(++filter->fir_index[0] >= filter->fir_length[0])
-    {
-        filter->fir_index[0] = 0;
-    }
-
-    // Filter stage 2
-
-    input_integer = filter->fir_accumulator[0] / (int32_t)filter->fir_length[0];
-
-    filter->fir_accumulator[1] += (input_integer - filter->fir_buf[1][filter->fir_index[1]]);
-
-    filter->fir_buf[1][filter->fir_index[1]] = input_integer;
-
-    // Do not use modulus (%) operator to wrap fir_index as it is very slow in TMS320C32 DSP
-
-    if(++filter->fir_index[1] >= filter->fir_length[1])
-    {
-        filter->fir_index[1] = 0;
-    }
-
-    // Convert filter output back to floating point
-
-    return(filter->integer_to_float * (float)filter->fir_accumulator[1]);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void regMeasFilter(struct reg_meas_filter *filter)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function is called in real-time to filter the measurement with a 2-stage cascaded box car filter and
-  then uses extrapolation to estimate the measurement without the measurement and FIR filtering delay.
-  If the filter is not running then the output is simply the unfiltered input.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    float   old_filtered_value;
-    
-    // If filter is stopped
-    
-    if(filter->enable == 0)
-    {
-        // Bypass the filter - simply set the output values to the input value
-        
-        filter->signal[REG_MEAS_EXTRAPOLATED] = filter->signal[REG_MEAS_FILTERED] = filter->signal[REG_MEAS_UNFILTERED];
-    }
-    else // Filter is running
-    {
-        filter->signal[REG_MEAS_FILTERED] = regMeasFirFilter(filter);
-
-        // Prepare to extrapolate to estimate the measurement without a delay
-
-        old_filtered_value = filter->extrapolation_buf[filter->extrapolation_index];
-
-        filter->extrapolation_buf[filter->extrapolation_index] = filter->signal[REG_MEAS_FILTERED];
-
-        // Do not use modulus (%) operator to wrap fir_index as it is very slow in TMS320C32 DSP
-
-        if(++filter->extrapolation_index >= filter->extrapolation_len_iters)
-        {
-            filter->extrapolation_index = 0;
-        }
-
-        // Extrapolate filtered measurement
-
-        filter->signal[REG_MEAS_EXTRAPOLATED] = filter->signal[REG_MEAS_FILTERED] + filter->extrapolation_factor *
-                                               (filter->signal[REG_MEAS_FILTERED] - old_filtered_value);
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
+//-----------------------------------------------------------------------------------------------------------
+// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+//-----------------------------------------------------------------------------------------------------------
 void regMeasFilterInitBuffer(struct reg_meas_filter *filter, int32_t *buf)
 /*---------------------------------------------------------------------------------------------------------*\
   This function allows the buffer for the measurement filter to be defined.  The buffer is used for both
@@ -196,7 +104,7 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
 
     while(total_fir_len--)
     {
-        regMeasFirFilter(filter);
+        regMeasFirFilterRT(filter);
     }
 
     // Initialise extrapolation buffer
@@ -213,7 +121,7 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
     filter->enable = 1;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regMeasRegSelect(struct reg_meas_filter *filter, enum reg_meas_select reg_select)
+void regMeasSetRegSelect(struct reg_meas_filter *filter, enum reg_meas_select reg_select)
 /*---------------------------------------------------------------------------------------------------------*\
   This function sets the selector of the regulation measurement.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -231,8 +139,106 @@ void regMeasSetNoiseAndTone(struct reg_noise_and_tone *noise_and_tone, float noi
     noise_and_tone->tone_amp = tone_amp;
     noise_and_tone->tone_half_period_iters = tone_half_period_iters;
 }
+//-----------------------------------------------------------------------------------------------------------
+// Real-Time Functions
+//-----------------------------------------------------------------------------------------------------------
+static float regMeasFirFilterRT(struct reg_meas_filter *filter)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function implements the classical two-stage box-car FIR filter used by regMeasFilter() and
+  regMeasFilterInitHistory().
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    int32_t input_integer;
+    float   input_meas = filter->signal[REG_MEAS_UNFILTERED];
+
+    // Clip unfiltered input measurement value to avoid crazy roll-overs in the integer stage
+
+    if(input_meas > filter->max_meas_value)
+    {
+        input_meas = filter->max_meas_value;
+    }
+    else if(input_meas < -filter->max_meas_value)
+    {
+        input_meas = -filter->max_meas_value;
+    }
+
+    // Filter stage 1
+
+    input_integer = (int32_t)(filter->float_to_integer * input_meas);
+
+    filter->fir_accumulator[0] += (input_integer - filter->fir_buf[0][filter->fir_index[0]]);
+
+    filter->fir_buf[0][filter->fir_index[0]] = input_integer;
+
+    // Do not use modulus (%) operator to wrap fir_index as it is very slow in TMS320C32 DSP
+
+    if(++filter->fir_index[0] >= filter->fir_length[0])
+    {
+        filter->fir_index[0] = 0;
+    }
+
+    // Filter stage 2
+
+    input_integer = filter->fir_accumulator[0] / (int32_t)filter->fir_length[0];
+
+    filter->fir_accumulator[1] += (input_integer - filter->fir_buf[1][filter->fir_index[1]]);
+
+    filter->fir_buf[1][filter->fir_index[1]] = input_integer;
+
+    // Do not use modulus (%) operator to wrap fir_index as it is very slow in TMS320C32 DSP
+
+    if(++filter->fir_index[1] >= filter->fir_length[1])
+    {
+        filter->fir_index[1] = 0;
+    }
+
+    // Convert filter output back to floating point
+
+    return(filter->integer_to_float * (float)filter->fir_accumulator[1]);
+}
+//-----------------------------------------------------------------------------------------------------------
+void regMeasFilterRT(struct reg_meas_filter *filter)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function is called in real-time to filter the measurement with a 2-stage cascaded box car filter and
+  then uses extrapolation to estimate the measurement without the measurement and FIR filtering delay.
+  If the filter is not running then the output is simply the unfiltered input.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float   old_filtered_value;
+
+    // If filter is stopped
+
+    if(filter->enable == 0)
+    {
+        // Bypass the filter - simply set the output values to the input value
+
+        filter->signal[REG_MEAS_EXTRAPOLATED] = filter->signal[REG_MEAS_FILTERED] = filter->signal[REG_MEAS_UNFILTERED];
+    }
+    else // Filter is running
+    {
+        filter->signal[REG_MEAS_FILTERED] = regMeasFirFilterRT(filter);
+
+        // Prepare to extrapolate to estimate the measurement without a delay
+
+        old_filtered_value = filter->extrapolation_buf[filter->extrapolation_index];
+
+        filter->extrapolation_buf[filter->extrapolation_index] = filter->signal[REG_MEAS_FILTERED];
+
+        // Do not use modulus (%) operator to wrap fir_index as it is very slow in TMS320C32 DSP
+
+        if(++filter->extrapolation_index >= filter->extrapolation_len_iters)
+        {
+            filter->extrapolation_index = 0;
+        }
+
+        // Extrapolate filtered measurement
+
+        filter->signal[REG_MEAS_EXTRAPOLATED] = filter->signal[REG_MEAS_FILTERED] + filter->extrapolation_factor *
+                                               (filter->signal[REG_MEAS_FILTERED] - old_filtered_value);
+    }
+}
 /*---------------------------------------------------------------------------------------------------------*/
-float regMeasNoiseAndTone(struct reg_noise_and_tone *noise_and_tone)
+float regMeasNoiseAndToneRT(struct reg_noise_and_tone *noise_and_tone)
 /*---------------------------------------------------------------------------------------------------------*\
   This function uses a simple pseudo random number generator to generate a roughly white noise and a
   square wave to simulate a tone. The frequency of the tone is defined by its half-period in iterations.
@@ -278,7 +284,7 @@ float regMeasNoiseAndTone(struct reg_noise_and_tone *noise_and_tone)
     return(noise + tone);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regMeasRate(struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters)
+void regMeasRateRT(struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will store the filtered measurement in the rate estimation history at the regulation
   period (defined by period_iters) and calculate the estimated rate using least-squares regression

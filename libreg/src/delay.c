@@ -26,7 +26,9 @@
 #include <math.h>
 #include "libreg/delay.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
+//-----------------------------------------------------------------------------------------------------------
+// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+//-----------------------------------------------------------------------------------------------------------
 void regDelayInitDelay(struct reg_delay *delay, float delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
   This function initialises the reg_delay structure parameters.  The undersampled_flag can be used to
@@ -65,8 +67,10 @@ void regDelayInitVars(struct reg_delay *delay, float initial_signal)
         delay->buf[i] = initial_signal;
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
-float regDelayCalc(struct reg_delay *delay, float signal, uint32_t under_sampled_flag)
+//-----------------------------------------------------------------------------------------------------------
+// Real-Time Functions
+//-----------------------------------------------------------------------------------------------------------
+float regDelaySignalRT(struct reg_delay *delay, float signal, uint32_t under_sampled_flag)
 /*---------------------------------------------------------------------------------------------------------*\
   This function should be called after the delay structure has been initialised.
 \*---------------------------------------------------------------------------------------------------------*/

@@ -27,7 +27,9 @@
 #include <math.h>
 #include "libreg/sim.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
+//-----------------------------------------------------------------------------------------------------------
+// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+//-----------------------------------------------------------------------------------------------------------
 void regSimLoadTcError(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars,
                        float sim_load_tc_error)
 /*---------------------------------------------------------------------------------------------------------*\
@@ -84,7 +86,7 @@ void regSimLoadSetField(struct reg_sim_load_pars *pars, struct reg_sim_load_vars
   This function initialises the load simulation with the field b_init.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    regSimLoadSetCurrent(pars, vars, regLoadFieldToCurrent(&pars->load_pars, b_init));
+    regSimLoadSetCurrent(pars, vars, regLoadFieldToCurrentRT(&pars->load_pars, b_init));
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float i_init)
@@ -100,7 +102,7 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
         vars->compensation = 0.0;
     }
 
-    regSimLoad(pars, vars, vars->circuit_voltage);
+    regSimLoadRT(pars, vars, vars->circuit_voltage);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init)
@@ -115,83 +117,10 @@ void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_va
         vars->compensation    = 0.0;
     }
 
-    regSimLoad(pars, vars, v_init);
+    regSimLoadRT(pars, vars, v_init);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regSimLoad(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_circuit)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function simulates the current in the load in response to the specified load voltage.  The algorithm
-  depends upon whether the voltage source simulation and the load are under-sampled.
-
-  The computation of the integrator (vars->integrator) makes use of the Kahan Summation Algorithm which
-  largely improves the precision on the sum, especially in that specific function where the increment is
-  often very small compared to the integrated sum.
-
-  IMPLEMENTATION NOTES: On C32 DSP, where there is no native support for 64-bit floating point arithmetic,
-  the use of a compensated summation (like Kahan) is necessary for the accuracy of the load simulation with
-  32-bit floating-point. However, the C32 has an internal ALU with extended 40-bit floating point arithmetic,
-  and in some conditions the compiler will use the extended precision for all intermediate results. In the
-  case of a Kahan summation, that extended precision would actually break the algorithm and result in a
-  precision no better than a naive summation. The reason for that is if the new integrator value is stored
-  in a register with 40-bit precision, then the compensation:
-
-      compensation = (integrator - previous_integrator) - increment ~ 0
-
-  Will be flawed and result in a negligible compensation value, different from the value obtained if the
-  integrator is stored with 32-bit precision. The implementation below stores the new value of the integrator
-  in the global variable vars->integrator BEFORE calculating the compensation, and that is sufficient for the
-  C32 compiler to lower the precision of the integrator to 32 bits.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    float int_gain;
-    float increment;
-    float prev_integrator;
-
-    // When load is not under sampled the inductive transients are modelled with an integrator
-
-    if(pars->load_undersampled_flag == 0)
-    {
-        int_gain = pars->period_tc_ratio / regLoadCalcSatFactor(&pars->load_pars,vars->magnet_current);
-
-        // If voltage source simulation is not under sampled use first-order interpolation of voltage
-
-        if(pars->vs_undersampled_flag == 0)
-        {
-            increment = int_gain * (pars->load_pars.gain1 * 0.5 * (v_circuit + vars->circuit_voltage) - vars->integrator);
-        }
-        else // else when voltage source simulation is under sampled use initial voltage for complete sample
-        {
-            increment = int_gain * (pars->load_pars.gain1 * vars->circuit_voltage - vars->integrator);
-        }
-
-        // Computation of the integrator using Kahan Summation
-
-        increment         -= vars->compensation;
-        prev_integrator    = vars->integrator;
-        vars->integrator   = prev_integrator + increment;
-        vars->compensation = (vars->integrator - prev_integrator) - increment;  // Algebraically 0, in fact holds the
-                                                                                // floating-point error compensation
-        vars->circuit_current = vars->integrator + pars->load_pars.gain0 * v_circuit;
-        vars->magnet_current  = vars->integrator * pars->load_pars.ohms1;
-    }
-    else // else when load is under sampled the inductive transients are ignored and ohms law is used
-    {
-        vars->circuit_current = v_circuit * pars->load_pars.gain2;
-        vars->magnet_current  = vars->circuit_current * pars->load_pars.ohms2;
-    }
-
-    // Remember load voltage for next iteration
-
-    vars->circuit_voltage = v_circuit;
-
-    // Simulate magnet field based on magnet current
-
-    vars->magnet_field = regLoadCurrentToField(&pars->load_pars, vars->magnet_current);
-
-    return(vars->circuit_current);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidth, float z, float tau_zero)
+void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float sim_period, float bandwidth, float z, float tau_zero)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates the z-transform using the Tustin algorithm for a voltage source with a
   second order s-transform with one optional real zero with time constant tau_zero (0 if not used),
@@ -257,7 +186,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float sim_period, float bandwidt
     pars->den[3] = 0.0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref_delay_iters)
+uint32_t regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref_delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates the gain and the 50% step response time of the simulated voltage source.
   It returns 1 if the voltage source simulation is under-sampled.
@@ -300,7 +229,7 @@ uint32_t regSimVsInitGain(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *
 
     // Scan to find when step response crosses 50% level - protect against ultra slow responses
 
-    for(i = 0 ; i < 1000 && ((step_response = regSimVs(pars, vars, 1.0)) < 0.5) ; i++)
+    for(i = 0 ; i < 1000 && ((step_response = regSimVsRT(pars, vars, 1.0)) < 0.5) ; i++)
     {
         prev_step_response = step_response;
     }
@@ -348,8 +277,10 @@ float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *
 
     return(v_ref);
 }
-/*---------------------------------------------------------------------------------------------------------*/
-float regSimVs(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref)
+//-----------------------------------------------------------------------------------------------------------
+// Real-Time Functions
+//-----------------------------------------------------------------------------------------------------------
+float regSimVsRT(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref)
 /*---------------------------------------------------------------------------------------------------------*\
   This function simulates the voltage source in response to the specified voltage reference.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -383,6 +314,79 @@ float regSimVs(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float
     vars->v_circuit[0] = v_circuit;
 
     return(v_circuit);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_circuit)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function simulates the current in the load in response to the specified load voltage.  The algorithm
+  depends upon whether the voltage source simulation and the load are under-sampled.
+
+  The computation of the integrator (vars->integrator) makes use of the Kahan Summation Algorithm which
+  largely improves the precision on the sum, especially in that specific function where the increment is
+  often very small compared to the integrated sum.
+
+  IMPLEMENTATION NOTES: On C32 DSP, where there is no native support for 64-bit floating point arithmetic,
+  the use of a compensated summation (like Kahan) is necessary for the accuracy of the load simulation with
+  32-bit floating-point. However, the C32 has an internal ALU with extended 40-bit floating point arithmetic,
+  and in some conditions the compiler will use the extended precision for all intermediate results. In the
+  case of a Kahan summation, that extended precision would actually break the algorithm and result in a
+  precision no better than a naive summation. The reason for that is if the new integrator value is stored
+  in a register with 40-bit precision, then the compensation:
+
+      compensation = (integrator - previous_integrator) - increment ~ 0
+
+  Will be flawed and result in a negligible compensation value, different from the value obtained if the
+  integrator is stored with 32-bit precision. The implementation below stores the new value of the integrator
+  in the global variable vars->integrator BEFORE calculating the compensation, and that is sufficient for the
+  C32 compiler to lower the precision of the integrator to 32 bits.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float int_gain;
+    float increment;
+    float prev_integrator;
+
+    // When load is not under sampled the inductive transients are modelled with an integrator
+
+    if(pars->load_undersampled_flag == 0)
+    {
+        int_gain = pars->period_tc_ratio / regLoadSatFactorRT(&pars->load_pars,vars->magnet_current);
+
+        // If voltage source simulation is not under sampled use first-order interpolation of voltage
+
+        if(pars->vs_undersampled_flag == 0)
+        {
+            increment = int_gain * (pars->load_pars.gain1 * 0.5 * (v_circuit + vars->circuit_voltage) - vars->integrator);
+        }
+        else // else when voltage source simulation is under sampled use initial voltage for complete sample
+        {
+            increment = int_gain * (pars->load_pars.gain1 * vars->circuit_voltage - vars->integrator);
+        }
+
+        // Computation of the integrator using Kahan Summation
+
+        increment         -= vars->compensation;
+        prev_integrator    = vars->integrator;
+        vars->integrator   = prev_integrator + increment;
+        vars->compensation = (vars->integrator - prev_integrator) - increment;  // Algebraically 0, in fact holds the
+                                                                                // floating-point error compensation
+        vars->circuit_current = vars->integrator + pars->load_pars.gain0 * v_circuit;
+        vars->magnet_current  = vars->integrator * pars->load_pars.ohms1;
+    }
+    else // else when load is under sampled the inductive transients are ignored and ohms law is used
+    {
+        vars->circuit_current = v_circuit * pars->load_pars.gain2;
+        vars->magnet_current  = vars->circuit_current * pars->load_pars.ohms2;
+    }
+
+    // Remember load voltage for next iteration
+
+    vars->circuit_voltage = v_circuit;
+
+    // Simulate magnet field based on magnet current
+
+    vars->magnet_field = regLoadCurrentToFieldRT(&pars->load_pars, vars->magnet_current);
+
+    return(vars->circuit_current);
 }
 // EOF
 

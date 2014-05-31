@@ -107,15 +107,15 @@ extern "C" {
 
 // Measurement related functions
 
-void     regMeasFilter           (struct reg_meas_filter *filter);
+void     regMeasFilterRT           (struct reg_meas_filter *filter);
 void     regMeasFilterInitBuffer (struct reg_meas_filter *filter, int32_t *buf);
 void     regMeasFilterInit       (struct reg_meas_filter *filter, uint32_t fir_length[2],
                                   uint32_t extrapolation_len_iters, float pos, float neg, float meas_delay_iters);
-void     regMeasRegSelect        (struct reg_meas_filter *filter, enum reg_meas_select reg_select);
+void     regMeasSetRegSelect        (struct reg_meas_filter *filter, enum reg_meas_select reg_select);
 void     regMeasSetNoiseAndTone  (struct reg_noise_and_tone *noise_and_tone, float noise_pp,
                                   float tone_amp, uint32_t tone_half_period_iters);
-float    regMeasNoiseAndTone     (struct reg_noise_and_tone *noise_and_tone);
-void     regMeasRate             (struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters);
+float    regMeasNoiseAndToneRT     (struct reg_noise_and_tone *noise_and_tone);
+void     regMeasRateRT             (struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters);
 
 #ifdef __cplusplus
 }

@@ -28,16 +28,17 @@
 
 // Constants
 
-#define TWO_PI              6.28318530717958647693
+#define M_TWO_PI           (2.0 * M_PI)
 #define FLOAT_THRESHOLD     1.0E-10
 
 // Static function declarations
 
 static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx);
 
-/*---------------------------------------------------------------------------------------------------------*/
+//-----------------------------------------------------------------------------------------------------------
+// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+//-----------------------------------------------------------------------------------------------------------
 static int32_t regJuryTest(struct reg_rst_pars *pars)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     int32_t     i;
     int32_t     n;
@@ -264,9 +265,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     // Calculate intermediate values
 
-    c1 = -exp(-pars->period * TWO_PI * clbw);
-    q1 = -exp(-pars->period * TWO_PI * clbw2 * z);
-    d1 = 2.0 * q1 * cos(pars->period * TWO_PI * clbw2 * sqrt(1.0 - z * z));
+    c1 = -exp(-pars->period * M_TWO_PI * clbw);
+    q1 = -exp(-pars->period * M_TWO_PI * clbw2 * z);
+    d1 = 2.0 * q1 * cos(pars->period * M_TWO_PI * clbw2 * sqrt(1.0 - z * z));
     d2 = q1 * q1;
 
     // Calculate RST coefficients
@@ -327,7 +328,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     case 3:                 // Algorithm 3 : Pure delay fraction 1.0 - 1.401 : dead-beat (2)
 
-        c2 = -exp(-pars->period * TWO_PI * clbw3);
+        c2 = -exp(-pars->period * M_TWO_PI * clbw3);
         q1 = 2.0 - a1 + c1 + c2 + d1;
 
         pars->rst.r[0] = q1*(2.0 - a1) + d2 + c1*c2 + d1*(c1 + c2) + 2.0*a1 - 1.0;
@@ -353,7 +354,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     case 4:                 // Algorithm 4 : Pure delay fraction 1.401 - 1.999 : not dead-beat
 
-        c2 = -exp(-pars->period * TWO_PI * clbw3);
+        c2 = -exp(-pars->period * M_TWO_PI * clbw3);
 
         pars->rst.r[0] = (4*a1 + 2*c1 + 2*c2 + 2*d1 + d2 + 3*a1*c1 + 3*a1*c2 + 3*a1*d1 + 2*a1*d2 + c1*c2 + c1*d1 + c2*d1 +
                           2*a1*c1*c2 + 2*a1*c1*d1 + a1*c1*d2 + 2*a1*c2*d1 + a1*c2*d2 - c1*c2*d2 + a1*c1*c2*d1 + 3)/(b0_b1*(a1 + 1)*(a1 + 1)) + 
@@ -393,8 +394,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     case 5:                 // Algorithm 5 : Pure delay fraction 2.0 - 2.401 : dead-beat (3)
 
-        c2 = -exp(-pars->period * TWO_PI * clbw3);
-        c3 = -exp(-pars->period * TWO_PI * clbw4);
+        c2 = -exp(-pars->period * M_TWO_PI * clbw3);
+        c3 = -exp(-pars->period * M_TWO_PI * clbw4);
         q1 = 2.0 - a1 + c1 + c2 + c3 + d1;
         q2 = (2.0 - a1)*q1 + 2.0*a1 - 1 + d2 + c1*c2 + c1*c3 + c2*c3 + c1*d1 + c2*d1 + c3*d1;
 
@@ -455,7 +456,7 @@ static void regRstInitPI(struct reg_rst_pars  *pars,
 {
     float a1 = -exp(-pars->period * (load->ohms_ser + load->ohms_mag) * load->inv_henrys);
     float b1 = (1.0 + a1) / (load->ohms_ser + load->ohms_mag);
-    float c1 = -exp(-pars->period * TWO_PI * clbw);
+    float c1 = -exp(-pars->period * M_TWO_PI * clbw);
 
     pars->alg_index = 10;
 
@@ -483,7 +484,7 @@ static void regRstInitI(struct reg_rst_pars  *pars,
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float b1 = 1.0 / (load->ohms_ser + load->ohms_mag);
-    float c1 = -exp(-TWO_PI * pars->period * clbw);
+    float c1 = -exp(-M_TWO_PI * pars->period * clbw);
 
     pars->alg_index = 20;
 
@@ -630,8 +631,10 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
 
     return(pars->status);
 }
-/*---------------------------------------------------------------------------------------------------------*/
-float regRstCalcAct(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas)
+//-----------------------------------------------------------------------------------------------------------
+// Real-Time Functions
+//-----------------------------------------------------------------------------------------------------------
+float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function returns the actuation based on the supplied reference and measurement using the RST
   parameters.  If the actuation is clipped then regRstCalcRef must be called to re-calculate the
@@ -684,7 +687,7 @@ float regRstCalcAct(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
     return(act);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas)
+float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function must be called in two situations:
 
@@ -739,14 +742,14 @@ float regRstCalcRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float 
     return(ref);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regRstMeasTrackDelay(struct reg_rst_vars *vars, float period, float max_ref_rate)
+void regRstTrackDelayRT(struct reg_rst_vars *vars, float period, float max_ref_rate)
 /*---------------------------------------------------------------------------------------------------------*\
   This function must be called after calling regRstCalcAct() and BEFORE calling regRstHistory() to measure
   the track delay.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float    meas_track_delay_periods   = 0.0;
-    float    delta_ref                  = regRstDeltaRef(vars);
+    float    delta_ref                  = regRstDeltaRefRT(vars);
     uint32_t var_idx                    = vars->history_index;
 
     // Measure track delay if reference is changing
@@ -771,7 +774,7 @@ void regRstMeasTrackDelay(struct reg_rst_vars *vars, float period, float max_ref
     vars->meas_track_delay_periods = meas_track_delay_periods;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regRstHistory(struct reg_rst_vars *vars)
+void regRstHistoryRT(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
   This function must be called after calling regRstCalcAct() and regRstMeasTrackDelay() to adjust the
   RST history index.
@@ -782,7 +785,7 @@ void regRstHistory(struct reg_rst_vars *vars)
     vars->delayed_ref_index = 0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regRstPrevRef(struct reg_rst_vars *vars)
+float regRstPrevRefRT(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will return the reference for the previous iteration.  It should be called after
   regRstHistory() has been called.
@@ -791,7 +794,7 @@ float regRstPrevRef(struct reg_rst_vars *vars)
     return(vars->ref[(vars->history_index - 1) & REG_RST_HISTORY_MASK]);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regRstDeltaRef(struct reg_rst_vars *vars)
+float regRstDeltaRefRT(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will return the change of reference for the previous iteration.  It should be called after
   regRstHistory() has been called.
@@ -801,7 +804,7 @@ float regRstDeltaRef(struct reg_rst_vars *vars)
            vars->ref[(vars->history_index - 2) & REG_RST_HISTORY_MASK]);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
+float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will return the reference delayed by ref_delay_periods for the next iteration.
   It should be called after regRstHistory() and regErrCheckLimits() have been called to prepare the delayed
@@ -860,7 +863,7 @@ float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
     return(vars->ref[vars->history_index]);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regRstAverageVref(struct reg_rst_vars *vars)
+float regRstAverageVrefRT(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will return the average RST actuation (V_REF) over the past few iterations.
 \*---------------------------------------------------------------------------------------------------------*/

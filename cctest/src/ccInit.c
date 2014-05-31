@@ -292,13 +292,13 @@ uint32_t ccInitSimulation(void)
     // If VS BANDWIDTH is greater than zero then initialise the voltage source simulation model coefficients
     // using Tustin algorithm.
 
-    regSimVsInit(&reg.sim_vs_pars, reg.iter_period, ccpars_vs.bandwidth,
+    regSimVsInitTustin(&reg.sim_vs_pars, reg.iter_period, ccpars_vs.bandwidth,
                  ccpars_vs.z, ccpars_vs.tau_zero);
 
     // Initialise voltage source model gain and stop if gain error is more than 5%
     // This also calculates the vs_undersampled_flag for sim_load_pars
 
-    reg.sim_load_pars.vs_undersampled_flag = regSimVsInitGain(&reg.sim_vs_pars, &reg.sim_vs_vars,
+    reg.sim_load_pars.vs_undersampled_flag = regSimVsInit(&reg.sim_vs_pars, &reg.sim_vs_vars,
                                                                    ccpars_vs.v_ref_delay_iters);
 
     if(fabs(reg.sim_vs_pars.gain - 1.0) > 0.05)
@@ -316,7 +316,7 @@ uint32_t ccInitSimulation(void)
 
     // Initialise load model for simulation using the sim_tc_error factor to mismatch the regulation
 
-    regSetSimLoad(&reg, ccpars_global.reg_mode[0], ccpars_load.sim_tc_error);
+    regConvInitSimLoad(&reg, ccpars_global.reg_mode[0], ccpars_load.sim_tc_error);
 
     // Initialise voltage source model history to allow simulation to start with a non-zero voltage
     // This is not needed in a real converter controller because the voltage always starts at zero
@@ -355,7 +355,7 @@ uint32_t ccInitSimulation(void)
     regMeasFilterInit(&reg.b.meas, ccpars_meas.b_fir_lengths, ccpars_breg.period_iters,
                       ccpars_limits.b.pos, ccpars_limits.b.neg, ccpars_meas.b_delay_iters);
 
-    regMeasRegSelect(&reg.b.meas, ccpars_meas.b_reg_select);
+    regMeasSetRegSelect(&reg.b.meas, ccpars_meas.b_reg_select);
 
     // Initialise current measurement filter
 
@@ -373,7 +373,7 @@ uint32_t ccInitSimulation(void)
     regMeasFilterInit(&reg.i.meas, ccpars_meas.i_fir_lengths, ccpars_ireg.period_iters,
                       ccpars_limits.i.pos, ccpars_limits.i.neg, ccpars_meas.i_delay_iters);
 
-    regMeasRegSelect(&reg.i.meas, ccpars_meas.i_reg_select);
+    regMeasSetRegSelect(&reg.i.meas, ccpars_meas.i_reg_select);
 
     // Initialise simulation of measurement noise and tone
 
@@ -387,7 +387,13 @@ uint32_t ccInitSimulation(void)
 
     // Run first simulation to initialise measurement variables
 
-    regSimulate(&reg, 0.0);
+//    regMeasFilter(&reg.b.meas);
+//    regMeasRate  (&reg.b.rate,reg.b.meas.signal[REG_MEAS_FILTERED],reg.b.rst_pars.period,reg.b.rst_pars.period_iters);
+
+//    regMeasFilter(&reg.i.meas);
+//    regMeasRate  (&reg.i.rate,reg.i.meas.signal[REG_MEAS_FILTERED],reg.i.rst_pars.period,reg.i.rst_pars.period_iters);
+
+    regConvSimulateRT(&reg, 0.0);
 
     return(EXIT_SUCCESS);
 }
@@ -407,7 +413,7 @@ uint32_t ccInitRegulation(void)
     if(ccrun.breg_flag == 1)
     {
         pure_delay_periods = ccpars_breg.pure_delay_periods > 0.0 ? ccpars_breg.pure_delay_periods :
-                             regCalcPureDelay(&reg, &reg.b.meas, ccpars_breg.period_iters);
+                             regConvPureDelay(&reg, &reg.b.meas, ccpars_breg.period_iters);
 
         status = regRstInit(&reg.b.rst_pars,
                             reg.iter_period, ccpars_breg.period_iters, &reg.load_pars,
@@ -431,7 +437,7 @@ uint32_t ccInitRegulation(void)
     if(ccrun.ireg_flag == 1)
     {
         pure_delay_periods = ccpars_ireg.pure_delay_periods > 0.0 ? ccpars_ireg.pure_delay_periods :
-                             regCalcPureDelay(&reg, &reg.i.meas, ccpars_ireg.period_iters);
+                             regConvPureDelay(&reg, &reg.i.meas, ccpars_ireg.period_iters);
 
         status = regRstInit(&reg.i.rst_pars,
                             reg.iter_period, ccpars_ireg.period_iters, &reg.load_pars,

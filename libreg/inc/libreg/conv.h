@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     libreg.h                                                                    Copyright CERN 2014
+  File:     libreg/conv.h                                                               Copyright CERN 2014
 
   License:  This file is part of libreg.
 
@@ -19,30 +19,14 @@
   Purpose:  Converter Control Regulation library header file
 
   Contact:  cclibs-devs@cern.ch
-
-  Notes:    The regulation library provides support for:
-
-                1. Field, Current and voltage limits
-                2. RST based regulation (Landau notation)
-                3. Regulation error calculation
-                4. Voltage source simulation
-                5. Magnet load definition and simulation
-
 \*---------------------------------------------------------------------------------------------------------*/
 
-#ifndef LIBREG_H
-#define LIBREG_H
+#ifndef LIBREG_CONV_H
+#define LIBREG_CONV_H
 
 // Include header files
 
 #include <stdint.h>
-#include <libreg/delay.h>
-#include <libreg/err.h>
-#include <libreg/lim.h>
-#include <libreg/load.h>
-#include <libreg/meas.h>
-#include <libreg/rst.h>
-#include <libreg/sim.h>
 
 // Regulation error rate control enum
 
@@ -54,14 +38,14 @@ enum reg_err_rate
 
 // Global power converter regulation structures
 
-struct reg_sim_meas                                     ///< Measurement simulation structure
+struct reg_conv_sim_meas                                ///< Measurement simulation structure
 {
     struct reg_delay            meas_delay;             ///< Measurement delay parameters
     struct reg_noise_and_tone   noise_and_tone;         ///< Simulated noise and tone parameters
     float                       signal;                 ///< Simulated measured signal with noise and tone
 };
 
-struct reg_signal
+struct reg_conv_signal
 {
     struct reg_meas_filter      meas;                   ///< Unfiltered and filtered measurement (real or sim)
     struct reg_meas_rate        rate;                   ///< Estimation of the rate of the field measurement
@@ -70,30 +54,30 @@ struct reg_signal
     struct reg_rst_pars         rst_pars;               ///< Regulation RST parameters
     enum   reg_err_rate         err_rate;               ///< Rate control for regulation error calculation
     struct reg_err              err;                    ///< Regulation error
-    struct reg_sim_meas         sim;                    ///< Simulated measurement with noise and tone
+    struct reg_conv_sim_meas    sim;                    ///< Simulated measurement with noise and tone
 };
 
-struct reg_voltage
+struct reg_conv_voltage
 {
     float                       meas;                   ///< Unfiltered voltage measurement (real or sim)
     struct reg_lim_ref          lim_ref;                ///< Voltage reference limits
     struct reg_rst_pars         rst_pars;               ///< Regulation RST parameters
     enum   reg_err_rate         err_rate;               ///< Rate control for regulation error calculation
     struct reg_err              err;                    ///< Voltage regulation error
-    struct reg_sim_meas         sim;                    ///< Simulated voltage measurement with noise and tone
+    struct reg_conv_sim_meas    sim;                    ///< Simulated voltage measurement with noise and tone
     float                       ref;                    ///< Voltage reference before saturation or limits
     float                       ref_sat;                ///< Voltage reference after saturation compensation
     float                       ref_limited;            ///< Voltage reference after saturation and limits
 };
 
-struct reg_converter                                    ///< Global converter regulation structure
+struct reg_conv                                         ///< Global converter regulation structure
 {
     double                      iter_period;            ///< Iteration (measurement) period
 
     // Regulation reference and measurement variables and parameters
 
     enum   reg_mode             mode;                   ///< Regulation mode: Field, Current or Voltage
-    struct reg_signal          *r;                      ///< Pointer to active regulation structure (reg.i or reg.b)
+    struct reg_conv_signal     *r;                      ///< Pointer to active regulation structure (reg.i or reg.b)
 
     uint32_t                    iteration_counter;      ///< Iteration counter (within each regulation period)
     double                      period;                 ///< Regulation period
@@ -117,9 +101,9 @@ struct reg_converter                                    ///< Global converter re
 
     // Field, current and voltage regulation structures
 
-    struct reg_signal           b;                      ///< Field regulation parameters and variables
-    struct reg_signal           i;                      ///< Current regulation parameters and variables
-    struct reg_voltage          v;                      ///< Voltage regulation parameters and variables
+    struct reg_conv_signal      b;                      ///< Field regulation parameters and variables
+    struct reg_conv_signal      i;                      ///< Current regulation parameters and variables
+    struct reg_conv_voltage     v;                      ///< Voltage regulation parameters and variables
                                                         ///< (Voltage is regulated by voltage source)
 
     // Load parameters and variables structures
@@ -139,18 +123,18 @@ extern "C" {
 
 // Converter regulation functions
 
-void     regSetSimLoad          (struct reg_converter *reg, enum reg_mode reg_mode, float sim_load_tc_error);
-void     regSetMeas             (struct reg_converter *reg, float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
-float    regCalcPureDelay       (struct reg_converter *reg, struct reg_meas_filter *meas_filter, uint32_t reg_period_iters);
-void     regSetMode             (struct reg_converter *reg, enum reg_mode reg_mode);
-uint32_t regConverter           (struct reg_converter *reg, float *ref, float feedforward_v_ref, uint32_t feedforward_control,
-                                 uint32_t max_abs_err_control);
-void     regSimulate            (struct reg_converter *reg, float v_perturbation);
+float    regConvPureDelay       (struct reg_conv *reg, struct reg_meas_filter *meas_filter, uint32_t reg_period_iters);
+void     regConvInitSimLoad     (struct reg_conv *reg, enum reg_mode reg_mode, float sim_load_tc_error);
+
+void     regConvSetMeasRT       (struct reg_conv *reg, float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
+void     regConvSetModeRT       (struct reg_conv *reg, enum reg_mode reg_mode);
+uint32_t regConverterRT         (struct reg_conv *reg, float *ref, float feedforward_v_ref, uint32_t feedforward_control, uint32_t max_abs_err_control);
+void     regConvSimulateRT      (struct reg_conv *reg, float v_perturbation);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // LIBREG_H
+#endif // LIBREG_CONV_H
 // EOF
 

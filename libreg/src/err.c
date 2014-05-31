@@ -26,7 +26,9 @@
 #include <math.h>
 #include "libreg/err.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
+//-----------------------------------------------------------------------------------------------------------
+// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+//-----------------------------------------------------------------------------------------------------------
 void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_threshold)
 /*---------------------------------------------------------------------------------------------------------*\
   This function can be called to initialise the warning and fault limits of the reg_err structure.
@@ -51,8 +53,10 @@ void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_
         err->fault.filter = 0.0;
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
-void regErrResetLimitsVars(struct reg_err *err)
+//-----------------------------------------------------------------------------------------------------------
+// Real-Time Functions
+//-----------------------------------------------------------------------------------------------------------
+void regErrResetLimitsVarsRT(struct reg_err *err)
 /*---------------------------------------------------------------------------------------------------------*\
   This function can be called to reset the reg_err structure variables, except for the max_abs_err.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -66,7 +70,7 @@ void regErrResetLimitsVars(struct reg_err *err)
     err->fault.filter   = 0.0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void regErrLimit(struct reg_err_limit *err_limit, float abs_err)
+static void regErrLimitRT(struct reg_err_limit *err_limit, float abs_err)
 /*---------------------------------------------------------------------------------------------------------*\
   This function manages the warning and fault limits by applying hysteresis to a first order filter of the
   limit exceeded flag.
@@ -95,8 +99,8 @@ static void regErrLimit(struct reg_err_limit *err_limit, float abs_err)
     err_limit->flag = err_limit->filter > 0.3;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regErrCheckLimits(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err,
-                       float delayed_ref, float meas)
+void regErrCheckLimitsRT(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err,
+                         float delayed_ref, float meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function can be called to calculate the regulation error and to check the error limits (if supplied).
   The calculation of the error can be enabled by setting enable_err.
@@ -114,7 +118,7 @@ void regErrCheckLimits(struct reg_err *err, uint32_t enable_err, uint32_t enable
 
     if(enable_err == 0)
     {
-        regErrResetLimitsVars(err);
+        regErrResetLimitsVarsRT(err);
         return;
     }
 
@@ -142,12 +146,12 @@ void regErrCheckLimits(struct reg_err *err, uint32_t enable_err, uint32_t enable
 
     if(err->warning.threshold > 0.0)
     {
-        regErrLimit(&err->warning, abs_error);
+        regErrLimitRT(&err->warning, abs_error);
     }
 
     if(err->fault.threshold > 0.0)
     {
-        regErrLimit(&err->fault, abs_error);
+        regErrLimitRT(&err->fault, abs_error);
     }
 }
 // EOF

@@ -81,12 +81,12 @@ void     regSimLoadInit         (struct reg_sim_load_pars *sim_load_pars, float 
 void     regSimLoadSetField     (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float b_init);
 void     regSimLoadSetCurrent   (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float i_init);
 void     regSimLoadSetVoltage   (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init);
-float    regSimLoad             (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float voltage);
-void     regSimVsInit           (struct reg_sim_vs_pars *pars, float sim_period, float bandwidth,
+float    regSimLoadRT             (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float voltage);
+void     regSimVsInitTustin           (struct reg_sim_vs_pars *pars, float sim_period, float bandwidth,
                                  float z, float tau_zero);
-uint32_t regSimVsInitGain       (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref_delay_iters);
+uint32_t regSimVsInit       (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref_delay_iters);
 float    regSimVsInitHistory    (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
-float    regSimVs               (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
+float    regSimVsRT               (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
 
 #ifdef __cplusplus
 }

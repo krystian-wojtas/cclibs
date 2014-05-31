@@ -117,14 +117,14 @@ enum reg_status regRstInit      (struct reg_rst_pars *pars, double iter_period, 
                                  struct reg_load_pars *load, float clbw, float clbw2, float z, float clbw3, float clbw4,
                                  float pure_delay_periods, float track_delay_periods, enum reg_mode reg_mode,
                                  struct reg_rst *manual);
-float    regRstCalcAct          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas);
-float    regRstCalcRef          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas);
-void     regRstMeasTrackDelay   (struct reg_rst_vars *vars, float period, float max_rate);
-void     regRstHistory          (struct reg_rst_vars *vars);
-float    regRstPrevRef          (struct reg_rst_vars *vars);
-float    regRstDeltaRef         (struct reg_rst_vars *vars);
-float    regRstDelayedRef       (struct reg_rst_pars *pars, struct reg_rst_vars *vars);
-float    regRstAverageVref      (struct reg_rst_vars *vars);
+float    regRstCalcActRT          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas);
+float    regRstCalcRefRT          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas);
+void     regRstTrackDelayRT   (struct reg_rst_vars *vars, float period, float max_rate);
+void     regRstHistoryRT          (struct reg_rst_vars *vars);
+float    regRstPrevRefRT          (struct reg_rst_vars *vars);
+float    regRstDeltaRefRT         (struct reg_rst_vars *vars);
+float    regRstDelayedRefRT       (struct reg_rst_pars *pars, struct reg_rst_vars *vars);
+float    regRstAverageVrefRT      (struct reg_rst_vars *vars);
 
 #ifdef __cplusplus
 }

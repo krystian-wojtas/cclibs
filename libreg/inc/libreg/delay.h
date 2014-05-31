@@ -47,7 +47,7 @@ extern "C" {
 
 void    regDelayInitDelay   (struct reg_delay *delay, float delay_iters);
 void    regDelayInitVars    (struct reg_delay *delay, float initial_signal);
-float   regDelayCalc        (struct reg_delay *delay, float signal, uint32_t under_sampled_flag);
+float   regDelaySignalRT        (struct reg_delay *delay, float signal, uint32_t under_sampled_flag);
 
 #ifdef __cplusplus
 }

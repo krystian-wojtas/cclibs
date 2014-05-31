@@ -506,14 +506,14 @@ uint32_t ccRefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
         {
             // Calculate rate of rise
 
-            ccpars_start.config.linear_rate = regRstDeltaRef(&reg.rst_vars) / reg.period;
+            ccpars_start.config.linear_rate = regRstDeltaRefRT(&reg.rst_vars) / reg.period;
 
             // Initialise PLEP function to continue this ramp rate up to the start plateau
 
             fgPlepCalc(&ccpars_start.config,
                         pars,
                         reg.time,
-                        regRstPrevRef(&reg.rst_vars),
+                        regRstPrevRefRT(&reg.rst_vars),
                         ccpars_start.config.linear_rate,
                         &fg_meta);
 
@@ -546,7 +546,7 @@ enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
 
     if(limits->user_data == REG_FIELD)
     {
-        i_ref  = regLoadFieldToCurrent(&reg.load_pars, ref);
+        i_ref  = regLoadFieldToCurrentRT(&reg.load_pars, ref);
         rate  *= i_ref / ref;
     }
     else
@@ -557,13 +557,13 @@ enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
     // Use load model to estimate voltage required for this current and rate of change of current
 
     v_ref = i_ref * reg.load_pars.ohms +
-            rate  * reg.load_pars.henrys * regLoadCalcSatFactor(&reg.load_pars, i_ref);
+            rate  * reg.load_pars.henrys * regLoadSatFactorRT(&reg.load_pars, i_ref);
 
     // Calculate the voltage limits for the current i_ref, taking into account invert_limits
 
     regLimRefSetInvertLimits(&ccrun.fg_lim_v_ref, invert_limits);
 
-    regLimVrefCalc(&ccrun.fg_lim_v_ref, i_ref);
+    regLimVrefCalcRT(&ccrun.fg_lim_v_ref, i_ref);
 
     // Check v_ref against voltage limits, inverted if required
 
