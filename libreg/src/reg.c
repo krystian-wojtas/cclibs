@@ -81,6 +81,8 @@ void regSetMeas(struct reg_converter *reg, float v_meas, float i_meas, float b_m
         reg->i.meas.signal[REG_MEAS_UNFILTERED] = reg->i.sim.signal;
         reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->b.sim.signal;
     }
+
+
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regCalcPureDelay(struct reg_converter *reg, struct reg_meas_filter *meas_filter, uint32_t reg_period_iters)
@@ -98,12 +100,6 @@ void regSetMode(struct reg_converter *reg, enum reg_mode reg_mode)
   This should be called at the start of an iteration before calling regConverter().
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t             idx;
-    float                ref_offset;
-    float                rate;
-    struct reg_rst_vars *rst_vars = &reg->rst_vars;
-    struct reg_rst_pars *rst_pars;
-
     // If regulation mode has changed
 
     if(reg_mode != reg->mode)
@@ -153,8 +149,13 @@ void regSetMode(struct reg_converter *reg, enum reg_mode reg_mode)
         }
         else // else switching to FIELD or CURRENT regulation
         {
-            float              v_ref;
-            struct reg_signal *r;
+            uint32_t             idx;
+            float                ref_offset;
+            float                rate;
+            float                v_ref;
+            struct reg_signal   *r;
+            struct reg_rst_pars *rst_pars;
+            struct reg_rst_vars *rst_vars = &reg->rst_vars;
 
             // If closing loop on current, adjust v_ref for magnet saturation assuming current is invariant.
             // This assumes it is unlikely that the current regulation will start with the current ramping
@@ -163,7 +164,7 @@ void regSetMode(struct reg_converter *reg, enum reg_mode reg_mode)
             r = reg->r       = (reg_mode == REG_FIELD ? &reg->b : &reg->i);
             rst_pars         = &r->rst_pars;
             v_ref            = (reg->mode == REG_CURRENT ? regLoadInverseVrefSat(&reg->load_pars, reg->i.meas.signal[REG_MEAS_UNFILTERED], reg->v.ref_limited) : reg->v.ref_limited);
-            rate             = (reg->mode != REG_NONE    ? regMeasRate(&r->rate, rst_pars->period) : 0.0);
+            rate             = (reg->mode != REG_NONE    ? r->rate.estimate : 0.0);
             reg->meas        = r->meas.signal[r->meas.reg_select];
             reg->ref_advance = rst_pars->track_delay_periods * rst_pars->period - r->meas.delay_iters[r->meas.reg_select] * reg->iter_period;
 
@@ -173,9 +174,8 @@ void regSetMode(struct reg_converter *reg, enum reg_mode reg_mode)
 
             // Prepare RST histories - assuming that v_ref has been constant when calculating rate
 
-            reg->period_iters      = rst_pars->period_iters;
             reg->period            = rst_pars->period;
-            reg->iteration_counter = reg->period_iters;
+            reg->iteration_counter = rst_pars->period_iters;
 
             ref_offset = rate * reg->ref_advance;
 
@@ -188,6 +188,9 @@ void regSetMode(struct reg_converter *reg, enum reg_mode reg_mode)
 
             rst_vars->delayed_ref_index = 0;
             rst_vars->history_index     = idx;
+
+            reg->ref_delayed = regRstDelayedRef(&r->rst_pars, &reg->rst_vars);
+
 
             reg->ref = reg->ref_limited = reg->ref_rst = rst_vars->ref[idx - 1];
         }
@@ -206,15 +209,14 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
                       float                     *ref,                 // Ref for voltage, current or field
                       float                      feedforward_v_ref,   // Feedforward voltage reference
                       uint32_t                   feedforward_control, // Feedforward enable/disable control
-                      uint32_t                   max_abs_err_control) // Max abs error calc enable/disable
+                      uint32_t                   enable_max_abs_err)  // Enable max abs error calculation
 /*---------------------------------------------------------------------------------------------------------*\
   This function will control a converter in either open-loop voltage mode, or closed-loop current or
   field regulation modes.  It returns non-zero on iterations when regulation is active (i.e. always for
   VOLTAGE mode).
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t           reg_flag = 0;    // Returned flag indicating iterations when regulation is active
-    struct reg_signal *r;               // Pointer to active regulation structure (reg->b or reg->i)
+    uint32_t  reg_flag = 0;    // Returned flag indicating iterations when regulation is active
 
     // Calculate and check the voltage regulation limits
 
@@ -238,10 +240,10 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
     // Filter the field and current measurements and prepare to estimate measurement rate
 
     regMeasFilter(&reg->b.meas);
-    regMeasRateStore(&reg->b.rate,reg->b.meas.signal[REG_MEAS_FILTERED],reg->b.rst_pars.period_iters);
+    regMeasRate  (&reg->b.rate,reg->b.meas.signal[REG_MEAS_FILTERED],reg->b.rst_pars.period,reg->b.rst_pars.period_iters);
 
     regMeasFilter(&reg->i.meas);
-    regMeasRateStore(&reg->i.rate,reg->i.meas.signal[REG_MEAS_FILTERED],reg->i.rst_pars.period_iters);
+    regMeasRate  (&reg->i.rate,reg->i.meas.signal[REG_MEAS_FILTERED],reg->i.rst_pars.period,reg->i.rst_pars.period_iters);
 
     // If open-loop (voltage regulation) mode - apply voltage ref limits
 
@@ -262,14 +264,14 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
     {
         // Regulate current or field at the regulation period
 
-        r = reg->r;
+        struct reg_signal *r = reg->r;            // Pointer to active regulation structure (reg->b or reg->i)
 
         if(reg->iteration_counter == 0)
         {
             float v_ref;
             float unfiltered_meas;
 
-            reg->iteration_counter = reg->period_iters;
+            reg->iteration_counter = r->rst_pars.period_iters;
 
             reg_flag        = 1;
             reg->ref        = *ref;
@@ -358,15 +360,18 @@ uint32_t regConverter(struct reg_converter      *reg,                 // Regulat
             *ref = reg->ref_rst;
         }
 
-        // Monitor regulation error using interpolation on the reference
+        // Monitor regulation error using interpolation on the reference and the unfiltered measurement
+
+        reg->ref_delayed = regRstDelayedRef(&r->rst_pars, &reg->rst_vars);
 
         if(r->err_rate == REG_ERR_RATE_MEASUREMENT || reg_flag == 1)
         {
-            reg->ref_delayed = regRstDelayedRef(&r->rst_pars, &reg->rst_vars);
-
-            regErrCheckLimits(&r->err, !feedforward_control, max_abs_err_control,
+            regErrCheckLimits(&r->err, !feedforward_control, enable_max_abs_err,
                               reg->ref_delayed, r->meas.signal[REG_MEAS_UNFILTERED]);
         }
+
+        // Calculate delayed reference for the next iteration
+
 
         reg->iteration_counter--;
     }
