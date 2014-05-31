@@ -803,8 +803,9 @@ float regRstDeltaRef(struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*/
 float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will return the reference delayed by ref_delay_periods.  It should be called after
-  regRstHistory() has been called.  It can be called every acquisition iteration between regulation
+  This function will return the reference delayed by ref_delay_periods for the next iteration.
+  It should be called after regRstHistory() and regErrCheckLimits() have been called to prepare the delayed
+  reference for the following iteration.  It can be called every acquisition iteration between regulation
   iterations, or just on the regulation iterations, as required.
 \*---------------------------------------------------------------------------------------------------------*/
 {
@@ -828,22 +829,35 @@ float regRstDelayedRef(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
 
     // Adjust track delay to account for the acquisition iteration time between regulation iterations
 
-    ref_delay_periods -= (float)vars->delayed_ref_index++ * pars->inv_period_iters;
+    ref_delay_periods -= (float)(vars->delayed_ref_index++) * pars->inv_period_iters;
 
     // Convert track delay to integer and fractional parts
 
+    if(ref_delay_periods <= 0.0)
+    {
+        // If ref_delay_periods is zero or less, just return most recent reference value
+
+        return(vars->ref[(vars->history_index - 1) & REG_RST_HISTORY_MASK]);
+    }
+
     delay_frac = modff(ref_delay_periods, &float_delay_int);
+    delay_int  = 1 + (int32_t)float_delay_int;               // Add 1 because history_index has been incremented
 
-    delay_int  = 1 + (int32_t)float_delay_int;  // Add 1 because history_index has been incremented
+    if(delay_int <= REG_RST_HISTORY_MASK)
+    {
+        // Extract references for the period containing the delayed reference
 
-    // Extract references for the period containing the delayed reference
+        ref1 = vars->ref[(vars->history_index - delay_int    ) & REG_RST_HISTORY_MASK];
+        ref2 = vars->ref[(vars->history_index - delay_int - 1) & REG_RST_HISTORY_MASK];
 
-    ref1 = vars->ref[(vars->history_index - delay_int    ) & REG_RST_HISTORY_MASK];
-    ref2 = vars->ref[(vars->history_index - delay_int - 1) & REG_RST_HISTORY_MASK];
+        // Return interpolated delayed reference value
 
-    // Return interpolated delayed reference value
+        return(ref1 + delay_frac * (ref2 - ref1));
+    }
 
-    return(ref1 + delay_frac * (ref2 - ref1));
+    // else delay_int over-runs the end of the history buffer so return ordered reference value
+
+    return(vars->ref[vars->history_index]);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regRstAverageVref(struct reg_rst_vars *vars)
