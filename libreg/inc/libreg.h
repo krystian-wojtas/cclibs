@@ -96,7 +96,6 @@ struct reg_converter                                    ///< Global converter re
     struct reg_signal          *r;                      ///< Pointer to active regulation structure (reg.i or reg.b)
 
     uint32_t                    iteration_counter;      ///< Iteration counter (within each regulation period)
-    uint32_t                    period_iters;           ///< Regulation period (in iterations)
     double                      period;                 ///< Regulation period
     double                      time;                   ///< Time of last regulation iteration
     float                       ref_advance;            ///< Time to advance reference function
