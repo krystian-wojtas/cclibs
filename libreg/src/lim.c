@@ -183,19 +183,22 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
     lim_v_ref->max_clip_user = pos_lim * (1.0 + REG_LIM_CLIP);
     lim_v_ref->min_clip_user = neg_lim * (1.0 + REG_LIM_CLIP);
     
+    // Disable Q41 exclusion zone before changing to avoid real-time thread have inconsistent values
+
+    lim_v_ref->i_quadrants41_max = -1.0E10;
+
     // Quadrants 41 exclusion zone: At least a 1A spread is needed to activate Q41 limiter
 
     delta_i_quadrants41 = i_quadrants41[1] - i_quadrants41[0];
 
     if(delta_i_quadrants41 >= 1.0)
     {
-        lim_v_ref->i_quadrants41_max = i_quadrants41[1];
         lim_v_ref->dvdi = (v_quadrants41[1] - v_quadrants41[0]) / delta_i_quadrants41;
         lim_v_ref->v0   = (v_quadrants41[0] - lim_v_ref->dvdi * i_quadrants41[0]) * (1.0 + REG_LIM_CLIP);
-    }
-    else
-    {
-        lim_v_ref->i_quadrants41_max = -1.0E10;         // Disable Q41 exclusion zone
+
+        // Enable quadrants 41 exclusiong after setting v0 and dvdi
+
+        lim_v_ref->i_quadrants41_max = i_quadrants41[1];
     }
 
     // Initialise Vref limits for zero current
