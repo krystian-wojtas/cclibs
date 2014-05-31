@@ -115,7 +115,7 @@ void regMeasFilter(struct reg_meas_filter *filter)
         // Extrapolate filtered measurement
 
         filter->signal[REG_MEAS_EXTRAPOLATED] = filter->signal[REG_MEAS_FILTERED] + filter->extrapolation_factor *
-                                             (filter->signal[REG_MEAS_FILTERED] - old_filtered_value);
+                                               (filter->signal[REG_MEAS_FILTERED] - old_filtered_value);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -278,38 +278,32 @@ float regMeasNoiseAndTone(struct reg_noise_and_tone *noise_and_tone)
     return(noise + tone);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regMeasRateStore(struct reg_meas_rate *meas_rate, float meas, int32_t period_iters)
+void regMeasRate(struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function will store the filtered measurement in the rate estimation history at the reg_period
+  This function will store the filtered measurement in the rate estimation history at the regulation
+  period (defined by period_iters) and calculate the estimated rate using least-squares regression
+  through the past four saved values. See libreg/doc/measurement/least_squares.xlsx for the
+  theory behind this implementation.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    float    *history_buf = meas_rate->history_buf;     // Local pointer to history buffer for efficiency
+    uint32_t  idx;                                      // Local copy of index of most recent sample
+
     // Store measurement at the specified period
 
     if(++meas_rate->iter_counter >= period_iters)
     {
         meas_rate->iter_counter = 0;
-        meas_rate->buf_index    = (meas_rate->buf_index + 1) & REG_MEAS_RATE_BUF_MASK;
+        idx = meas_rate->history_index = (meas_rate->history_index + 1) & REG_MEAS_RATE_BUF_MASK;
 
-        meas_rate->buf[meas_rate->buf_index] = meas;
+        history_buf[idx] = filtered_meas;
+
+        // Estimate rate using linear regression through last four samples
+
+        meas_rate->estimate = (2.0 / 20.0 * period) * (3.0 * (history_buf[ idx ] -
+                                                              history_buf[(idx - 3) & REG_MEAS_RATE_BUF_MASK]) +
+                                                             (history_buf[(idx - 1) & REG_MEAS_RATE_BUF_MASK]  -
+                                                              history_buf[(idx - 2) & REG_MEAS_RATE_BUF_MASK]));
     }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-float regMeasRate(struct reg_meas_rate *meas_rate, float period)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will use linear regression through four points to estimate the rate of change of the
-  measurement stored by regMeasRateStore().
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    float    *buf   = meas_rate->buf;           // Local pointer to history buffer
-    uint32_t  index = meas_rate->buf_index;     // Local copy of index of most recent sample
-
-    // Least-squares linear regression through four points
-
-    meas_rate->rate = 2.0 / (20.0 * period) * (3.0 * (buf[ index ] -
-                                                      buf[(index - 3) & REG_MEAS_RATE_BUF_MASK]) +
-                                                     (buf[(index - 1) & REG_MEAS_RATE_BUF_MASK]  -
-                                                      buf[(index - 2) & REG_MEAS_RATE_BUF_MASK]));
-
-    return(meas_rate->rate);
 }
 // EOF
