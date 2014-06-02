@@ -127,7 +127,7 @@ float    regConvPureDelay       (struct reg_conv *reg, struct reg_meas_filter *m
 void     regConvInitSimLoad     (struct reg_conv *reg, enum reg_mode reg_mode, float sim_load_tc_error);
 
 void     regConvSetMeasRT       (struct reg_conv *reg, float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
-void     regConvSetModeRT       (struct reg_conv *reg, enum reg_mode reg_mode);
+void     regConvSetModeRT       (struct reg_conv *reg, enum reg_mode reg_mode, uint32_t iteration_counter);
 uint32_t regConverterRT         (struct reg_conv *reg, float *ref, float feedforward_v_ref, uint32_t feedforward_control, uint32_t max_abs_err_control);
 void     regConvSimulateRT      (struct reg_conv *reg, float v_perturbation);
 

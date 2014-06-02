@@ -99,7 +99,6 @@ struct reg_rst_pars                                             // RST algorithm
 struct reg_rst_vars                                             // RST algorithm variables
 {
     uint32_t                    history_index;                  // Index to latest entry in the history
-    uint32_t                    delayed_ref_index;              // Iteration counter for delayed reference
     float                       prev_ref_rate;                  // Ref rate from previous iteration
     float                       meas_track_delay_periods;       // Measured track_delay in regulation periods
     float                       ref [REG_RST_HISTORY_MASK+1];   // RST calculated reference history
@@ -111,19 +110,22 @@ struct reg_rst_vars                                             // RST algorithm
 extern "C" {
 #endif
 
+// RST macro "functions"
+
+#define regRstIncHistoryIndexRT(rst_vars_p) (rst_vars_p)->history_index = ((rst_vars_p)->history_index + 1) & REG_RST_HISTORY_MASK
+#define regRstPrevRefRT(rst_vars_p) (rst_vars_p)->ref[(rst_vars_p)->history_index]
+#define regRstDeltaRefRT(rst_vars_p) (regRstPrevRefRT(rst_vars_p) - (rst_vars_p)->ref[((rst_vars_p)->history_index - 1) & REG_RST_HISTORY_MASK])
+
 // RST regulation functions
 
-enum reg_status regRstInit      (struct reg_rst_pars *pars, double iter_period, uint32_t period_iters,
-                                 struct reg_load_pars *load, float clbw, float clbw2, float z, float clbw3, float clbw4,
-                                 float pure_delay_periods, float track_delay_periods, enum reg_mode reg_mode,
-                                 struct reg_rst *manual);
+enum reg_status regRstInit        (struct reg_rst_pars *pars, double iter_period, uint32_t period_iters,
+                                   struct reg_load_pars *load, float clbw, float clbw2, float z, float clbw3, float clbw4,
+                                   float pure_delay_periods, float track_delay_periods, enum reg_mode reg_mode,
+                                   struct reg_rst *manual);
 float    regRstCalcActRT          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas);
 float    regRstCalcRefRT          (struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas);
-void     regRstTrackDelayRT   (struct reg_rst_vars *vars, float period, float max_rate);
-void     regRstHistoryRT          (struct reg_rst_vars *vars);
-float    regRstPrevRefRT          (struct reg_rst_vars *vars);
-float    regRstDeltaRefRT         (struct reg_rst_vars *vars);
-float    regRstDelayedRefRT       (struct reg_rst_pars *pars, struct reg_rst_vars *vars);
+void     regRstTrackDelayRT       (struct reg_rst_vars *vars, float period, float max_rate);
+float    regRstDelayedRefRT       (struct reg_rst_pars *pars, struct reg_rst_vars *vars, uint32_t iteration_index);
 float    regRstAverageVrefRT      (struct reg_rst_vars *vars);
 
 #ifdef __cplusplus

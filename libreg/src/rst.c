@@ -774,37 +774,7 @@ void regRstTrackDelayRT(struct reg_rst_vars *vars, float period, float max_ref_r
     vars->meas_track_delay_periods = meas_track_delay_periods;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regRstHistoryRT(struct reg_rst_vars *vars)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function must be called after calling regRstCalcAct() and regRstMeasTrackDelay() to adjust the
-  RST history index.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    vars->history_index = (vars->history_index + 1) & REG_RST_HISTORY_MASK;
-
-    vars->delayed_ref_index = 0;
-}
-/*---------------------------------------------------------------------------------------------------------*/
-float regRstPrevRefRT(struct reg_rst_vars *vars)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will return the reference for the previous iteration.  It should be called after
-  regRstHistory() has been called.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    return(vars->ref[(vars->history_index - 1) & REG_RST_HISTORY_MASK]);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-float regRstDeltaRefRT(struct reg_rst_vars *vars)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will return the change of reference for the previous iteration.  It should be called after
-  regRstHistory() has been called.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    return(vars->ref[(vars->history_index - 1) & REG_RST_HISTORY_MASK] -
-           vars->ref[(vars->history_index - 2) & REG_RST_HISTORY_MASK]);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
+float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, uint32_t iteration_index)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will return the reference delayed by ref_delay_periods for the next iteration.
   It should be called after regRstHistory() and regErrCheckLimits() have been called to prepare the delayed
@@ -813,26 +783,15 @@ float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     int32_t  delay_int;
-    float    ref_delay_periods = pars->ref_delay_periods;
+    float    ref_delay_periods;
     float    float_delay_int;
     float    delay_frac;
     float    ref1;
     float    ref2;
 
-    // Clip track delay
+    // Adjust ref delay to account for the acquisition iteration time between regulation iterations
 
-    if(ref_delay_periods < 1.0)
-    {
-        ref_delay_periods = 1.0;
-    }
-    else if(ref_delay_periods > (REG_RST_HISTORY_MASK - 1.0))
-    {
-        ref_delay_periods = (REG_RST_HISTORY_MASK - 1.0);
-    }
-
-    // Adjust track delay to account for the acquisition iteration time between regulation iterations
-
-    ref_delay_periods -= (float)(vars->delayed_ref_index++) * pars->inv_period_iters;
+    ref_delay_periods = pars->ref_delay_periods - (float)iteration_index * pars->inv_period_iters;
 
     // Convert track delay to integer and fractional parts
 
@@ -840,13 +799,13 @@ float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
     {
         // If ref_delay_periods is zero or less, just return most recent reference value
 
-        return(vars->ref[(vars->history_index - 1) & REG_RST_HISTORY_MASK]);
+        return(vars->ref[vars->history_index]);
     }
 
     delay_frac = modff(ref_delay_periods, &float_delay_int);
-    delay_int  = 1 + (int32_t)float_delay_int;               // Add 1 because history_index has been incremented
+    delay_int  = (int32_t)float_delay_int;
 
-    if(delay_int <= REG_RST_HISTORY_MASK)
+    if(delay_int < (REG_RST_HISTORY_MASK - 1))
     {
         // Extract references for the period containing the delayed reference
 
@@ -858,9 +817,9 @@ float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars)
         return(ref1 + delay_frac * (ref2 - ref1));
     }
 
-    // else delay_int over-runs the end of the history buffer so return ordered reference value
+    // else delay_int over-runs the end of the history buffer so return the oldest reference value
 
-    return(vars->ref[vars->history_index]);
+    return(vars->ref[(vars->history_index + 1) & REG_RST_HISTORY_MASK]);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regRstAverageVrefRT(struct reg_rst_vars *vars)
@@ -872,11 +831,9 @@ float regRstAverageVrefRT(struct reg_rst_vars *vars)
     uint32_t    var_idx  = vars->history_index;
     float       sum_vref = 0.0;
 
-    for(i = 0 ; i < REG_AVE_V_REF_LEN ; i++)
+    for(i = 0 ; i < REG_AVE_V_REF_LEN ; i++, var_idx--)
     {
-        var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
-
-        sum_vref += vars->act [var_idx];
+        sum_vref += vars->act [var_idx & REG_RST_HISTORY_MASK];
     }
 
     return(sum_vref * (1.0 / REG_AVE_V_REF_LEN));
