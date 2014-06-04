@@ -1,9 +1,0 @@
-# CCTEST laod file: LHC 60A
-
-LOAD.OHMS_SER        4.7E-2
-LOAD.OHMS_PAR        1.0E8
-LOAD.OHMS_MAG        0.0
-LOAD.HENRYS          5.0E-3
-LOAD.SIM_TC_ERROR    0.1
-
-# EOF

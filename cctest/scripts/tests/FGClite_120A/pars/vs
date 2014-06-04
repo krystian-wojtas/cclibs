@@ -1,6 +1,0 @@
-# CCTEST voltage source model file : FGClite + LHC 60A
-
-VS.V_REF_DELAY_ITERS   20.0
-
-# EOF
-
