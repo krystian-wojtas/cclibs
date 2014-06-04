@@ -99,6 +99,20 @@ struct reg_conv                                         ///< Global converter re
 
     struct reg_rst_vars         rst_vars;               ///< Field or current regulation RST variables
 
+    // Field, current and voltage measurements
+
+    struct reg_meas_signal     *b_meas_p;               ///< Pointer to field measurement and measurement status
+    struct reg_meas_signal     *i_meas_p;               ///< Pointer to current measurement and measurement status
+    struct reg_meas_signal     *v_meas_p;               ///< Pointer to voltage measurement and measurement status
+
+    struct reg_meas_signal      b_meas;                 ///< Field measurement and measurement status
+    struct reg_meas_signal      i_meas;                 ///< Current measurement and measurement status
+    struct reg_meas_signal      v_meas;                 ///< Voltage measurement and measurement status
+
+    uint32_t                    b_meas_invalid_counter; ///< Counter for invalid field measurements
+    uint32_t                    i_meas_invalid_counter; ///< Counter for invalid current measurements
+    uint32_t                    v_meas_invalid_counter; ///< Counter for invalid voltage measurements
+
     // Field, current and voltage regulation structures
 
     struct reg_conv_signal      b;                      ///< Field regulation parameters and variables
@@ -125,8 +139,9 @@ extern "C" {
 
 float    regConvPureDelay       (struct reg_conv *reg, struct reg_meas_filter *meas_filter, uint32_t reg_period_iters);
 void     regConvInitSimLoad     (struct reg_conv *reg, enum reg_mode reg_mode, float sim_load_tc_error);
+void     regConvInitMeas        (struct reg_conv *reg, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p);
 
-void     regConvSetMeasRT       (struct reg_conv *reg, float v_meas, float i_meas, float b_meas, uint32_t sim_meas_control);
+void     regConvSetMeasRT       (struct reg_conv *reg, uint32_t sim_meas_control);
 void     regConvSetModeRT       (struct reg_conv *reg, enum reg_mode reg_mode, uint32_t iteration_counter);
 uint32_t regConverterRT         (struct reg_conv *reg, float *ref, float feedforward_v_ref, uint32_t feedforward_control, uint32_t max_abs_err_control);
 void     regConvSimulateRT      (struct reg_conv *reg, float v_perturbation);

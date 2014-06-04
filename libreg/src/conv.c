@@ -69,30 +69,36 @@ void regConvInitSimLoad(struct reg_conv *reg, enum reg_mode reg_mode, float sim_
     reg->b.meas.signal[REG_MEAS_FILTERED] = reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->sim_load_vars.magnet_field;
 }
 //-----------------------------------------------------------------------------------------------------------
+void regConvInitMeas(struct reg_conv *reg, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p)
+{
+    reg->b_meas_p = b_meas_p;
+    reg->i_meas_p = i_meas_p;
+    reg->v_meas_p = v_meas_p;
+}
+//-----------------------------------------------------------------------------------------------------------
 // Real-Time Functions
 //-----------------------------------------------------------------------------------------------------------
-void regConvSetMeasRT(struct reg_conv *reg, float v_meas, float i_meas, float b_meas, uint32_t use_sim_meas)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will set the unfiltered measured values in the reg structure based on the sim_meas_control.
-  When active, the measurements will be based on the voltage source and load simulation calculated by
-  regConvSimulate().
-\*---------------------------------------------------------------------------------------------------------*/
+void regConvSetMeasRT(struct reg_conv *reg, uint32_t use_sim_meas)
 {
     if(use_sim_meas == 0)
     {
-        // Use measured values for voltage, current and field
+        // Use measured field, current and voltage measurement and status supplied by application
 
-        reg->v.meas = v_meas;
-        reg->i.meas.signal[REG_MEAS_UNFILTERED] = i_meas;
-        reg->b.meas.signal[REG_MEAS_UNFILTERED] = b_meas;
+        reg->b_meas = *reg->b_meas_p;
+        reg->i_meas = *reg->i_meas_p;
+        reg->v_meas = *reg->v_meas_p;
     }
     else
     {
-        // Use simulated measurements
+        // Use simulated measurements which are always OK
 
-        reg->v.meas = reg->v.sim.signal;
-        reg->i.meas.signal[REG_MEAS_UNFILTERED] = reg->i.sim.signal;
-        reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->b.sim.signal;
+        reg->b_meas.signal = reg->b.sim.signal;
+        reg->i_meas.signal = reg->i.sim.signal;
+        reg->v_meas.signal = reg->v.sim.signal;
+
+        reg->b_meas.status = REG_MEAS_SIGNAL_OK;
+        reg->i_meas.status = REG_MEAS_SIGNAL_OK;
+        reg->v_meas.status = REG_MEAS_SIGNAL_OK;
     }
 }
 //-----------------------------------------------------------------------------------------------------------
@@ -216,6 +222,77 @@ void regConvSetModeRT(struct reg_conv *reg, enum reg_mode reg_mode, uint32_t ite
     reg->i.err.max_abs_err = reg->b.err.max_abs_err = 0.0;
 }
 //-----------------------------------------------------------------------------------------------------------
+void regConvValidateMeas(struct reg_conv *reg)
+{
+    if(reg->mode != REG_VOLTAGE)
+    {
+        reg->ref_delayed = regRstDelayedRefRT(&reg->r->rst_pars, &reg->rst_vars, reg->iteration_counter);
+    }
+
+    // Check voltage measurement
+
+    if(reg->v_meas.status != REG_MEAS_SIGNAL_OK)
+    {
+        // If voltage measurement is invalid then use voltage source model instead
+
+        reg->v.meas = reg->v.err.delayed_ref;
+        reg->v_meas_invalid_counter++;
+    }
+    else
+    {
+        reg->v.meas = reg->v_meas.signal;
+    }
+
+    // Check current measurement
+
+    if(reg->i_meas.status != REG_MEAS_SIGNAL_OK)
+    {
+        if(reg->mode == REG_CURRENT)
+        {
+            // If regulating current then use delayed ref adjusted by the regulation error as the measurement
+
+            reg->i.meas.signal[REG_MEAS_UNFILTERED] = reg->ref_delayed - reg->i.err.err;
+        }
+        else
+        {
+            // If not regulating current then extrapolate previous value using the current rate of change
+
+            reg->i.meas.signal[REG_MEAS_UNFILTERED] += reg->i.rate.estimate * reg->iter_period;
+        }
+
+        reg->i_meas_invalid_counter++;
+    }
+    else
+    {
+        reg->i.meas.signal[REG_MEAS_UNFILTERED] = reg->i_meas.signal;
+    }
+
+    // Check field measurement
+
+    if(reg->b_meas.status != REG_MEAS_SIGNAL_OK)
+    {
+        if(reg->mode == REG_FIELD)
+        {
+            // If regulating field then use delayed ref adjusted by the regulation error as the measurement
+
+            reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->ref_delayed - reg->b.err.err;
+        }
+        else
+        {
+            // If not regulating current then extrapolate previous value using the current rate of change
+
+            reg->b.meas.signal[REG_MEAS_UNFILTERED] += reg->b.rate.estimate * reg->iter_period;
+        }
+
+        reg->b_meas_invalid_counter++;
+    }
+    else
+    {
+        reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->b_meas.signal;
+    }
+
+}
+//-----------------------------------------------------------------------------------------------------------
 uint32_t regConverterRT(struct reg_conv *reg,                 // Regulation structure
                         float           *ref,                 // Ref for voltage, current or field
                         float            feedforward_v_ref,   // Feedforward voltage reference
@@ -237,14 +314,11 @@ uint32_t regConverterRT(struct reg_conv *reg,                 // Regulation stru
         return(0);
     }
 
-    // New iteration - calculate delayed reference when closed loop on current or field
+    // New iteration - validate measurements before using them
 
     reg->iteration_counter++;
 
-    if(reg->mode != REG_VOLTAGE)
-    {
-        reg->ref_delayed = regRstDelayedRefRT(&r->rst_pars, &reg->rst_vars, reg->iteration_counter);
-    }
+    regConvValidateMeas(reg);
 
     // Calculate and check the voltage regulation limits
 
