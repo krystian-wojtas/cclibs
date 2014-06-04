@@ -43,8 +43,8 @@
 struct fg_plep_config                       // PLEP function configuration
 {
     float       final;                      // Final reference
-    float       acceleration;               // Absolute acceleration of the parabolic segments   (must be strictly positive)
-    float       linear_rate;                // Maximum absolute linear rate of the PLEP segments (must be strictly positive)
+    float       acceleration;               // Acceleration of the parabolic segments (absolute value is used)
+    float       linear_rate;                // Maximum linear rate (absolute value is used)
     float       final_rate;                 // Final rate of change
     float       exp_tc;                     // Exponential time constant
     float       exp_final;                  // End reference of exponential segment (can be zero)
