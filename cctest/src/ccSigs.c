@@ -463,6 +463,31 @@ void ccSigsStore(double time)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
+static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n_points, char label)
+{
+    double         time;
+    uint32_t       iteration_idx;
+
+    if(signals[sig_idx].control == CC_ENABLED)
+    {
+        fprintf(f,"\"INVALID_%c\": { lines: { show:false }, points: { show:true },\ndata:[", label);
+
+        for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
+        {
+            // Only print changed values when meta_data is TRAIL_STEP
+
+            if((iteration_idx % ccpars_meas.invalid_meas_period_iters) == 0)
+            {
+                time = reg.iter_period * iteration_idx;
+
+                fprintf(f,"[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
+                (*n_points)++;
+            }
+        }
+        fputs("]\n },\n",f);
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
 void ccSigsFlot(FILE *f)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will print the flot data and footer
@@ -559,7 +584,16 @@ void ccSigsFlot(FILE *f)
         start_func_time += ccrun.fg_meta[func_idx].duration + ccpars_global.pre_func_delay;
     }
 
-    // Print enabled analogue signal values
+    // Highlight invalid points if enabled
+
+    if(ccpars_meas.invalid_meas_period_iters > 0)
+    {
+        ccSigsFlotInvalidSignal(f, ANA_B_MEAS, &n_points, 'B');
+        ccSigsFlotInvalidSignal(f, ANA_I_MEAS, &n_points, 'I');
+        ccSigsFlotInvalidSignal(f, ANA_V_MEAS, &n_points, 'V');
+    }
+
+    // Print enabled analog signal values
 
     for(sig_idx = 0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
     {

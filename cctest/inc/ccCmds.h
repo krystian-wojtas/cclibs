@@ -38,7 +38,7 @@
 
 #define CC_MAX_FILE_LINE_LEN  65536
 #define CC_MAX_CMD_NAME_LEN   6             //  Current longest command name
-#define CC_MAX_PAR_NAME_LEN   24            //  Current longest parameter name
+#define CC_MAX_PAR_NAME_LEN   27            //  Current longest parameter name
 #define CC_PROMPT             ">"
 
 // Include ccPars.h

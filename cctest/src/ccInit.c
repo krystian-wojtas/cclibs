@@ -49,6 +49,12 @@ uint32_t ccInitRun(void)
 
     reg.iter_period = ccpars_global.iter_period;
 
+    // Prepare an invalid signal to allow recovery from invalid signals to be tested
+
+    ccrun.invalid_meas.status = REG_MEAS_SIGNAL_INVALID;
+
+    regConvInitMeas(&reg, &ccrun.invalid_meas, &ccrun.invalid_meas, &ccrun.invalid_meas);
+
     // Check that GLOBAL FUNCTION and REG_MODE parameters have the same number of elements
 
     ccrun.func_idx      = 0;

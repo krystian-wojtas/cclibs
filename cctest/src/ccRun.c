@@ -134,11 +134,8 @@ void ccRunSimulation(void)
     {
         // Set measurements to simulated values
 
-        regConvSetMeasRT(&reg,
-                   0.0,         // v_meas from ADC
-                   0.0,         // i_meas from ADC
-                   0.0,         // b_meas from field measurement system
-                   1);          // sim_meas_control: 0=Use real measurements, 1=Use simulated measurements
+        regConvSetMeasRT(&reg, (ccpars_meas.invalid_meas_period_iters == 0 ||
+                                (iteration_idx % ccpars_meas.invalid_meas_period_iters) > 0));
 
         // If converter has not tripped then generate reference value using libfg function
 

@@ -68,24 +68,27 @@ struct ccpars_meas
     uint32_t                tone_half_period_iters;     // Simulated measurement tone half-period in iterations
     float                   b_sim_tone_amp;             // Simulated field   measurement tone amplitude
     float                   i_sim_tone_amp;             // Simulated current measurement tone amplitude
+
+    uint32_t                invalid_meas_period_iters;  // Period in iterations between invalid measurements
 };
 
 CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
 #ifdef GLOBALS
 = {//   Default value               Parameter
-        REG_MEAS_EXTRAPOLATED,   // MEAS.B_REG_SELECT
-        REG_MEAS_EXTRAPOLATED,   // MEAS.I_REG_SELECT
-        1.3,                     // MEAS.B_DELAY_ITERS
-        1.3,                     // MEAS.I_DELAY_ITERS
-        1.3,                     // MEAS.V_DELAY_ITERS
-        { 1, 1 },                // MEAS.B_FIR_LENGTHS
-        { 1, 1 },                // MEAS.I_FIR_LENGTHS
-        0.0,                     // MEAS.B_SIM_NOISE_PP
-        0.0,                     // MEAS.I_SIM_NOISE_PP
-        0.0,                     // MEAS.V_SIM_NOISE_PP
-        10,                      // MEAS.TONE_HALF_PERIOD_ITERS
-        0.0,                     // MEAS.I_SIM_TONE_AMP
-        0.0,                     // MEAS.B_SIM_TONE_AMP
+        REG_MEAS_EXTRAPOLATED,   // MEAS B_REG_SELECT
+        REG_MEAS_EXTRAPOLATED,   // MEAS I_REG_SELECT
+        1.3,                     // MEAS B_DELAY_ITERS
+        1.3,                     // MEAS I_DELAY_ITERS
+        1.3,                     // MEAS V_DELAY_ITERS
+        { 1, 1 },                // MEAS B_FIR_LENGTHS
+        { 1, 1 },                // MEAS I_FIR_LENGTHS
+        0.0,                     // MEAS B_SIM_NOISE_PP
+        0.0,                     // MEAS I_SIM_NOISE_PP
+        0.0,                     // MEAS V_SIM_NOISE_PP
+        10,                      // MEAS TONE_HALF_PERIOD_ITERS
+        0.0,                     // MEAS I_SIM_TONE_AMP
+        0.0,                     // MEAS B_SIM_TONE_AMP
+        0,                       // MEAS INVALID_MEAS_PERIOD_ITERS
 }
 #endif
 ;
@@ -94,20 +97,21 @@ CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
 
 CCPARS_MEAS_EXT struct ccpars meas_pars[]
 #ifdef GLOBALS
-= {// "Signal name"            type,max_n_els,min_n_els,*enum,          *value,                               num_defaults
-    { "B_REG_SELECT",          PAR_ENUM,     1, 1, reg_meas_select, { .i = &ccpars_meas.b_reg_select           }, 1 },
-    { "I_REG_SELECT",          PAR_ENUM,     1, 1, reg_meas_select, { .i = &ccpars_meas.i_reg_select           }, 1 },
-    { "B_DELAY_ITERS",         PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_delay_iters          }, 1 },
-    { "I_DELAY_ITERS",         PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_delay_iters          }, 1 },
-    { "V_DELAY_ITERS",         PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.v_delay_iters          }, 1 },
-    { "B_FIR_LENGTHS",         PAR_UNSIGNED, 2, 2, NULL,            { .i =  ccpars_meas.b_fir_lengths          }, 2 },
-    { "I_FIR_LENGTHS",         PAR_UNSIGNED, 2, 2, NULL,            { .i =  ccpars_meas.i_fir_lengths          }, 2 },
-    { "B_SIM_NOISE_PP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_sim_noise_pp         }, 1 },
-    { "I_SIM_NOISE_PP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_sim_noise_pp         }, 1 },
-    { "V_SIM_NOISE_PP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.v_sim_noise_pp         }, 1 },
-    { "TONE_HALF_PERIOD_ITERS",PAR_UNSIGNED, 1, 1, NULL,            { .i = &ccpars_meas.tone_half_period_iters }, 1 },
-    { "B_SIM_TONE_AMP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_sim_tone_amp         }, 1 },
-    { "I_SIM_TONE_AMP",        PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_sim_tone_amp         }, 1 },
+= {// "Signal name"               type,max_n_els,min_n_els,*enum,          *value,                                  num_defaults
+    { "B_REG_SELECT",             PAR_ENUM,     1, 1, reg_meas_select, { .i = &ccpars_meas.b_reg_select              }, 1 },
+    { "I_REG_SELECT",             PAR_ENUM,     1, 1, reg_meas_select, { .i = &ccpars_meas.i_reg_select              }, 1 },
+    { "B_DELAY_ITERS",            PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_delay_iters             }, 1 },
+    { "I_DELAY_ITERS",            PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_delay_iters             }, 1 },
+    { "V_DELAY_ITERS",            PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.v_delay_iters             }, 1 },
+    { "B_FIR_LENGTHS",            PAR_UNSIGNED, 2, 2, NULL,            { .i =  ccpars_meas.b_fir_lengths             }, 2 },
+    { "I_FIR_LENGTHS",            PAR_UNSIGNED, 2, 2, NULL,            { .i =  ccpars_meas.i_fir_lengths             }, 2 },
+    { "B_SIM_NOISE_PP",           PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_sim_noise_pp            }, 1 },
+    { "I_SIM_NOISE_PP",           PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_sim_noise_pp            }, 1 },
+    { "V_SIM_NOISE_PP",           PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.v_sim_noise_pp            }, 1 },
+    { "TONE_HALF_PERIOD_ITERS",   PAR_UNSIGNED, 1, 1, NULL,            { .i = &ccpars_meas.tone_half_period_iters    }, 1 },
+    { "B_SIM_TONE_AMP",           PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_sim_tone_amp            }, 1 },
+    { "I_SIM_TONE_AMP",           PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_sim_tone_amp            }, 1 },
+    { "INVALID_MEAS_PERIOD_ITERS",PAR_UNSIGNED, 1, 1, NULL,            { .i = &ccpars_meas.invalid_meas_period_iters }, 1 },
     { NULL }
 }
 #endif

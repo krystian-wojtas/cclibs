@@ -36,7 +36,7 @@
 
 // Constants
 
-#define PARS_INDENT             31
+#define PARS_INDENT             34
 #define PARS_MAX_PRINT_LINE_LEN (CC_MAX_FILE_LINE_LEN*8)      // Allow for longest print line for table
 #define PARS_MAX_REPORT_LINES   1000
 
