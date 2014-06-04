@@ -9,3 +9,4 @@ ti/
 webplots/
 debug/
 .DS_Store
+/Debug
