@@ -1,0 +1,91 @@
+# CCTEST - FGClite tests script
+
+GLOBAL RUN_DELAY                1.0
+GLOBAL STOP_DELAY               1.0
+GLOBAL ITER_PERIOD              1.0E-3
+GLOBAL FUNCTION                 PLEP
+GLOBAL STOP_ON_ERROR            ENABLED
+GLOBAL REG_MODE                 CURRENT
+GLOBAL FG_LIMITS                ENABLED
+GLOBAL SIM_LOAD                 ENABLED
+GLOBAL GROUP                    tests
+GLOBAL PROJECT                  FGClite
+
+# Limits parameters
+
+LIMITS I_POS                    60.0
+LIMITS I_MIN                    0.0
+LIMITS I_NEG                    -60.0
+LIMITS I_RATE                   1.0
+LIMITS I_ACCELERATION           0.25
+LIMITS I_ERR_WARNING            0.1
+LIMITS I_ERR_FAULT              1.0
+LIMITS I_QUADRANTS41            -60.0,60.0
+
+LIMITS V_POS                    8.0
+LIMITS V_NEG                    -8.0
+LIMITS V_RATE                   1000.0
+LIMITS V_ACCELERATION           1.0E6
+LIMITS V_ERR_WARNING            0.1
+LIMITS V_ERR_FAULT              1.0
+LIMITS V_QUADRANTS41            5.0,8.0
+
+# Voltage source parameters
+
+VS V_REF_DELAY_ITERS            20.0
+VS BANDWIDTH                    1000.0
+VS TAU_ZERO                     0.0
+VS Z                            0.9
+
+# Load parameters
+
+LOAD OHMS_SER                   0.0625
+LOAD OHMS_PAR                   1.0E8
+LOAD OHMS_MAG                   0.0
+LOAD HENRYS                     6.02
+LOAD SIM_TC_ERROR               -0.1
+
+# Measurement parameters
+
+MEAS I_REG_SELECT               FILTERED
+MEAS I_DELAY_ITERS              1.3
+MEAS V_DELAY_ITERS              1.3
+MEAS I_FIR_LENGTHS              20,1
+MEAS I_SIM_NOISE_PP             0.000
+MEAS V_SIM_NOISE_PP             0.000
+MEAS TONE_HALF_PERIOD_ITERS     10
+MEAS I_SIM_TONE_AMP             0.01
+MEAS INVALID_MEAS_PERIOD_ITERS  0
+
+# Current regulation
+
+IREG CLBW                       2
+IREG CLBW2                      2
+IREG Z                          0.5
+
+# PLEP function
+
+PLEP INITIAL_REF                -2
+PLEP FINAL_REF                  2
+PLEP ACCELERATION               0.2
+PLEP LINEAR_RATE                1
+
+# PLEP test
+
+GLOBAL FILE                     amps-plep-20ms
+IREG PERIOD_ITERS               20
+RUN
+
+GLOBAL FILE                     amps-plep-40ms
+IREG PERIOD_ITERS               40
+RUN
+
+GLOBAL FILE                     amps-plep-60ms
+IREG PERIOD_ITERS               60
+RUN
+
+GLOBAL FILE                     amps-plep-80ms
+IREG PERIOD_ITERS               80
+RUN
+
+# EOF
