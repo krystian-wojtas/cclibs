@@ -306,7 +306,7 @@ void regMeasRateRT(struct reg_meas_rate *meas_rate, float filtered_meas, float p
 
         // Estimate rate using linear regression through last four samples
 
-        meas_rate->estimate = (2.0 / 20.0 * period) * (3.0 * (history_buf[ idx ] -
+        meas_rate->estimate = (2.0 / 20.0) / period * (3.0 * (history_buf[ idx ] -
                                                               history_buf[(idx - 3) & REG_MEAS_RATE_BUF_MASK]) +
                                                              (history_buf[(idx - 1) & REG_MEAS_RATE_BUF_MASK]  -
                                                               history_buf[(idx - 2) & REG_MEAS_RATE_BUF_MASK]));
