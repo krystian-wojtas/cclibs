@@ -291,7 +291,7 @@ void fgRampCalc(struct fg_ramp_config *config,
     pars->prev_ramp_ref  = pars->prev_returned_ref = init_ref;
     pars->iteration_idx  = 0;
     delta_ref            = config->final - init_ref;
-    overshoot_rate_limit = sqrt(2.0 * config->deceleration * fabs(delta_ref));
+    overshoot_rate_limit = sqrt(-2.0 * pars->deceleration * fabs(delta_ref));
 
     // Set up accelerations according to ramp direction and possible overshoot
 
