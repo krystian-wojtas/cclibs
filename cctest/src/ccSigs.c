@@ -476,7 +476,7 @@ static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n
         {
             // Only print changed values when meta_data is TRAIL_STEP
 
-            if((iteration_idx % ccpars_meas.invalid_meas_period_iters) == 0)
+            if((iteration_idx % ccpars_meas.invalid_meas_period_iters) < ccpars_meas.invalid_meas_repeat_iters)
             {
                 time = reg.iter_period * iteration_idx;
 
@@ -586,7 +586,7 @@ void ccSigsFlot(FILE *f)
 
     // Highlight invalid points if enabled
 
-    if(ccpars_meas.invalid_meas_period_iters > 0)
+    if(ccpars_meas.invalid_meas_period_iters > 0 && ccpars_meas.invalid_meas_repeat_iters > 0)
     {
         ccSigsFlotInvalidSignal(f, ANA_B_MEAS, &n_points, 'B');
         ccSigsFlotInvalidSignal(f, ANA_I_MEAS, &n_points, 'I');

@@ -135,7 +135,7 @@ void ccRunSimulation(void)
         // Set measurements to simulated values
 
         regConvSetMeasRT(&reg, (ccpars_meas.invalid_meas_period_iters == 0 ||
-                                (iteration_idx % ccpars_meas.invalid_meas_period_iters) > 0));
+                                (iteration_idx % ccpars_meas.invalid_meas_period_iters) >= ccpars_meas.invalid_meas_repeat_iters));
 
         // If converter has not tripped then generate reference value using libfg function
 

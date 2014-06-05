@@ -69,7 +69,8 @@ struct ccpars_meas
     float                   b_sim_tone_amp;             // Simulated field   measurement tone amplitude
     float                   i_sim_tone_amp;             // Simulated current measurement tone amplitude
 
-    uint32_t                invalid_meas_period_iters;  // Period in iterations between invalid measurements
+    uint32_t                invalid_meas_period_iters;  // Period in iterations between bursts of invalid measurements
+    uint32_t                invalid_meas_repeat_iters;  // Number of iterations to repeat the invalid measurements
 };
 
 CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
@@ -89,6 +90,7 @@ CCPARS_MEAS_EXT struct ccpars_meas ccpars_meas
         0.0,                     // MEAS I_SIM_TONE_AMP
         0.0,                     // MEAS B_SIM_TONE_AMP
         0,                       // MEAS INVALID_MEAS_PERIOD_ITERS
+        1,                       // MEAS INVALID_MEAS_REPEAT_ITERS
 }
 #endif
 ;
@@ -112,6 +114,7 @@ CCPARS_MEAS_EXT struct ccpars meas_pars[]
     { "B_SIM_TONE_AMP",           PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.b_sim_tone_amp            }, 1 },
     { "I_SIM_TONE_AMP",           PAR_FLOAT,    1, 1, NULL,            { .f = &ccpars_meas.i_sim_tone_amp            }, 1 },
     { "INVALID_MEAS_PERIOD_ITERS",PAR_UNSIGNED, 1, 1, NULL,            { .i = &ccpars_meas.invalid_meas_period_iters }, 1 },
+    { "INVALID_MEAS_REPEAT_ITERS",PAR_UNSIGNED, 1, 1, NULL,            { .i = &ccpars_meas.invalid_meas_repeat_iters }, 1 },
     { NULL }
 }
 #endif
