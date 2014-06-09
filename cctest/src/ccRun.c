@@ -55,7 +55,7 @@ static uint32_t ccRunAbort(double time)
 
     if(config.acceleration <= 0.0)
     {
-        config.acceleration = 10.0 * config.linear_rate / reg.period;
+        config.acceleration = config.linear_rate / (10.0 * reg.period);
     }
 
     // Make ramp symmetric with deceleration = acceleration
