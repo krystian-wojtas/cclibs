@@ -190,12 +190,14 @@ void ccSigsInit(void)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        // Set time offset for circuit simulation signals
+        // Set time offset for circuit simulation signals - if the voltage source is under-sampled then
+        // include the steady ramp delay, otherwise the dynamic response is actually simulated
 
         signals[ANA_B_MAGNET ].time_offset =
         signals[ANA_I_MAGNET ].time_offset =
         signals[ANA_I_CIRCUIT].time_offset =
-        signals[ANA_V_CIRCUIT].time_offset = ccpars_vs.v_ref_delay_iters * ccpars_global.iter_period;
+        signals[ANA_V_CIRCUIT].time_offset = ccpars_global.iter_period * (ccpars_vs.v_ref_delay_iters +
+                                            (reg.sim_load_pars.vs_undersampled_flag == 0 ? 0.0 : reg.sim_vs_pars.vs_delay_iters));
 
         // Enable cursor signals only if CSV output is for the Labview Dataviewer (LVDV)
 

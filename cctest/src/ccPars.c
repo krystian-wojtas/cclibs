@@ -404,8 +404,9 @@ void ccParsPrintDebug(FILE *f)
                      reg.sim_vs_pars.den[i]);
         }
 
-        fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS step_rsp_time_iters",reg.sim_vs_pars.step_rsp_time_iters);
-        fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",               reg.sim_vs_pars.gain);
+        fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_delay_iters",       reg.sim_vs_pars.vs_delay_iters);
+        fprintf(f,"%-*s"   FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_tustin_delay_iters",reg.sim_vs_pars.vs_tustin_delay_iters);
+        fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",                 reg.sim_vs_pars.gain);
 
         // Report internally calculated field regulation parameters
 
