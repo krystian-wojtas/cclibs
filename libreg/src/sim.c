@@ -24,6 +24,7 @@
             Pierre Dejoue
 \*---------------------------------------------------------------------------------------------------------*/
 
+#include <stdio.h>
 #include <math.h>
 #include "libreg/sim.h"
 
@@ -120,7 +121,7 @@ void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_va
     regSimLoadRT(pars, vars, v_init);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float sim_period, float bandwidth, float z, float tau_zero)
+void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float iter_period, float bandwidth, float z, float tau_zero)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates the z-transform using the Tustin algorithm for a voltage source with a
   second order s-transform with one optional real zero with time constant tau_zero (0 if not used),
@@ -136,30 +137,41 @@ void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float sim_period, float ba
     float       de;
     float       y;
 
-    // If voltage source model is too undersampled then do not attempt Tustin algorithm
+    // Return immediately if bandwidth is zero or negative - the user's model will be used
 
-    if(bandwidth <= 0.0 || bandwidth > 0.4 / sim_period)
+    if(bandwidth <= 0.0)
     {
-        pars->den[0] = pars->num[0] = 1.0;
-        pars->den[1] = pars->den[2] = pars->den[3] = pars->num[1] = pars->num[2] = pars->num[3] = 0.0;
+        pars->vs_tustin_delay_iters = 0.0;
         return;
     }
 
     // Calculate the natural frequency from the bandwidth and damping
 
     z2 = z * z;
-
     natural_freq = bandwidth / sqrt(1.0 - 2.0 * z2 + sqrt(2.0 - 4.0 * z2 + 4 * z2 * z2));
+
+    // Calculate the delay for a steady ramp (see doc/model/FirstSecondOrder.pdf page 36)
+
+    pars->vs_tustin_delay_iters = 2.0 * z / (2.0 * M_PI * natural_freq * iter_period);
+
+    // If voltage source model is too under-sampled then do not attempt Tustin algorithm
+
+    if(bandwidth > 0.8 / iter_period)
+    {
+        pars->den[0] = pars->num[0] = 1.0;
+        pars->den[1] = pars->den[2] = pars->den[3] = pars->num[1] = pars->num[2] = pars->num[3] = 0.0;
+        return;
+    }
 
     // Tustin will match z-transform and s-transform at frequency f_pw
 
     if(z < 0.7)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
     {
         f_pw = natural_freq * sqrt(1.0 - 2.0 * z2);
-        w  = M_PI * sim_period * f_pw;
+        w  = M_PI * iter_period * f_pw;
         b  = tan(w) / w;
     }
-    else              // else heavily damped, there is no resonance peak: f_pw = 0 (minimises approximation error)
+    else              // else heavily damped, there is no resonance peak: f_pw = 0 (minimizes approximation error)
     {
         w  = 0.0;
         b  = 1.0;
@@ -167,8 +179,8 @@ void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float sim_period, float ba
 
     // Calculate intermediate variables
 
-    d  = 2.0 * tau_zero / (sim_period * b);
-    y  = M_PI * sim_period * b * natural_freq;
+    d  = 2.0 * tau_zero / (iter_period * b);
+    y  = M_PI * iter_period * b * natural_freq;
     de = 1.0 / (y * y + 2.0 * z * y + 1.0);
 
     // Numerator (b0, b1, b2, b3) coefficients
@@ -188,29 +200,31 @@ void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float sim_period, float ba
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref_delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function calculates the gain and the 50% step response time of the simulated voltage source.
+  This function calculates the gain and the voltage source delay for a steady ramp.
   It returns 1 if the voltage source simulation is under-sampled.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t        i;
-    float           sum_num  = 0.0;         // Sum(b)
-    float           sum_den  = 0.0;         // Sum(a)
-    float           step_response;
-    float           prev_step_response;
+    float           sum_num  = 0.0;         // Sum(b_i)
+    float           sum_den  = 0.0;         // Sum(a_i)
 
     // Save v_ref_delay so that it can be used later by regCalcPureDelay()
 
     pars->v_ref_delay_iters = v_ref_delay_iters;
 
-    // Calculate gain of voltage source model
+    // Calculate gain of voltage source model and delay for a steady ramp
+
+    pars->vs_delay_iters = 0.0;         // Steady ramp delay = Sum(i.(a_i - b_i)) / Sum(b_i)
 
     for(i = 0 ; i < REG_N_VS_SIM_COEFFS ; i++)
     {
         sum_num += pars->num[i];
         sum_den += pars->den[i];
+
+        pars->vs_delay_iters += (float)i * (pars->num[i] - pars->den[i]);
     }
 
-    // Protect gain against NaN if the denominator is zero
+    // Protect gain against Inf if the denominator is zero
 
     if(sum_den != 0.0)
     {
@@ -221,35 +235,23 @@ uint32_t regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars
         pars->gain = 0.0;
     }
 
-    // Evaluate the step response time to reach 50%
+    // Protect against Inf if numerator is zero
 
-    regSimVsInitHistory(pars, vars, 0.0);
-
-    prev_step_response = 0.0;
-
-    // Scan to find when step response crosses 50% level - protect against ultra slow responses
-
-    for(i = 0 ; i < 1000 && ((step_response = regSimVsRT(pars, vars, 1.0)) < 0.5) ; i++)
+    if(sum_num != 0.0)
     {
-        prev_step_response = step_response;
-    }
-
-    if(i >= 1000)
-    {
-        pars->step_rsp_time_iters = 1000.0;
+        pars->vs_delay_iters /= sum_num;
     }
     else
     {
-        pars->step_rsp_time_iters = (float)i - 1.0 + (0.5 - prev_step_response) /
-                                                     (step_response - prev_step_response);
+        pars->vs_delay_iters = 0.0;
     }
 
-    // Consider simulation to be under-sampled if step response time is less than 60% of one iteration
+    // Return under-sampled flag
 
-    if(pars->step_rsp_time_iters < 0.0)
+    if(pars->num[0] == 1.0)
     {
-        pars->step_rsp_time_iters = 0.0;
-        return(1);                              // Report that model is under-sampled
+        pars->vs_delay_iters = pars->vs_tustin_delay_iters;
+        return(1);
     }
 
     return(0);                                  // Report that model is not under-sampled

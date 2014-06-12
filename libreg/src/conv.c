@@ -32,7 +32,7 @@ float regConvPureDelay(struct reg_conv *reg, struct reg_meas_filter *meas_filter
   This function will estimate the pure loop delay in regulation periods needed by regRstInit().
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    return((reg->sim_vs_pars.v_ref_delay_iters + reg->sim_vs_pars.step_rsp_time_iters +
+    return((reg->sim_vs_pars.v_ref_delay_iters + reg->sim_vs_pars.vs_delay_iters +
             meas_filter->delay_iters[meas_filter->reg_select]) / (float)reg_period_iters);
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -130,8 +130,7 @@ static void regConvSetModeVoltageRT(struct reg_conv *reg)
 
     // Calculate the ref advance for voltage mode
 
-    reg->ref_advance = reg->iter_period *
-                      (reg->sim_vs_pars.v_ref_delay_iters + reg->sim_vs_pars.step_rsp_time_iters);
+    reg->ref_advance = reg->iter_period * (reg->sim_vs_pars.v_ref_delay_iters + reg->sim_vs_pars.vs_delay_iters);
 
     // Clear field and current regulation variables
 
