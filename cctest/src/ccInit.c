@@ -171,12 +171,12 @@ uint32_t ccInitLoad(void)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        // Initialise load model structure
+        // Initialize load model structure
 
         regLoadInit(&reg.load_pars, ccpars_load.ohms_ser, ccpars_load.ohms_par,
                      ccpars_load.ohms_mag, ccpars_load.henrys, ccpars_load.gauss_per_amp);
 
-        // Initialise load saturation model
+        // Initialize load saturation model
 
         regLoadInitSat(&reg.load_pars, ccpars_load.henrys_sat, ccpars_load.i_sat_start, ccpars_load.i_sat_end);
 
@@ -199,7 +199,7 @@ uint32_t ccInitLimits(void)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-         // Initialise field and current measurement trip/low/zero limits
+         // Initialize field and current measurement trip/low/zero limits
 
         regLimMeasInit(&reg.b.lim_meas,
                        ccpars_limits.b.pos, ccpars_limits.b.neg,
@@ -213,7 +213,7 @@ uint32_t ccInitLimits(void)
                        ccpars_limits.i.pos * ZERO_MEAS_FACTOR,
                        ccpars_limits.invert_limits);
 
-        // Initialise field, current and voltage reference pos/min/neg/rate limits
+        // Initialize field, current and voltage reference pos/min/neg/rate limits
 
         regLimRefInit (&reg.b.lim_ref, ccpars_limits.b.pos, ccpars_limits.b.neg, ccpars_limits.b.rate,
                        ccpars_limits.invert_limits);
@@ -224,7 +224,7 @@ uint32_t ccInitLimits(void)
         regLimVrefInit(&reg.v.lim_ref, ccpars_limits.v.pos, ccpars_limits.v.neg, ccpars_limits.v.rate,
                        ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41, ccpars_limits.invert_limits);
 
-        // Initialise field, current and voltage regulation error warning/fault thresholds
+        // Initialize field, current and voltage regulation error warning/fault thresholds
 
         regErrInitLimits(&reg.b.err, ccpars_limits.b_err_warning, ccpars_limits.b_err_fault);
 
@@ -247,19 +247,19 @@ uint32_t ccInitFunctions(void)
 
     ccrun.fg_limits = NULL;
 
-    // Initialise v_ref limits in case ccrefCheckConverterLimits() is used
+    // Initialize v_ref limits in case ccrefCheckConverterLimits() is used
 
     regLimVrefInit(&ccrun.fg_lim_v_ref, ccpars_limits.v.pos, ccpars_limits.v.neg,
                    ccpars_limits.v.rate, ccpars_limits.i_quadrants41, ccpars_limits.v_quadrants41,
                    CC_DISABLED);
 
-    // Initialise the reference functions
+    // Initialize the reference functions
 
     for(func_idx = 0, exit_status = EXIT_SUCCESS ;
         func_idx < ccrun.num_functions && exit_status == EXIT_SUCCESS;
         func_idx++)
     {
-        // Initialise pointer to function generation limits when FG_LIMITS is ENABLED
+        // Initialize pointer to function generation limits when FG_LIMITS is ENABLED
 
         if(ccpars_global.fg_limits == CC_ENABLED)
         {
@@ -295,22 +295,19 @@ uint32_t ccInitSimulation(void)
 
     reg.sim_vs_pars = ccpars_vs.sim_vs_pars;
 
-    // If VS BANDWIDTH is greater than zero then initialise the voltage source simulation model coefficients
+    // If VS BANDWIDTH is greater than zero then initialize the voltage source simulation model coefficients
     // using Tustin algorithm.
 
-    regSimVsInitTustin(&reg.sim_vs_pars, reg.iter_period, ccpars_vs.bandwidth,
-                 ccpars_vs.z, ccpars_vs.tau_zero);
+    regSimVsInitTustin(&reg.sim_vs_pars, reg.iter_period, ccpars_vs.bandwidth, ccpars_vs.z, ccpars_vs.tau_zero);
 
-    // Initialise voltage source model gain and stop if gain error is more than 5%
+    // Initialize voltage source model gain and stop if gain error is more than 5%
     // This also calculates the vs_undersampled_flag for sim_load_pars
 
-    reg.sim_load_pars.vs_undersampled_flag = regSimVsInit(&reg.sim_vs_pars, &reg.sim_vs_vars,
-                                                                   ccpars_vs.v_ref_delay_iters);
+    reg.sim_load_pars.vs_undersampled_flag = regSimVsInit(&reg.sim_vs_pars, &reg.sim_vs_vars, ccpars_vs.v_ref_delay_iters);
 
     if(fabs(reg.sim_vs_pars.gain - 1.0) > 0.05)
     {
-        ccTestPrintError("voltage source model gain (%.3f) has an error of more than 5%%",
-                         reg.sim_vs_pars.gain);
+        ccTestPrintError("voltage source model gain (%.3f) has an error of more than 5%%", reg.sim_vs_pars.gain);
         return(EXIT_FAILURE);
     }
 
