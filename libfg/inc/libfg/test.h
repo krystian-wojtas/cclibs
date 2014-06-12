@@ -50,13 +50,13 @@ struct fg_test_config                       // Test function configuration
     float               amplitude_pp;       // Ref peak-to-peak amplitude
     float               num_cycles;         // Number of cycles/steps (this is rounded to nearest integer)
     float               period;             // Period
-    uint32_t            window_flag;        // Window control (Enabled or Disabled)
+    uint32_t            use_window;         // Window control (!0 to use window for sine & cosine)
 };
 
 struct fg_test_pars                         // Test function parameters
 {
     enum fg_test_type   type;               // Type of test function
-    uint32_t            window_flag;        // Window control (Enabled or Disabled)
+    uint32_t            use_window;         // Window control (!0 to use window for sine & cosine)
     float               delay;              // Time before start of function
     float               end_time;           // Time at end of function (delay + duration)
     float               frequency;          // 1 / period

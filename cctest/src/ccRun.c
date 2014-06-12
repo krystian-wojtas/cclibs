@@ -55,7 +55,7 @@ static uint32_t ccRunAbort(double time)
 
     if(config.acceleration <= 0.0)
     {
-        config.acceleration = 10.0 * config.linear_rate / reg.period;
+        config.acceleration = config.linear_rate / (10.0 * reg.period);
     }
 
     // Make ramp symmetric with deceleration = acceleration
@@ -67,8 +67,8 @@ static uint32_t ccRunAbort(double time)
     fgRampCalc(&config,
                &ccpars_ramp.ramp_pars,
                 ccrun.reg_time,                                            // time of last RST calculation
-                regRstPrevRef(&reg.rst_vars),                              // last reference value
-                regRstDeltaRef(&reg.rst_vars) / reg.period,                // last reference rate
+                regRstPrevRefRT(&reg.rst_vars),                              // last reference value
+                regRstDeltaRefRT(&reg.rst_vars) / reg.period,                // last reference rate
                &meta);
 
     // Check that abort duration is not too large (limit to 50000 iterations)
@@ -97,7 +97,7 @@ static void ccRunStartFunction(uint32_t func_idx)
     ccrun.fgen_func     = funcs[ccpars_global.function[func_idx]].fgen_func;
     ccrun.fg_pars       = funcs[ccpars_global.function[func_idx]].fg_pars;
 
-    regSetMode(&reg, &reg_pars, ccpars_global.reg_mode[func_idx]);
+    regConvSetModeRT(&reg, ccpars_global.reg_mode[func_idx], 0);
 
     ccrun.ref_advance[func_idx] = reg.ref_advance;
 
@@ -134,11 +134,8 @@ void ccRunSimulation(void)
     {
         // Set measurements to simulated values
 
-        regSetMeas(&reg, &reg_pars,
-                   0.0,         // v_meas from ADC
-                   0.0,         // i_meas from ADC
-                   0.0,         // b_meas from field measurement system
-                   1);          // sim_meas_control: 0=Use real measurements, 1=Use simulated measurements
+        regConvSetMeasRT(&reg, (ccpars_meas.invalid_meas_period_iters == 0 ||
+                                (iteration_idx % ccpars_meas.invalid_meas_period_iters) >= ccpars_meas.invalid_meas_repeat_iters));
 
         // If converter has not tripped then generate reference value using libfg function
 
@@ -150,8 +147,7 @@ void ccRunSimulation(void)
         // Regulate converter - this returns 1 on iterations when the current or field regulation
         // algorithm is executed.
 
-        if(regConverter(&reg,
-                        &reg_pars,
+        if(regConverterRT(&reg,
                         &ref,                           // V_REF, I_REF or B_REF according to reg.mode
                         ccrun.feedforward_v_ref,        // V_REF when feedforward_control is 1
                         ccrun.feedforward_control,      // 1=Feed-forward  0=Feedback
@@ -187,7 +183,7 @@ void ccRunSimulation(void)
 
         // Simulate voltage source and load response (with voltage perturbation added)
 
-        regSimulate(&reg, &reg_pars, perturb_volts);
+        regConvSimulateRT(&reg, perturb_volts);
 
         // Store and print to CSV file the enabled signals
 
@@ -196,19 +192,19 @@ void ccRunSimulation(void)
         // Check if any condition requires the converter to trip
 
         if(ccrun.vs_tripped_flag       == 0 &&
-          (reg.lim_b_meas.flags.trip   == 1 ||
-           reg.lim_i_meas.flags.trip   == 1 ||
-           reg.b_err.fault.flag        == 1 ||
-           reg.i_err.fault.flag        == 1 ||
-           reg.v_err.fault.flag        == 1))
+          (reg.b.lim_meas.flags.trip   == 1 ||
+           reg.i.lim_meas.flags.trip   == 1 ||
+           reg.b.err.fault.flag        == 1 ||
+           reg.i.err.fault.flag        == 1 ||
+           reg.v.err.fault.flag        == 1))
         {
             // Simulate converter trip - switch to voltage regulation mode and set v_ref to zero
 
             ccrun.vs_tripped_flag = 1;
 
-            regSetMode(&reg, &reg_pars, REG_VOLTAGE);
+            regConvSetModeRT(&reg, REG_VOLTAGE, 0);
 
-            ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v_ref = reg.v_ref_sat = reg.v_ref_limited = 0.0;
+            ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v.ref = reg.v.ref_sat = reg.v.ref_limited = 0.0;
 
             ccSigsStoreCursor(CSR_FUNC,"TRIP!");
 
@@ -239,8 +235,8 @@ void ccRunSimulation(void)
 
                 switch(reg.mode)
                 {
-                case REG_FIELD  : ccrun.max_abs_err[ccrun.func_idx] = reg.b_err.max_abs_err; break;
-                case REG_CURRENT: ccrun.max_abs_err[ccrun.func_idx] = reg.i_err.max_abs_err; break;
+                case REG_FIELD  : ccrun.max_abs_err[ccrun.func_idx] = reg.b.err.max_abs_err; break;
+                case REG_CURRENT: ccrun.max_abs_err[ccrun.func_idx] = reg.i.err.max_abs_err; break;
                 default:          ccrun.max_abs_err[ccrun.func_idx] = 0.0;                   break;
                 }
 
@@ -295,7 +291,7 @@ void ccRunFuncGen(void)
     {
         // Generate reference value using libfg function
 
-        func_run_f = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &reg.v_ref);
+        func_run_f = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &reg.v.ref);
 
         // Store and print to CSV file the enabled signals
 
@@ -369,7 +365,7 @@ void ccRunFuncGenReverseTime(void)
 
         // Generate reference value using libfg function
 
-        ccrun.fgen_func(ccrun.fg_pars, &time, &reg.v_ref);
+        ccrun.fgen_func(ccrun.fg_pars, &time, &reg.v.ref);
 
         // Store and print enabled signals
 

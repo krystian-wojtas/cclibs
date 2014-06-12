@@ -51,11 +51,11 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     pars->frequency   = 1.0 / config->period;
     pars->ref_amp     = config->amplitude_pp;
     pars->type        = config->type;
-    pars->window_flag = config->window_flag;            // Allow windowing
+    pars->use_window  = config->use_window;             // Control window for sine and cosine
 
     // Check parameters
 
-    if(pars->duration > 1.0E5)                          // If total time is too long
+    if(pars->duration > 1.0E6)                          // If total time is too long
     {
         meta->error.data[0]=pars->duration;
 
@@ -214,9 +214,9 @@ uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
                 return(0);
         }
 
-        // Apply cosine window if enabled
+        // For SINE and COSINE: Apply cosine window if enabled
 
-        if(pars->window_flag &&                             // If window enabled, and
+        if(pars->use_window &&                              // If window enabled, and
           (ref_time < pars->half_period ||                  // first or
            pars->duration - ref_time < pars->half_period))  // last half period
         {

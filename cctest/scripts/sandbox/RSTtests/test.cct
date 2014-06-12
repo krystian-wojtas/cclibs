@@ -1,0 +1,126 @@
+# CCTEST - RST tests script
+
+GLOBAL RUN_DELAY            0.1
+GLOBAL STOP_DELAY           0.1
+GLOBAL ITER_PERIOD          1.0E-4
+GLOBAL STOP_ON_ERROR        DISABLED
+GLOBAL REG_MODE             CURRENT
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL GROUP                sandbox
+GLOBAL PROJECT              RSTtests
+
+# Limits parameters
+
+LIMITS B_POS                4000.0
+LIMITS B_MIN                0.0
+LIMITS B_NEG                -4000.0
+LIMITS B_RATE               10000.0
+LIMITS B_ACCELERATION       0.0
+LIMITS B_ERR_WARNING        0.0
+LIMITS B_ERR_FAULT          0.0
+                            
+LIMITS I_POS                4000.0
+LIMITS I_MIN                0.0
+LIMITS I_NEG                -4000.0
+LIMITS I_RATE               500.0
+LIMITS I_ACCELERATION       0.0
+LIMITS I_ERR_WARNING        1.0
+#LIMITS I_ERR_FAULT          10.0
+LIMITS I_QUADRANTS41        0.0,0.0
+                            
+LIMITS V_POS                450.0
+LIMITS V_NEG                -450.0
+LIMITS V_RATE               5.0E5
+LIMITS V_ACCELERATION       0.0
+LIMITS V_ERR_WARNING        10.0
+LIMITS V_ERR_FAULT          0.0
+LIMITS V_QUADRANTS41        0.0,0.0
+
+# Voltage source parameters
+
+VS V_REF_DELAY_ITERS        0.5
+VS BANDWIDTH                2000.0
+VS TAU_ZERO                 0.0
+VS Z                        0.9
+
+# Load parameters
+
+LOAD OHMS_SER               0.0
+LOAD OHMS_PAR               1.0E8
+LOAD OHMS_MAG               0.3
+LOAD HENRYS                 0.2
+LOAD HENRYS_SAT             0.2
+LOAD I_SAT_START            0.0
+LOAD I_SAT_END              0.0
+LOAD GAUSS_PER_AMP          0.75
+LOAD PERTURB_VOLTS          10.0
+LOAD PERTURB_TIME           0.0
+LOAD SIM_TC_ERROR           0.1
+
+# Measurement parameters
+
+MEAS B_REG_SELECT           EXTRAPOLATED
+MEAS I_REG_SELECT           UNFILTERED
+MEAS B_DELAY_ITERS          1.3
+MEAS I_DELAY_ITERS          1.3
+MEAS V_DELAY_ITERS          1.3
+MEAS B_FIR_LENGTHS          10, 7
+MEAS I_FIR_LENGTHS          10, 1
+MEAS B_SIM_NOISE_PP         0.00
+MEAS I_SIM_NOISE_PP         0.00
+MEAS V_SIM_NOISE_PP         0.0
+MEAS TONE_HALF_PERIOD_ITERS 100
+MEAS B_SIM_TONE_AMP         0.0
+MEAS I_SIM_TONE_AMP         0.0
+
+# PPPL parameters
+
+PPPL INITIAL_REF               10
+PPPL ACCELERATION1          25000,   -25000,    -25000
+PPPL ACCELERATION2              0,        0,         0
+PPPL ACCELERATION3          -2000,    25000,     25000
+PPPL RATE2                    400,     -400,      -400
+PPPL RATE4                      0,        0,         0
+PPPL REF4                     100,       50,         0
+PPPL DURATION4                0.1,      0.2,      0.01
+
+# Sine wave parameters
+
+TEST INITIAL_REF            100.0
+TEST AMPLITUDE_PP           100.0
+TEST NUM_CYCLES             2
+TEST PERIOD                 0.5
+TEST WINDOW                 ENABLED
+
+# Test 1 - unfiltered
+             
+GLOBAL REG_MODE             CURRENT
+MEAS I_REG_SELECT           UNFILTERED
+
+IREG PERIOD_ITERS           10
+IREG CLBW                   90
+IREG CLBW2                  90
+IREG CLBW3                  90
+IREG CLBW4                  90
+IREG Z                      0.5
+
+# Test 2 - filtered
+             
+MEAS I_REG_SELECT           FILTERED
+
+VS V_REF_DELAY_ITERS        1.5
+
+# PLP verse CTRIM closed-loop tests
+
+PLEP   INITIAL_REF         10
+PLEP   FINAL_REF           100
+PLEP   ACCELERATION        5000
+PLEP   LINEAR_RATE         400
+
+GLOBAL FUNCTION             PLEP
+GLOBAL ABORT_TIME           0.2
+GLOBAL FILE                 aborted-plep
+RUN
+
+# EOF

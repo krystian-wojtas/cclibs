@@ -58,8 +58,8 @@ MEAS I_SIM_TONE_AMP         0.0
 # Current regulation 
 
 IREG PERIOD_ITERS           3
-IREG CLBW                   30
-IREG CLBW2                  30
+IREG CLBW                   20
+IREG CLBW2                  20
 IREG Z                      0.5
 
 # Main dipole functions

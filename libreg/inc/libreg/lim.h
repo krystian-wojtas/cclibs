@@ -91,13 +91,13 @@ extern "C" {
 
 void     regLimMeasInit         (struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
                                  float low_lim, float zero_lim, uint32_t invert_limits);
-void     regLimMeas             (struct reg_lim_meas *lim_meas, float meas);
+void     regLimMeasRT             (struct reg_lim_meas *lim_meas, float meas);
 void     regLimRefInit          (struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim,
                                  uint32_t invert_limits);
 void     regLimVrefInit         (struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
                                  float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits);
-void     regLimVrefCalc         (struct reg_lim_ref *lim_v_ref, float i_meas);
-float    regLimRef              (struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref);
+void     regLimVrefCalcRT         (struct reg_lim_ref *lim_v_ref, float i_meas);
+float    regLimRefRT              (struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref);
 
 #ifdef __cplusplus
 }

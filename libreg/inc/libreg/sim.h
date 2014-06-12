@@ -55,11 +55,12 @@ struct reg_sim_load_vars                                        // Load simulati
 };
 
 struct reg_sim_vs_pars                                          // Voltage source simulation parameters
-{                                                               // Note: the order of fields is significant in fgtest
+{
     float                       num  [REG_N_VS_SIM_COEFFS];     // Numerator coefficients b0, b1, b2, ...
     float                       den  [REG_N_VS_SIM_COEFFS];     // Denominator coefficients a0, a2, a2, ...
     float                       v_ref_delay_iters;              // Delay before V_REF is applied to the voltage source
-    float                       step_rsp_time_iters;            // Time for step response to cross 50%
+    float                       vs_tustin_delay_iters;          // Tustin model delay for steady ramp in iterations
+    float                       vs_delay_iters;                 // Voltage source delay for steady ramp in iterations
     float                       gain;                           // Gain = Sum(den)/Sum(num)
 };
 
@@ -77,16 +78,15 @@ extern "C" {
 
 void     regSimLoadTcError      (struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars,
                                  float sim_load_tc_error);
-void     regSimLoadInit         (struct reg_sim_load_pars *sim_load_pars, float sim_period);
+void     regSimLoadInit         (struct reg_sim_load_pars *sim_load_pars, float iter_period);
 void     regSimLoadSetField     (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float b_init);
 void     regSimLoadSetCurrent   (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float i_init);
 void     regSimLoadSetVoltage   (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init);
-float    regSimLoad             (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float voltage);
-void     regSimVsInit           (struct reg_sim_vs_pars *pars, float sim_period, float bandwidth,
-                                 float z, float tau_zero);
-uint32_t regSimVsInitGain       (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref_delay_iters);
+float    regSimLoadRT           (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float voltage);
+void     regSimVsInitTustin     (struct reg_sim_vs_pars   *pars, float iter_period, float bandwidth, float z, float tau_zero);
+uint32_t regSimVsInit           (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref_delay_iters);
 float    regSimVsInitHistory    (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
-float    regSimVs               (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
+float    regSimVsRT             (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
 
 #ifdef __cplusplus
 }

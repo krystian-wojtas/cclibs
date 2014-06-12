@@ -343,6 +343,35 @@ static void ccParsPrintDebugLoad(FILE *f, char *prefix, struct reg_load_pars *lo
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
+static void ccParsPrintDebugReg(FILE *f, char *prefix, struct reg_conv_signal *r)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t i;
+
+    fprintf(f,"%s" INT_FORMAT "\n",  ccParsDebugLabel(prefix, "alg_index"),   r->rst_pars.alg_index);
+    fprintf(f,"%s" INT_FORMAT "\n",  ccParsDebugLabel(prefix, "dead_beat"),   r->rst_pars.dead_beat);
+    fprintf(f,"%s" INT_FORMAT "\n",  ccParsDebugLabel(prefix, "jurys_result"),r->rst_pars.jurys_result);
+
+    fprintf(f,"%s" DOUBLE_FORMAT "\n",  ccParsDebugLabel(prefix, "pure_delay_periods"),  r->rst_pars.pure_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n",  ccParsDebugLabel(prefix, "track_delay_periods"), r->rst_pars.track_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n",  ccParsDebugLabel(prefix, "ref_delay_periods"),   r->rst_pars.ref_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n",  ccParsDebugLabel(prefix, "t0_correction"),       r->rst_pars.t0_correction);
+
+    for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+    {
+        fprintf(f,"%s" DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT " "
+                       DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "R:S:T:A:B:AS+BR"),
+                       r->rst_pars.rst.r[i],
+                       r->rst_pars.rst.s[i],
+                       r->rst_pars.rst.t[i],
+                       r->rst_pars.a[i],
+                       r->rst_pars.b[i],
+                       r->rst_pars.asbr[i]);
+    }
+
+    fputc('\n',f);
+}
+/*---------------------------------------------------------------------------------------------------------*/
 void ccParsPrintDebug(FILE *f)
 /*---------------------------------------------------------------------------------------------------------*/
 {
@@ -350,20 +379,20 @@ void ccParsPrintDebug(FILE *f)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        ccParsPrintDebugLoad(f, "LOAD", &reg_pars.load_pars);
+        ccParsPrintDebugLoad(f, "LOAD", &reg.load_pars);
 
         fprintf(f,"%s" INT_FORMAT "\n",    ccParsDebugLabel("SIMLOAD", "vs_undersampled_flag"),
-                reg_pars.sim_load_pars.vs_undersampled_flag);
+                reg.sim_load_pars.vs_undersampled_flag);
         fprintf(f,"%s" INT_FORMAT "\n",    ccParsDebugLabel("SIMLOAD", "load_undersampled_flag"),
-                reg_pars.sim_load_pars.load_undersampled_flag);
+                reg.sim_load_pars.load_undersampled_flag);
         fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel("SIMLOAD", "period_tc_ratio"),
-                reg_pars.sim_load_pars.period_tc_ratio);
+                reg.sim_load_pars.period_tc_ratio);
 
-        if(reg_pars.sim_load_pars.tc_error != 0.0)
+        if(reg.sim_load_pars.tc_error != 0.0)
         {
-            fprintf(f,"%s" FLOAT_FORMAT "\n",ccParsDebugLabel("SIMLOAD", "tc_error"), reg_pars.sim_load_pars.tc_error);
+            fprintf(f,"%s" FLOAT_FORMAT "\n",ccParsDebugLabel("SIMLOAD", "tc_error"), reg.sim_load_pars.tc_error);
 
-            ccParsPrintDebugLoad(f, "SIMLOAD", &reg_pars.sim_load_pars.load_pars);
+            ccParsPrintDebugLoad(f, "SIMLOAD", &reg.sim_load_pars.load_pars);
         }
 
         // Report internally calculated voltage source parameters
@@ -371,68 +400,26 @@ void ccParsPrintDebug(FILE *f)
         for(i = 0 ; i < REG_N_VS_SIM_COEFFS ; i++)
         {
             fprintf(f,"%-*s" DOUBLE_FORMAT "  " DOUBLE_FORMAT "\n", PARS_INDENT, "SIMVS num:den",
-                     reg_pars.sim_vs_pars.num[i],
-                     reg_pars.sim_vs_pars.den[i]);
+                     reg.sim_vs_pars.num[i],
+                     reg.sim_vs_pars.den[i]);
         }
 
-        fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS step_rsp_time_iters",reg_pars.sim_vs_pars.step_rsp_time_iters);
-        fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",               reg_pars.sim_vs_pars.gain);
+        fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_delay_iters",       reg.sim_vs_pars.vs_delay_iters);
+        fprintf(f,"%-*s"   FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_tustin_delay_iters",reg.sim_vs_pars.vs_tustin_delay_iters);
+        fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",                 reg.sim_vs_pars.gain);
 
         // Report internally calculated field regulation parameters
 
         if(ccrun.breg_flag == 1)
         {
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG pure_delay_periods",
-                               reg_pars.b_rst_pars.pure_delay_periods);
-
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "BREG alg_index", reg_pars.b_rst_pars.alg_index);
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "BREG dead_beat", reg_pars.b_rst_pars.dead_beat);
-
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG track_delay_periods",
-                               reg_pars.b_rst_pars.track_delay_periods);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "BREG ref_delay_periods",
-                               reg_pars.b_rst_pars.ref_delay_periods);
-
-            for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
-            {
-                fprintf(f,"%-*s" DOUBLE_FORMAT "  " DOUBLE_FORMAT "  " DOUBLE_FORMAT "\n", PARS_INDENT, "BREG R:S:T",
-                               reg_pars.b_rst_pars.rst.r[i],
-                               reg_pars.b_rst_pars.rst.s[i],
-                               reg_pars.b_rst_pars.rst.t[i]);
-            }
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n\n", PARS_INDENT, "BREG t0_correction",
-                               reg_pars.b_rst_pars.t0_correction);
+            ccParsPrintDebugReg(f, "BREG", &reg.b);
         }
 
         // Report internally calculated current regulation parameters
 
         if(ccrun.ireg_flag == 1)
         {
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG alg_index",    reg_pars.i_rst_pars.alg_index);
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG dead_beat",    reg_pars.i_rst_pars.dead_beat);
-            fprintf(f,"%-*s" INT_FORMAT "\n", PARS_INDENT, "IREG jurys_result", reg_pars.i_rst_pars.jurys_result);
-
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG pure_delay_periods",
-                               reg_pars.i_rst_pars.pure_delay_periods);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG track_delay_periods",
-                               reg_pars.i_rst_pars.track_delay_periods);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n", PARS_INDENT, "IREG ref_delay_periods",
-                               reg_pars.i_rst_pars.ref_delay_periods);
-            fprintf(f,"%-*s" DOUBLE_FORMAT "\n\n", PARS_INDENT, "IREG t0_correction",
-                               reg_pars.i_rst_pars.t0_correction);
-
-            for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
-            {
-                fprintf(f,"%-*s" DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT " "
-                                 DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT "\n",
-                                 PARS_INDENT, "IREG R:S:T:A:B:AS+BR",
-                               reg_pars.i_rst_pars.rst.r[i],
-                               reg_pars.i_rst_pars.rst.s[i],
-                               reg_pars.i_rst_pars.rst.t[i],
-                               reg_pars.i_rst_pars.a[i],
-                               reg_pars.i_rst_pars.b[i],
-                               reg_pars.i_rst_pars.asbr[i]);
-            }
+            ccParsPrintDebugReg(f, "IREG", &reg.i);
         }
     }
 

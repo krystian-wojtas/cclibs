@@ -51,8 +51,8 @@ extern "C" {
 // Regulation error functions
 
 void     regErrInitLimits       (struct reg_err *err, float warning_threshold, float fault_threshold);
-void     regErrResetLimitsVars  (struct reg_err *err);
-void     regErrCheckLimits      (struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err,
+void     regErrResetLimitsVarsRT  (struct reg_err *err);
+void     regErrCheckLimitsRT      (struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err,
                                  float delayed_ref, float meas);
 #ifdef __cplusplus
 }

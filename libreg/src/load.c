@@ -53,7 +53,9 @@
 #include <math.h>
 #include "libreg/load.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
+//-----------------------------------------------------------------------------------------------------------
+// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+//-----------------------------------------------------------------------------------------------------------
 void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag, float henrys,
                  float gauss_per_amp)
 /*---------------------------------------------------------------------------------------------------------*\
@@ -117,7 +119,34 @@ void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, flo
     load->sat.i_end   = 0.0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regLoadCurrentToField(struct reg_load_pars *load, float i_meas)
+void regLoadInitSat(struct reg_load_pars *load, float henrys_sat, float i_sat_start, float i_sat_end)
+/*---------------------------------------------------------------------------------------------------------*\
+ This function processes the magnet saturation parameters and calculates the linear model slope.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    if(load->henrys > 0.0 && henrys_sat > 0.0 && henrys_sat < load->henrys &&
+       i_sat_end > 0.0 && i_sat_end > i_sat_start)
+    {
+        load->sat.henrys   = henrys_sat;
+        load->sat.l_clip   = henrys_sat / load->henrys;
+        load->sat.i_start  = i_sat_start;
+        load->sat.i_end    = i_sat_end;
+        load->sat.i_delta  = i_sat_end - i_sat_start;
+        load->sat.l_rate   = (1.0 - load->sat.l_clip) / load->sat.i_delta;
+        load->sat.b_end    = 0.5 * load->gauss_per_amp * (i_sat_start + i_sat_end +
+                                                          load->sat.i_delta * load->sat.l_clip);
+        load->sat.b_factor = 0.5 * (1.0 - load->sat.l_clip) / load->sat.i_delta;
+    }
+    else  // Disable saturation
+    {
+        load->sat.i_start = 1.0E30;
+        load->sat.i_end   = 0.0;
+    }
+}
+//-----------------------------------------------------------------------------------------------------------
+// Real-Time Functions
+//-----------------------------------------------------------------------------------------------------------
+float regLoadCurrentToFieldRT(struct reg_load_pars *load, float i_meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function estimates the field based on current.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -155,7 +184,7 @@ float regLoadCurrentToField(struct reg_load_pars *load, float i_meas)
     return(i_meas < 0.0 ? -b_meas : b_meas);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regLoadFieldToCurrent(struct reg_load_pars *load, float b_meas)
+float regLoadFieldToCurrentRT(struct reg_load_pars *load, float b_meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function estimates the current based on the field according to the saturation model of the magnet.
   Beware: This function requires a sqrt() call so it may take a long time depending upon the floating-point
@@ -205,32 +234,7 @@ float regLoadFieldToCurrent(struct reg_load_pars *load, float b_meas)
     return(b_meas < 0.0 ? -i_meas : i_meas);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regLoadInitSat(struct reg_load_pars *load, float henrys_sat, float i_sat_start, float i_sat_end)
-/*---------------------------------------------------------------------------------------------------------*\
- This function processes the magnet saturation parameters and calculates the linear model slope.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    if(load->henrys > 0.0 && henrys_sat > 0.0 && henrys_sat < load->henrys &&
-       i_sat_end > 0.0 && i_sat_end > i_sat_start)
-    {
-        load->sat.henrys   = henrys_sat;
-        load->sat.l_clip   = henrys_sat / load->henrys;
-        load->sat.i_start  = i_sat_start;
-        load->sat.i_end    = i_sat_end;
-        load->sat.i_delta  = i_sat_end - i_sat_start;
-        load->sat.l_rate   = (1.0 - load->sat.l_clip) / load->sat.i_delta;
-        load->sat.b_end    = 0.5 * load->gauss_per_amp * (i_sat_start + i_sat_end +
-                                                          load->sat.i_delta * load->sat.l_clip);
-        load->sat.b_factor = 0.5 * (1.0 - load->sat.l_clip) / load->sat.i_delta;
-    }
-    else  // Disable saturation
-    {
-        load->sat.i_start = 1.0E30;
-        load->sat.i_end   = 0.0;
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-float regLoadVrefSat(struct reg_load_pars *load, float i_meas, float v_ref)
+float regLoadVrefSatRT(struct reg_load_pars *load, float i_meas, float v_ref)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will help to linearise the effects of magnet saturation when regulating current.  This is
   not required if regulating field.
@@ -250,12 +254,12 @@ float regLoadVrefSat(struct reg_load_pars *load, float i_meas, float v_ref)
         v_ref_sat = I.R + f.L.dI/dt = f.v_ref + (1 - f).I.R
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float f = regLoadCalcSatFactor(load, i_meas);
+    float f = regLoadSatFactorRT(load, i_meas);
 
     return(f * v_ref + (1.0 - f) * i_meas * load->ohms);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regLoadInverseVrefSat(struct reg_load_pars *load, float i_meas, float v_ref_sat)
+float regLoadInverseVrefSatRT(struct reg_load_pars *load, float i_meas, float v_ref_sat)
 /*---------------------------------------------------------------------------------------------------------*\
   This function does the opposite of regLoadVrefSat:
 
@@ -264,12 +268,12 @@ float regLoadInverseVrefSat(struct reg_load_pars *load, float i_meas, float v_re
                           f
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float f = regLoadCalcSatFactor(load, i_meas);
+    float f = regLoadSatFactorRT(load, i_meas);
 
     return((v_ref_sat - (1.0 - f) * i_meas * load->ohms) / f);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regLoadCalcSatFactor(struct reg_load_pars *load, float i_meas)
+float regLoadSatFactorRT(struct reg_load_pars *load, float i_meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates the saturation factor f for the load for the given measured current.  Is uses
   the simple linear saturation model defined in reg_load: L = L0 . regLoadCalcSatFactor(&load,i_meas)

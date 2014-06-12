@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for makefile in `find . -type f -name Makefile`
+for makefile in `find . -type f -maxdepth 2 -name Makefile`
 do
     cd `dirname $makefile`
     pwd

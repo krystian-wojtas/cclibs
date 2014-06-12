@@ -46,7 +46,19 @@ enum reg_meas_select
     REG_MEAS_NUM_SIGNALS
 };
 
+enum reg_meas_status
+{
+    REG_MEAS_SIGNAL_OK,
+    REG_MEAS_SIGNAL_INVALID
+};
+
 // Measurement structures
+
+struct reg_meas_signal
+{
+    float                 signal;                                 // Measurement signal
+    enum reg_meas_status  status;                                 // Measurement signal status
+};
 
 struct reg_meas_filter                                            // Measurement filter parameters and variables
 {
@@ -68,16 +80,16 @@ struct reg_meas_filter                                            // Measurement
     float                 extrapolation_factor;                   // Extrapolation factor
 
     enum reg_meas_select  reg_select;                             // Regulation measurement selector
-    float                 meas_delay_iters[REG_MEAS_NUM_SIGNALS]; // Delay for each signal in iterations
-    float                 meas[REG_MEAS_NUM_SIGNALS];             // Array of measurement with different filtering
+    float                 delay_iters[REG_MEAS_NUM_SIGNALS];      // Delay for each signal in iterations
+    float                 signal[REG_MEAS_NUM_SIGNALS];           // Array of measurement with different filtering
 };
 
 struct reg_meas_rate                                              // Measurement rate estimate structure
 {
     uint32_t              iter_counter;                           // Iteration counter
-    uint32_t              buf_index;                              // Index of most recent sample in history buffer
-    float                 buf[REG_MEAS_RATE_BUF_MASK+1];          // History buffer
-    float                 rate;                                   // Rate of change based on history
+    uint32_t              history_index;                          // Index of most recent sample in history buffer
+    float                 history_buf[REG_MEAS_RATE_BUF_MASK+1];  // History buffer
+    float                 estimate;                               // Estimated rate using linear regression through 4 samples
 };
 
 struct reg_noise_and_tone                                         // Noise and tone generator structure
@@ -95,16 +107,15 @@ extern "C" {
 
 // Measurement related functions
 
-void     regMeasFilter           (struct reg_meas_filter *filter);
+void     regMeasFilterRT           (struct reg_meas_filter *filter);
 void     regMeasFilterInitBuffer (struct reg_meas_filter *filter, int32_t *buf);
 void     regMeasFilterInit       (struct reg_meas_filter *filter, uint32_t fir_length[2],
                                   uint32_t extrapolation_len_iters, float pos, float neg, float meas_delay_iters);
-void     regMeasRegSelect        (struct reg_meas_filter *filter, enum reg_meas_select reg_select);
+void     regMeasSetRegSelect        (struct reg_meas_filter *filter, enum reg_meas_select reg_select);
 void     regMeasSetNoiseAndTone  (struct reg_noise_and_tone *noise_and_tone, float noise_pp,
                                   float tone_amp, uint32_t tone_half_period_iters);
-float    regMeasNoiseAndTone     (struct reg_noise_and_tone *noise_and_tone);
-void     regMeasRateStore        (struct reg_meas_rate *meas_rate, float meas, int32_t period_iters);
-float    regMeasRate             (struct reg_meas_rate *meas_rate, float period);
+float    regMeasNoiseAndToneRT     (struct reg_noise_and_tone *noise_and_tone);
+void     regMeasRateRT             (struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters);
 
 #ifdef __cplusplus
 }

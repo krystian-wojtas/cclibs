@@ -51,7 +51,9 @@
 #include <math.h>
 #include "libreg/lim.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
+//-----------------------------------------------------------------------------------------------------------
+// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+//-----------------------------------------------------------------------------------------------------------
 void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
                     float low_lim, float zero_lim, uint32_t invert_limits)
 /*---------------------------------------------------------------------------------------------------------*\
@@ -71,7 +73,74 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
     lim_meas->flags.zero = 0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void regLimMeas(struct reg_lim_meas *lim_meas, float meas)
+void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim,
+                   uint32_t invert_limits)
+/*---------------------------------------------------------------------------------------------------------*\
+ This function will initialise the field/current reference limits.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    lim_ref->invert_limits = invert_limits;
+    lim_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
+    lim_ref->max_clip      = pos_lim  * (1.0 + REG_LIM_CLIP);
+
+    // Determine if converter is unipolar or bipolar
+
+    if(neg_lim < 0.0)
+    {
+        lim_ref->flags.unipolar = 0;
+        lim_ref->min_clip = neg_lim * (1.0 + REG_LIM_CLIP);
+    }
+    else
+    {
+        lim_ref->flags.unipolar = 1;
+        lim_ref->min_clip       = 0.0;
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
+                    float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits)
+/*---------------------------------------------------------------------------------------------------------*\
+ This function will initialise the voltage reference limits.  Voltage reference limits use the same
+ structure as field/current limits but have different behaviour.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    float delta_i_quadrants41;
+
+    lim_v_ref->invert_limits  = invert_limits;
+    lim_v_ref->flags.unipolar = (neg_lim > REG_LIM_V_DIODE);    // Set unipolar flag allowing diode voltage
+    lim_v_ref->rate_clip      = rate_lim * (1.0 + REG_LIM_CLIP);
+
+    // Set max/min user clip limits
+
+    lim_v_ref->max_clip_user = pos_lim * (1.0 + REG_LIM_CLIP);
+    lim_v_ref->min_clip_user = neg_lim * (1.0 + REG_LIM_CLIP);
+
+    // Disable Q41 exclusion zone before changing to avoid real-time thread have inconsistent values
+
+    lim_v_ref->i_quadrants41_max = -1.0E10;
+
+    // Quadrants 41 exclusion zone: At least a 1A spread is needed to activate Q41 limiter
+
+    delta_i_quadrants41 = i_quadrants41[1] - i_quadrants41[0];
+
+    if(delta_i_quadrants41 >= 1.0)
+    {
+        lim_v_ref->dvdi = (v_quadrants41[1] - v_quadrants41[0]) / delta_i_quadrants41;
+        lim_v_ref->v0   = (v_quadrants41[0] - lim_v_ref->dvdi * i_quadrants41[0]) * (1.0 + REG_LIM_CLIP);
+
+        // Enable quadrants 41 exclusiong after setting v0 and dvdi
+
+        lim_v_ref->i_quadrants41_max = i_quadrants41[1];
+    }
+
+    // Initialise Vref limits for zero current
+
+    regLimVrefCalcRT(lim_v_ref, 0.0);
+}
+//-----------------------------------------------------------------------------------------------------------
+// Real-Time Functions
+//-----------------------------------------------------------------------------------------------------------
+void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
 /*---------------------------------------------------------------------------------------------------------*\
  This function will check the measurement against the trip levels and the absolute measurement against
  the low and zero limits with hysteresis to avoid toggling.
@@ -140,70 +209,8 @@ void regLimMeas(struct reg_lim_meas *lim_meas, float meas)
         }
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
-void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim, 
-                   uint32_t invert_limits)
-/*---------------------------------------------------------------------------------------------------------*\
- This function will initialise the field/current reference limits.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    lim_ref->invert_limits = invert_limits;
-    lim_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
-    lim_ref->max_clip      = pos_lim  * (1.0 + REG_LIM_CLIP);
-
-    // Determine if converter is unipolar or bipolar
-
-    if(neg_lim < 0.0)
-    {
-        lim_ref->flags.unipolar = 0;
-        lim_ref->min_clip = neg_lim * (1.0 + REG_LIM_CLIP);
-    }
-    else
-    {
-        lim_ref->flags.unipolar = 1;
-        lim_ref->min_clip       = 0.0;
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
-                    float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits)
-/*---------------------------------------------------------------------------------------------------------*\
- This function will initialise the voltage reference limits.  Voltage reference limits use the same
- structure as field/current limits but have different behaviour.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    float delta_i_quadrants41;
-
-    lim_v_ref->invert_limits  = invert_limits;
-    lim_v_ref->flags.unipolar = (neg_lim > REG_LIM_V_DIODE);    // Set unipolar flag allowing diode voltage
-    lim_v_ref->rate_clip      = rate_lim * (1.0 + REG_LIM_CLIP);
-
-    // Set max/min user clip limits
-    
-    lim_v_ref->max_clip_user = pos_lim * (1.0 + REG_LIM_CLIP);
-    lim_v_ref->min_clip_user = neg_lim * (1.0 + REG_LIM_CLIP);
-    
-    // Quadrants 41 exclusion zone: At least a 1A spread is needed to activate Q41 limiter
-
-    delta_i_quadrants41 = i_quadrants41[1] - i_quadrants41[0];
-
-    if(delta_i_quadrants41 >= 1.0)
-    {
-        lim_v_ref->i_quadrants41_max = i_quadrants41[1];
-        lim_v_ref->dvdi = (v_quadrants41[1] - v_quadrants41[0]) / delta_i_quadrants41;
-        lim_v_ref->v0   = (v_quadrants41[0] - lim_v_ref->dvdi * i_quadrants41[0]) * (1.0 + REG_LIM_CLIP);
-    }
-    else
-    {
-        lim_v_ref->i_quadrants41_max = -1.0E10;         // Disable Q41 exclusion zone
-    }
-
-    // Initialise Vref limits for zero current
-
-    regLimVrefCalc(lim_v_ref, 0.0);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void regLimVrefCalc(struct reg_lim_ref *lim_v_ref, float i_meas)
+//-----------------------------------------------------------------------------------------------------------
+void regLimVrefCalcRT(struct reg_lim_ref *lim_v_ref, float i_meas)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will use the measured current to work out the voltage limits based on the operating
   zone for the voltage source.  The user defines the exclusion zone for positive voltages in quadrants 41
@@ -258,7 +265,7 @@ void regLimVrefCalc(struct reg_lim_ref *lim_v_ref, float i_meas)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regLimRef(struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref)
+float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref)
 /*---------------------------------------------------------------------------------------------------------*\
   This function applies clip and rate limits to the field, current or voltage reference.
 

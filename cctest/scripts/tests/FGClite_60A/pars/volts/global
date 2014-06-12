@@ -1,9 +1,0 @@
-# CCTEST global control file
-
-GLOBAL.RUN_DELAY       5.0
-GLOBAL.STOP_DELAY      5.0
-GLOBAL.ITER_PERIOD     1.0E-3
-GLOBAL.UNITS           VOLTS
-GLOBAL.SIM_LOAD        ENABLED
-
-# EOF

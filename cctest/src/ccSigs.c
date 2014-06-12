@@ -190,12 +190,14 @@ void ccSigsInit(void)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        // Set time offset for circuit simulation signals
+        // Set time offset for circuit simulation signals - if the voltage source is under-sampled then
+        // include the steady ramp delay, otherwise the dynamic response is actually simulated
 
         signals[ANA_B_MAGNET ].time_offset =
         signals[ANA_I_MAGNET ].time_offset =
         signals[ANA_I_CIRCUIT].time_offset =
-        signals[ANA_V_CIRCUIT].time_offset = ccpars_vs.v_ref_delay_iters * ccpars_global.iter_period;
+        signals[ANA_V_CIRCUIT].time_offset = ccpars_global.iter_period * (ccpars_vs.v_ref_delay_iters +
+                                            (reg.sim_load_pars.vs_undersampled_flag == 0 ? 0.0 : reg.sim_vs_pars.vs_delay_iters));
 
         // Enable cursor signals only if CSV output is for the Labview Dataviewer (LVDV)
 
@@ -260,7 +262,7 @@ void ccSigsInit(void)
 
         // Current simulation signals
 
-        if(reg_pars.sim_load_pars.load_undersampled_flag == 0)
+        if(reg.sim_load_pars.load_undersampled_flag == 0)
         {
             ccSigsEnableSignal(ANA_I_MAGNET);
         }
@@ -318,7 +320,7 @@ void ccSigsStore(double time)
 {
     // Voltage reference is always stored
 
-    ccSigsStoreAnalog(ANA_V_REF, reg.v_ref);
+    ccSigsStoreAnalog(ANA_V_REF, reg.v.ref);
 
     // Store other signals when simulating load - if they are not enabled then they are ignored
 
@@ -359,55 +361,55 @@ void ccSigsStore(double time)
         }
 
         ccSigsStoreAnalog( ANA_B_MAGNET,       reg.sim_load_vars.magnet_field);
-        ccSigsStoreAnalog( ANA_B_MEAS,         reg.b_meas.meas[REG_MEAS_UNFILTERED]);
-        ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b_meas.meas[REG_MEAS_FILTERED]);
-        ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b_meas.meas[REG_MEAS_EXTRAPOLATED]);
+        ccSigsStoreAnalog( ANA_B_MEAS,         reg.b.meas.signal[REG_MEAS_UNFILTERED]);
+        ccSigsStoreAnalog( ANA_B_MEAS_FLTR,    reg.b.meas.signal[REG_MEAS_FILTERED]);
+        ccSigsStoreAnalog( ANA_B_MEAS_EXTR,    reg.b.meas.signal[REG_MEAS_EXTRAPOLATED]);
 
         ccSigsStoreAnalog (ANA_I_MAGNET,       reg.sim_load_vars.magnet_current);
         ccSigsStoreAnalog (ANA_I_CIRCUIT,      reg.sim_load_vars.circuit_current);
-        ccSigsStoreAnalog (ANA_I_MEAS,         reg.i_meas.meas[REG_MEAS_UNFILTERED]);
-        ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i_meas.meas[REG_MEAS_FILTERED]);
-        ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i_meas.meas[REG_MEAS_EXTRAPOLATED]);
+        ccSigsStoreAnalog (ANA_I_MEAS,         reg.i.meas.signal[REG_MEAS_UNFILTERED]);
+        ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i.meas.signal[REG_MEAS_FILTERED]);
+        ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i.meas.signal[REG_MEAS_EXTRAPOLATED]);
 
         ccSigsStoreAnalog( ANA_REG_MEAS,       reg.meas);
 
-        ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v_ref_sat);
-        ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v_ref_limited);
+        ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v.ref_sat);
+        ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v.ref_limited);
         ccSigsStoreAnalog (ANA_V_CIRCUIT,      reg.sim_load_vars.circuit_voltage);
-        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v_meas);
+        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v.meas);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
 
-        ccSigsStoreAnalog (ANA_B_ERR,          reg.b_err.err);
-        ccSigsStoreAnalog (ANA_I_ERR,          reg.i_err.err);
-        ccSigsStoreAnalog (ANA_V_ERR,          reg.v_err.err);
+        ccSigsStoreAnalog (ANA_B_ERR,          reg.b.err.err);
+        ccSigsStoreAnalog (ANA_I_ERR,          reg.i.err.err);
+        ccSigsStoreAnalog (ANA_V_ERR,          reg.v.err.err);
 
-        ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.b_err.max_abs_err);
-        ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.i_err.max_abs_err);
-        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v_err.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.b.err.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.i.err.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v.err.max_abs_err);
 
-        ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.lim_b_meas.flags.trip);
-        ccSigsStoreDigital(DIG_B_MEAS_LOW,     reg.lim_b_meas.flags.low);
-        ccSigsStoreDigital(DIG_B_MEAS_ZERO,    reg.lim_b_meas.flags.zero);
+        ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.b.lim_meas.flags.trip);
+        ccSigsStoreDigital(DIG_B_MEAS_LOW,     reg.b.lim_meas.flags.low);
+        ccSigsStoreDigital(DIG_B_MEAS_ZERO,    reg.b.lim_meas.flags.zero);
 
-        ccSigsStoreDigital(DIG_B_REF_CLIP,     reg.lim_b_ref.flags.clip);
-        ccSigsStoreDigital(DIG_B_REF_RATE_CLIP,reg.lim_b_ref.flags.rate);
-        ccSigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b_err.warning.flag);
-        ccSigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b_err.fault.flag);
+        ccSigsStoreDigital(DIG_B_REF_CLIP,     reg.b.lim_ref.flags.clip);
+        ccSigsStoreDigital(DIG_B_REF_RATE_CLIP,reg.b.lim_ref.flags.rate);
+        ccSigsStoreDigital(DIG_B_REG_ERR_WARN, reg.b.err.warning.flag);
+        ccSigsStoreDigital(DIG_B_REG_ERR_FLT,  reg.b.err.fault.flag);
 
-        ccSigsStoreDigital(DIG_I_MEAS_TRIP, reg.lim_i_meas.flags.trip);
-        ccSigsStoreDigital(DIG_I_MEAS_LOW,  reg.lim_i_meas.flags.low);
-        ccSigsStoreDigital(DIG_I_MEAS_ZERO, reg.lim_i_meas.flags.zero);
+        ccSigsStoreDigital(DIG_I_MEAS_TRIP, reg.i.lim_meas.flags.trip);
+        ccSigsStoreDigital(DIG_I_MEAS_LOW,  reg.i.lim_meas.flags.low);
+        ccSigsStoreDigital(DIG_I_MEAS_ZERO, reg.i.lim_meas.flags.zero);
 
-        ccSigsStoreDigital(DIG_I_REF_CLIP,     reg.lim_i_ref.flags.clip);
-        ccSigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.lim_i_ref.flags.rate);
-        ccSigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i_err.warning.flag);
-        ccSigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i_err.fault.flag);
+        ccSigsStoreDigital(DIG_I_REF_CLIP,     reg.i.lim_ref.flags.clip);
+        ccSigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.i.lim_ref.flags.rate);
+        ccSigsStoreDigital(DIG_I_REG_ERR_WARN, reg.i.err.warning.flag);
+        ccSigsStoreDigital(DIG_I_REG_ERR_FLT,  reg.i.err.fault.flag);
 
-        ccSigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v_err.fault.flag);
-        ccSigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v_err.warning.flag);
-        ccSigsStoreDigital(DIG_V_REF_CLIP,     reg.lim_v_ref.flags.clip);
-        ccSigsStoreDigital(DIG_V_REF_RATE_CLIP,reg.lim_v_ref.flags.rate);
+        ccSigsStoreDigital(DIG_V_REG_ERR_FLT,  reg.v.err.fault.flag);
+        ccSigsStoreDigital(DIG_V_REG_ERR_WARN, reg.v.err.warning.flag);
+        ccSigsStoreDigital(DIG_V_REF_CLIP,     reg.v.lim_ref.flags.clip);
+        ccSigsStoreDigital(DIG_V_REF_RATE_CLIP,reg.v.lim_ref.flags.rate);
     }
 
     // Increment FLOT data index, but clip to max number of FLOT points
@@ -460,6 +462,31 @@ void ccSigsStore(double time)
         }
 
         fputc('\n',cctest.csv_file);
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n_points, char label)
+{
+    double         time;
+    uint32_t       iteration_idx;
+
+    if(signals[sig_idx].control == CC_ENABLED)
+    {
+        fprintf(f,"\"INVALID_%c\": { lines: { show:false }, points: { show:true },\ndata:[", label);
+
+        for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
+        {
+            // Only print changed values when meta_data is TRAIL_STEP
+
+            if((iteration_idx % ccpars_meas.invalid_meas_period_iters) < ccpars_meas.invalid_meas_repeat_iters)
+            {
+                time = reg.iter_period * iteration_idx;
+
+                fprintf(f,"[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
+                (*n_points)++;
+            }
+        }
+        fputs("]\n },\n",f);
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -559,7 +586,16 @@ void ccSigsFlot(FILE *f)
         start_func_time += ccrun.fg_meta[func_idx].duration + ccpars_global.pre_func_delay;
     }
 
-    // Print enabled analogue signal values
+    // Highlight invalid points if enabled
+
+    if(ccpars_meas.invalid_meas_period_iters > 0 && ccpars_meas.invalid_meas_repeat_iters > 0)
+    {
+        ccSigsFlotInvalidSignal(f, ANA_B_MEAS, &n_points, 'B');
+        ccSigsFlotInvalidSignal(f, ANA_I_MEAS, &n_points, 'I');
+        ccSigsFlotInvalidSignal(f, ANA_V_MEAS, &n_points, 'V');
+    }
+
+    // Print enabled analog signal values
 
     for(sig_idx = 0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
     {
