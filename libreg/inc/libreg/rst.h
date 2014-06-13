@@ -106,10 +106,6 @@ struct reg_rst_vars                                             // RST algorithm
     float                       act [REG_RST_HISTORY_MASK+1];   // RST actuation history
 };
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 // RST macro "functions"
 
 #define regRstIncHistoryIndexRT(rst_vars_p) (rst_vars_p)->history_index = ((rst_vars_p)->history_index + 1) & REG_RST_HISTORY_MASK
@@ -117,6 +113,10 @@ extern "C" {
 #define regRstDeltaRefRT(rst_vars_p) (regRstPrevRefRT(rst_vars_p) - (rst_vars_p)->ref[((rst_vars_p)->history_index - 1) & REG_RST_HISTORY_MASK])
 
 // RST regulation functions
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum reg_status regRstInit        (struct reg_rst_pars *pars, double iter_period, uint32_t period_iters,
                                    struct reg_load_pars *load, float clbw, float clbw2, float z, float clbw3, float clbw4,

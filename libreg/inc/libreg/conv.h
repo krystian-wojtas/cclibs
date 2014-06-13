@@ -36,6 +36,18 @@ enum reg_err_rate
     REG_ERR_RATE_MEASUREMENT                            ///< Calculate regulation error at measurement rate
 };
 
+// Regulation control from reference generator
+
+enum reg_control
+{
+    REG_CONTROL_FEEDBACK,
+    REG_CONTROL_FEEDFORWARD
+};
+
+// Typedef pointer to reference generation function
+
+typedef enum reg_control (*reg_ref_gen_function)(float *feedback_ref, float *feedforward_ref);
+
 // Global power converter regulation structures
 
 struct reg_conv_sim_meas                                ///< Measurement simulation structure
@@ -85,7 +97,7 @@ struct reg_conv                                         ///< Global converter re
     float                       ref_advance;            ///< Time to advance reference function
 
     float                       meas;                   ///< Field or current regulated measurement
-
+    reg_ref_gen_function        reg_ref_gen_function;   ///< Pointer to function to generator reference
     float                       ref;                    ///< Field or current reference
     float                       ref_limited;            ///< Field or current reference after limits
     float                       ref_rst;                ///< Field or current reference after back-calculation
@@ -131,11 +143,15 @@ struct reg_conv                                         ///< Global converter re
     struct reg_sim_load_vars    sim_load_vars;          ///< Load simulation variables
 };
 
+// Converter control macro "functions"
+
+#define regConvInitRefGenFunc(reg_p, reg_ref_gen_function) (reg_p)->reg_ref_gen_function=reg_ref_gen_function
+
+// Converter control functions
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// Converter regulation functions
 
 float    regConvPureDelay       (struct reg_conv *reg, struct reg_meas_filter *meas_filter, uint32_t reg_period_iters);
 void     regConvInitSimLoad     (struct reg_conv *reg, enum reg_mode reg_mode, float sim_load_tc_error);
