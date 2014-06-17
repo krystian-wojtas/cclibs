@@ -31,7 +31,7 @@ uint32_t ccInitLoad       (void);
 uint32_t ccInitFunctions  (void);
 uint32_t ccInitLimits     (void);
 uint32_t ccInitSimulation (void);
-uint32_t ccInitRegulation (void);
+uint32_t ccInitRegulation (struct ccpars_reg_pars *reg_pars, struct reg_conv_signal * s, char *label);
 
 #endif
 // EOF

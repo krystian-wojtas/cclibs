@@ -417,7 +417,10 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
         }
         // Initialise regulation after simulation
 
-        if(ccInitRegulation() == EXIT_FAILURE)
+        // Initialise FIELD regulator if field regulation used by at least one function
+
+        if((ccrun.breg_flag == 1 && ccInitRegulation(&ccpars_breg, &reg.b, "FIELD"  ) == EXIT_FAILURE) ||
+           (ccrun.ireg_flag == 1 && ccInitRegulation(&ccpars_ireg, &reg.i, "CURRENT") == EXIT_FAILURE))
         {
             // If STOP_ON_ERROR is DISABLED then dump debug data automatically to stdout
 

@@ -490,6 +490,27 @@ static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
+static void ccSigsFlotSpy(FILE *f, struct reg_rst_pars *pars, uint32_t *n_points, char label)
+{
+    uint32_t    frequency_index;
+    float       frequency_fraction;     // 1 = regulation frequency, 0.5 = Nyquist
+
+    fprintf(f,"\"INVALID_%c\": { data:[", label);
+
+    // Scan the frequency range up to the Nyquist
+
+    for(frequency_index = 0 ; frequency_index < REG_MM_BUF_LEN ; frequency_index++)
+    {
+        frequency_fraction = 0.5 * (float)(frequency_index + 1) / REG_MM_BUF_LEN;
+
+        fprintf(f,"[%.6f,%.7E],", frequency_fraction, pars->abs_S_p_y[frequency_index]);
+
+        (*n_points)++;
+    }
+
+    fputs("]\n },\n",f);
+}
+/*---------------------------------------------------------------------------------------------------------*/
 void ccSigsFlot(FILE *f)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will print the flot data and footer
@@ -593,6 +614,18 @@ void ccSigsFlot(FILE *f)
         ccSigsFlotInvalidSignal(f, ANA_B_MEAS, &n_points, 'B');
         ccSigsFlotInvalidSignal(f, ANA_I_MEAS, &n_points, 'I');
         ccSigsFlotInvalidSignal(f, ANA_V_MEAS, &n_points, 'V');
+    }
+
+    // Report absolute sensitivity of measurement to perturbation if regulation enabled
+
+    if(ccrun.breg_flag == 1 && reg.b.rst_pars.modulus_margin > 0.0)
+    {
+//        ccSigsFlotSpy(f, &reg.b.rst_pars, &n_points, 'B');
+    }
+
+    if(ccrun.ireg_flag == 1 && reg.i.rst_pars.modulus_margin > 0.0)
+    {
+//        ccSigsFlotSpy(f, &reg.i.rst_pars, &n_points, 'I');
     }
 
     // Print enabled analog signal values

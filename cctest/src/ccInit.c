@@ -45,6 +45,8 @@ uint32_t ccInitRun(void)
     uint32_t       num_reg_modes;
     struct cccmds *cmd;
 
+    reg.mode = REG_NONE;
+
     // Set iteration period into libreg structure
 
     reg.iter_period = ccpars_global.iter_period;
@@ -401,63 +403,42 @@ uint32_t ccInitSimulation(void)
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t ccInitRegulation(void)
+uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_signal *s, char *label)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t status = 0;
     float    pure_delay_periods;
 
-    // Reset reg.mode since regSetMode & regSetVoltageMode are change sensitive
+printf("ccInitRst %s : ENTER\n", label);
 
-    reg.mode = REG_NONE;
+    pure_delay_periods = reg_pars->pure_delay_periods > 0.0 ? reg_pars->pure_delay_periods :
+                         regConvPureDelay(&reg, &s->meas, reg_pars->period_iters);
 
-    // Initialise FIELD regulator if field regulation used by at least one function
+    status = regRstInit(&s->rst_pars,
+                        reg.iter_period, reg_pars->period_iters, &reg.load_pars,
+                        reg_pars->auxpole1_hz, reg_pars->auxpoles2_hz, reg_pars->auxpoles2_z,
+                        reg_pars->auxpole4_hz, reg_pars->auxpole5_hz,
+                        pure_delay_periods,
+                        reg_pars->track_delay_periods,
+                        REG_FIELD, &reg_pars->rst);
 
-    if(ccrun.breg_flag == 1)
+    printf("ccInitRst %s : %u\n", label, status);
+
+    if(status == REG_FAULT)
     {
-        pure_delay_periods = ccpars_breg.pure_delay_periods > 0.0 ? ccpars_breg.pure_delay_periods :
-                             regConvPureDelay(&reg, &reg.b.meas, ccpars_breg.period_iters);
-
-        status = regRstInit(&reg.b.rst_pars,
-                            reg.iter_period, ccpars_breg.period_iters, &reg.load_pars,
-                            ccpars_breg.clbw, ccpars_breg.clbw2, ccpars_breg.z,
-                            ccpars_breg.clbw3, ccpars_breg.clbw4,
-                            pure_delay_periods,
-                            ccpars_breg.track_delay_periods,
-                            REG_FIELD, &ccpars_breg.rst);
-
-        if(status != REG_OK)
-        {
-            ccTestPrintError("failed to initialise FIELD RST regulator: S has unstable poles - try reducing CLBW");
-            return(EXIT_FAILURE);
-        }
-
-        reg.b.err_rate = ccpars_breg.err_rate;
+        ccTestPrintError("failed to initialise %s RST regulator: S has unstable poles - try reducing AUXPOLE frequencies", label);
+        return(EXIT_FAILURE);
     }
 
-    // Initialise CURRENT regulator if current regulation used by at least one function
-
-    if(ccrun.ireg_flag == 1)
+    if(status == REG_WARNING)
     {
-        pure_delay_periods = ccpars_ireg.pure_delay_periods > 0.0 ? ccpars_ireg.pure_delay_periods :
-                             regConvPureDelay(&reg, &reg.i.meas, ccpars_ireg.period_iters);
-
-        status = regRstInit(&reg.i.rst_pars,
-                            reg.iter_period, ccpars_ireg.period_iters, &reg.load_pars,
-                            ccpars_ireg.clbw, ccpars_ireg.clbw2, ccpars_ireg.z,
-                            ccpars_ireg.clbw3, ccpars_ireg.clbw4,
-                            pure_delay_periods,
-                            ccpars_ireg.track_delay_periods,
-                            REG_CURRENT, &ccpars_ireg.rst);
-
-        if(status != REG_OK)
-        {
-            ccTestPrintError("failed to initialise CURRENT RST regulator: S has unstable poles - try reducing CLBW");
-            return(EXIT_FAILURE);
-        }
-
-        reg.i.err_rate = ccpars_ireg.err_rate;
+        ccTestPrintError("%s RST regulator warning: Modulus Margin (%.2f) is less than %.1f - try reducing AUXPOLE frequencies",
+                label, s->rst_pars.modulus_margin, REG_MM_WARNING_THRESHOLD);
     }
+
+    s->err_rate = reg_pars->err_rate;
+
+    printf("ccInitRst %s : EXIT\n", label);
 
     return(EXIT_SUCCESS);
 }
