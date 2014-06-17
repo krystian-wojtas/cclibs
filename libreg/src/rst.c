@@ -721,7 +721,7 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
 
     // Return zero immediately if parameters are invalid
 
-    if(pars->status != REG_OK)
+    if(pars->status == REG_FAULT)
     {
         return(0.0);
     }
@@ -778,7 +778,7 @@ float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
 
     // Return zero immediately if parameters are invalid
 
-    if(pars->status != REG_OK)
+    if(pars->status == REG_FAULT)
     {
         return(0.0);
     }
