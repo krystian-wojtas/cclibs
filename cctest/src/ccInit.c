@@ -401,11 +401,13 @@ uint32_t ccInitSimulation(void)
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_signal *s, char *label)
+uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_signal *s, enum reg_mode reg_mode, char *label)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t status = 0;
     float    pure_delay_periods;
+
+    reg.mode = REG_NONE;
 
     pure_delay_periods = reg_pars->pure_delay_periods > 0.0 ? reg_pars->pure_delay_periods :
                          regConvPureDelay(&reg, &s->meas, reg_pars->period_iters);
@@ -416,7 +418,7 @@ uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_sign
                         reg_pars->auxpole4_hz, reg_pars->auxpole5_hz,
                         pure_delay_periods,
                         reg_pars->track_delay_periods,
-                        REG_FIELD, &reg_pars->rst);
+                        reg_mode, &reg_pars->rst);
 
     if(status == REG_FAULT)
     {
@@ -431,8 +433,6 @@ uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_sign
     }
 
     s->err_rate = reg_pars->err_rate;
-
-    reg.mode = REG_NONE;
 
     return(EXIT_SUCCESS);
 }
