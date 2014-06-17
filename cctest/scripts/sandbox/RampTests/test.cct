@@ -39,9 +39,9 @@ MEAS I_SIM_TONE_AMP         0.0
 # IREG parameters
 
 IREG PERIOD_ITERS           10
-IREG CLBW                   200
-IREG CLBW2                  200
-IREG Z                      0.5
+IREG AUXPOLE1_HZ            200
+IREG AUXPOLES2_HZ           200
+IREG AUXPOLES2_Z            0.5
 
 # - Voltage RAMP UP -
 

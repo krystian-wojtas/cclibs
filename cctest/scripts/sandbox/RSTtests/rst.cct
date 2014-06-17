@@ -117,11 +117,11 @@ GLOBAL REG_MODE             CURRENT
 MEAS I_REG_SELECT           UNFILTERED
 
 IREG PERIOD_ITERS           10
-IREG CLBW                   90
-IREG CLBW2                  90
-IREG CLBW3                  90
-IREG CLBW4                  90
-IREG Z                      0.5
+IREG AUXPOLE1_HZ            90
+IREG AUXPOLES2_HZ           90
+IREG AUXPOLE4_HZ            90
+IREG AUXPOLE5_HZ            90
+IREG AUXPOLES2_Z            0.5
 
 VS V_REF_DELAY_ITERS        1.0
 GLOBAL FILE                 amps-pppl-unf-0.38

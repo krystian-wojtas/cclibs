@@ -63,9 +63,9 @@ MEAS I_SIM_TONE_AMP         0.0
 # IREG parameters
 
 IREG PERIOD_ITERS           20
-IREG CLBW                   5
-IREG CLBW2                  5
-IREG Z                      0.5
+IREG AUXPOLE1_HZ            5
+IREG AUXPOLES2_HZ           5
+IREG AUXPOLES2_Z            0.5
 
 # Tests with POL_SWI_AUTO DISABLED
 
