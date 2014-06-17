@@ -495,17 +495,20 @@ static void ccSigsFlotSpy(FILE *f, struct reg_rst_pars *pars, uint32_t *n_points
     uint32_t    frequency_index;
     float       frequency_fraction;     // 1 = regulation frequency, 0.5 = Nyquist
 
-    fprintf(f,"\"INVALID_%c\": { data:[", label);
+    fprintf(f,"\"%c_ABS_S_PY\": { data:[", label);
 
     // Scan the frequency range up to the Nyquist
 
     for(frequency_index = 0 ; frequency_index < REG_MM_BUF_LEN ; frequency_index++)
     {
-        frequency_fraction = 0.5 * (float)(frequency_index + 1) / REG_MM_BUF_LEN;
+        if(pars->abs_S_p_y[frequency_index] < 10.0)
+        {
+            frequency_fraction = 0.5 * (float)(frequency_index + 1) / REG_MM_BUF_LEN;
 
-        fprintf(f,"[%.6f,%.7E],", frequency_fraction, pars->abs_S_p_y[frequency_index]);
+            fprintf(f,"[%.6f,%.7E],", frequency_fraction, pars->abs_S_p_y[frequency_index]);
 
-        (*n_points)++;
+            (*n_points)++;
+        }
     }
 
     fputs("]\n },\n",f);
@@ -620,12 +623,12 @@ void ccSigsFlot(FILE *f)
 
     if(ccrun.breg_flag == 1 && reg.b.rst_pars.modulus_margin > 0.0)
     {
-//        ccSigsFlotSpy(f, &reg.b.rst_pars, &n_points, 'B');
+        ccSigsFlotSpy(f, &reg.b.rst_pars, &n_points, 'B');
     }
 
     if(ccrun.ireg_flag == 1 && reg.i.rst_pars.modulus_margin > 0.0)
     {
-//        ccSigsFlotSpy(f, &reg.i.rst_pars, &n_points, 'I');
+        ccSigsFlotSpy(f, &reg.i.rst_pars, &n_points, 'I');
     }
 
     // Print enabled analog signal values

@@ -45,8 +45,6 @@ uint32_t ccInitRun(void)
     uint32_t       num_reg_modes;
     struct cccmds *cmd;
 
-    reg.mode = REG_NONE;
-
     // Set iteration period into libreg structure
 
     reg.iter_period = ccpars_global.iter_period;
@@ -409,8 +407,6 @@ uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_sign
     uint32_t status = 0;
     float    pure_delay_periods;
 
-printf("ccInitRst %s : ENTER\n", label);
-
     pure_delay_periods = reg_pars->pure_delay_periods > 0.0 ? reg_pars->pure_delay_periods :
                          regConvPureDelay(&reg, &s->meas, reg_pars->period_iters);
 
@@ -421,8 +417,6 @@ printf("ccInitRst %s : ENTER\n", label);
                         pure_delay_periods,
                         reg_pars->track_delay_periods,
                         REG_FIELD, &reg_pars->rst);
-
-    printf("ccInitRst %s : %u\n", label, status);
 
     if(status == REG_FAULT)
     {
@@ -438,7 +432,7 @@ printf("ccInitRst %s : ENTER\n", label);
 
     s->err_rate = reg_pars->err_rate;
 
-    printf("ccInitRst %s : EXIT\n", label);
+    reg.mode = REG_NONE;
 
     return(EXIT_SUCCESS);
 }
