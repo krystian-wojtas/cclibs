@@ -176,6 +176,7 @@ uint32_t ccRefInitRAMP(struct fg_meta *fg_meta)
                         ccpars_global.run_delay,
                         ccpars_ramp.initial_ref,
                         ccpars_ramp.initial_rate,
+                        0.0,
                         fg_meta);
         }
     }

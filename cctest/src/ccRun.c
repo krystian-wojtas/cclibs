@@ -69,6 +69,7 @@ static uint32_t ccRunAbort(double time)
                 ccrun.reg_time,                                            // time of last RST calculation
                 regRstPrevRefRT(&reg.rst_vars),                              // last reference value
                 regRstDeltaRefRT(&reg.rst_vars) / reg.period,                // last reference rate
+                0.0,
                &meta);
 
     // Check that abort duration is not too large (limit to 50000 iterations)
