@@ -155,15 +155,42 @@ uint32_t ccRefInitPLEP(struct fg_meta *fg_meta)
 uint32_t ccRefInitRAMP(struct fg_meta *fg_meta)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    enum fg_error fg_error;
+    enum fg_error fg_error = FG_OK;
 
-    // Try to initialise the RAMP
+    // Try to initialise the RAMP according to the initial rate parameter
 
-    fg_error = fgRampInit(ccrun.fg_limits,
-                          ccRefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto),
-                          &ccpars_ramp.config,
-                          ccpars_global.run_delay, ccpars_ramp.initial_ref,
-                          &ccpars_ramp.ramp_pars, fg_meta);
+    if(ccpars_ramp.initial_rate != 0.0)
+    {
+        // If initial rate isn't zero then initialise with no limits checking
+
+        if(ccpars_ramp.config.acceleration == 0.0 || ccpars_ramp.config.deceleration == 0.0)
+        {
+            fg_error = FG_BAD_PARAMETER;
+        }
+        else
+        {
+            fgResetMeta(fg_meta, NULL, ccpars_ramp.initial_ref);
+
+            fgRampCalc(&ccpars_ramp.config,
+                       &ccpars_ramp.ramp_pars,
+                        ccpars_global.run_delay,
+                        ccpars_ramp.initial_ref,
+                        ccpars_ramp.initial_rate,
+                        fg_meta);
+        }
+    }
+    else
+    {
+        // If initial rate is zero, use normal initialisation with limits checking
+
+        fg_error = fgRampInit(ccrun.fg_limits,
+                              ccRefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto),
+                              &ccpars_ramp.config,
+                              ccpars_global.run_delay,
+                              ccpars_ramp.initial_ref,
+                              &ccpars_ramp.ramp_pars,
+                              fg_meta);
+    }
 
     // Report error if initialisation fails
 
