@@ -51,7 +51,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     // Calculate ramp parameters always with zero initial ramp rate
 
-    fgRampCalc(config, pars, delay, ref, 0.0, meta);
+    fgRampCalc(config, pars, delay, ref, 0.0, 0.0, meta);
 
     // Check limits if supplied
 
@@ -97,11 +97,12 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
     uint32_t    time_shift_alg    = 0;      // Time shift adjustment algorithm index
     float       r;
     float       ref_rate_limit;             // Limit on ref due to rate limit
+    float       period;                     // Time period calculated using prev_time
     double      ref_time;                   // Time within the segment in seconds
 
     // Pre-function coast
 
-    if(*time < pars->delay)
+    if(*time <= pars->delay)
     {
         r = pars->init_ref;
     }
@@ -208,48 +209,53 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
  
             func_running_flag = 0;
         }
-    }
 
-    // Keep ramp reference for next iteration (before rate limiter)
+        // Keep ramp reference for next iteration (before rate limiter)
 
-    pars->prev_ramp_ref = r;
+        pars->prev_ramp_ref = r;
 
-    // Apply rate limit if active
+        // Apply rate limit if active
 
-    if(pars->linear_rate > 0.0)
-    {
-        if(pars->iteration_idx == 1)
+        period = *time - pars->prev_time;
+
+        if(pars->linear_rate > 0.0 && period > 0.0)
         {
-            pars->period = *time - pars->prev_time;
-        }
-        else if(pars->iteration_idx > 1)
-        {
-            if(r > pars->prev_returned_ref)
+            if(pars->linear_rate_limit < pars->linear_rate)
+            {
+                pars->linear_rate_limit = pars->linear_rate;
+            }
+
+            if(r > *ref)
             {
                 // Positive rate of change
 
-                ref_rate_limit = *ref + pars->linear_rate * pars->period;
+                ref_rate_limit = *ref + pars->linear_rate_limit * period;
 
                 if(r > ref_rate_limit)
                 {
                     r = ref_rate_limit;
                 }
             }
-            else if(r < pars->prev_returned_ref)
+            else if(r < *ref)
             {
                 // Negative rate of change
 
-                ref_rate_limit = *ref - pars->linear_rate * pars->period;
+                ref_rate_limit = *ref - pars->linear_rate_limit * period;
 
                 if(r < ref_rate_limit)
                 {
                     r = ref_rate_limit;
                 }
             }
+
+            // Adjust linear rate limit if greater than user value, respecting acceleration
+
+            if(pars->linear_rate_limit > pars->linear_rate)
+            {
+                pars->linear_rate_limit -= period * fabs(ref_time <= pars->time[1] ? pars->acceleration : pars->deceleration);
+            }
         }
     }
-
-    pars->iteration_idx++;
 
     // Keep returned reference and time for next iteration
 
@@ -268,6 +274,7 @@ void fgRampCalc(struct fg_ramp_config *config,
                 float                  delay,
                 float                  init_ref,
                 float                  init_rate,
+                double                 init_time,
                 struct fg_meta        *meta)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates ramp parameters. 
@@ -283,15 +290,17 @@ void fgRampCalc(struct fg_ramp_config *config,
 
     // Prepare variables assuming ascending (positive) ramp
 
-    pars->delay          =  delay;
-    pars->iteration_idx  =  0;
-    pars->pos_ramp_flag  =  1;
-    pars->acceleration   =  fabs(config->acceleration);
-    pars->deceleration   = -fabs(config->deceleration);
-    pars->linear_rate    =  fabs(config->linear_rate);
-    pars->prev_ramp_ref  =  pars->prev_returned_ref = pars->init_ref = init_ref;
-    delta_ref            =  config->final - init_ref;
-    overshoot_rate_limit =  sqrt(-2.0 * pars->deceleration * fabs(delta_ref));
+    pars->delay             =  delay;
+    pars->iteration_idx     =  0;
+    pars->pos_ramp_flag     =  1;
+    pars->acceleration      =  fabs(config->acceleration);
+    pars->deceleration      = -fabs(config->deceleration);
+    pars->linear_rate       =  fabs(config->linear_rate);
+    pars->linear_rate_limit =  fabs(init_rate);
+    pars->prev_time         =  init_time;
+    pars->prev_ramp_ref     =  pars->prev_returned_ref = pars->init_ref = init_ref;
+    delta_ref               =  config->final - init_ref;
+    overshoot_rate_limit    =  sqrt(-2.0 * pars->deceleration * fabs(delta_ref));
 
     // Set up accelerations according to ramp direction and possible overshoot
 

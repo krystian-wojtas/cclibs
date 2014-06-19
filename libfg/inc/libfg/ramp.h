@@ -59,7 +59,6 @@ struct fg_ramp_pars                         // RAMP function parameters
     float       deceleration;               // Parabolic deceleration
     float       linear_rate;                // User linear rate
     float       linear_rate_limit;          // Actual linear rate limit
-    float       linear_rate_limit_step;     // Step change in linear rate limit corresponding to acceleration
     float       ref[FG_RAMP_N_SEGS+1];      // End of segment references
     float       time[FG_RAMP_N_SEGS+1];     // End of segment times
     float       prev_ramp_ref;              // Function ref from previous iteration
@@ -75,7 +74,7 @@ extern "C" {
 // External functions
 
 void            fgRampCalc(struct fg_ramp_config *config, struct fg_ramp_pars *pars,
-                           float delay, float init_ref, float init_rate, struct fg_meta *meta);
+                           float delay, float init_ref, float init_rate, double init_time, struct fg_meta *meta);
 uint32_t        fgRampGen (struct fg_ramp_pars *pars, const double *time, float *ref);
 enum fg_error   fgRampInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
                            struct fg_ramp_config *config, float delay, float ref,
