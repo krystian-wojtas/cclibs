@@ -87,7 +87,7 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
   ramp function: 
 
    - pars->time[0], pars->ref[0]: Max/min of first (accelerating) parabola;
-   - pars->time[1], pars->ref[1]: Connection between acceleating and decelerating parabolas;
+   - pars->time[1], pars->ref[1]: Connection between accelerating and decelerating parabolas;
    - pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also end of the ramp function.
   
   NOTE: Unlike the other libfg functions, TIME MUST NOT GO BACKWARDS. 
@@ -103,7 +103,7 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 
     if(*time < pars->delay)
     {
-        r = pars->ref[0];
+        r = pars->init_ref;
     }
     else
     {
@@ -283,15 +283,15 @@ void fgRampCalc(struct fg_ramp_config *config,
 
     // Prepare variables assuming ascending (positive) ramp
 
-    pars->delay          = delay;
-    pars->pos_ramp_flag =  1;
-    pars->acceleration  =  fabs(config->acceleration);
-    pars->deceleration  = -fabs(config->deceleration);
-    pars->linear_rate    = fabs(config->linear_rate);
-    pars->prev_ramp_ref  = pars->prev_returned_ref = init_ref;
-    pars->iteration_idx  = 0;
-    delta_ref            = config->final - init_ref;
-    overshoot_rate_limit = sqrt(-2.0 * pars->deceleration * fabs(delta_ref));
+    pars->delay          =  delay;
+    pars->iteration_idx  =  0;
+    pars->pos_ramp_flag  =  1;
+    pars->acceleration   =  fabs(config->acceleration);
+    pars->deceleration   = -fabs(config->deceleration);
+    pars->linear_rate    =  fabs(config->linear_rate);
+    pars->prev_ramp_ref  =  pars->prev_returned_ref = pars->init_ref = init_ref;
+    delta_ref            =  config->final - init_ref;
+    overshoot_rate_limit =  sqrt(-2.0 * pars->deceleration * fabs(delta_ref));
 
     // Set up accelerations according to ramp direction and possible overshoot
 

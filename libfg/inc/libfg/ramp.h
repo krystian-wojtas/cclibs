@@ -53,10 +53,13 @@ struct fg_ramp_pars                         // RAMP function parameters
     uint32_t    pre_ramp_flag;              // Pre-ramp flag. Set if before point of inflexion of 1st parabola
     uint32_t    iteration_idx;              // Iteration index - used to suppress rate limiter for 2 iterations
     float       period;                     // Iteration period
+    float       init_ref;                   // Reference before the start of the function
     float       delay;                      // Time before start of function
     float       acceleration;               // Parabolic acceleration
     float       deceleration;               // Parabolic deceleration
-    float       linear_rate;                // Linear rate limit
+    float       linear_rate;                // User linear rate
+    float       linear_rate_limit;          // Actual linear rate limit
+    float       linear_rate_limit_step;     // Step change in linear rate limit corresponding to acceleration
     float       ref[FG_RAMP_N_SEGS+1];      // End of segment references
     float       time[FG_RAMP_N_SEGS+1];     // End of segment times
     float       prev_ramp_ref;              // Function ref from previous iteration
