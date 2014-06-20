@@ -69,7 +69,6 @@ static uint32_t ccRunAbort(double time)
                 ccrun.reg_time,                                            // time of last RST calculation
                 regRstPrevRefRT(&reg.rst_vars),                              // last reference value
                 regRstDeltaRefRT(&reg.rst_vars) / reg.period,                // last reference rate
-                0.0,
                &meta);
 
     // Check that abort duration is not too large (limit to 50000 iterations)
@@ -148,12 +147,7 @@ void ccRunSimulation(void)
         // Regulate converter - this returns 1 on iterations when the current or field regulation
         // algorithm is executed.
 
-        if(regConverterRT(&reg,
-                        &ref,                           // V_REF, I_REF or B_REF according to reg.mode
-                        ccrun.feedforward_v_ref,        // V_REF when feedforward_control is 1
-                        ccrun.feedforward_control,      // 1=Feed-forward  0=Feedback
-                        1                               // max_abs_err_control (always enabled)
-                        ) == 1)
+        if(regConverterRT(&reg, &ref, 1) == 1)
         {
             // Record time of iterations when current or field regulation algorithm runs.
             // This is used by START function.
