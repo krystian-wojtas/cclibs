@@ -51,7 +51,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     // Calculate ramp parameters always with zero initial ramp rate
 
-    fgRampCalc(config, pars, delay, ref, 0.0, 0.0, meta);
+    fgRampCalc(config, pars, delay, ref, 0.0, meta);
 
     // Check limits if supplied
 
@@ -274,7 +274,6 @@ void fgRampCalc(struct fg_ramp_config *config,
                 float                  delay,
                 float                  init_ref,
                 float                  init_rate,
-                double                 init_time,
                 struct fg_meta        *meta)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates ramp parameters. 
@@ -291,13 +290,12 @@ void fgRampCalc(struct fg_ramp_config *config,
     // Prepare variables assuming ascending (positive) ramp
 
     pars->delay             =  delay;
-    pars->iteration_idx     =  0;
+    pars->prev_time         =  delay;
     pars->pos_ramp_flag     =  1;
     pars->acceleration      =  fabs(config->acceleration);
     pars->deceleration      = -fabs(config->deceleration);
     pars->linear_rate       =  fabs(config->linear_rate);
     pars->linear_rate_limit =  fabs(init_rate);
-    pars->prev_time         =  init_time;
     pars->prev_ramp_ref     =  pars->prev_returned_ref = pars->init_ref = init_ref;
     delta_ref               =  config->final - init_ref;
     overshoot_rate_limit    =  sqrt(-2.0 * pars->deceleration * fabs(delta_ref));
