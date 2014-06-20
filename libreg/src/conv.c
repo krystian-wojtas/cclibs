@@ -294,8 +294,6 @@ void regConvValidateMeas(struct reg_conv *reg)
 //-----------------------------------------------------------------------------------------------------------
 uint32_t regConverterRT(struct reg_conv *reg,                 // Regulation structure
                         float           *ref,                 // Ref for voltage, current or field
-                        float            feedforward_v_ref,   // Feedforward voltage reference
-                        uint32_t         feedforward_control, // Feedforward enable/disable control
                         uint32_t         enable_max_abs_err)  // Enable max abs error calculation
 /*---------------------------------------------------------------------------------------------------------*\
   This function will control a converter in either open-loop voltage mode, or closed-loop current or
@@ -377,80 +375,45 @@ uint32_t regConverterRT(struct reg_conv *reg,                 // Regulation stru
             unfiltered_meas = reg->i.meas.signal[REG_MEAS_UNFILTERED];
             regRstIncHistoryIndexRT(&reg->rst_vars);
 
-            if(feedforward_control == 0)
+            // Apply current reference clip and rate limits
+
+            reg->ref_limited = regLimRefRT(&r->lim_ref, reg->period, reg->ref, reg->ref_limited);
+
+            // Calculate voltage reference using RST algorithm
+
+            reg->v.ref = regRstCalcActRT(&r->rst_pars, &reg->rst_vars, reg->ref_limited, reg->meas);
+
+            // Calculate magnet saturation compensation when regulating current only
+
+            reg->v.ref_sat = (reg->mode == REG_CURRENT ? regLoadVrefSatRT(&reg->load_pars, unfiltered_meas, reg->v.ref) : reg->v.ref);
+
+            // Apply voltage reference clip and rate limits
+
+            reg->v.ref_limited = regLimRefRT(&reg->v.lim_ref, reg->period, reg->v.ref_sat, reg->v.ref_limited);
+
+            // If voltage reference has been clipped
+
+            if(reg->v.lim_ref.flags.clip || reg->v.lim_ref.flags.rate)
             {
-                // Apply current reference clip and rate limits
+                // Back calculate the new v_ref before the saturation compensation when regulating current only
 
-                reg->ref_limited = regLimRefRT(&r->lim_ref, reg->period, reg->ref, reg->ref_limited);
+                v_ref = (reg->mode == REG_CURRENT ? regLoadInverseVrefSatRT(&reg->load_pars, unfiltered_meas, reg->v.ref_limited) : reg->v.ref_limited);
 
-                // Calculate voltage reference using RST algorithm
+                // Back calculate new current reference to keep RST histories balanced
 
-                reg->v.ref = regRstCalcActRT(&r->rst_pars, &reg->rst_vars, reg->ref_limited, reg->meas);
+                reg->ref_rst = regRstCalcRefRT(&r->rst_pars, &reg->rst_vars, v_ref, reg->meas);
 
-                // Calculate magnet saturation compensation when regulating current only
+                // Mark current reference as rate limited
 
-                reg->v.ref_sat = (reg->mode == REG_CURRENT ? regLoadVrefSatRT(&reg->load_pars, unfiltered_meas, reg->v.ref) : reg->v.ref);
-
-                // Apply voltage reference clip and rate limits
-
-                reg->v.ref_limited = regLimRefRT(&reg->v.lim_ref, reg->period, reg->v.ref_sat, reg->v.ref_limited);
-
-                // If voltage reference has been clipped
-
-                if(reg->v.lim_ref.flags.clip || reg->v.lim_ref.flags.rate)
-                {
-                    // Back calculate the new v_ref before the saturation compensation when regulating current only
-
-                    v_ref = (reg->mode == REG_CURRENT ? regLoadInverseVrefSatRT(&reg->load_pars, unfiltered_meas, reg->v.ref_limited) : reg->v.ref_limited);
-
-                    // Back calculate new current reference to keep RST histories balanced
-
-                    reg->ref_rst = regRstCalcRefRT(&r->rst_pars, &reg->rst_vars, v_ref, reg->meas);
-
-                    // Mark current reference as rate limited
-
-                    r->lim_ref.flags.rate = 1;
-                }
-                else
-                {
-                    reg->ref_rst = reg->ref_limited;
-                }
-
-                reg->flags.ref_clip = r->lim_ref.flags.clip;
-                reg->flags.ref_rate = r->lim_ref.flags.rate;
+                r->lim_ref.flags.rate = 1;
             }
             else
             {
-              // Open-loop: Use feedforward_v_ref
-
-                reg->flags.ref_clip = 0;
-                reg->v.ref = feedforward_v_ref;
-
-                // Calculate v_ref with saturation compensation applied when regulating current only
-
-                reg->v.ref_sat = (reg->mode == REG_CURRENT ? regLoadVrefSatRT(&reg->load_pars, unfiltered_meas, feedforward_v_ref) : feedforward_v_ref);
-
-                // Apply voltage reference limits
-
-                reg->v.ref_limited = regLimRefRT(&reg->v.lim_ref, reg->period, reg->v.ref_sat, reg->v.ref_limited);
-
-                // If v_ref was clipped then back calculate the new uncompensated v_ref
-
-                if(reg->v.lim_ref.flags.clip || reg->v.lim_ref.flags.rate)
-                {
-                    v_ref = (reg->mode == REG_CURRENT ? regLoadInverseVrefSatRT(&reg->load_pars, unfiltered_meas, reg->v.ref_limited) : reg->v.ref_limited);
-                    reg->flags.ref_rate = 1;
-                }
-                else
-                {
-                    v_ref = reg->v.ref;
-                    reg->flags.ref_rate = 0;
-                }
-
-                // Back calculate the current reference that would produce this voltage reference
-
-                reg->ref = reg->ref_limited = reg->ref_rst = regRstCalcRefRT(&r->rst_pars, &reg->rst_vars, v_ref, reg->meas);
+                reg->ref_rst = reg->ref_limited;
             }
+
+            reg->flags.ref_clip = r->lim_ref.flags.clip;
+            reg->flags.ref_rate = r->lim_ref.flags.rate;
 
             regRstTrackDelayRT(&reg->rst_vars, reg->period,r->lim_ref.rate_clip);
 
@@ -461,7 +424,7 @@ uint32_t regConverterRT(struct reg_conv *reg,                 // Regulation stru
 
         if(r->err_rate == REG_ERR_RATE_MEASUREMENT || reg->iteration_counter == 0)
         {
-            regErrCheckLimitsRT(&r->err, !feedforward_control, enable_max_abs_err,
+            regErrCheckLimitsRT(&r->err, 1, enable_max_abs_err,
                                 reg->ref_delayed, r->meas.signal[REG_MEAS_UNFILTERED]);
         }
     }
