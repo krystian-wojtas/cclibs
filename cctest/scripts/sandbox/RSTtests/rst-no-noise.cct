@@ -19,7 +19,7 @@ LIMITS B_RATE               10000.0
 LIMITS B_ACCELERATION       0.0
 LIMITS B_ERR_WARNING        0.0
 LIMITS B_ERR_FAULT          0.0
-                            
+
 LIMITS I_POS                4000.0
 LIMITS I_MIN                0.0
 LIMITS I_NEG                -4000.0
@@ -28,7 +28,7 @@ LIMITS I_ACCELERATION       0.0
 LIMITS I_ERR_WARNING        1.0
 #LIMITS I_ERR_FAULT          10.0
 LIMITS I_QUADRANTS41        0.0,0.0
-                            
+
 LIMITS V_POS                450.0
 LIMITS V_NEG                -450.0
 LIMITS V_RATE               5.0E5
@@ -93,7 +93,7 @@ TEST NUM_CYCLES             2
 TEST PERIOD                 0.5
 TEST WINDOW                 ENABLED
 
-# Test 0 - Open loop 
+# Test 0 - Open loop
 
 GLOBAL FUNCTION             PPPL
 GLOBAL REG_MODE             VOLTAGE
@@ -111,7 +111,7 @@ GLOBAL FILE                 nn-volts-steps
 RUN
 
 # Test 1 - unfiltered
-             
+
 GLOBAL REG_MODE             CURRENT
 MEAS I_REG_SELECT           UNFILTERED
 
@@ -122,8 +122,8 @@ IREG AUXPOLE4_HZ            30
 IREG AUXPOLE5_HZ            30
 IREG AUXPOLES2_Z            0.5
 
-VS V_REF_DELAY_ITERS        0.5
-GLOBAL FILE                 nn-amps-pppl-unf-0.29
+VS V_REF_DELAY_ITERS        0.2
+GLOBAL FILE                 nn-amps-pppl-unf-0.26
 GLOBAL FUNCTION             PPPL
 RUN
 
@@ -148,7 +148,7 @@ GLOBAL FUNCTION             PPPL
 RUN
 
 # Test 2 - filtered
-             
+
 MEAS I_REG_SELECT           FILTERED
 
 VS V_REF_DELAY_ITERS        1.5
@@ -172,7 +172,7 @@ GLOBAL FUNCTION             PPPL
 RUN
 
 # Test 3 - extrapolated
-             
+
 MEAS I_REG_SELECT           EXTRAPOLATED
 
 VS V_REF_DELAY_ITERS        1.5
@@ -201,7 +201,7 @@ GLOBAL FUNCTION             PPPL
 RUN
 
 # Test 5 - unfiltered - Field regulation
-             
+
 GLOBAL REG_MODE             FIELD
 MEAS B_REG_SELECT           UNFILTERED
 
@@ -238,7 +238,7 @@ GLOBAL FUNCTION             PPPL
 RUN
 
 # Test 5 - filtered - Field regulation
-             
+
 MEAS B_REG_SELECT           FILTERED
 
 VS V_REF_DELAY_ITERS        1.5
@@ -262,7 +262,7 @@ GLOBAL FUNCTION             PPPL
 RUN
 
 # Test 6 - extrapolated - Field regulation
-             
+
 MEAS B_REG_SELECT           EXTRAPOLATED
 
 VS V_REF_DELAY_ITERS        1.5
