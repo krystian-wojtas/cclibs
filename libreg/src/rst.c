@@ -458,6 +458,12 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     // Calculate A.S and A.S + B.R to allow Modulus Margin to be calculated later
 
+    for(idx = REG_N_RST_COEFFS-1 ; idx > s_idx ; idx --)
+    {
+        pars->as  [idx] = 0.0;
+        pars->asbr[idx] = 0.0;
+    }
+
     for(idx = s_idx ; s_idx >= 0 || r_idx >= 0 ; s_idx--, r_idx--, idx--)
     {
         pars->as  [idx] = regVectorMultiply(pars->a, pars->rst.s, 1, s_idx);
