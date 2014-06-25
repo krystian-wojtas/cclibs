@@ -50,12 +50,19 @@ struct reg_lim_meas                                             // Measurement l
     float                       neg_trip;                       // Negative measurement trip limit
     float                       low;                            // Low measurement threshold
     float                       zero;                           // Zero measurement threshold
+    float                       rms2_trip;                      // Squared RMS trip threshold
+    float                       rms2_warning;                   // Squared RMS warning threshold
+    float                       rms2_warning_hysteresis;        // Squared RMS warning threshold with hysteresis
+    float                       meas2_filter;                   // Filtered square of the measurement
+    float                       meas2_filter_factor;            // First order filter factor for square of measurement
     float                       low_hysteresis;                 // Low measurement threshold with hysteresis
     float                       zero_hysteresis;                // Zero measurement threshold with hysteresis
 
     struct                                                      // Measurement limit flags
     {
         uint32_t                trip;                           // Measurement exceeds pos or neg trip limits
+        uint32_t                rms_trip;                       // Filtered square of the measurement exceeds trip level
+        uint32_t                rms_warning;                    // Filtered square of the measurement exceeds warning level
         uint32_t                low;                            // Absolute measurement is below low threshold
         uint32_t                zero;                           // Absolute measurement is below zero threshold
     } flags;
@@ -91,13 +98,14 @@ extern "C" {
 
 void     regLimMeasInit         (struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
                                  float low_lim, float zero_lim, uint32_t invert_limits);
-void     regLimMeasRT             (struct reg_lim_meas *lim_meas, float meas);
+void     regLimMeasRmsInit      (struct reg_lim_meas *lim_meas, float rms_trip, float rms_warning, float rms_tc, float iter_period);
+void     regLimMeasRT           (struct reg_lim_meas *lim_meas, float meas);
 void     regLimRefInit          (struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim,
                                  uint32_t invert_limits);
 void     regLimVrefInit         (struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
                                  float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits);
-void     regLimVrefCalcRT         (struct reg_lim_ref *lim_v_ref, float i_meas);
-float    regLimRefRT              (struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref);
+void     regLimVrefCalcRT       (struct reg_lim_ref *lim_v_ref, float i_meas);
+float    regLimRefRT            (struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref);
 
 #ifdef __cplusplus
 }
