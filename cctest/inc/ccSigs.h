@@ -68,6 +68,7 @@ enum ccsig_idx
 
     ANA_I_MAGNET,               // Current in the magnet
     ANA_I_CIRCUIT,              // Current in the circuit
+    ANA_I_RMS,                  // Filtered RMS circuit current
     ANA_I_MEAS,                 // Unfiltered measured current
     ANA_I_MEAS_FLTR,            // Filtered measured current
     ANA_I_MEAS_EXTR,            // Extrapolated measured current
@@ -102,6 +103,9 @@ enum ccsig_idx
     DIG_I_MEAS_TRIP,            // Current digital signals
     DIG_I_MEAS_LOW,
     DIG_I_MEAS_ZERO,
+
+    DIG_I_RMS_WARN,
+    DIG_I_RMS_FLT,
 
     DIG_I_REF_CLIP,
     DIG_I_REF_RATE_CLIP,
@@ -152,6 +156,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
 
     { "I_MAGNET",               ANALOG,         "TRAIL_STEP" },
     { "I_CIRCUIT",              ANALOG,         "TRAIL_STEP" },
+    { "I_RMS",                  ANALOG,         ""           },
     { "I_MEAS",                 ANALOG,         ""           },
     { "I_MEAS_FLTR",            ANALOG,         ""           },
     { "I_MEAS_EXTR",            ANALOG,         ""           },
@@ -186,6 +191,9 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "I_MEAS_TRIP",            DIGITAL,        "TRAIL_STEP" },
     { "I_MEAS_LOW",             DIGITAL,        "TRAIL_STEP" },
     { "I_MEAS_ZERO",            DIGITAL,        "TRAIL_STEP" },
+
+    { "I_RMS_WARN",             DIGITAL,        "TRAIL_STEP" },
+    { "I_RMS_FLT",              DIGITAL,        "TRAIL_STEP" },
 
     { "I_REF_CLIP",             DIGITAL,        "TRAIL_STEP" },
     { "I_REF_RATE_CLIP",        DIGITAL,        "TRAIL_STEP" },

@@ -213,10 +213,19 @@ void ccSigsInit(void)
         ccSigsEnableSignal(ANA_V_MEAS);
         ccSigsEnableSignal(ANA_V_ERR);
         ccSigsEnableSignal(ANA_MAX_ABS_V_ERR);
+
         ccSigsEnableSignal(DIG_V_REF_CLIP);
         ccSigsEnableSignal(DIG_V_REF_RATE_CLIP);
-        ccSigsEnableSignal(DIG_V_REG_ERR_WARN);
-        ccSigsEnableSignal(DIG_V_REG_ERR_FLT);
+
+        if(ccpars_limits.v_err_warning > 0.0)
+        {
+            ccSigsEnableSignal(DIG_V_REG_ERR_WARN);
+        }
+
+        if(ccpars_limits.v_err_fault > 0.0)
+        {
+            ccSigsEnableSignal(DIG_V_REG_ERR_FLT);
+        }
 
         // Field regulation signals
 
@@ -238,8 +247,16 @@ void ccSigsInit(void)
             ccSigsEnableSignal(DIG_B_MEAS_ZERO);
             ccSigsEnableSignal(DIG_B_REF_CLIP);
             ccSigsEnableSignal(DIG_B_REF_RATE_CLIP);
-            ccSigsEnableSignal(DIG_B_REG_ERR_WARN);
-            ccSigsEnableSignal(DIG_B_REG_ERR_FLT);
+
+            if(ccpars_limits.b_err_warning > 0.0)
+            {
+                ccSigsEnableSignal(DIG_B_REG_ERR_WARN);
+            }
+
+            if(ccpars_limits.b_err_fault > 0.0)
+            {
+                ccSigsEnableSignal(DIG_B_REG_ERR_FLT);
+            }
         }
 
         // Current regulation signals
@@ -256,8 +273,16 @@ void ccSigsInit(void)
             ccSigsEnableSignal(ANA_V_REF_SAT);
             ccSigsEnableSignal(DIG_I_REF_CLIP);
             ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
-            ccSigsEnableSignal(DIG_I_REG_ERR_WARN);
-            ccSigsEnableSignal(DIG_I_REG_ERR_FLT);
+
+            if(ccpars_limits.i_err_warning > 0.0)
+            {
+                ccSigsEnableSignal(DIG_I_REG_ERR_WARN);
+            }
+
+            if(ccpars_limits.i_err_fault > 0.0)
+            {
+                ccSigsEnableSignal(DIG_I_REG_ERR_FLT);
+            }
         }
 
         // Current simulation signals
@@ -273,6 +298,23 @@ void ccSigsInit(void)
         ccSigsEnableSignal(DIG_I_MEAS_TRIP);
         ccSigsEnableSignal(DIG_I_MEAS_LOW);
         ccSigsEnableSignal(DIG_I_MEAS_ZERO);
+
+        // RMS current signals
+
+        if(ccpars_limits.i_rms_tc > 0.0)
+        {
+            ccSigsEnableSignal(ANA_I_RMS);
+
+            if(ccpars_limits.i_rms_warning > 0.0)
+            {
+                ccSigsEnableSignal(DIG_I_RMS_WARN);
+            }
+
+            if(ccpars_limits.i_rms_fault > 0.0)
+            {
+                ccSigsEnableSignal(DIG_I_RMS_FLT);
+            }
+        }
     }
 
     // If CSV output is enabled, write header to CSV file
@@ -367,6 +409,7 @@ void ccSigsStore(double time)
 
         ccSigsStoreAnalog (ANA_I_MAGNET,       reg.sim_load_vars.magnet_current);
         ccSigsStoreAnalog (ANA_I_CIRCUIT,      reg.sim_load_vars.circuit_current);
+        ccSigsStoreAnalog (ANA_I_RMS,          sqrtf(reg.i.lim_meas.meas2_filter));
         ccSigsStoreAnalog (ANA_I_MEAS,         reg.i.meas.signal[REG_MEAS_UNFILTERED]);
         ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    reg.i.meas.signal[REG_MEAS_FILTERED]);
         ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    reg.i.meas.signal[REG_MEAS_EXTRAPOLATED]);
@@ -376,17 +419,20 @@ void ccSigsStore(double time)
         ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v.ref_sat);
         ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v.ref_limited);
         ccSigsStoreAnalog (ANA_V_CIRCUIT,      reg.sim_load_vars.circuit_voltage);
-        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v.meas);
+//        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v.meas);
+        ccSigsStoreAnalog (ANA_V_MEAS,         ccpars_ramp.ramp_pars.time_shift);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
 
         ccSigsStoreAnalog (ANA_B_ERR,          reg.b.err.err);
         ccSigsStoreAnalog (ANA_I_ERR,          reg.i.err.err);
-        ccSigsStoreAnalog (ANA_V_ERR,          reg.v.err.err);
+//        ccSigsStoreAnalog (ANA_V_ERR,          reg.v.err.err);
+        ccSigsStoreAnalog (ANA_V_ERR,          ccpars_ramp.ramp_pars.linear_rate_limit);
 
         ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.b.err.max_abs_err);
         ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.i.err.max_abs_err);
-        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v.err.max_abs_err);
+//        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v.err.max_abs_err);
+        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  ccpars_ramp.ramp_pars.prev_ramp_ref);
 
         ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.b.lim_meas.flags.trip);
         ccSigsStoreDigital(DIG_B_MEAS_LOW,     reg.b.lim_meas.flags.low);
@@ -400,6 +446,9 @@ void ccSigsStore(double time)
         ccSigsStoreDigital(DIG_I_MEAS_TRIP, reg.i.lim_meas.flags.trip);
         ccSigsStoreDigital(DIG_I_MEAS_LOW,  reg.i.lim_meas.flags.low);
         ccSigsStoreDigital(DIG_I_MEAS_ZERO, reg.i.lim_meas.flags.zero);
+
+        ccSigsStoreDigital(DIG_I_RMS_WARN,     reg.i.lim_meas.flags.rms_warning);
+        ccSigsStoreDigital(DIG_I_RMS_FLT,      reg.i.lim_meas.flags.rms_trip);
 
         ccSigsStoreDigital(DIG_I_REF_CLIP,     reg.i.lim_ref.flags.clip);
         ccSigsStoreDigital(DIG_I_REF_RATE_CLIP,reg.i.lim_ref.flags.rate);
@@ -488,30 +537,6 @@ static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n
         }
         fputs("]\n },\n",f);
     }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static void ccSigsFlotSpy(FILE *f, struct reg_rst_pars *pars, uint32_t *n_points, char label)
-{
-    uint32_t    frequency_index;
-    float       frequency_fraction;     // 1 = regulation frequency, 0.5 = Nyquist
-
-    fprintf(f,"\"%c_ABS_S_PY\": { data:[", label);
-
-    // Scan the frequency range up to the Nyquist
-
-    for(frequency_index = 0 ; frequency_index < REG_MM_BUF_LEN ; frequency_index++)
-    {
-        if(pars->abs_S_p_y[frequency_index] < 10.0)
-        {
-            frequency_fraction = 0.5 * (float)(frequency_index + 1) / REG_MM_BUF_LEN;
-
-            fprintf(f,"[%.6f,%.7E],", frequency_fraction, pars->abs_S_p_y[frequency_index]);
-
-            (*n_points)++;
-        }
-    }
-
-    fputs("]\n },\n",f);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ccSigsFlot(FILE *f)
@@ -617,18 +642,6 @@ void ccSigsFlot(FILE *f)
         ccSigsFlotInvalidSignal(f, ANA_B_MEAS, &n_points, 'B');
         ccSigsFlotInvalidSignal(f, ANA_I_MEAS, &n_points, 'I');
         ccSigsFlotInvalidSignal(f, ANA_V_MEAS, &n_points, 'V');
-    }
-
-    // Report absolute sensitivity of measurement to perturbation if regulation enabled
-
-    if(ccrun.breg_flag == 1 && reg.b.rst_pars.modulus_margin > 0.0)
-    {
-        ccSigsFlotSpy(f, &reg.b.rst_pars, &n_points, 'B');
-    }
-
-    if(ccrun.ireg_flag == 1 && reg.i.rst_pars.modulus_margin > 0.0)
-    {
-        ccSigsFlotSpy(f, &reg.i.rst_pars, &n_points, 'I');
     }
 
     // Print enabled analog signal values

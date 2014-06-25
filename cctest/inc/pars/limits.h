@@ -48,6 +48,9 @@ struct ccpars_limits
     struct fg_limits    i;                      // Current limits
     float               i_err_warning;          // Current regulation error warning limit
     float               i_err_fault;            // Current regulation error fault limit
+    float               i_rms_warning;          // RMS current warning limit
+    float               i_rms_fault;            // RMS current fault limit
+    float               i_rms_tc;               // RMS current filter time constant
     float               i_quadrants41[2];       // Exclusion zone for quadrants 4 and 1
 
     struct fg_limits    v;                      // Voltage limits
@@ -60,11 +63,11 @@ struct ccpars_limits
 
 CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 #ifdef GLOBALS
-= {//  POS   MIN    NEG    RATE   ACC   ERR_WRN ERR_FLT  Quadrant41 
-    { 1.0E1, 0.0, -1.0E1, 5.0E0, 1.0E6 }, 0.0,   0.0,                 // LIMITS B_limits
-    { 1.0E1, 0.0, -1.0E1, 5.0E0, 1.0E6 }, 0.0,   0.0,  { 0.0, 0.0 },  // LIMITS I_limits
-    { 1.0E2, 0.0, -1.0E2, 1.0E3, 1.0E6 }, 0.0,   0.0,  { 0.0, 0.0 },  // LIMITS V_limits
-    CC_DISABLED                                                       // LIMITS INVERT_LIMITS
+= {//  POS   MIN    NEG    RATE   ACC   ERR_WRN ERR_FLT RMS_WRN RMS_FLT RMS_TC Quadrant41
+    { 1.0E1, 0.0, -1.0E1, 5.0E0, 1.0E6 }, 0.0,   0.0,                                         // LIMITS B_limits
+    { 1.0E1, 0.0, -1.0E1, 5.0E0, 1.0E6 }, 0.0,   0.0,    0.0,    0.0,    0.0,  { 0.0, 0.0 },  // LIMITS I_limits
+    { 1.0E2, 0.0, -1.0E2, 1.0E3, 1.0E6 }, 0.0,   0.0,                          { 0.0, 0.0 },  // LIMITS V_limits
+    CC_DISABLED                                                                               // LIMITS INVERT_LIMITS
 }
 #endif
 ;
@@ -88,6 +91,9 @@ CCPARS_LIMITS_EXT struct ccpars limits_pars[]
     { "I_ACCELERATION", PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.i.acceleration }, 1 },
     { "I_ERR_WARNING",  PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.i_err_warning  }, 1 },
     { "I_ERR_FAULT",    PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.i_err_fault    }, 1 },
+    { "I_RMS_WARNING",  PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.i_rms_warning  }, 1 },
+    { "I_RMS_FAULT",    PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.i_rms_fault    }, 1 },
+    { "I_RMS_TC",       PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.i_rms_tc       }, 1 },
     { "I_QUADRANTS41",  PAR_FLOAT, 2, 1, NULL,             { .f =  ccpars_limits.i_quadrants41  }, 2 },
     { "V_POS",          PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.v.pos          }, 1 },
     { "V_NEG",          PAR_FLOAT, 1, 1, NULL,             { .f = &ccpars_limits.v.neg          }, 1 },

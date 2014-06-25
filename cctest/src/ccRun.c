@@ -186,12 +186,13 @@ void ccRunSimulation(void)
 
         // Check if any condition requires the converter to trip
 
-        if(ccrun.vs_tripped_flag       == 0 &&
-          (reg.b.lim_meas.flags.trip   == 1 ||
-           reg.i.lim_meas.flags.trip   == 1 ||
-           reg.b.err.fault.flag        == 1 ||
-           reg.i.err.fault.flag        == 1 ||
-           reg.v.err.fault.flag        == 1))
+        if(ccrun.vs_tripped_flag         == 0 &&
+          (reg.b.lim_meas.flags.trip     == 1 ||
+           reg.i.lim_meas.flags.trip     == 1 ||
+           reg.i.lim_meas.flags.rms_trip == 1 ||
+           reg.b.err.fault.flag          == 1 ||
+           reg.i.err.fault.flag          == 1 ||
+           reg.v.err.fault.flag          == 1))
         {
             // Simulate converter trip - switch to voltage regulation mode and set v_ref to zero
 

@@ -213,6 +213,14 @@ uint32_t ccInitLimits(void)
                        ccpars_limits.i.pos * ZERO_MEAS_FACTOR,
                        ccpars_limits.invert_limits);
 
+        // Initialize RMS current limits
+
+        regLimMeasRmsInit(&reg.i.lim_meas,
+                          ccpars_limits.i_rms_fault,
+                          ccpars_limits.i_rms_warning,
+                          ccpars_limits.i_rms_tc,
+                          reg.iter_period);
+
         // Initialize field, current and voltage reference pos/min/neg/rate limits
 
         regLimRefInit (&reg.b.lim_ref, ccpars_limits.b.pos, ccpars_limits.b.neg, ccpars_limits.b.rate,
