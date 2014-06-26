@@ -670,34 +670,34 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
         pars->t0_correction    = t0_correction;
         pars->inv_corrected_t0 = 1.0 / (t0_correction + (double)pars->rst.t[0]);
         pars->inv_s0           = 1.0 /  pars->rst.s[0];
-    }
 
-    // Set track_delay to parameter supplied if manual RST coefficients used, or I or PI algorithm
+        // Set track_delay to parameter supplied if manual RST coefficients used, or I or PI algorithm
 
-    if(pars->alg_index == 0 || pars->alg_index >= 10)
-    {
-        pars->track_delay_periods = track_delay_periods;
-    }
-    else // else for PII the track delay can be calculated
-    {
-        if(pars->dead_beat > 0)
+        if(pars->alg_index == 0 || pars->alg_index >= 10)
         {
-            pars->track_delay_periods = (float)pars->dead_beat;
+            pars->track_delay_periods = track_delay_periods;
         }
-        else
+        else // else for PII the track delay can be calculated
         {
-            pars->track_delay_periods = 1.0 + pure_delay_periods;
-        }
+            if(pars->dead_beat > 0)
+            {
+                pars->track_delay_periods = (float)pars->dead_beat;
+            }
+            else
+            {
+                pars->track_delay_periods = 1.0 + pure_delay_periods;
+            }
 
-        // Calculate and check Modulus Margin
+            // Calculate and check Modulus Margin
 
-        if(regModulusMargin(pars) < REG_MM_WARNING_THRESHOLD)
-        {
-            pars->status = REG_WARNING;
-        }
-        else
-        {
-            pars->status = REG_OK;
+            if(regModulusMargin(pars) < REG_MM_WARNING_THRESHOLD)
+            {
+                pars->status = REG_WARNING;
+            }
+            else
+            {
+                pars->status = REG_OK;
+            }
         }
     }
 
