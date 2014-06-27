@@ -419,20 +419,20 @@ void ccSigsStore(double time)
         ccSigsStoreAnalog (ANA_V_REF_SAT,      reg.v.ref_sat);
         ccSigsStoreAnalog (ANA_V_REF_LIMITED,  reg.v.ref_limited);
         ccSigsStoreAnalog (ANA_V_CIRCUIT,      reg.sim_load_vars.circuit_voltage);
-//        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v.meas);
-        ccSigsStoreAnalog (ANA_V_MEAS,         ccpars_ramp.ramp_pars.time_shift);
+        ccSigsStoreAnalog (ANA_V_MEAS,         reg.v.meas);
+//        ccSigsStoreAnalog (ANA_V_MEAS,         ccpars_ramp.ramp_pars.time_shift);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      reg.rst_vars.meas_track_delay_periods);
 
         ccSigsStoreAnalog (ANA_B_ERR,          reg.b.err.err);
         ccSigsStoreAnalog (ANA_I_ERR,          reg.i.err.err);
-//        ccSigsStoreAnalog (ANA_V_ERR,          reg.v.err.err);
-        ccSigsStoreAnalog (ANA_V_ERR,          ccpars_ramp.ramp_pars.linear_rate_limit);
+        ccSigsStoreAnalog (ANA_V_ERR,          reg.v.err.err);
+//        ccSigsStoreAnalog (ANA_V_ERR,          ccpars_ramp.ramp_pars.linear_rate_limit);
 
         ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  reg.b.err.max_abs_err);
         ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  reg.i.err.max_abs_err);
-//        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v.err.max_abs_err);
-        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  ccpars_ramp.ramp_pars.prev_ramp_ref);
+        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  reg.v.err.max_abs_err);
+//        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  ccpars_ramp.ramp_pars.prev_ramp_ref);
 
         ccSigsStoreDigital(DIG_B_MEAS_TRIP,    reg.b.lim_meas.flags.trip);
         ccSigsStoreDigital(DIG_B_MEAS_LOW,     reg.b.lim_meas.flags.low);
