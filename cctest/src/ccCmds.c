@@ -64,7 +64,6 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
     char   *arg;
     FILE   *f;
     char   *wd;
-    char    path_filename[CC_PATH_LEN];   // Name of file to write new working directory
     char    cwd_buf[CC_PATH_LEN];
 
     arg = ccTestGetArgument(remaining_line);
@@ -89,31 +88,32 @@ uint32_t ccCmdsCd(uint32_t cmd_idx, char **remaining_line)
         return(EXIT_FAILURE);
     }
 
-    // Open file to save the current working directory
+    // If reading from stdin, open CMD file to save the current working directory
 
-    snprintf(path_filename, CC_PATH_LEN, "%s/%s", cctest.base_path, CC_CWD_FILE);
-
-    f = fopen(path_filename,"w");
-
-    if(f == NULL)
+    if(cctest.cwd_file_path[0] != '\0')
     {
-        printf("Fatal - failed to open '%s' : %s (%d)\n", path_filename, strerror(errno), errno);
-        exit(EXIT_FAILURE);
+        f = fopen(cctest.cwd_file_path,"w");
+
+        if(f == NULL)
+        {
+            printf("Fatal - failed to open '%s' : %s (%d)\n", cctest.cwd_file_path, strerror(errno), errno);
+            exit(EXIT_FAILURE);
+        }
+
+        // Read the current working directory and write to the file
+
+        wd = getcwd(cwd_buf, sizeof(cwd_buf));
+
+        if(wd == NULL)
+        {
+            ccTestPrintError("getting current directory : %s (%d)", strerror(errno), errno);
+            return(EXIT_FAILURE);
+        }
+
+        fputs(wd,f);
+
+        fclose(f);
     }
-
-    // Read the current working directory and write to the file
-
-    wd = getcwd(cwd_buf, sizeof(cwd_buf));
-
-    if(wd == NULL)
-    {
-        ccTestPrintError("getting current directory : %s (%d)", strerror(errno), errno);
-        return(EXIT_FAILURE);
-    }
-
-    fputs(wd,f);
-
-    fclose(f);
 
     // Print new current working directory
 
