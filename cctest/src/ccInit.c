@@ -81,9 +81,9 @@ uint32_t ccInitRun(void)
     {
         // Extend REG_MODES array to use the last value for any additional functions
 
-        if(i >= num_reg_modes)
+        if(i > 0 && i >= num_reg_modes)
         {
-            ccpars_global.reg_mode[i] = ccpars_global.reg_mode[num_reg_modes-1];
+            ccpars_global.reg_mode[i] = ccpars_global.reg_mode[i-1];
         }
 
         // Set the field or current regulation flags
