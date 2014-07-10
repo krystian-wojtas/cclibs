@@ -93,6 +93,7 @@ struct reg_rst_pars                                             // RST algorithm
     int32_t                     jurys_result;                   // Jury's test result index (0=OK)
     float                       min_auxpole_hz;
     float                       modulus_margin;                 // Modulus margin = min(abs_S_p_y)
+    float                       modulus_margin_freq;            // Frequency for Modulus margin
 };
 
 struct reg_rst_vars                                             // RST algorithm variables

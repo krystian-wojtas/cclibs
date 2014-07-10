@@ -140,9 +140,10 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
 static float regModulusMargin(struct reg_rst_pars *pars)
 {
     int32_t     frequency_index;
-    int32_t     frequency_index_step;   // +/-1
-    float       frequency_fraction;     // 1 = regulation frequency, 0.5 = Nyquist
-    float       abs_S_p_y;              // Current value of the sensitivity function
+    int32_t     frequency_index_step;                       // +/-1
+    float       frequency_fraction;                         // 1 = regulation frequency, 0.5 = Nyquist
+    float       frequency_fraction_for_min_abs_S_p_y;
+    float       abs_S_p_y;                                  // Current value of the sensitivity function
 
     // For algorithm 1 (dead-beat, 1 period delay), the modulous margin comes at the Nyquist
 
@@ -160,6 +161,7 @@ static float regModulusMargin(struct reg_rst_pars *pars)
         // Start in the middle of the linearised range
 
         frequency_index = REG_MM_STEPS / 2;
+        frequency_fraction_for_min_abs_S_p_y =
         frequency_fraction = pars->min_auxpole_hz * pars->period * REG_MM_FREQ(frequency_index);
 
         // If this frequency is over the Nyquist, report a bad modulus margin (0)
@@ -183,6 +185,7 @@ static float regModulusMargin(struct reg_rst_pars *pars)
         else
         {
             abs_S_p_y = pars->modulus_margin;
+            frequency_fraction = frequency_fraction_for_min_abs_S_p_y;
             frequency_index_step = 1;
             frequency_index++;
         }
@@ -192,19 +195,18 @@ static float regModulusMargin(struct reg_rst_pars *pars)
         do
         {
             pars->modulus_margin = abs_S_p_y;
+            frequency_fraction_for_min_abs_S_p_y = frequency_fraction;
 
             frequency_fraction = pars->min_auxpole_hz * pars->period * REG_MM_FREQ(frequency_index);
 
             abs_S_p_y = regAbsComplexRatio(pars->asbr, pars->as, frequency_fraction);
-            printf("freq_index=%u freq_fract=%.3f abs_S_p_y=%.5f\n",frequency_index,frequency_fraction,abs_S_p_y);
 
             frequency_index += frequency_index_step;
 
         } while(frequency_index >= 0 && frequency_index <= REG_MM_STEPS && frequency_fraction < 0.5 && abs_S_p_y < pars->modulus_margin);
 
-        printf("alg_idx=%d  freq_index=%u freq_fract=%.3f\n",pars->alg_index,frequency_index,frequency_fraction);
+        pars->modulus_margin_freq = frequency_fraction_for_min_abs_S_p_y / pars->period;
     }
-printf("mod_margin=%.3f\n",pars->modulus_margin);
 
     return(pars->modulus_margin);
 }
