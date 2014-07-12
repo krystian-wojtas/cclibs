@@ -54,7 +54,7 @@ struct winsize window;                  // Window size is window.ws_row x window
 static void ResetStdinConfig(void)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    TermInit();                                  // Initialise terminal on stdout (clear screen, etc...)
+    TermInit(0);                                 // Initialise terminal on stdout (clear screen, etc...)
 
     tcsetattr(STDIN_FILENO, 0, &stdin_config);   // Restore stdin configuation
 }
@@ -70,7 +70,7 @@ static void ResetTerm(void)
         exit(-1);
     }
 
-    TermInit();                                 // Initialise terminal on stdout (clear screen, etc...)
+    TermInit(window.ws_col);             // Initialise terminal on stdout (clear screen, etc...)
 
     printf(TERM_SET_SCROLL_LINES, 1, window.ws_row - N_RTD_LINES);  // Set scroll zone
 
