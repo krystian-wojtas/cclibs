@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     libterm.h                                                                   Copyright CERN 2011
+  File:     libterm.h                                                                   Copyright CERN 2014
 
   License:  This file is part of libterm.
 
@@ -16,7 +16,7 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Contents: ANSI terminal support library
+  Contents: ANSI terminal support library header file
 \*---------------------------------------------------------------------------------------------------------*/
 
 #ifndef LIBTERM_H
@@ -81,7 +81,7 @@ extern "C" {
 #endif
 
 void     TermLibInit    (FILE *file, void (*term_line)(char *line, uint16_t line_len), char prompt);
-void     TermInit       (void);
+void     TermInit       (uint16_t number_of_columns);
 uint16_t TermChar       (char keyboard_ch);
 
 #ifdef __cplusplus
@@ -89,7 +89,5 @@ uint16_t TermChar       (char keyboard_ch);
 #endif
 
 #endif
-// End of file: libterm.h
 
-
-
+// EOF
