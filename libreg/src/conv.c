@@ -449,16 +449,16 @@ void regConvSimulateRT(struct reg_conv *reg, float v_perturbation)
 
     // Simulate load current and field in response to sim_advanced_v_circuit plus the perturbation
 
-    regSimLoadRT(&reg->sim_load_pars, &reg->sim_load_vars, v_circuit + v_perturbation);
+    regSimLoadRT(&reg->sim_load_pars, &reg->sim_load_vars, reg->sim_vs_pars.vs_undersampled_flag, v_circuit + v_perturbation);
 
     // Use delays to estimate the measurement of the magnet's field and the circuit's current and voltage
 
     reg->b.sim.signal = regDelaySignalRT(&reg->b.sim.meas_delay, reg->sim_load_vars.magnet_field,
-                                      reg->sim_load_pars.vs_undersampled_flag && reg->sim_load_pars.load_undersampled_flag);
+                                      reg->sim_vs_pars.vs_undersampled_flag && reg->sim_load_pars.load_undersampled_flag);
     reg->i.sim.signal = regDelaySignalRT(&reg->i.sim.meas_delay, reg->sim_load_vars.circuit_current,
-                                      reg->sim_load_pars.vs_undersampled_flag && reg->sim_load_pars.load_undersampled_flag);
+                                      reg->sim_vs_pars.vs_undersampled_flag && reg->sim_load_pars.load_undersampled_flag);
     reg->v.sim.signal = regDelaySignalRT(&reg->v.sim.meas_delay, reg->sim_load_vars.circuit_voltage,
-                                      reg->sim_load_pars.vs_undersampled_flag);
+                                      reg->sim_vs_pars.vs_undersampled_flag);
 
     // Store simulated voltage measurement without noise as the delayed ref for the v_err calculation
 

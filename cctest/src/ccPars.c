@@ -383,8 +383,6 @@ void ccParsPrintDebug(FILE *f)
     {
         ccParsPrintDebugLoad(f, "LOAD", &reg.load_pars);
 
-        fprintf(f,"%s" INT_FORMAT "\n",    ccParsDebugLabel("SIMLOAD", "vs_undersampled_flag"),
-                reg.sim_load_pars.vs_undersampled_flag);
         fprintf(f,"%s" INT_FORMAT "\n",    ccParsDebugLabel("SIMLOAD", "load_undersampled_flag"),
                 reg.sim_load_pars.load_undersampled_flag);
         fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel("SIMLOAD", "period_tc_ratio"),
@@ -409,6 +407,8 @@ void ccParsPrintDebug(FILE *f)
         fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_delay_iters",       reg.sim_vs_pars.vs_delay_iters);
         fprintf(f,"%-*s"   FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_tustin_delay_iters",reg.sim_vs_pars.vs_tustin_delay_iters);
         fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",                 reg.sim_vs_pars.gain);
+
+        fprintf(f,"%s"     INT_FORMAT   "\n",   ccParsDebugLabel("SIMLOAD", "vs_undersampled_flag"), reg.sim_vs_pars.vs_undersampled_flag);
 
         // Report internally calculated field regulation parameters
 

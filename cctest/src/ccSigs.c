@@ -197,7 +197,7 @@ void ccSigsInit(void)
         signals[ANA_I_MAGNET ].time_offset =
         signals[ANA_I_CIRCUIT].time_offset =
         signals[ANA_V_CIRCUIT].time_offset = ccpars_global.iter_period * (ccpars_vs.v_ref_delay_iters +
-                                            (reg.sim_load_pars.vs_undersampled_flag == 0 ? 0.0 : reg.sim_vs_pars.vs_delay_iters));
+                                            (reg.sim_vs_pars.vs_undersampled_flag == 0 ? 0.0 : reg.sim_vs_pars.vs_delay_iters));
 
         // Enable cursor signals only if CSV output is for the Labview Dataviewer (LVDV)
 

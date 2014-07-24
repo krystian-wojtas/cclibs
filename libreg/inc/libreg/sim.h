@@ -39,9 +39,8 @@ struct reg_sim_load_pars                                        // Load simulati
     float                       tc_error;                       // Simulated load time constant error
     float                       period_tc_ratio;                // Simulation period / load time constant
     uint32_t                    load_undersampled_flag;         // Simulated load is under-sampled flag
-    uint32_t                    vs_undersampled_flag;           // Simulated voltage source is under-sampled flag
 
-    struct reg_load_pars load_pars;                             // Simulated load parameters
+    struct reg_load_pars        load_pars;                      // Simulated load parameters
 };
 
 struct reg_sim_load_vars                                        // Load simulation variables
@@ -62,6 +61,7 @@ struct reg_sim_vs_pars                                          // Voltage sourc
     float                       vs_tustin_delay_iters;          // Tustin model delay for steady ramp in iterations
     float                       vs_delay_iters;                 // Voltage source delay for steady ramp in iterations
     float                       gain;                           // Gain = Sum(den)/Sum(num)
+    uint32_t                    vs_undersampled_flag;           // Simulated voltage source is under-sampled flag
 };
 
 struct reg_sim_vs_vars                                          // Voltage source simulation variables
@@ -76,15 +76,14 @@ extern "C" {
 
 // Simulation functions
 
-void     regSimLoadTcError      (struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars,
-                                 float sim_load_tc_error);
+void     regSimLoadTcError      (struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars, float sim_load_tc_error);
 void     regSimLoadInit         (struct reg_sim_load_pars *sim_load_pars, float iter_period);
 void     regSimLoadSetField     (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float b_init);
 void     regSimLoadSetCurrent   (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float i_init);
 void     regSimLoadSetVoltage   (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init);
-float    regSimLoadRT           (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float voltage);
+float    regSimLoadRT           (struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, uint32_t vs_undersampled_flag, float voltage);
 void     regSimVsInitTustin     (struct reg_sim_vs_pars   *pars, float iter_period, float bandwidth, float z, float tau_zero);
-uint32_t regSimVsInit           (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref_delay_iters);
+void     regSimVsInit           (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref_delay_iters);
 float    regSimVsInitHistory    (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
 float    regSimVsRT             (struct reg_sim_vs_pars   *pars, struct reg_sim_vs_vars   *vars, float v_ref);
 

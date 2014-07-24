@@ -309,9 +309,9 @@ uint32_t ccInitSimulation(void)
     regSimVsInitTustin(&reg.sim_vs_pars, reg.iter_period, ccpars_vs.bandwidth, ccpars_vs.z, ccpars_vs.tau_zero);
 
     // Initialize voltage source model gain and stop if gain error is more than 5%
-    // This also calculates the vs_undersampled_flag for sim_load_pars
+    // This also calculates the vs_undersampled_flag in sim_vs_pars
 
-    reg.sim_load_pars.vs_undersampled_flag = regSimVsInit(&reg.sim_vs_pars, &reg.sim_vs_vars, ccpars_vs.v_ref_delay_iters);
+    regSimVsInit(&reg.sim_vs_pars, &reg.sim_vs_vars, ccpars_vs.v_ref_delay_iters);
 
     if(fabs(reg.sim_vs_pars.gain - 1.0) > 0.05)
     {
