@@ -65,14 +65,14 @@ extern "C" {
 
 // Load functions
 
-void     regLoadInit            (struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag,
-                                 float henrys, float gauss_per_amp);
+void     regLoadInit              (struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag,
+                                   float henrys, float gauss_per_amp);
 float    regLoadCurrentToFieldRT  (struct reg_load_pars *load, float i_meas);
 float    regLoadFieldToCurrentRT  (struct reg_load_pars *load, float b_meas);
-void     regLoadInitSat         (struct reg_load_pars *load, float henrys_sat, float i_sat_start, float i_sat_end);
+void     regLoadInitSat           (struct reg_load_pars *load, float henrys_sat, float i_sat_start, float i_sat_end);
 float    regLoadVrefSatRT         (struct reg_load_pars *load, float i_meas, float v_ref);
 float    regLoadInverseVrefSatRT  (struct reg_load_pars *load, float i_meas, float v_ref_sat);
-float    regLoadSatFactorRT   (struct reg_load_pars *load, float i_meas);
+float    regLoadSatFactorRT       (struct reg_load_pars *load, float i_meas);
 
 #ifdef __cplusplus
 }
