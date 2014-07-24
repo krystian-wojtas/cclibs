@@ -39,7 +39,6 @@ struct reg_sim_load_pars                                        // Load simulati
     float                       tc_error;                       // Simulated load time constant error
     float                       period_tc_ratio;                // Simulation period / load time constant
     uint32_t                    load_undersampled_flag;         // Simulated load is under-sampled flag
-
     struct reg_load_pars        load_pars;                      // Simulated load parameters
 };
 
