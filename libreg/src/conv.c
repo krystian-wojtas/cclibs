@@ -71,9 +71,9 @@ void regConvInitSimLoad(struct reg_conv *reg, enum reg_mode reg_mode, float sim_
 //-----------------------------------------------------------------------------------------------------------
 void regConvInitMeas(struct reg_conv *reg, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p)
 {
-    reg->b_meas_p = b_meas_p;
-    reg->i_meas_p = i_meas_p;
-    reg->v_meas_p = v_meas_p;
+    reg->b.input_p = b_meas_p;
+    reg->i.input_p = i_meas_p;
+    reg->v.input_p = v_meas_p;
 }
 //-----------------------------------------------------------------------------------------------------------
 // Real-Time Functions
@@ -84,21 +84,21 @@ void regConvSetMeasRT(struct reg_conv *reg, uint32_t use_sim_meas)
     {
         // Use measured field, current and voltage measurement and status supplied by application
 
-        reg->b_meas = *reg->b_meas_p;
-        reg->i_meas = *reg->i_meas_p;
-        reg->v_meas = *reg->v_meas_p;
+        reg->b.input = *reg->b.input_p;
+        reg->i.input = *reg->i.input_p;
+        reg->v.input = *reg->v.input_p;
     }
     else
     {
         // Use simulated measurements which are always OK
 
-        reg->b_meas.signal = reg->b.sim.signal;
-        reg->i_meas.signal = reg->i.sim.signal;
-        reg->v_meas.signal = reg->v.sim.signal;
+        reg->b.input.signal = reg->b.sim.signal;
+        reg->i.input.signal = reg->i.sim.signal;
+        reg->v.input.signal = reg->v.sim.signal;
 
-        reg->b_meas.status = REG_MEAS_SIGNAL_OK;
-        reg->i_meas.status = REG_MEAS_SIGNAL_OK;
-        reg->v_meas.status = REG_MEAS_SIGNAL_OK;
+        reg->b.input.status = REG_MEAS_SIGNAL_OK;
+        reg->i.input.status = REG_MEAS_SIGNAL_OK;
+        reg->v.input.status = REG_MEAS_SIGNAL_OK;
     }
 }
 //-----------------------------------------------------------------------------------------------------------
@@ -230,21 +230,21 @@ void regConvValidateMeas(struct reg_conv *reg)
 
     // Check voltage measurement
 
-    if(reg->v_meas.status != REG_MEAS_SIGNAL_OK)
+    if(reg->v.input.status != REG_MEAS_SIGNAL_OK)
     {
-        // If voltage measurement is invalid then use voltage source model instead
+        // If input voltage measurement is invalid then use voltage source model instead
 
         reg->v.meas = reg->v.err.delayed_ref;
-        reg->v_meas_invalid_counter++;
+        reg->v.invalid_input_counter++;
     }
     else
     {
-        reg->v.meas = reg->v_meas.signal;
+        reg->v.meas = reg->v.input.signal;
     }
 
     // Check current measurement
 
-    if(reg->i_meas.status != REG_MEAS_SIGNAL_OK)
+    if(reg->i.input.status != REG_MEAS_SIGNAL_OK)
     {
         if(reg->mode == REG_CURRENT)
         {
@@ -259,16 +259,16 @@ void regConvValidateMeas(struct reg_conv *reg)
             reg->i.meas.signal[REG_MEAS_UNFILTERED] += reg->i.rate.estimate * reg->iter_period;
         }
 
-        reg->i_meas_invalid_counter++;
+        reg->i.invalid_input_counter++;
     }
     else
     {
-        reg->i.meas.signal[REG_MEAS_UNFILTERED] = reg->i_meas.signal;
+        reg->i.meas.signal[REG_MEAS_UNFILTERED] = reg->i.input.signal;
     }
 
     // Check field measurement
 
-    if(reg->b_meas.status != REG_MEAS_SIGNAL_OK)
+    if(reg->b.input.status != REG_MEAS_SIGNAL_OK)
     {
         if(reg->mode == REG_FIELD)
         {
@@ -283,11 +283,11 @@ void regConvValidateMeas(struct reg_conv *reg)
             reg->b.meas.signal[REG_MEAS_UNFILTERED] += reg->b.rate.estimate * reg->iter_period;
         }
 
-        reg->b_meas_invalid_counter++;
+        reg->b.invalid_input_counter++;
     }
     else
     {
-        reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->b_meas.signal;
+        reg->b.meas.signal[REG_MEAS_UNFILTERED] = reg->b.input.signal;
     }
 
 }

@@ -57,8 +57,11 @@ struct reg_conv_sim_meas                                ///< Measurement simulat
     float                       signal;                 ///< Simulated measured signal with noise and tone
 };
 
-struct reg_conv_signal
+struct reg_conv_signal                                  ///< Converter signal (field or current) regulation structure
 {
+    struct reg_meas_signal     *input_p;                ///< Pointer to input measurement signal structure
+    struct reg_meas_signal      input;                  ///< Input measurement and measurement status
+    uint32_t                    invalid_input_counter;  ///< Counter for invalid input measurements
     struct reg_meas_filter      meas;                   ///< Unfiltered and filtered measurement (real or sim)
     struct reg_meas_rate        rate;                   ///< Estimation of the rate of the field measurement
     struct reg_lim_meas         lim_meas;               ///< Measurement limits
@@ -69,8 +72,11 @@ struct reg_conv_signal
     struct reg_conv_sim_meas    sim;                    ///< Simulated measurement with noise and tone
 };
 
-struct reg_conv_voltage
+struct reg_conv_voltage                                 ///< Converter voltage structure
 {
+    struct reg_meas_signal     *input_p;                ///< Pointer to input measurement signal structure
+    struct reg_meas_signal      input;                  ///< Input measurement and measurement status
+    uint32_t                    invalid_input_counter;  ///< Counter for invalid input measurements
     float                       meas;                   ///< Unfiltered voltage measurement (real or sim)
     struct reg_lim_ref          lim_ref;                ///< Voltage reference limits
     struct reg_rst_pars         rst_pars;               ///< Regulation RST parameters
@@ -111,27 +117,12 @@ struct reg_conv                                         ///< Global converter re
 
     struct reg_rst_vars         rst_vars;               ///< Field or current regulation RST variables
 
-    // Field, current and voltage measurements
-
-    struct reg_meas_signal     *b_meas_p;               ///< Pointer to field measurement and measurement status
-    struct reg_meas_signal     *i_meas_p;               ///< Pointer to current measurement and measurement status
-    struct reg_meas_signal     *v_meas_p;               ///< Pointer to voltage measurement and measurement status
-
-    struct reg_meas_signal      b_meas;                 ///< Field measurement and measurement status
-    struct reg_meas_signal      i_meas;                 ///< Current measurement and measurement status
-    struct reg_meas_signal      v_meas;                 ///< Voltage measurement and measurement status
-
-    uint32_t                    b_meas_invalid_counter; ///< Counter for invalid field measurements
-    uint32_t                    i_meas_invalid_counter; ///< Counter for invalid current measurements
-    uint32_t                    v_meas_invalid_counter; ///< Counter for invalid voltage measurements
-
     // Field, current and voltage regulation structures
 
     struct reg_conv_signal      b;                      ///< Field regulation parameters and variables
     struct reg_conv_signal      i;                      ///< Current regulation parameters and variables
     struct reg_conv_voltage     v;                      ///< Voltage regulation parameters and variables
                                                         ///< (Voltage is regulated by voltage source)
-
     // Load parameters and variables structures
 
     struct reg_load_pars        load_pars;              ///< Circuit load model for regulation
