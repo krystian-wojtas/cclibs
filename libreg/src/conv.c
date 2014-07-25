@@ -71,9 +71,11 @@ void regConvInitSimLoad(struct reg_conv *reg, enum reg_mode reg_mode, float sim_
 //-----------------------------------------------------------------------------------------------------------
 void regConvInitMeas(struct reg_conv *reg, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p)
 {
-    reg->b.input_p = b_meas_p;
-    reg->i.input_p = i_meas_p;
-    reg->v.input_p = v_meas_p;
+    static struct reg_meas_signal null_signal = { 0.0, REG_MEAS_SIGNAL_OK };
+
+    reg->b.input_p = (b_meas_p == NULL ? &null_signal : b_meas_p);;
+    reg->i.input_p = (i_meas_p == NULL ? &null_signal : i_meas_p);;
+    reg->v.input_p = (v_meas_p == NULL ? &null_signal : v_meas_p);
 }
 //-----------------------------------------------------------------------------------------------------------
 // Real-Time Functions
@@ -165,7 +167,7 @@ static void regConvSetModeFieldOrCurrentRT(struct reg_conv *reg, enum reg_mode r
     reg->ref_advance = rst_pars->track_delay_periods * rst_pars->period - r->meas.delay_iters[r->meas.reg_select] * reg->iter_period;
 
     rst_pars->ref_delay_periods = rst_pars->track_delay_periods +
-                                 (r->meas.delay_iters[REG_MEAS_UNFILTERED] - r->meas.delay_iters[r->meas.reg_select]) / (float)rst_pars->period_iters;
+                                 (r->meas.delay_iters[REG_MEAS_FILTERED] - r->meas.delay_iters[r->meas.reg_select]) / (float)rst_pars->period_iters;
     regErrResetLimitsVarsRT(&r->err);
 
     // Prepare RST histories - assuming that v_ref has been constant when calculating rate
@@ -425,7 +427,7 @@ uint32_t regConverterRT(struct reg_conv *reg,                 // Regulation stru
         if(r->err_rate == REG_ERR_RATE_MEASUREMENT || reg->iteration_counter == 0)
         {
             regErrCheckLimitsRT(&r->err, 1, enable_max_abs_err,
-                                reg->ref_delayed, r->meas.signal[REG_MEAS_UNFILTERED]);
+                                reg->ref_delayed, r->meas.signal[REG_MEAS_FILTERED]);
         }
     }
 
