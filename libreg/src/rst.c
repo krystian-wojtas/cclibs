@@ -48,7 +48,7 @@ typedef struct complex
 // Static function declarations
 
 static double regVectorMultiply (double *p, double *m, int32_t p_order, int32_t m_idx);
-static float  regAbsComplexRatio(double *num , double *den, double k);
+static float  regAbsComplexRatio(double *num, double *den, double k);
 
 //-----------------------------------------------------------------------------------------------------------
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
