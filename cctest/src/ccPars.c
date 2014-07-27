@@ -348,27 +348,27 @@ static void ccParsPrintDebugReg(FILE *f, char *prefix, struct reg_conv_signal *r
 {
     uint32_t i;
 
-    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "alg_index"),           r->rst_pars.alg_index);
-    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "dead_beat"),           r->rst_pars.dead_beat);
-    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "jurys_result"),        r->rst_pars.jurys_result);
-    fprintf(f,"%s" FLOAT_FORMAT  "\n", ccParsDebugLabel(prefix, "modulus_margin"),      r->rst_pars.modulus_margin);
-    fprintf(f,"%s" FLOAT_FORMAT  "\n", ccParsDebugLabel(prefix, "modulus_margin_freq"), r->rst_pars.modulus_margin_freq);
+    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "alg_index"),           r->rst_pars->alg_index);
+    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "dead_beat"),           r->rst_pars->dead_beat);
+    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "jurys_result"),        r->rst_pars->jurys_result);
+    fprintf(f,"%s" FLOAT_FORMAT  "\n", ccParsDebugLabel(prefix, "modulus_margin"),      r->rst_pars->modulus_margin);
+    fprintf(f,"%s" FLOAT_FORMAT  "\n", ccParsDebugLabel(prefix, "modulus_margin_freq"), r->rst_pars->modulus_margin_freq);
 
-    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "pure_delay_periods"),  r->rst_pars.pure_delay_periods);
-    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "track_delay_periods"), r->rst_pars.track_delay_periods);
-    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "ref_delay_periods"),   r->rst_pars.ref_delay_periods);
-    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "t0_correction"),       r->rst_pars.t0_correction);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "pure_delay_periods"),  r->rst_pars->pure_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "track_delay_periods"), r->rst_pars->track_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "ref_delay_periods"),   r->rst_pars->ref_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "t0_correction"),       r->rst_pars->t0_correction);
 
     for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
     {
         fprintf(f,"%s" DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT " "
                        DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "R:S:T:A:B:AS+BR"),
-                       r->rst_pars.rst.r[i],
-                       r->rst_pars.rst.s[i],
-                       r->rst_pars.rst.t[i],
-                       r->rst_pars.a[i],
-                       r->rst_pars.b[i],
-                       r->rst_pars.asbr[i]);
+                       r->rst_pars->rst.r[i],
+                       r->rst_pars->rst.s[i],
+                       r->rst_pars->rst.t[i],
+                       r->rst_pars->a[i],
+                       r->rst_pars->b[i],
+                       r->rst_pars->asbr[i]);
     }
 
     fputc('\n',f);

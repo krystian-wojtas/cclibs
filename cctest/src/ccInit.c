@@ -396,23 +396,14 @@ uint32_t ccInitSimulation(void)
 
     regMeasSetNoiseAndTone(&reg.v.sim.noise_and_tone, ccpars_meas.v_sim_noise_pp, 0.0, 0);
 
-    // Run first simulation to initialise measurement variables
-
-//    regMeasFilter(&reg.b.meas);
-//    regMeasRate  (&reg.b.rate,reg.b.meas.signal[REG_MEAS_FILTERED],reg.b.rst_pars.period,reg.b.rst_pars.period_iters);
-
-//    regMeasFilter(&reg.i.meas);
-//    regMeasRate  (&reg.i.rate,reg.i.meas.signal[REG_MEAS_FILTERED],reg.i.rst_pars.period,reg.i.rst_pars.period_iters);
-
-    regConvSimulateRT(&reg, 0.0);
+     regConvSimulateRT(&reg, 0.0);
 
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_signal *s, enum reg_mode reg_mode, char *label)
+uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_signal *s, enum reg_mode mode, char *label)
 /*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t status = 0;
     float    pure_delay_periods;
 
     reg.mode = REG_NONE;
@@ -420,24 +411,29 @@ uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_sign
     pure_delay_periods = reg_pars->pure_delay_periods > 0.0 ? reg_pars->pure_delay_periods :
                          regConvPureDelay(&reg, &s->meas, reg_pars->period_iters);
 
-    status = regRstInit(&s->rst_pars,
-                        reg.iter_period, reg_pars->period_iters, &reg.load_pars,
-                        reg_pars->auxpole1_hz, reg_pars->auxpoles2_hz, reg_pars->auxpoles2_z,
-                        reg_pars->auxpole4_hz, reg_pars->auxpole5_hz,
-                        pure_delay_periods,
-                        reg_pars->track_delay_periods,
-                        reg_mode, &reg_pars->rst);
+    if(regConvRstInit(&reg, mode, REG_OPERATIONAL_RST_PARS, reg_pars->period_iters,
+                      reg_pars->auxpole1_hz, reg_pars->auxpoles2_hz, reg_pars->auxpoles2_z,
+                      reg_pars->auxpole4_hz, reg_pars->auxpole5_hz,
+                      pure_delay_periods,
+                      reg_pars->track_delay_periods,
+                      reg_pars->rst.r,
+                      reg_pars->rst.s,
+                      reg_pars->rst.t) == 0)
+     {
+        printf("Fatal - failed to initialise %s RST regulator: next RST parameters structure still pending switch by RT thread\n", label);
+        exit(EXIT_FAILURE);
+     }
 
-    if(status == REG_FAULT)
+    if(s->op_rst_pars.debug.status == REG_FAULT)
     {
         ccTestPrintError("failed to initialise %s RST regulator: S has unstable poles - try reducing AUXPOLE frequencies", label);
         return(EXIT_FAILURE);
     }
 
-    if(status == REG_WARNING)
+    if(s->op_rst_pars.debug.status == REG_WARNING)
     {
         ccTestPrintError("%s RST regulator warning: Modulus Margin (%.2f) is less than %.1f - try reducing AUXPOLE frequencies",
-                label, s->rst_pars.modulus_margin, REG_MM_WARNING_THRESHOLD);
+                label, s->op_rst_pars.debug.modulus_margin, REG_MM_WARNING_THRESHOLD);
     }
 
     s->err_rate = reg_pars->err_rate;

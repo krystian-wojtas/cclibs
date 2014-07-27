@@ -97,7 +97,7 @@ static void ccRunStartFunction(uint32_t func_idx)
     ccrun.fgen_func     = funcs[ccpars_global.function[func_idx]].fgen_func;
     ccrun.fg_pars       = funcs[ccpars_global.function[func_idx]].fg_pars;
 
-    regConvSetModeRT(&reg, ccpars_global.reg_mode[func_idx], 0);
+    regConvSetModeRT(&reg, ccpars_global.reg_mode[func_idx], REG_OPERATIONAL_RST_PARS, 0);
 
     ccrun.ref_advance[func_idx] = reg.ref_advance;
 
@@ -198,7 +198,7 @@ void ccRunSimulation(void)
 
             ccrun.vs_tripped_flag = 1;
 
-            regConvSetModeRT(&reg, REG_VOLTAGE, 0);
+            regConvSetModeRT(&reg, REG_VOLTAGE, REG_OPERATIONAL_RST_PARS, 0);
 
             ref = reg.ref = reg.ref_limited = reg.ref_rst = reg.v.ref = reg.v.ref_sat = reg.v.ref_limited = 0.0;
 
