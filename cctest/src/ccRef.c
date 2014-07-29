@@ -258,7 +258,7 @@ uint32_t ccRefInitTABLE(struct fg_meta *fg_meta)
     fg_error = fgTableInit(ccrun.fg_limits,
                            ccRefLimitsPolarity(ccpars_limits.invert_limits, ccpars_load.pol_swi_auto),
                            &ccpars_table.config,
-                           ccpars_global.run_delay, reg.iter_period,
+                           ccpars_global.run_delay, conv.iter_period,
                            &ccpars_table.table_pars, fg_meta);
 
     // Report error if initialisation fails
@@ -519,7 +519,7 @@ uint32_t ccRefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
 
             return(0);          // 0 means function not finished
         }
-        else if(reg.rst_vars.meas[0] < ccpars_start.closeloop_level)
+        else if(conv.rst_vars.meas[0] < ccpars_start.closeloop_level)
         {
             // Apply feedforward voltage reference to start converter in openloop
 
@@ -533,14 +533,14 @@ uint32_t ccRefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
         {
             // Calculate rate of rise
 
-            ccpars_start.config.linear_rate = regRstDeltaRefRT(&reg.rst_vars) / reg.period;
+            ccpars_start.config.linear_rate = regRstDeltaRefRT(&conv.rst_vars) / conv.period;
 
             // Initialise PLEP function to continue this ramp rate up to the start plateau
 
             fgPlepCalc(&ccpars_start.config,
                         pars,
-                        reg.time,
-                        regRstPrevRefRT(&reg.rst_vars),
+                        ccrun.reg_time,
+                        regRstPrevRefRT(&conv.rst_vars),
                         ccpars_start.config.linear_rate,
                         &fg_meta);
 
@@ -573,7 +573,7 @@ enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
 
     if(limits->user_data == REG_FIELD)
     {
-        i_ref  = regLoadFieldToCurrentRT(&reg.load_pars, ref);
+        i_ref  = regLoadFieldToCurrentRT(&conv.load_pars, ref);
         rate  *= i_ref / ref;
     }
     else
@@ -583,8 +583,8 @@ enum fg_error ccRefCheckConverterLimits(struct fg_limits *limits, uint32_t inver
 
     // Use load model to estimate voltage required for this current and rate of change of current
 
-    v_ref = i_ref * reg.load_pars.ohms +
-            rate  * reg.load_pars.henrys * regLoadSatFactorRT(&reg.load_pars, i_ref);
+    v_ref = i_ref * conv.load_pars.ohms +
+            rate  * conv.load_pars.henrys * regLoadSatFactorRT(&conv.load_pars, i_ref);
 
     // Calculate the voltage limits for the current i_ref, taking into account invert_limits
 

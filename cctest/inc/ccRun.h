@@ -53,7 +53,6 @@ struct ccrun_vars
     struct fg_meta         fg_meta[MAX_FUNCS];         ///< Reference function meta data for all functions
     float                  ref_advance[MAX_FUNCS];     ///< Ref advance used with each function (for debugging)
     float                  max_abs_err[MAX_FUNCS];     ///< Max absolute regulation for each function (when regulation is active)
-    struct reg_meas_signal invalid_meas;               ///< Measured signal structure with invalid status
 };
 
 CCRUN_EXT struct ccrun_vars ccrun;

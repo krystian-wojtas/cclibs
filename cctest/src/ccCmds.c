@@ -417,8 +417,8 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
         }
         // Initialise regulation - must be after ccInitSimulation()
 
-        if(ccInitRegulation(&ccpars_breg, &reg.b, REG_FIELD,   "FIELD"  ) == EXIT_FAILURE ||
-           ccInitRegulation(&ccpars_ireg, &reg.i, REG_CURRENT, "CURRENT") == EXIT_FAILURE)
+        if((ccrun.breg_flag == 1 && ccInitRegulation(&ccpars_breg, &conv.b, REG_FIELD,   "FIELD"  ) == EXIT_FAILURE) ||
+           (ccrun.ireg_flag == 1 && ccInitRegulation(&ccpars_ireg, &conv.i, REG_CURRENT, "CURRENT") == EXIT_FAILURE))
         {
             // If STOP_ON_ERROR is DISABLED then dump debug data automatically to stdout
 
