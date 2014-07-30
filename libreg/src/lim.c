@@ -56,9 +56,6 @@
 //-----------------------------------------------------------------------------------------------------------
 void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
                     float low_lim, float zero_lim, uint32_t invert_limits)
-/*---------------------------------------------------------------------------------------------------------*\
- This function will initialise the measurement limits based on the pos/neg, zero and low limits supplied.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     lim_meas->invert_limits   = invert_limits;
     lim_meas->pos_trip        = pos_lim  * (1.0 + REG_LIM_TRIP);
@@ -71,6 +68,25 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
     lim_meas->flags.trip = 0;
     lim_meas->flags.low  = 0;
     lim_meas->flags.zero = 0;
+}
+//-----------------------------------------------------------------------------------------------------------
+void regLimMeasRmsInit(struct reg_lim_meas *lim_meas, float rms_trip, float rms_warning, float rms_tc, float iter_period)
+{
+    if(rms_tc > 0.0)
+    {
+        lim_meas->meas2_filter_factor = iter_period / rms_tc;
+
+        lim_meas->rms2_trip               = rms_trip * rms_trip;
+        lim_meas->rms2_warning            = rms_warning * rms_warning;
+        lim_meas->rms2_warning_hysteresis = lim_meas->rms2_warning * (1.0 - 2.0 * REG_LIM_HYSTERESIS);
+    }
+    else
+    {
+        lim_meas->meas2_filter_factor = 0.0;
+    }
+
+    lim_meas->flags.rms_trip    = 0;
+    lim_meas->flags.rms_warning = 0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim,
@@ -143,38 +159,69 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
 void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
 /*---------------------------------------------------------------------------------------------------------*\
  This function will check the measurement against the trip levels and the absolute measurement against
- the low and zero limits with hysteresis to avoid toggling.
+ the low and zero limits with hysteresis to avoid toggling. It also
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float abs_meas = fabs(meas);
 
-    if(lim_meas->invert_limits == 0)
-    {
-        // Trip level - negative limit is only active if less than zero
+    // Invert measurement if limits are inverted
 
-        if((meas > lim_meas->pos_trip) || (lim_meas->neg_trip < 0.0 && meas < lim_meas->neg_trip))
-        {
-            lim_meas->flags.trip = 1;
-        }
-        else
-        {
-            lim_meas->flags.trip = 0;
-        }
+    if(lim_meas->invert_limits != 0)
+    {
+        meas = -meas;
     }
-    else    // Invert limits before use - this may be necessary if a polarity switch is in the negative position
-    {
-        // Trip level - negative limit is only active if less than zero
 
-        if((meas < -lim_meas->pos_trip) || (lim_meas->neg_trip < 0.0 && meas > -lim_meas->neg_trip))
-        {
-            lim_meas->flags.trip = 1;
-        }
-        else
-        {
-            lim_meas->flags.trip = 0;
-        }
+    // Trip level - negative limit is only active if less than zero
+
+    if((meas > lim_meas->pos_trip) || (lim_meas->neg_trip < 0.0 && meas < lim_meas->neg_trip))
+    {
+        lim_meas->flags.trip = 1;
+    }
+    else
+    {
+        lim_meas->flags.trip = 0;
     }
     
+    // RMS measurement test
+
+    if(lim_meas->meas2_filter_factor > 0.0)
+    {
+        // Use first order filter on measurement squared
+
+        lim_meas->meas2_filter += (meas * meas - lim_meas->meas2_filter) * lim_meas->meas2_filter_factor;
+
+        // Apply trip limit if defined
+
+        if(lim_meas->rms2_trip > 0.0 && lim_meas->meas2_filter > lim_meas->rms2_trip)
+        {
+            lim_meas->flags.rms_trip = 1;
+        }
+        else
+        {
+            lim_meas->flags.rms_trip = 0;
+        }
+
+        // Apply warning limit (with hysteresis if defined)
+
+        if(lim_meas->rms2_warning > 0.0)
+        {
+            if(lim_meas->flags.rms_warning == 0)
+            {
+                if(lim_meas->meas2_filter > lim_meas->rms2_warning)
+                {
+                    lim_meas->flags.rms_warning = 1;
+                }
+            }
+            else
+            {
+                if(lim_meas->meas2_filter < lim_meas->rms2_warning_hysteresis)
+                {
+                    lim_meas->flags.rms_warning = 0;
+                }
+            }
+        }
+    }
+
     // Zero flag
 
     if(lim_meas->flags.zero)

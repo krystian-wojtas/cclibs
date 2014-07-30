@@ -59,9 +59,9 @@ MEAS INVALID_MEAS_PERIOD_ITERS  0
 
 # Current regulation
 
-IREG CLBW                       2
-IREG CLBW2                      2
-IREG Z                          0.5
+IREG AUXPOLE1_HZ                2
+IREG AUXPOLES2_HZ               2
+IREG AUXPOLES2_Z                0.5
 
 # PLEP function
 

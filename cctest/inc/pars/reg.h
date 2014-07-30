@@ -54,11 +54,11 @@ struct ccpars_reg_pars
     enum reg_err_rate   err_rate;                   // Regulation error rate control
     float               pure_delay_periods;         // Regulation pure delay in periods (0 to use automatic calculation)
     float               track_delay_periods;        // Regulation track delay in periods (0 to use automatic calculation)
-    float               clbw;                       // Regulation closed loop bandwidth (real pole)
-    float               clbw2;                      // Regulation closed loop bandwidth (conjugate poles)
-    float               clbw3;                      // Regulation closed loop bandwidth (2nd real pole)
-    float               clbw4;                      // Regulation closed loop bandwidth (3rd real pole)
-    float               z;                          // Regulation conjugate poles damping factor (0.5-0.8)
+    float               auxpole1_hz;                // Frequency of (real) auxiliary pole 1
+    float               auxpoles2_hz;               // Frequency of (conjugate) auxiliary poles 2 & 3
+    float               auxpoles2_z;                // Damping of (conjugate) auxiliary poles 2 & 3
+    float               auxpole4_hz;                // Frequency of (real) auxiliary pole 4
+    float               auxpole5_hz;                // Frequency of (real) auxiliary pole 5
     struct reg_rst      rst;                        // Regulation RST coefficient
 };
 
@@ -69,11 +69,11 @@ CCPARS_REG_EXT struct ccpars_reg_pars ccpars_breg
         REG_ERR_RATE_REGULATION,    // BREG ERR_RATE
         0.0,                        // BREG PURE_DELAY_PERIODS
         0.0,                        // BREG TRACK_DELAY_PERIODS
-        10.0,                       // BREG CLBW
-        10.0,                       // BREG CLBW2
-        10.0,                       // BREG CLBW3
-        10.0,                       // BREG CLBW4
-        0.5,                        // BREG Z
+        10.0,                       // BREG AUXPOLE1_HZ
+        10.0,                       // BREG AUXPOLES2_HZ
+        0.5,                        // BREG AUXPOLES2_Z
+        10.0,                       // BREG AUXPOLE4_HZ
+        10.0,                       // BREG AUXPOLE5_HZ
         { {  0.0  },                // BREG R
           {  0.0  },                // BREG S
           {  0.0  } },              // BREG T
@@ -88,11 +88,11 @@ CCPARS_REG_EXT struct ccpars_reg_pars ccpars_ireg
         REG_ERR_RATE_REGULATION,    // IREG ERR_RATE
         0.0,                        // IREG PURE_DELAY_PERIODS
         0.0,                        // IREG TRACK_DELAY_PERIODS
-        10.0,                       // IREG CLBW
-        10.0,                       // IREG CLBW2
-        10.0,                       // IREG CLBW3
-        10.0,                       // IREG CLBW4
-        0.5,                        // IREG Z
+        10.0,                       // IREG AUXPOLE1_HZ
+        10.0,                       // IREG AUXPOLES2_HZ
+        0.5,                        // IREG AUXPOLES2_Z
+        10.0,                       // IREG AUXPOLE4_HZ
+        10.0,                       // IREG AUXPOLE5_HZ
         { {  0.0  },                // IREG R
           {  0.0  },                // IREG S
           {  0.0  } },              // IREG T
@@ -102,7 +102,7 @@ CCPARS_REG_EXT struct ccpars_reg_pars ccpars_ireg
 
 // Libreg structures
 
-CCPARS_REG_EXT struct reg_conv reg;            // Libreg converter regulation structure
+CCPARS_REG_EXT struct reg_conv conv;            // Libreg converter regulation structure
 
 // Define Field and Current regulation parameters description structures
 
@@ -113,11 +113,11 @@ CCPARS_REG_EXT struct ccpars breg_pars[]
     { "ERR_RATE",           PAR_ENUM,     1,                1, err_rate,    { .i = &ccpars_breg.err_rate            }, 1 },
     { "PURE_DELAY_PERIODS", PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.pure_delay_periods  }, 1 },
     { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.track_delay_periods }, 1 },
-    { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw                }, 1 },
-    { "CLBW2",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw2               }, 1 },
-    { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw3               }, 1 },
-    { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.clbw4               }, 1 },
-    { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.z                   }, 1 },
+    { "AUXPOLE1_HZ",        PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.auxpole1_hz         }, 1 },
+    { "AUXPOLES2_HZ",       PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.auxpoles2_hz        }, 1 },
+    { "AUXPOLES2_Z",        PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.auxpoles2_z         }, 1 },
+    { "AUXPOLE4_HZ",        PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.auxpole4_hz         }, 1 },
+    { "AUXPOLE5_HZ",        PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_breg.auxpole5_hz         }, 1 },
     { "R",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.r               }, 0 },
     { "S",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.s               }, 0 },
     { "T",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_breg.rst.t               }, 0 },
@@ -133,11 +133,11 @@ CCPARS_REG_EXT struct ccpars ireg_pars[]
     { "ERR_RATE",           PAR_ENUM,     1,                1, err_rate,    { .i = &ccpars_ireg.err_rate            }, 1 },
     { "PURE_DELAY_PERIODS", PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.pure_delay_periods  }, 1 },
     { "TRACK_DELAY_PERIODS",PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.track_delay_periods }, 1 },
-    { "CLBW",               PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw                }, 1 },
-    { "CLBW2",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw2               }, 1 },
-    { "CLBW3",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw3               }, 1 },
-    { "CLBW4",              PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.clbw4               }, 1 },
-    { "Z",                  PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.z                   }, 1 },
+    { "AUXPOLE1_HZ",        PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.auxpole1_hz         }, 1 },
+    { "AUXPOLES2_HZ",       PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.auxpoles2_hz        }, 1 },
+    { "AUXPOLES2_Z",        PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.auxpoles2_z         }, 1 },
+    { "AUXPOLE4_HZ",        PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.auxpole4_hz         }, 1 },
+    { "AUXPOLE5_HZ",        PAR_FLOAT,    1,                1, NULL,        { .f = &ccpars_ireg.auxpole5_hz         }, 1 },
     { "R",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.r               }, 0 },
     { "S",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.s               }, 0 },
     { "T",                  PAR_DOUBLE,   REG_N_RST_COEFFS, 0, NULL,        { .d =  ccpars_ireg.rst.t               }, 0 },

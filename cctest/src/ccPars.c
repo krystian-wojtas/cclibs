@@ -343,30 +343,32 @@ static void ccParsPrintDebugLoad(FILE *f, char *prefix, struct reg_load_pars *lo
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccParsPrintDebugReg(FILE *f, char *prefix, struct reg_conv_signal *r)
+static void ccParsPrintDebugReg(FILE *f, char *prefix, struct reg_conv_signal *reg_signal)
 /*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t i;
 
-    fprintf(f,"%s" INT_FORMAT "\n",  ccParsDebugLabel(prefix, "alg_index"),   r->rst_pars.alg_index);
-    fprintf(f,"%s" INT_FORMAT "\n",  ccParsDebugLabel(prefix, "dead_beat"),   r->rst_pars.dead_beat);
-    fprintf(f,"%s" INT_FORMAT "\n",  ccParsDebugLabel(prefix, "jurys_result"),r->rst_pars.jurys_result);
+    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "alg_index"),           reg_signal->rst_pars->alg_index);
+    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "dead_beat"),           reg_signal->rst_pars->dead_beat);
+    fprintf(f,"%s" INT_FORMAT    "\n", ccParsDebugLabel(prefix, "jurys_result"),        reg_signal->rst_pars->jurys_result);
+    fprintf(f,"%s" FLOAT_FORMAT  "\n", ccParsDebugLabel(prefix, "modulus_margin"),      reg_signal->rst_pars->modulus_margin);
+    fprintf(f,"%s" FLOAT_FORMAT  "\n", ccParsDebugLabel(prefix, "modulus_margin_freq"), reg_signal->rst_pars->modulus_margin_freq);
 
-    fprintf(f,"%s" DOUBLE_FORMAT "\n",  ccParsDebugLabel(prefix, "pure_delay_periods"),  r->rst_pars.pure_delay_periods);
-    fprintf(f,"%s" DOUBLE_FORMAT "\n",  ccParsDebugLabel(prefix, "track_delay_periods"), r->rst_pars.track_delay_periods);
-    fprintf(f,"%s" DOUBLE_FORMAT "\n",  ccParsDebugLabel(prefix, "ref_delay_periods"),   r->rst_pars.ref_delay_periods);
-    fprintf(f,"%s" DOUBLE_FORMAT "\n",  ccParsDebugLabel(prefix, "t0_correction"),       r->rst_pars.t0_correction);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "pure_delay_periods"),  reg_signal->rst_pars->pure_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "track_delay_periods"), reg_signal->rst_pars->track_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "ref_delay_periods"),   reg_signal->rst_pars->ref_delay_periods);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "t0_correction"),       reg_signal->rst_pars->t0_correction);
 
     for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
     {
         fprintf(f,"%s" DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT " "
                        DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "R:S:T:A:B:AS+BR"),
-                       r->rst_pars.rst.r[i],
-                       r->rst_pars.rst.s[i],
-                       r->rst_pars.rst.t[i],
-                       r->rst_pars.a[i],
-                       r->rst_pars.b[i],
-                       r->rst_pars.asbr[i]);
+                       reg_signal->rst_pars->rst.r[i],
+                       reg_signal->rst_pars->rst.s[i],
+                       reg_signal->rst_pars->rst.t[i],
+                       reg_signal->rst_pars->a[i],
+                       reg_signal->rst_pars->b[i],
+                       reg_signal->rst_pars->asbr[i]);
     }
 
     fputc('\n',f);
@@ -379,20 +381,18 @@ void ccParsPrintDebug(FILE *f)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        ccParsPrintDebugLoad(f, "LOAD", &reg.load_pars);
+        ccParsPrintDebugLoad(f, "LOAD", &conv.load_pars);
 
-        fprintf(f,"%s" INT_FORMAT "\n",    ccParsDebugLabel("SIMLOAD", "vs_undersampled_flag"),
-                reg.sim_load_pars.vs_undersampled_flag);
         fprintf(f,"%s" INT_FORMAT "\n",    ccParsDebugLabel("SIMLOAD", "load_undersampled_flag"),
-                reg.sim_load_pars.load_undersampled_flag);
+                conv.sim_load_pars.load_undersampled_flag);
         fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel("SIMLOAD", "period_tc_ratio"),
-                reg.sim_load_pars.period_tc_ratio);
+                conv.sim_load_pars.period_tc_ratio);
 
-        if(reg.sim_load_pars.tc_error != 0.0)
+        if(conv.sim_load_pars.tc_error != 0.0)
         {
-            fprintf(f,"%s" FLOAT_FORMAT "\n",ccParsDebugLabel("SIMLOAD", "tc_error"), reg.sim_load_pars.tc_error);
+            fprintf(f,"%s" FLOAT_FORMAT "\n",ccParsDebugLabel("SIMLOAD", "tc_error"), conv.sim_load_pars.tc_error);
 
-            ccParsPrintDebugLoad(f, "SIMLOAD", &reg.sim_load_pars.load_pars);
+            ccParsPrintDebugLoad(f, "SIMLOAD", &conv.sim_load_pars.load_pars);
         }
 
         // Report internally calculated voltage source parameters
@@ -400,26 +400,28 @@ void ccParsPrintDebug(FILE *f)
         for(i = 0 ; i < REG_N_VS_SIM_COEFFS ; i++)
         {
             fprintf(f,"%-*s" DOUBLE_FORMAT "  " DOUBLE_FORMAT "\n", PARS_INDENT, "SIMVS num:den",
-                     reg.sim_vs_pars.num[i],
-                     reg.sim_vs_pars.den[i]);
+                     conv.sim_vs_pars.num[i],
+                     conv.sim_vs_pars.den[i]);
         }
 
-        fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_delay_iters",       reg.sim_vs_pars.vs_delay_iters);
-        fprintf(f,"%-*s"   FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_tustin_delay_iters",reg.sim_vs_pars.vs_tustin_delay_iters);
-        fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",                 reg.sim_vs_pars.gain);
+        fprintf(f,"%s"     INT_FORMAT   "\n",   ccParsDebugLabel("SIMVS", "vs_undersampled_flag"), conv.sim_vs_pars.vs_undersampled_flag);
+        fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_delay_iters",       conv.sim_vs_pars.vs_delay_iters);
+        fprintf(f,"%-*s"   FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_tustin_delay_iters",conv.sim_vs_pars.vs_tustin_delay_iters);
+        fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",                 conv.sim_vs_pars.gain);
+
 
         // Report internally calculated field regulation parameters
 
         if(ccrun.breg_flag == 1)
         {
-            ccParsPrintDebugReg(f, "BREG", &reg.b);
+            ccParsPrintDebugReg(f, "BREG", &conv.b);
         }
 
         // Report internally calculated current regulation parameters
 
         if(ccrun.ireg_flag == 1)
         {
-            ccParsPrintDebugReg(f, "IREG", &reg.i);
+            ccParsPrintDebugReg(f, "IREG", &conv.i);
         }
     }
 

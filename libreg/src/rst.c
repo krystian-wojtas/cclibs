@@ -28,12 +28,27 @@
 
 // Constants
 
-#define M_TWO_PI           (2.0 * M_PI)
-#define FLOAT_THRESHOLD     1.0E-10
+#define M_TWO_PI                   (2.0*M_PI)
+#define FLOAT_THRESHOLD            1.0E-10
+#define REG_AVE_V_REF_LEN          4                            // Number of iterations over which to average V_REF
+#define REG_TRACK_DELAY_FLTR_TC    100                          // Track delay measurement filter time constant (periods)
+#define REG_MM_STEPS               20                           // Number of steps to cover modulus margin scan
+
+#define MINIMUM(A,B)               (A<B?A:B)
+#define REG_MM_FREQ(index)         (0.1 + (9.9 / (REG_MM_STEPS*REG_MM_STEPS*REG_MM_STEPS)) * (float)(index*index*index))
+
+// Typedef for complex numbers
+
+typedef struct complex
+{
+    double  real;
+    double  imag;
+} complex;
 
 // Static function declarations
 
-static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx);
+static double regVectorMultiply (double *p, double *m, int32_t p_order, int32_t m_idx);
+static float  regAbsComplexRatio(double *num, double *den, double k);
 
 //-----------------------------------------------------------------------------------------------------------
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
@@ -46,12 +61,12 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
     double      d;
     double      a[REG_N_RST_COEFFS];
     double      b[REG_N_RST_COEFFS];
+    double      sum_even_s;                     // Sum of even S coefficients: s[0]+s[2]+s[4]+...
+    double      sum_odd_s;                      // Sum of odd S coefficients:  s[1]+s[3]+s[5]+...
 
     // Jury's test -1: s[0] > 0 for stability
 
-    pars->jury[0] = pars->rst.s[0];
-
-    if(pars->jury[0] < FLOAT_THRESHOLD)
+    if(pars->rst.s[0] < FLOAT_THRESHOLD)
     {
         return(-1);
     }
@@ -64,30 +79,30 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
 
     // Transfer s[] to b[] and sum even and odd coefficients of s[] separately
 
-    for(i = 0, pars->sum_odd_s = 0.0, pars->sum_even_s = 0.0 ; i <= n ; i++)
+    for(i = 0, sum_odd_s = 0.0, sum_even_s = 0.0 ; i <= n ; i++)
     {
         b[i] = pars->rst.s[i];
 
         if((i & 1) == 0)
         {
-            pars->sum_even_s += b[i];
+            sum_even_s += b[i];
         }
         else
         {
-            pars->sum_odd_s += b[i];
+            sum_odd_s += b[i];
         }
     }
 
     // Jury's test -2 : s(1) > 0 for stability - allow for floating point rounding errors
 
-    if((pars->sum_even_s + pars->sum_odd_s) < -FLOAT_THRESHOLD)
+    if((sum_even_s + sum_odd_s) < -FLOAT_THRESHOLD)
     {
         return(-2);
     }
 
     // Jury's test -3 : (-1)^n . s(-1) > 0 for stability
 
-    if(pars->sum_even_s < pars->sum_odd_s)
+    if(sum_even_s < sum_odd_s)
     {
         return(-3);
     }
@@ -108,8 +123,6 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
             b[i] = a[i] - d * a[n - i];
         }
 
-        pars->jury[++jury_idx] = b[0];
-
         // Jury's tests 1 - (n-2) : First element of every row of Jury's array > 0 for stability
 
         if(b[0] <= 0.0)
@@ -123,14 +136,115 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
 
     return(0);
 }
+//-----------------------------------------------------------------------------------------------------------
+static float regModulusMargin(struct reg_rst_pars *pars)
+{
+    int32_t     frequency_index;
+    int32_t     frequency_index_step;                       // +/-1
+    float       frequency_fraction;                         // 1 = regulation frequency, 0.5 = Nyquist
+    float       frequency_fraction_for_min_abs_S_p_y;
+    float       abs_S_p_y;                                  // Current value of the sensitivity function
+
+    // For algorithm 1 (dead-beat, 1 period delay), the modulous margin comes at the Nyquist
+
+    if(pars->alg_index == 1)
+    {
+        pars->modulus_margin = regAbsComplexRatio(pars->asbr, pars->as, 0.5);
+    }
+    else // for algorithms 2-5, scan for minimum abs_S_p_y (this is the modulus margin)
+    {
+        // Limit scan frequency range from 0.1 x min_auxpole_hz to 10 x min_auxpole_hz.
+        // Frequency steps size follows a cubic because abs_S_p_y changes more quickly at lower
+        // frequencies. Start the scan in the middle of the range and stop scan at the minimum
+        // abs_S_p_y or the Nyquist.
+
+        // Start in the middle of the linearised range
+
+        frequency_index = REG_MM_STEPS / 2;
+        frequency_fraction_for_min_abs_S_p_y =
+        frequency_fraction = pars->min_auxpole_hz * pars->period * REG_MM_FREQ(frequency_index);
+
+        // If this frequency is over the Nyquist, report a bad modulus margin (0)
+
+        if(frequency_fraction > 0.5)
+        {
+            return(0.0);
+        }
+
+        // Evaluate abs_S_p_y on cons
+
+        pars->modulus_margin = regAbsComplexRatio(pars->asbr, pars->as, frequency_fraction);
+        frequency_index--;
+        frequency_fraction = pars->min_auxpole_hz * pars->period * REG_MM_FREQ(frequency_index);
+        abs_S_p_y = regAbsComplexRatio(pars->asbr, pars->as, frequency_fraction);
+
+        if(abs_S_p_y < pars->modulus_margin)
+        {
+            frequency_index_step = -1;
+        }
+        else
+        {
+            abs_S_p_y = pars->modulus_margin;
+            frequency_fraction = frequency_fraction_for_min_abs_S_p_y;
+            frequency_index_step = 1;
+            frequency_index++;
+        }
+
+        frequency_index += frequency_index_step;
+
+        do
+        {
+            pars->modulus_margin = abs_S_p_y;
+            frequency_fraction_for_min_abs_S_p_y = frequency_fraction;
+
+            frequency_fraction = pars->min_auxpole_hz * pars->period * REG_MM_FREQ(frequency_index);
+
+            abs_S_p_y = regAbsComplexRatio(pars->asbr, pars->as, frequency_fraction);
+
+            frequency_index += frequency_index_step;
+
+        } while(frequency_index >= 0 && frequency_index <= REG_MM_STEPS && frequency_fraction < 0.5 && abs_S_p_y < pars->modulus_margin);
+
+        pars->modulus_margin_freq = frequency_fraction_for_min_abs_S_p_y / pars->period;
+    }
+
+    return(pars->modulus_margin);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static float regAbsComplexRatio(double *num, double *den, double k)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    int32_t     idx;
+    double      cosine;
+    double      sine;
+    double      w;
+    complex     num_exp = { 0.0, 0.0 };
+    complex     den_exp = { 0.0, 0.0 };
+
+    for(idx = 0 ; idx < REG_N_RST_COEFFS; idx++)
+    {
+        w      = M_TWO_PI * (double)(idx + 1) * k;
+        cosine = cos(w);
+        sine   = sin(w);
+
+        num_exp.real += num[idx] * cosine;
+        num_exp.imag -= num[idx] * sine;
+
+        den_exp.real += den[idx] * cosine;
+        den_exp.imag -= den[idx] * sine;
+    }
+
+    return(sqrt(num_exp.real * num_exp.real + num_exp.imag * num_exp.imag) /
+           sqrt(den_exp.real * den_exp.real + den_exp.imag * den_exp.imag));
+}
 /*---------------------------------------------------------------------------------------------------------*/
 static void regRstInitPII(struct reg_rst_pars  *pars,
                           struct reg_load_pars *load,
-                          float                 clbw,
-                          float                 clbw2,
-                          float                 z,
-                          float                 clbw3,
-                          float                 clbw4)
+                          float                 auxpole1_hz,
+                          float                 auxpoles2_hz,
+                          float                 auxpoles2_z,
+                          float                 auxpole4_hz,
+                          float                 auxpole5_hz)
 /*---------------------------------------------------------------------------------------------------------*\
   This function prepares coefficients for the RST regulation algorithm. It chooses the algorithm to use
   based on pars->pure_delay_iters. It is divided into 5 ranges, two result in dead-beat PII
@@ -138,7 +252,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
   FIR filter notches must be at least ten times the bandwidth because they not included in the load model.
 
   It can be used with slow inductive circuits as well as fast or even resistive loads.  For fast loads,
-  clbw is set to 1.0E+5 and z to 0.8.  Normally clbw should equal clbw2 and z should be 0.5.
+  auxpole1_hz is set to 1.0E+5 and z to 0.8.  Normally auxpole1_hz should equal auxpoles2_hz and z should be 0.5.
 
   The pure_delay_iters parameter informs the algorithm of the pure delay around the loop.  This can be
   a dynamic behaviour (i.e. of the voltage source or filters) crudely modelled as a pure delay for low
@@ -184,6 +298,10 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     b0_b1 = load->gain1 * a2;
 
+    // Identify minimum frequency of an auxiliary pole
+
+    pars->min_auxpole_hz = MINIMUM(auxpole1_hz, auxpoles2_hz);
+
     // Select the algorithm to use according to the pure delay
 
     if(pars->pure_delay_periods < 0.401)
@@ -215,6 +333,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->alg_index = 3;
         b0 = b0_b1 * (2.0 - pars->pure_delay_periods);
         b1 = b0_b1 * (pars->pure_delay_periods - 1.0);
+        pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole4_hz);
     }
     else if (pars->pure_delay_periods < 2.00)
     {
@@ -265,9 +384,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     // Calculate intermediate values
 
-    c1 = -exp(-pars->period * M_TWO_PI * clbw);
-    q1 = -exp(-pars->period * M_TWO_PI * clbw2 * z);
-    d1 = 2.0 * q1 * cos(pars->period * M_TWO_PI * clbw2 * sqrt(1.0 - z * z));
+    c1 = -exp(-pars->period * M_TWO_PI * auxpole1_hz);
+    q1 = -exp(-pars->period * M_TWO_PI * auxpoles2_hz * auxpoles2_z);
+    d1 = 2.0 * q1 * cos(pars->period * M_TWO_PI * auxpoles2_hz * sqrt(1.0 - auxpoles2_z * auxpoles2_z));
     d2 = q1 * q1;
 
     // Calculate RST coefficients
@@ -328,7 +447,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     case 3:                 // Algorithm 3 : Pure delay fraction 1.0 - 1.401 : dead-beat (2)
 
-        c2 = -exp(-pars->period * M_TWO_PI * clbw3);
+        pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole4_hz);
+        c2 = -exp(-pars->period * M_TWO_PI * auxpole4_hz);
         q1 = 2.0 - a1 + c1 + c2 + d1;
 
         pars->rst.r[0] = q1*(2.0 - a1) + d2 + c1*c2 + d1*(c1 + c2) + 2.0*a1 - 1.0;
@@ -354,7 +474,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     case 4:                 // Algorithm 4 : Pure delay fraction 1.401 - 1.999 : not dead-beat
 
-        c2 = -exp(-pars->period * M_TWO_PI * clbw3);
+        pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole4_hz);
+        c2 = -exp(-pars->period * M_TWO_PI * auxpole4_hz);
 
         pars->rst.r[0] = (4*a1 + 2*c1 + 2*c2 + 2*d1 + d2 + 3*a1*c1 + 3*a1*c2 + 3*a1*d1 + 2*a1*d2 + c1*c2 + c1*d1 + c2*d1 +
                           2*a1*c1*c2 + 2*a1*c1*d1 + a1*c1*d2 + 2*a1*c2*d1 + a1*c2*d2 - c1*c2*d2 + a1*c1*c2*d1 + 3)/(b0_b1*(a1 + 1)*(a1 + 1)) + 
@@ -394,8 +515,10 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     case 5:                 // Algorithm 5 : Pure delay fraction 2.0 - 2.401 : dead-beat (3)
 
-        c2 = -exp(-pars->period * M_TWO_PI * clbw3);
-        c3 = -exp(-pars->period * M_TWO_PI * clbw4);
+        pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole4_hz);
+        pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole5_hz);
+        c2 = -exp(-pars->period * M_TWO_PI * auxpole4_hz);
+        c3 = -exp(-pars->period * M_TWO_PI * auxpole5_hz);
         q1 = 2.0 - a1 + c1 + c2 + c3 + d1;
         q2 = (2.0 - a1)*q1 + 2.0*a1 - 1 + d2 + c1*c2 + c1*c3 + c2*c3 + c1*d1 + c2*d1 + c3*d1;
 
@@ -423,12 +546,18 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         break;
     }
 
-    // Calculate A.S + B.R to allow analysis using Matlab
+    // Calculate A.S and A.S + B.R to allow Modulus Margin to be calculated later
+
+    for(idx = REG_N_RST_COEFFS-1 ; idx > s_idx ; idx --)
+    {
+        pars->as  [idx] = 0.0;
+        pars->asbr[idx] = 0.0;
+    }
 
     for(idx = s_idx ; s_idx >= 0 || r_idx >= 0 ; s_idx--, r_idx--, idx--)
     {
-        pars->asbr[idx] = regVectorMultiply(pars->a, pars->rst.s, 1, s_idx) +
-                          regVectorMultiply(pars->b, pars->rst.r, 1, r_idx);
+        pars->as  [idx] = regVectorMultiply(pars->a, pars->rst.s, 1, s_idx);
+        pars->asbr[idx] = regVectorMultiply(pars->b, pars->rst.r, 1, r_idx) + pars->as[idx];
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -448,7 +577,7 @@ static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m
 /*---------------------------------------------------------------------------------------------------------*/
 static void regRstInitPI(struct reg_rst_pars  *pars,
                          struct reg_load_pars *load,
-                         float                 clbw)
+                         float                 auxpole1_hz)
 /*---------------------------------------------------------------------------------------------------------*\
   This function prepares coefficients for the RST regulation algorithm to implement a proportional-integral
   controller.  It can be used with fast slightly inductive circuits.
@@ -456,7 +585,7 @@ static void regRstInitPI(struct reg_rst_pars  *pars,
 {
     float a1 = -exp(-pars->period * (load->ohms_ser + load->ohms_mag) * load->inv_henrys);
     float b1 = (1.0 + a1) / (load->ohms_ser + load->ohms_mag);
-    float c1 = -exp(-pars->period * M_TWO_PI * clbw);
+    float c1 = -exp(-pars->period * M_TWO_PI * auxpole1_hz);
 
     pars->alg_index = 10;
 
@@ -477,14 +606,14 @@ static void regRstInitPI(struct reg_rst_pars  *pars,
 /*---------------------------------------------------------------------------------------------------------*/
 static void regRstInitI(struct reg_rst_pars  *pars,
                         struct reg_load_pars *load,
-                        float                 clbw)
+                        float                 auxpole1_hz)
 /*---------------------------------------------------------------------------------------------------------*\
   This function prepares coefficients for the RST regulation algorithm to implement an Integrator only.
   This can be used with resistive circuits.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float b1 = 1.0 / (load->ohms_ser + load->ohms_mag);
-    float c1 = -exp(-M_TWO_PI * pars->period * clbw);
+    float c1 = -exp(-M_TWO_PI * pars->period * auxpole1_hz);
 
     pars->alg_index = 20;
 
@@ -505,11 +634,11 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
                            double                iter_period,
                            uint32_t              period_iters,
                            struct reg_load_pars *load,
-                           float                 clbw,
-                           float                 clbw2,
-                           float                 z,
-                           float                 clbw3,
-                           float                 clbw4,
+                           float                 auxpole1_hz,
+                           float                 auxpoles2_hz,
+                           float                 auxpoles2_z,
+                           float                 auxpole4_hz,
+                           float                 auxpole5_hz,
                            float                 pure_delay_periods,
                            float                 track_delay_periods,
                            enum reg_mode         reg_mode,
@@ -521,7 +650,7 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
   is unstable (has poles outside the unit circle).
 
   Notes:    The algorithms can calculate the RST coefficients from the parameters
-            clbw/clbw2/z/clbw3/clbw4/pure_delay_periods and the load parameters.
+            auxpole1_hz/auxpoles2_hz/auxpoles2_z/auxpole4_hz/auxpole5_hz/pure_delay_periods and the load parameters.
             This only works well if the voltage source bandwidth and FIR notch are much faster
             than the closed loop bandwidth (>10x). Three controllers are selectable:  I, PI, PII.
             For the PII, the regulator may or may not be dead-beat according to the pure delay.
@@ -541,10 +670,11 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
     pars->alg_index          = 0;
     pars->dead_beat          = 0;
     pars->pure_delay_periods = pure_delay_periods;
+    pars->modulus_margin     = 0.0;
 
-    // if CLBW = 0.0 -> MANUAL RST coefficients
+    // if AUXPOLE1 = 0.0 -> MANUAL RST coefficients
 
-    if(clbw <= 0.0)
+    if(auxpole1_hz <= 0.0)
     {
         pars->rst = *manual;
     }
@@ -554,24 +684,22 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
 
         for(i=0 ; i < REG_N_RST_COEFFS ; i++)
         {
-            pars->rst.r[i] = pars->rst.s[i] = pars->rst.t[i] = pars->a[i] = pars->b[i] = pars->asbr[i] = pars->jury[i] = 0.0;
+            pars->rst.r[i] = pars->rst.s[i] = pars->rst.t[i] = pars->a[i] = pars->b[i] = pars->asbr[i] = 0.0;
         }
 
-        pars->sum_even_s = pars->sum_odd_s = 0.0;
+        // Calculate RST coefficients and track delay according to AUXPOLES2_HZ and load inductance
 
-        // Calculate RST coefficients and track delay according to CLBW2 and load inductance
-
-        if(clbw2 > 0.0)                         // If CLBW2 > 0               -> PII regulator (slow inductive load)
+        if(auxpoles2_hz > 0.0)                         // If AUXPOLES2_HZ > 0               -> PII regulator (slow inductive load)
         {
-            regRstInitPII(pars, load, clbw, clbw2, z, clbw3, clbw4);
+            regRstInitPII(pars, load, auxpole1_hz, auxpoles2_hz, auxpoles2_z, auxpole4_hz, auxpole5_hz);
         }
-        else if(load->henrys >= 1.0E-10)        // If CLBW2 <= 0, HENRYS > 0  ->  PI regulator (fast inductive load)
+        else if(load->henrys >= 1.0E-10)               // If AUXPOLES2_HZ <= 0, HENRYS > 0  ->  PI regulator (fast inductive load)
         {
-            regRstInitPI(pars, load, clbw);
+            regRstInitPI(pars, load, auxpole1_hz);
         }
-        else                                    // If CLBW2 <= 0, HENRYS <= 0 ->   I regulator (resistive load)
+        else                                           // If AUXPOLES2_HZ <= 0, HENRYS <= 0 ->   I regulator (resistive load)
         {
-            regRstInitI(pars, load, clbw);
+            regRstInitI(pars, load, auxpole1_hz);
         }
     }
 
@@ -591,10 +719,6 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
     }
     else
     {
-        // RST coefficients are valid and can be used
-
-        pars->status = REG_OK;
-
         // Calculate floating point math correction for T coefficients to ensure that Sum(T) == Sum(R)
 
         t0_correction = 0.0;
@@ -607,23 +731,34 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
         pars->t0_correction    = t0_correction;
         pars->inv_corrected_t0 = 1.0 / (t0_correction + (double)pars->rst.t[0]);
         pars->inv_s0           = 1.0 /  pars->rst.s[0];
-    }
 
-    // Set track_delay to parameter supplied if manual RST coefficients used, or I or PI algorithm
+        // Set track_delay to parameter supplied if manual RST coefficients used, or I or PI algorithm
 
-    if(pars->alg_index == 0 || pars->alg_index >= 10)
-    {
-        pars->track_delay_periods = track_delay_periods;
-    }
-    else // else for PII the track delay can be calculated
-    {
-        if(pars->dead_beat > 0)
+        if(pars->alg_index == 0 || pars->alg_index >= 10)
         {
-            pars->track_delay_periods = (float)pars->dead_beat;
+            pars->track_delay_periods = track_delay_periods;
         }
-        else
+        else // else for PII the track delay can be calculated
         {
-            pars->track_delay_periods = 1.0 + pure_delay_periods;
+            if(pars->dead_beat > 0)
+            {
+                pars->track_delay_periods = (float)pars->dead_beat;
+            }
+            else
+            {
+                pars->track_delay_periods = 1.0 + pure_delay_periods;
+            }
+
+            // Calculate and check Modulus Margin
+
+            if(regModulusMargin(pars) < REG_MM_WARNING_THRESHOLD)
+            {
+                pars->status = REG_WARNING;
+            }
+            else
+            {
+                pars->status = REG_OK;
+            }
         }
     }
 
@@ -653,7 +788,7 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
 
     // Return zero immediately if parameters are invalid
 
-    if(pars->status != REG_OK)
+    if(pars->status == REG_FAULT)
     {
         return(0.0);
     }
@@ -710,7 +845,7 @@ float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
 
     // Return zero immediately if parameters are invalid
 
-    if(pars->status != REG_OK)
+    if(pars->status == REG_FAULT)
     {
         return(0.0);
     }

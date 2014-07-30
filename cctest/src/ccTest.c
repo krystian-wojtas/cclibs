@@ -414,14 +414,13 @@ void ccTestRecoverPath(void)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     FILE   *f;
-    char    path_filename[CC_PATH_LEN];
     char    cwd_buf[CC_PATH_LEN];
 
     // Try to open the file with the path
 
-    snprintf(path_filename, CC_PATH_LEN, "%s/%s", cctest.base_path, CC_CWD_FILE);
+    snprintf(cctest.cwd_file_path, CC_PATH_LEN, "%s/%s", cctest.base_path, CC_CWD_FILE);
 
-    f = fopen(path_filename, "r");
+    f = fopen(cctest.cwd_file_path, "r");
 
     if(f == NULL)
     {

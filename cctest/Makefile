@@ -56,6 +56,7 @@ all: $(exec)
 
 clean:
 	rm -f $(exec) $(dep_path)/*.d $(obj_path)/*.o $(inc_path)/flot.h
+	rm -rf results/debug results/csv results/webplots/tests/* results/webplots/sandbox/*
 
 $(exec): $(objects) $(libfg) $(libreg)
 	@[ -d $(@D) ] || mkdir -p $(@D)

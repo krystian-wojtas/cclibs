@@ -41,6 +41,7 @@ struct ccpars_ramp
     // RAMP file data
 
     float                       initial_ref;
+    float                       initial_rate;
     struct fg_ramp_config       config;                     // Libfg config struct for RAMP
 
     // Libfg RAMP variables
@@ -52,6 +53,7 @@ CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp
 #ifdef GLOBALS
 = {//   Default value           Parameter
         0.0,                 // RAMP INITIAL_REF
+        0.0,                 // RAMP INITIAL_RATE
         {
             1.0,             // RAMP FINAL_REF
             4.0,             // RAMP ACCELERATION
@@ -68,6 +70,7 @@ CCPARS_RAMP_EXT struct ccpars   ramp_pars[]
 #ifdef GLOBALS
 = {// "Signal name"   type, max_n_els,min_n_els,*enum,        *value,                       num_defaults
     { "INITIAL_REF",  PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.initial_ref         }, 1 },
+    { "INITIAL_RATE", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.initial_rate        }, 1 },
     { "FINAL_REF",    PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.config.final        }, 1 },
     { "ACCELERATION", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.config.acceleration }, 1 },
     { "LINEAR_RATE",  PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_ramp.config.linear_rate  }, 1 },

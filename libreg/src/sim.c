@@ -103,7 +103,7 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
         vars->compensation = 0.0;
     }
 
-    regSimLoadRT(pars, vars, vars->circuit_voltage);
+    regSimLoadRT(pars, vars, 0, vars->circuit_voltage);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init)
@@ -118,7 +118,7 @@ void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_va
         vars->compensation    = 0.0;
     }
 
-    regSimLoadRT(pars, vars, v_init);
+regSimLoadRT(pars, vars, 0, v_init);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float iter_period, float bandwidth, float z, float tau_zero)
@@ -198,7 +198,7 @@ void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float iter_period, float b
     pars->den[3] = 0.0;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-uint32_t regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref_delay_iters)
+void regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref_delay_iters)
 /*---------------------------------------------------------------------------------------------------------*\
   This function calculates the gain and the voltage source delay for a steady ramp.
   It returns 1 if the voltage source simulation is under-sampled.
@@ -208,7 +208,7 @@ uint32_t regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars
     float           sum_num  = 0.0;         // Sum(b_i)
     float           sum_den  = 0.0;         // Sum(a_i)
 
-    // Save v_ref_delay so that it can be used later by regCalcPureDelay()
+    // Save v_ref_delay so that it can be used later by regConvPureDelay()
 
     pars->v_ref_delay_iters = v_ref_delay_iters;
 
@@ -246,15 +246,17 @@ uint32_t regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars
         pars->vs_delay_iters = 0.0;
     }
 
-    // Return under-sampled flag
+    // Set or clear under-sampled flag
 
     if(pars->num[0] == 1.0)
     {
         pars->vs_delay_iters = pars->vs_tustin_delay_iters;
-        return(1);
+        pars->vs_undersampled_flag = 1;
     }
-
-    return(0);                                  // Report that model is not under-sampled
+    else
+    {
+        pars->vs_undersampled_flag = 0;
+    }
 }
 /*---------------------------------------------------------------------------------------------------------*/
 float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_circuit)
@@ -318,7 +320,8 @@ float regSimVsRT(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, flo
     return(v_circuit);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_circuit)
+float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
+                   uint32_t vs_undersampled_flag, float v_circuit)
 /*---------------------------------------------------------------------------------------------------------*\
   This function simulates the current in the load in response to the specified load voltage.  The algorithm
   depends upon whether the voltage source simulation and the load are under-sampled.
@@ -355,7 +358,7 @@ float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *var
 
         // If voltage source simulation is not under sampled use first-order interpolation of voltage
 
-        if(pars->vs_undersampled_flag == 0)
+        if(vs_undersampled_flag == 0)
         {
             increment = int_gain * (pars->load_pars.gain1 * 0.5 * (v_circuit + vars->circuit_voltage) - vars->integrator);
         }

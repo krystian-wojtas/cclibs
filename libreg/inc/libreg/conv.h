@@ -28,6 +28,14 @@
 
 #include <stdint.h>
 
+// Regulation parameters source (operational or test) enum
+
+enum reg_rst_source
+{
+    REG_OPERATIONAL_RST_PARS,                           ///< Use operational RST parameters
+    REG_TEST_RST_PARS                                   ///< Use test RST parameters
+};
+
 // Regulation error rate control enum
 
 enum reg_err_rate
@@ -45,20 +53,37 @@ struct reg_conv_sim_meas                                ///< Measurement simulat
     float                       signal;                 ///< Simulated measured signal with noise and tone
 };
 
-struct reg_conv_signal
+struct reg_conv_rst_pars
 {
+    uint32_t                    use_next_pars;          ///< Signal to use next RST pars in the RT thread
+    struct reg_rst_pars        *active;                 ///< Pointer to active parameters in pars[]
+    struct reg_rst_pars        *next;                   ///< Pointer to next parameters in pars[]
+    struct reg_rst_pars        *debug;                  ///< Pointer to most recently initialized parameters in pars[]
+    struct reg_rst_pars         pars[2];                ///< Structures for active and next RST parameter
+};
+
+struct reg_conv_signal                                  ///< Converter signal (field or current) regulation structure
+{
+    struct reg_meas_signal     *input_p;                ///< Pointer to input measurement signal structure
+    struct reg_meas_signal      input;                  ///< Input measurement and measurement status
+    uint32_t                    invalid_input_counter;  ///< Counter for invalid input measurements
     struct reg_meas_filter      meas;                   ///< Unfiltered and filtered measurement (real or sim)
     struct reg_meas_rate        rate;                   ///< Estimation of the rate of the field measurement
     struct reg_lim_meas         lim_meas;               ///< Measurement limits
     struct reg_lim_ref          lim_ref;                ///< Reference limits
-    struct reg_rst_pars         rst_pars;               ///< Regulation RST parameters
+    struct reg_rst_pars        *rst_pars;               ///< Active RST parameters (Active Operational or Test)
+    struct reg_conv_rst_pars    op_rst_pars;            ///< Operational regulation RST parameters
+    struct reg_conv_rst_pars    test_rst_pars;          ///< Test regulation RST parameters
     enum   reg_err_rate         err_rate;               ///< Rate control for regulation error calculation
     struct reg_err              err;                    ///< Regulation error
     struct reg_conv_sim_meas    sim;                    ///< Simulated measurement with noise and tone
 };
 
-struct reg_conv_voltage
+struct reg_conv_voltage                                 ///< Converter voltage structure
 {
+    struct reg_meas_signal     *input_p;                ///< Pointer to input measurement signal structure
+    struct reg_meas_signal      input;                  ///< Input measurement and measurement status
+    uint32_t                    invalid_input_counter;  ///< Counter for invalid input measurements
     float                       meas;                   ///< Unfiltered voltage measurement (real or sim)
     struct reg_lim_ref          lim_ref;                ///< Voltage reference limits
     struct reg_rst_pars         rst_pars;               ///< Regulation RST parameters
@@ -76,16 +101,15 @@ struct reg_conv                                         ///< Global converter re
 
     // Regulation reference and measurement variables and parameters
 
-    enum   reg_mode             mode;                   ///< Regulation mode: Field, Current or Voltage
-    struct reg_conv_signal     *r;                      ///< Pointer to active regulation structure (reg.i or reg.b)
+    enum   reg_mode             reg_mode;               ///< Regulation mode: Field, Current or Voltage
+    enum   reg_rst_source       reg_rst_source;         ///< RST parameter source (Operational or Test)
+    struct reg_conv_signal     *reg_signal;             ///< Pointer to currently regulated signal structure (reg.i or reg.b)
 
     uint32_t                    iteration_counter;      ///< Iteration counter (within each regulation period)
     double                      period;                 ///< Regulation period
-    double                      time;                   ///< Time of last regulation iteration
     float                       ref_advance;            ///< Time to advance reference function
 
     float                       meas;                   ///< Field or current regulated measurement
-
     float                       ref;                    ///< Field or current reference
     float                       ref_limited;            ///< Field or current reference after limits
     float                       ref_rst;                ///< Field or current reference after back-calculation
@@ -99,27 +123,12 @@ struct reg_conv                                         ///< Global converter re
 
     struct reg_rst_vars         rst_vars;               ///< Field or current regulation RST variables
 
-    // Field, current and voltage measurements
-
-    struct reg_meas_signal     *b_meas_p;               ///< Pointer to field measurement and measurement status
-    struct reg_meas_signal     *i_meas_p;               ///< Pointer to current measurement and measurement status
-    struct reg_meas_signal     *v_meas_p;               ///< Pointer to voltage measurement and measurement status
-
-    struct reg_meas_signal      b_meas;                 ///< Field measurement and measurement status
-    struct reg_meas_signal      i_meas;                 ///< Current measurement and measurement status
-    struct reg_meas_signal      v_meas;                 ///< Voltage measurement and measurement status
-
-    uint32_t                    b_meas_invalid_counter; ///< Counter for invalid field measurements
-    uint32_t                    i_meas_invalid_counter; ///< Counter for invalid current measurements
-    uint32_t                    v_meas_invalid_counter; ///< Counter for invalid voltage measurements
-
     // Field, current and voltage regulation structures
 
     struct reg_conv_signal      b;                      ///< Field regulation parameters and variables
     struct reg_conv_signal      i;                      ///< Current regulation parameters and variables
     struct reg_conv_voltage     v;                      ///< Voltage regulation parameters and variables
                                                         ///< (Voltage is regulated by voltage source)
-
     // Load parameters and variables structures
 
     struct reg_load_pars        load_pars;              ///< Circuit load model for regulation
@@ -131,20 +140,29 @@ struct reg_conv                                         ///< Global converter re
     struct reg_sim_load_vars    sim_load_vars;          ///< Load simulation variables
 };
 
+// Converter control macro "functions"
+
+#define regConvInitRefGenFunc(reg_p, reg_ref_gen_function) (reg_p)->reg_ref_gen_function=reg_ref_gen_function
+
+// Converter control functions
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Converter regulation functions
+void     regConvInit              (struct reg_conv *conv, double iter_period);
+uint32_t regConvRstInit           (struct reg_conv *conv, struct reg_conv_signal *reg_signal,
+                                   enum reg_mode reg_mode, enum reg_rst_source reg_rst_source, uint32_t reg_period_iters,
+                                   float auxpole1_hz, float auxpoles2_hz, float auxpoles2_z, float auxpole4_hz, float auxpole5_hz,
+                                   float pure_delay_periods, float track_delay_periods,
+                                   double manual_r[REG_N_RST_COEFFS], double manual_s[REG_N_RST_COEFFS], double manual_t[REG_N_RST_COEFFS]);
+void     regConvInitSimLoad       (struct reg_conv *conv, enum reg_mode reg_mode, float sim_load_tc_error);
+void     regConvInitMeas          (struct reg_conv *conv, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p);
 
-float    regConvPureDelay       (struct reg_conv *reg, struct reg_meas_filter *meas_filter, uint32_t reg_period_iters);
-void     regConvInitSimLoad     (struct reg_conv *reg, enum reg_mode reg_mode, float sim_load_tc_error);
-void     regConvInitMeas        (struct reg_conv *reg, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p);
-
-void     regConvSetMeasRT       (struct reg_conv *reg, uint32_t sim_meas_control);
-void     regConvSetModeRT       (struct reg_conv *reg, enum reg_mode reg_mode, uint32_t iteration_counter);
-uint32_t regConverterRT         (struct reg_conv *reg, float *ref, float feedforward_v_ref, uint32_t feedforward_control, uint32_t max_abs_err_control);
-void     regConvSimulateRT      (struct reg_conv *reg, float v_perturbation);
+void     regConvSetModeRT         (struct reg_conv *conv, enum reg_mode reg_mode, enum reg_rst_source reg_rst_source, uint32_t iteration_counter);
+uint32_t regConvSetMeasRT         (struct reg_conv *conv, uint32_t sim_meas_control);
+uint32_t regConvRegulateRT        (struct reg_conv *conv, float *ref, uint32_t enable_max_abs_err);
+void     regConvSimulateRT        (struct reg_conv *conv, float v_perturbation);
 
 #ifdef __cplusplus
 }

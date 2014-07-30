@@ -60,9 +60,9 @@ MEAS I_SIM_TONE_AMP         0.000
 # Current regulation 
 
 IREG PERIOD_ITERS           1000
-IREG CLBW                   2
-IREG CLBW2                  2
-IREG Z                      0.5
+IREG AUXPOLE1_HZ            2
+IREG AUXPOLES2_HZ           2
+IREG AUXPOLES2_Z            0.5
 
 # PLEP function
 
@@ -125,9 +125,9 @@ MEAS I_SIM_TONE_AMP         0.000
 # Current regulation 
 
 IREG PERIOD_ITERS           1000
-IREG CLBW                   2
-IREG CLBW2                  2
-IREG Z                      0.5
+IREG AUXPOLE1_HZ            2
+IREG AUXPOLES2_HZ           2
+IREG AUXPOLES2_Z            0.5
 
 # PLEP function
 

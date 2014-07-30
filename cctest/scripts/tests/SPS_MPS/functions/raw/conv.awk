@@ -1,3 +1,4 @@
+#!/usr/bin/awk -f
 # Convert SPS csv function files to cctest compatible functions
 
 BEGIN {

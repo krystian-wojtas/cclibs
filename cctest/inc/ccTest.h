@@ -36,7 +36,7 @@
 
 // Constants
 
-#define CC_VERSION                  3.00
+#define CC_VERSION                  3.01
 #define CC_PATH_LEN                 256
 #define CC_ABBREVIATED_ARG_LEN      20
 #define CC_INPUT_FILE_NEST_LIMIT    4
@@ -54,8 +54,9 @@ struct cctest_input
 struct cctest
 {
     uint32_t                input_idx;
-    struct cctest_input     input       [CC_INPUT_FILE_NEST_LIMIT];
-    char                    base_path   [CC_PATH_LEN];
+    struct cctest_input     input        [CC_INPUT_FILE_NEST_LIMIT];
+    char                    base_path    [CC_PATH_LEN];
+    char                    cwd_file_path[CC_PATH_LEN];
     FILE                   *csv_file;
 };
 

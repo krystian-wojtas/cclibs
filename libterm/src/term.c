@@ -29,14 +29,15 @@
 
 // Private constants (this file only)
 
-#define NUM_LINE_BUFS           16                      // Must be a power of 2 !!!
+#define NUM_LINE_BUFS           32                      // Must be a power of 2 !!!
 #define LINE_BUFS_MASK          (NUM_LINE_BUFS-1)       // Mask for circular history buffer
-#define MAX_LINE_LEN            78
-
+#define MAX_LINE_LEN            254                     // Maximum line length - the current maximum
+                                                        // is given by term_s.max_line_len
 // Static variables (this file only)
 
 static struct term_static
 {
+    uint16_t     max_line_len;                                  // Mex line len is number_of_columns-1
     uint16_t     level;                                         // Keyboard character processing level
     uint16_t     line_idx;                                      // Line editor buffer index
     uint16_t     line_end;                                      // Line editor end of buffer contents index
@@ -83,27 +84,39 @@ void TermLibInit(FILE *file, void (*term_line)(char *line, uint16_t line_len), c
     term_s.prompt    = prompt;
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void TermInit(void)
+void TermInit(uint16_t number_of_columns)
 /*---------------------------------------------------------------------------------------------------------*\
-  This function is used to initialise the terminal structure.  Some old terminals take time to reset and
-  ingore characters while they are resetting.  So this function sends dummy spaces to give time for the
+  This function is used to initialise the terminal.  Some old terminals take time to reset and
+  ignore characters while they are resetting.  So this function sends dummy spaces to give time for the
   reset to complete before the user program sends important characters that must not be ignored.
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint16_t    i;
 
-    fputs(TERM_RESET, term_s.file);             // Reset terminal
+    // Reset terminal
 
-    for ( i = 0 ; i < 32; i++ )                 // Send spaces to allow time for terminal to reset
+    fputs(TERM_RESET, term_s.file);
+
+    // Send spaces to allow time for terminal to reset
+
+    for ( i = 0 ; i < 32; i++ )
     {
         fputc(' ', term_s.file);
     }
 
-    fputs(TERM_INIT, term_s.file);              // Clear screen, enable line wrap, ring bell
+    // Clear screen, enable line wrap, ring bell
 
-    term_s.line_idx = 0;                        // Reset line buffer cursor index
-    term_s.line_end = 0;                        // Reset line buffer end index
-    term_s.level    = 0;                        // Reset level
+    fputs(TERM_INIT, term_s.file);
+
+    // Reset line buffer variables
+
+    term_s.line_idx     = 0;
+    term_s.line_end     = 0;
+    term_s.level        = 0;
+
+    // Set max line length to  number of terminal columns minus 1 (for the prompt character)
+
+    term_s.max_line_len = number_of_columns - 2;
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint16_t TermChar(char keyboard_ch)
@@ -236,7 +249,7 @@ static void TermInsertChar(char keyboard_ch)
 
     if(keyboard_ch >= 0x20)
     {
-        if(term_s.line_end == MAX_LINE_LEN)     // If line buffer is full then ring the bell
+        if(term_s.line_end >= term_s.max_line_len)     // If line buffer is full then ring the bell
         {
             fputc(TERM_BELL, term_s.file);
         }
@@ -531,9 +544,12 @@ static void TermRecallLine(uint16_t recall_line)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     // Save recalled line index and recover line length and data
+    // If window is now narrower then truncate the recovered line
 
     term_s.recall_line = recall_line;
-    term_s.line_idx    = term_s.line_end = term_s.line_len[recall_line];
+    term_s.line_idx = 
+    term_s.line_end = (term_s.line_len[recall_line] < term_s.max_line_len ?
+                       term_s.line_len[recall_line] : term_s.max_line_len);
 
     memcpy(term_s.line_buf,&term_s.line_bufs[recall_line],term_s.line_end);
 
@@ -543,6 +559,4 @@ static void TermRecallLine(uint16_t recall_line)
 
     fprintf(term_s.file, TERM_CLR_LINE "\r%c%s", term_s.prompt, term_s.line_buf);
 }
-/*---------------------------------------------------------------------------------------------------------*\
-  End of file: term.c
-\*---------------------------------------------------------------------------------------------------------*/
+// EOF
