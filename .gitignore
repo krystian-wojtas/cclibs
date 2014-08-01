@@ -1,6 +1,7 @@
 ~$*
 ._*
 *.csv
+*.swp
 html/
 Darwin/
 Linux/
@@ -12,3 +13,5 @@ webplots/
 debug/
 .DS_Store
 /Debug
+resources/
+sync.sh
