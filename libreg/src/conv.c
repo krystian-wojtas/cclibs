@@ -92,9 +92,9 @@ uint32_t regConvRstInit(struct reg_conv        *conv,
     {
          // Prepare structure with manual RST coefficients
 
-        memcpy(manual.r, manual_r, sizeof(manual_r));
-        memcpy(manual.s, manual_s, sizeof(manual_s));
-        memcpy(manual.t, manual_t, sizeof(manual_t));
+        memcpy(manual.r, manual_r, REG_N_RST_COEFFS * sizeof(double));  // On Mac, gcc returns an error compiling sizeof(manual_r)
+        memcpy(manual.s, manual_s, REG_N_RST_COEFFS * sizeof(double));
+        memcpy(manual.t, manual_t, REG_N_RST_COEFFS * sizeof(double));
 
         // if pure_delay_periods is zero then calculate it
 
