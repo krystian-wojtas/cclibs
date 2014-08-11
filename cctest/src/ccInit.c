@@ -49,7 +49,7 @@ uint32_t ccInitRun(void)
 
     // Set iteration period into libreg structure
 
-    regConvInit(&conv, (double)ccpars_global.iter_period);
+    regConvInit(&conv, (double)ccpars_global.iter_period, ccpars_global.actuation);
 
     // Prepare an invalid signal to allow recovery from invalid signals to be tested
 
@@ -84,6 +84,14 @@ uint32_t ccInitRun(void)
         if(i > 0 && i >= num_reg_modes)
         {
             ccpars_global.reg_mode[i] = ccpars_global.reg_mode[i-1];
+        }
+
+        // Check that reg_mode is compatible with actuation
+
+        if(conv.actuation == REG_CURRENT_REF && ccpars_global.reg_mode[i] != REG_CURRENT)
+        {
+            ccTestPrintError("GLOBAL REG_MODE must CURRENT when GLOBAL ACTUATION is CURRENT");
+            return(EXIT_FAILURE);
         }
 
         // Set the field or current regulation flags
@@ -321,22 +329,31 @@ uint32_t ccInitSimulation(void)
 
     // First set the V/I/B measurements to cover all three regulation modes
 
-    conv.v.meas = ccrun.fg_meta[0].range.start * conv.sim_vs_pars.gain;  // Set v_meas to voltage on load
+    conv.v.meas = ccrun.fg_meta[0].range.start * conv.sim_vs_pars.gain;        // Set v_meas to voltage on load
     conv.i.meas.signal[REG_MEAS_UNFILTERED] = ccrun.fg_meta[0].range.start;    // i_meas
     conv.b.meas.signal[REG_MEAS_UNFILTERED] = ccrun.fg_meta[0].range.start;    // b_meas
 
-    // Initialise load model for simulation using the sim_tc_error factor to mismatch the regulation
+    // Initialize load model for simulation using the sim_tc_error factor to mismatch the regulation
 
     regConvInitSimLoad(&conv, ccpars_global.reg_mode[0], ccpars_load.sim_tc_error);
 
-    // Initialise voltage source model history to allow simulation to start with a non-zero voltage
-    // This is not needed in a real converter controller because the voltage always starts at zero
+    // Initialize voltage source model history according to the actuation because for CURRENT_REF,
+    // the model is used for the current in the load rather than the voltage from the voltage source
 
-    conv.v.ref_sat     =
-    conv.v.ref_limited =
-    conv.v.ref         = regSimVsInitHistory(&conv.sim_vs_pars, &conv.sim_vs_vars, conv.v.meas);
+    if(conv.actuation == REG_VOLTAGE_REF)
+    {
+        conv.v.ref_sat     =
+        conv.v.ref_limited =
+        conv.v.ref         = regSimVsInitHistory(&conv.sim_vs_pars, &conv.sim_vs_vars, conv.v.meas);
+    }
+    else // Actuation is CURRENT_REF
+    {
+        conv.ref_limited = ccrun.fg_meta[0].range.start;
+        conv.sim_load_vars.magnet_current = conv.ref_limited * conv.sim_vs_pars.gain;
+        regSimVsInitHistory(&conv.sim_vs_pars, &conv.sim_vs_vars, conv.sim_load_vars.magnet_current);
+    }
 
-    // Initialise measurement delay structures for simulated measurement of the field, current and voltage.
+    // Initialize measurement delay structures for simulated measurement of the field, current and voltage.
     // The -1.0 is because the simulated measurement applies to the following iteration, so 1 iteration
     // of delay is always present.
 
@@ -344,13 +361,13 @@ uint32_t ccInitSimulation(void)
     regDelayInitDelay(&conv.i.sim.meas_delay, ccpars_vs.v_ref_delay_iters + ccpars_meas.i_delay_iters - 1.0);
     regDelayInitDelay(&conv.v.sim.meas_delay, ccpars_vs.v_ref_delay_iters + ccpars_meas.v_delay_iters - 1.0);
 
-    // Initialise simulated measurement delay histories
+    // Initialize simulated measurement delay histories
 
     regDelayInitVars(&conv.b.sim.meas_delay, conv.b.meas.signal[REG_MEAS_UNFILTERED]);
     regDelayInitVars(&conv.i.sim.meas_delay, conv.i.meas.signal[REG_MEAS_UNFILTERED]);
     regDelayInitVars(&conv.v.sim.meas_delay, conv.v.meas);
 
-    // Initialise field measurement filter
+    // Initialize field measurement filter
 
     if(ccpars_meas.b_fir_lengths[0] == 0 || ccpars_meas.b_fir_lengths[1] == 0)
     {
@@ -368,7 +385,7 @@ uint32_t ccInitSimulation(void)
 
     regMeasSetRegSelect(&conv.b.meas, ccpars_meas.b_reg_select);
 
-    // Initialise current measurement filter
+    // Initialize current measurement filter
 
     if(ccpars_meas.i_fir_lengths[0] == 0 || ccpars_meas.i_fir_lengths[1] == 0)
     {
@@ -386,7 +403,7 @@ uint32_t ccInitSimulation(void)
 
     regMeasSetRegSelect(&conv.i.meas, ccpars_meas.i_reg_select);
 
-    // Initialise simulation of measurement noise and tone
+    // Initialize simulation of measurement noise and tone
 
     regMeasSetNoiseAndTone(&conv.b.sim.noise_and_tone, ccpars_meas.b_sim_noise_pp, ccpars_meas.b_sim_tone_amp,
                            ccpars_meas.tone_half_period_iters);
@@ -403,6 +420,8 @@ uint32_t ccInitSimulation(void)
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_signal *reg_signal, enum reg_mode mode, char *label)
 {
+    // Try to initialize RST
+
     if(regConvRstInit(&conv, reg_signal, mode, REG_OPERATIONAL_RST_PARS, reg_pars->period_iters,
                       reg_pars->auxpole1_hz, reg_pars->auxpoles2_hz, reg_pars->auxpoles2_z,
                       reg_pars->auxpole4_hz, reg_pars->auxpole5_hz,
@@ -412,13 +431,13 @@ uint32_t ccInitRegulation(struct ccpars_reg_pars *reg_pars, struct reg_conv_sign
                       reg_pars->rst.s,
                       reg_pars->rst.t) == 0)
      {
-        printf("Fatal - failed to initialise %s RST regulator: next RST parameters structure still pending switch by RT thread\n", label);
+        printf("Fatal - failed to initialize %s RST regulator: next RST parameters structure still pending switch by RT thread\n", label);
         exit(EXIT_FAILURE);
      }
 
     if(reg_signal->op_rst_pars.debug->status == REG_FAULT)
     {
-        ccTestPrintError("failed to initialise %s RST regulator: S has unstable poles - try reducing AUXPOLE frequencies", label);
+        ccTestPrintError("failed to initialize %s RST regulator: S has unstable poles - try reducing AUXPOLE frequencies", label);
         return(EXIT_FAILURE);
     }
 

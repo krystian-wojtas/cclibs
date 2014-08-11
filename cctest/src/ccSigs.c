@@ -182,9 +182,12 @@ void ccSigsInit(void)
         signals[idx].time_offset    = 0.0;
     }
 
-    // Voltage reference is always enabled
+    // Voltage reference is always enabled when converter actuation is voltage ref
 
-    ccSigsEnableSignal(ANA_V_REF);
+    if(conv.actuation == REG_VOLTAGE_REF)
+    {
+        ccSigsEnableSignal(ANA_V_REF);
+    }
 
     // Enable additional signals with simulating load
 
@@ -206,91 +209,115 @@ void ccSigsInit(void)
             ccSigsEnableSignal(CSR_FUNC);
         }
 
-        // Voltage source simulation signals
-
-        ccSigsEnableSignal(ANA_V_REF_LIMITED);
-        ccSigsEnableSignal(ANA_V_CIRCUIT);
-        ccSigsEnableSignal(ANA_V_MEAS);
-        ccSigsEnableSignal(ANA_V_ERR);
-        ccSigsEnableSignal(ANA_MAX_ABS_V_ERR);
-
-        ccSigsEnableSignal(DIG_V_REF_CLIP);
-        ccSigsEnableSignal(DIG_V_REF_RATE_CLIP);
-
-        if(ccpars_limits.v_err_warning > 0.0)
+        if(conv.actuation == REG_VOLTAGE_REF)
         {
-            ccSigsEnableSignal(DIG_V_REG_ERR_WARN);
-        }
+            // Voltage source simulation signals
 
-        if(ccpars_limits.v_err_fault > 0.0)
-        {
-            ccSigsEnableSignal(DIG_V_REG_ERR_FLT);
-        }
+            ccSigsEnableSignal(ANA_V_REF_LIMITED);
+            ccSigsEnableSignal(ANA_V_CIRCUIT);
+            ccSigsEnableSignal(ANA_V_MEAS);
+            ccSigsEnableSignal(ANA_V_ERR);
+            ccSigsEnableSignal(ANA_MAX_ABS_V_ERR);
 
-        // Field regulation signals
+            ccSigsEnableSignal(DIG_V_REF_CLIP);
+            ccSigsEnableSignal(DIG_V_REF_RATE_CLIP);
 
-        if(ccrun.breg_flag == 1)
-        {
-            ccSigsEnableSignal(ANA_REG_MEAS);
-            ccSigsEnableSignal(ANA_TRACK_DLY);
-            ccSigsEnableSignal(ANA_B_REF);
-            ccSigsEnableSignal(ANA_B_REF_LIMITED);
-            ccSigsEnableSignal(ANA_B_REF_RST);
-            ccSigsEnableSignal(ANA_B_MAGNET);
-            ccSigsEnableSignal(ANA_B_MEAS);
-            ccSigsEnableSignal(ANA_B_MEAS_FLTR);
-            ccSigsEnableSignal(ANA_B_MEAS_EXTR);
-            ccSigsEnableSignal(ANA_B_ERR);
-            ccSigsEnableSignal(ANA_MAX_ABS_B_ERR);
-            ccSigsEnableSignal(DIG_B_MEAS_TRIP);
-            ccSigsEnableSignal(DIG_B_MEAS_LOW);
-            ccSigsEnableSignal(DIG_B_MEAS_ZERO);
-            ccSigsEnableSignal(DIG_B_REF_CLIP);
-            ccSigsEnableSignal(DIG_B_REF_RATE_CLIP);
-
-            if(ccpars_limits.b_err_warning > 0.0)
+            if(ccpars_limits.v_err_warning > 0.0)
             {
-                ccSigsEnableSignal(DIG_B_REG_ERR_WARN);
+                ccSigsEnableSignal(DIG_V_REG_ERR_WARN);
             }
 
-            if(ccpars_limits.b_err_fault > 0.0)
+            if(ccpars_limits.v_err_fault > 0.0)
             {
-                ccSigsEnableSignal(DIG_B_REG_ERR_FLT);
+                ccSigsEnableSignal(DIG_V_REG_ERR_FLT);
+            }
+
+            // Field regulation signals
+
+            if(ccrun.breg_flag == 1)
+            {
+                ccSigsEnableSignal(ANA_REG_MEAS);
+                ccSigsEnableSignal(ANA_TRACK_DLY);
+                ccSigsEnableSignal(ANA_B_REF);
+                ccSigsEnableSignal(ANA_B_REF_LIMITED);
+                ccSigsEnableSignal(ANA_B_REF_RST);
+                ccSigsEnableSignal(ANA_B_MAGNET);
+                ccSigsEnableSignal(ANA_B_MEAS);
+                ccSigsEnableSignal(ANA_B_MEAS_FLTR);
+                ccSigsEnableSignal(ANA_B_MEAS_EXTR);
+                ccSigsEnableSignal(ANA_B_ERR);
+                ccSigsEnableSignal(ANA_MAX_ABS_B_ERR);
+                ccSigsEnableSignal(DIG_B_MEAS_TRIP);
+                ccSigsEnableSignal(DIG_B_MEAS_LOW);
+                ccSigsEnableSignal(DIG_B_MEAS_ZERO);
+                ccSigsEnableSignal(DIG_B_REF_CLIP);
+                ccSigsEnableSignal(DIG_B_REF_RATE_CLIP);
+
+                if(ccpars_limits.b_err_warning > 0.0)
+                {
+                    ccSigsEnableSignal(DIG_B_REG_ERR_WARN);
+                }
+
+                if(ccpars_limits.b_err_fault > 0.0)
+                {
+                    ccSigsEnableSignal(DIG_B_REG_ERR_FLT);
+                }
+            }
+
+            // Current regulation signals
+
+            if(ccrun.ireg_flag == 1)
+            {
+                ccSigsEnableSignal(ANA_REG_MEAS);
+                ccSigsEnableSignal(ANA_TRACK_DLY);
+                ccSigsEnableSignal(ANA_I_REF);
+                ccSigsEnableSignal(ANA_I_REF_LIMITED);
+                ccSigsEnableSignal(ANA_I_REF_RST);
+                ccSigsEnableSignal(ANA_I_REF_DELAYED);
+                ccSigsEnableSignal(ANA_I_ERR);
+                ccSigsEnableSignal(ANA_MAX_ABS_I_ERR);
+                ccSigsEnableSignal(ANA_V_REF_SAT);
+                ccSigsEnableSignal(DIG_I_REF_CLIP);
+                ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
+
+                if(ccpars_limits.i_err_warning > 0.0)
+                {
+                    ccSigsEnableSignal(DIG_I_REG_ERR_WARN);
+                }
+
+                if(ccpars_limits.i_err_fault > 0.0)
+                {
+                    ccSigsEnableSignal(DIG_I_REG_ERR_FLT);
+                }
+            }
+
+            // Current simulation signals
+
+            if(conv.sim_load_pars.load_undersampled_flag == 0)
+            {
+                ccSigsEnableSignal(ANA_I_MAGNET);
             }
         }
-
-        // Current regulation signals
-
-        if(ccrun.ireg_flag == 1)
+        else // Converter actuation is CURRENT reference
         {
             ccSigsEnableSignal(ANA_REG_MEAS);
-            ccSigsEnableSignal(ANA_TRACK_DLY);
+            ccSigsEnableSignal(ANA_V_CIRCUIT);
+            ccSigsEnableSignal(ANA_V_MEAS);
             ccSigsEnableSignal(ANA_I_REF);
             ccSigsEnableSignal(ANA_I_REF_LIMITED);
-            ccSigsEnableSignal(ANA_I_REF_RST);
-            ccSigsEnableSignal(ANA_I_ERR);
-            ccSigsEnableSignal(ANA_MAX_ABS_I_ERR);
-            ccSigsEnableSignal(ANA_V_REF_SAT);
+            ccSigsEnableSignal(ANA_I_REF_DELAYED);
             ccSigsEnableSignal(DIG_I_REF_CLIP);
-            ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
 
-            if(ccpars_limits.i_err_warning > 0.0)
+            if(conv.i.lim_ref.rate_clip > 0.0)
             {
-                ccSigsEnableSignal(DIG_I_REG_ERR_WARN);
+                ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
             }
 
-            if(ccpars_limits.i_err_fault > 0.0)
-            {
-                ccSigsEnableSignal(DIG_I_REG_ERR_FLT);
-            }
+            signals[ANA_REG_MEAS].time_offset = (uint32_t)(conv.i.meas.delay_iters[conv.i.meas.reg_select] + 0.499) * conv.iter_period;
         }
 
         // Current simulation signals
 
-        if(conv.sim_load_pars.load_undersampled_flag == 0)
-        {
-            ccSigsEnableSignal(ANA_I_MAGNET);
-        }
         ccSigsEnableSignal(ANA_I_CIRCUIT);
         ccSigsEnableSignal(ANA_I_MEAS);
         ccSigsEnableSignal(ANA_I_MEAS_FLTR);
@@ -368,38 +395,54 @@ void ccSigsStore(double time)
 
     if(ccpars_global.sim_load == CC_ENABLED)
     {
-        switch(conv.reg_mode)
+        if(conv.actuation == REG_CURRENT_REF)
         {
-        case REG_FIELD:
-
-            ccSigsStoreAnalog (ANA_B_REF,          conv.ref);
-            ccSigsStoreAnalog (ANA_B_REF_LIMITED,  conv.ref_limited);
-            ccSigsStoreAnalog (ANA_B_REF_RST,      conv.ref_rst);
-            ccSigsStoreAnalog (ANA_I_REF,          0.0);
-            ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
-            ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
-            break;
-
-        case REG_CURRENT:
-
-
-            ccSigsStoreAnalog (ANA_B_REF,          0.0);
-            ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
-            ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
             ccSigsStoreAnalog (ANA_I_REF,          conv.ref);
             ccSigsStoreAnalog (ANA_I_REF_LIMITED,  conv.ref_limited);
-            ccSigsStoreAnalog (ANA_I_REF_RST,      conv.ref_rst);
-            break;
+            ccSigsStoreAnalog (ANA_I_REF_DELAYED,  conv.ref_delayed);
+        }
+        else // Actuation is VOLTAGE_REF
+        {
+            switch(conv.reg_mode)
+            {
+            case REG_FIELD:
 
-        default:
+                ccSigsStoreAnalog (ANA_B_REF,          conv.ref);
+                ccSigsStoreAnalog (ANA_B_REF_LIMITED,  conv.ref_limited);
+                ccSigsStoreAnalog (ANA_B_REF_RST,      conv.ref_rst);
+                ccSigsStoreAnalog (ANA_I_REF,          0.0);
+                ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
+                ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_I_REF_DELAYED,  0.0);
+                break;
 
-            ccSigsStoreAnalog (ANA_B_REF,          0.0);
-            ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
-            ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
-            ccSigsStoreAnalog (ANA_I_REF,          0.0);
-            ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
-            ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
-            break;
+            case REG_CURRENT:
+
+
+                ccSigsStoreAnalog (ANA_B_REF,          0.0);
+                ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
+                ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_I_REF,          conv.ref);
+                ccSigsStoreAnalog (ANA_I_REF_LIMITED,  conv.ref_limited);
+                ccSigsStoreAnalog (ANA_I_REF_RST,      conv.ref_rst);
+                ccSigsStoreAnalog (ANA_I_REF_DELAYED,  conv.ref_delayed);
+                break;
+
+            case REG_VOLTAGE:
+
+                ccSigsStoreAnalog (ANA_B_REF,          0.0);
+                ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
+                ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_I_REF,          0.0);
+                ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
+                ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_I_REF_DELAYED,  0.0);
+                break;
+
+            case REG_NONE:
+
+                break;
+            }
         }
 
         ccSigsStoreAnalog( ANA_B_MAGNET,       conv.sim_load_vars.magnet_field);
@@ -420,19 +463,16 @@ void ccSigsStore(double time)
         ccSigsStoreAnalog (ANA_V_REF_LIMITED,  conv.v.ref_limited);
         ccSigsStoreAnalog (ANA_V_CIRCUIT,      conv.sim_load_vars.circuit_voltage);
         ccSigsStoreAnalog (ANA_V_MEAS,         conv.v.meas);
-//        ccSigsStoreAnalog (ANA_V_MEAS,         ccpars_ramp.ramp_pars.time_shift);
 
         ccSigsStoreAnalog( ANA_TRACK_DLY,      conv.rst_vars.meas_track_delay_periods);
 
         ccSigsStoreAnalog (ANA_B_ERR,          conv.b.err.err);
         ccSigsStoreAnalog (ANA_I_ERR,          conv.i.err.err);
         ccSigsStoreAnalog (ANA_V_ERR,          conv.v.err.err);
-//        ccSigsStoreAnalog (ANA_V_ERR,          ccpars_ramp.ramp_pars.linear_rate_limit);
 
         ccSigsStoreAnalog (ANA_MAX_ABS_B_ERR,  conv.b.err.max_abs_err);
         ccSigsStoreAnalog (ANA_MAX_ABS_I_ERR,  conv.i.err.max_abs_err);
         ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  conv.v.err.max_abs_err);
-//        ccSigsStoreAnalog (ANA_MAX_ABS_V_ERR,  ccpars_ramp.ramp_pars.prev_ramp_ref);
 
         ccSigsStoreDigital(DIG_B_MEAS_TRIP,    conv.b.lim_meas.flags.trip);
         ccSigsStoreDigital(DIG_B_MEAS_LOW,     conv.b.lim_meas.flags.low);
@@ -443,9 +483,9 @@ void ccSigsStore(double time)
         ccSigsStoreDigital(DIG_B_REG_ERR_WARN, conv.b.err.warning.flag);
         ccSigsStoreDigital(DIG_B_REG_ERR_FLT,  conv.b.err.fault.flag);
 
-        ccSigsStoreDigital(DIG_I_MEAS_TRIP, conv.i.lim_meas.flags.trip);
-        ccSigsStoreDigital(DIG_I_MEAS_LOW,  conv.i.lim_meas.flags.low);
-        ccSigsStoreDigital(DIG_I_MEAS_ZERO, conv.i.lim_meas.flags.zero);
+        ccSigsStoreDigital(DIG_I_MEAS_TRIP,    conv.i.lim_meas.flags.trip);
+        ccSigsStoreDigital(DIG_I_MEAS_LOW,     conv.i.lim_meas.flags.low);
+        ccSigsStoreDigital(DIG_I_MEAS_ZERO,    conv.i.lim_meas.flags.zero);
 
         ccSigsStoreDigital(DIG_I_RMS_WARN,     conv.i.lim_meas.flags.rms_warning);
         ccSigsStoreDigital(DIG_I_RMS_FLT,      conv.i.lim_meas.flags.rms_trip);

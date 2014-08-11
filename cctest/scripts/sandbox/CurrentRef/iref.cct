@@ -1,0 +1,46 @@
+# Test default parameters
+
+GLOBAL ITER_PERIOD              1.0E-3
+GLOBAL GROUP                    sandbox
+GLOBAL PROJECT                  CurrentRef
+
+GLOBAL ACTUATION                CURRENT
+GLOBAL REG_MODE                 CURRENT
+GLOBAL FUNCTION                 PLEP
+GLOBAL SIM_LOAD                 ENABLED
+GLOBAL FG_LIMITS                DISABLED
+
+PLEP INITIAL_REF                0.2
+PLEP FINAL_REF                  2
+
+VS BANDWIDTH                    10
+VS Z                            1.0
+VS V_REF_DELAY                  1.0
+
+IREG PERIOD_ITERS               1
+MEAS I_FIR_LENGTHS              4 2
+
+LIMITS I_POS                    10.0
+LIMITS I_RATE                   0.0
+LIMITS B_ACCELERATION           1.000000E+003
+LIMITS V_ACCELERATION           1.000000E+003
+
+GLOBAL FILE                     plep-nn
+RUN
+
+MEAS I_SIM_NOISE_PP             1.0E-3
+GLOBAL FILE                     plep
+RUN
+
+LIMITS I_RATE                   0.7
+GLOBAL FILE                     plep-rate-lim
+RUN
+
+GLOBAL FUNCTION                 SINE
+TEST INITIAL_REF                0.1
+LIMITS I_RATE                   0.0
+LIMITS I_POS                    0.8
+GLOBAL FILE                     sine-clip-lim
+RUN
+
+# EOF

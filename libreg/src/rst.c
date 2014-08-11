@@ -162,7 +162,7 @@ static float regModulusMargin(struct reg_rst_pars *pars)
 
         frequency_index = REG_MM_STEPS / 2;
         frequency_fraction_for_min_abs_S_p_y =
-        frequency_fraction = pars->min_auxpole_hz * pars->period * REG_MM_FREQ(frequency_index);
+        frequency_fraction = pars->min_auxpole_hz * pars->reg_period * REG_MM_FREQ(frequency_index);
 
         // If this frequency is over the Nyquist, report a bad modulus margin (0)
 
@@ -175,7 +175,7 @@ static float regModulusMargin(struct reg_rst_pars *pars)
 
         pars->modulus_margin = regAbsComplexRatio(pars->asbr, pars->as, frequency_fraction);
         frequency_index--;
-        frequency_fraction = pars->min_auxpole_hz * pars->period * REG_MM_FREQ(frequency_index);
+        frequency_fraction = pars->min_auxpole_hz * pars->reg_period * REG_MM_FREQ(frequency_index);
         abs_S_p_y = regAbsComplexRatio(pars->asbr, pars->as, frequency_fraction);
 
         if(abs_S_p_y < pars->modulus_margin)
@@ -197,7 +197,7 @@ static float regModulusMargin(struct reg_rst_pars *pars)
             pars->modulus_margin = abs_S_p_y;
             frequency_fraction_for_min_abs_S_p_y = frequency_fraction;
 
-            frequency_fraction = pars->min_auxpole_hz * pars->period * REG_MM_FREQ(frequency_index);
+            frequency_fraction = pars->min_auxpole_hz * pars->reg_period * REG_MM_FREQ(frequency_index);
 
             abs_S_p_y = regAbsComplexRatio(pars->asbr, pars->as, frequency_fraction);
 
@@ -205,7 +205,7 @@ static float regModulusMargin(struct reg_rst_pars *pars)
 
         } while(frequency_index >= 0 && frequency_index <= REG_MM_STEPS && frequency_fraction < 0.5 && abs_S_p_y < pars->modulus_margin);
 
-        pars->modulus_margin_freq = frequency_fraction_for_min_abs_S_p_y / pars->period;
+        pars->modulus_margin_freq = frequency_fraction_for_min_abs_S_p_y / pars->reg_period;
     }
 
     return(pars->modulus_margin);
@@ -284,7 +284,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     // Calculate a2 = 1 - exp(t1) using Maclaurin series if t1 is small
 
-    t1 = -pars->period / load->tc;
+    t1 = -pars->reg_period / load->tc;
     a1 = -exp(t1);
 
     if(a1 > -0.99)              // if t1 > 0.01
@@ -384,9 +384,9 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
     // Calculate intermediate values
 
-    c1 = -exp(-pars->period * M_TWO_PI * auxpole1_hz);
-    q1 = -exp(-pars->period * M_TWO_PI * auxpoles2_hz * auxpoles2_z);
-    d1 = 2.0 * q1 * cos(pars->period * M_TWO_PI * auxpoles2_hz * sqrt(1.0 - auxpoles2_z * auxpoles2_z));
+    c1 = -exp(-pars->reg_period * M_TWO_PI * auxpole1_hz);
+    q1 = -exp(-pars->reg_period * M_TWO_PI * auxpoles2_hz * auxpoles2_z);
+    d1 = 2.0 * q1 * cos(pars->reg_period * M_TWO_PI * auxpoles2_hz * sqrt(1.0 - auxpoles2_z * auxpoles2_z));
     d2 = q1 * q1;
 
     // Calculate RST coefficients
@@ -448,7 +448,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     case 3:                 // Algorithm 3 : Pure delay fraction 1.0 - 1.401 : dead-beat (2)
 
         pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole4_hz);
-        c2 = -exp(-pars->period * M_TWO_PI * auxpole4_hz);
+        c2 = -exp(-pars->reg_period * M_TWO_PI * auxpole4_hz);
         q1 = 2.0 - a1 + c1 + c2 + d1;
 
         pars->rst.r[0] = q1*(2.0 - a1) + d2 + c1*c2 + d1*(c1 + c2) + 2.0*a1 - 1.0;
@@ -475,7 +475,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     case 4:                 // Algorithm 4 : Pure delay fraction 1.401 - 1.999 : not dead-beat
 
         pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole4_hz);
-        c2 = -exp(-pars->period * M_TWO_PI * auxpole4_hz);
+        c2 = -exp(-pars->reg_period * M_TWO_PI * auxpole4_hz);
 
         pars->rst.r[0] = (4*a1 + 2*c1 + 2*c2 + 2*d1 + d2 + 3*a1*c1 + 3*a1*c2 + 3*a1*d1 + 2*a1*d2 + c1*c2 + c1*d1 + c2*d1 +
                           2*a1*c1*c2 + 2*a1*c1*d1 + a1*c1*d2 + 2*a1*c2*d1 + a1*c2*d2 - c1*c2*d2 + a1*c1*c2*d1 + 3)/(b0_b1*(a1 + 1)*(a1 + 1)) + 
@@ -517,8 +517,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
         pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole4_hz);
         pars->min_auxpole_hz = MINIMUM(pars->min_auxpole_hz, auxpole5_hz);
-        c2 = -exp(-pars->period * M_TWO_PI * auxpole4_hz);
-        c3 = -exp(-pars->period * M_TWO_PI * auxpole5_hz);
+        c2 = -exp(-pars->reg_period * M_TWO_PI * auxpole4_hz);
+        c3 = -exp(-pars->reg_period * M_TWO_PI * auxpole5_hz);
         q1 = 2.0 - a1 + c1 + c2 + c3 + d1;
         q2 = (2.0 - a1)*q1 + 2.0*a1 - 1 + d2 + c1*c2 + c1*c3 + c2*c3 + c1*d1 + c2*d1 + c3*d1;
 
@@ -583,9 +583,9 @@ static void regRstInitPI(struct reg_rst_pars  *pars,
   controller.  It can be used with fast slightly inductive circuits.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    float a1 = -exp(-pars->period * (load->ohms_ser + load->ohms_mag) * load->inv_henrys);
+    float a1 = -exp(-pars->reg_period * (load->ohms_ser + load->ohms_mag) * load->inv_henrys);
     float b1 = (1.0 + a1) / (load->ohms_ser + load->ohms_mag);
-    float c1 = -exp(-pars->period * M_TWO_PI * auxpole1_hz);
+    float c1 = -exp(-pars->reg_period * M_TWO_PI * auxpole1_hz);
 
     pars->alg_index = 10;
 
@@ -613,7 +613,7 @@ static void regRstInitI(struct reg_rst_pars  *pars,
 \*---------------------------------------------------------------------------------------------------------*/
 {
     float b1 = 1.0 / (load->ohms_ser + load->ohms_mag);
-    float c1 = -exp(-M_TWO_PI * pars->period * auxpole1_hz);
+    float c1 = -exp(-M_TWO_PI * pars->reg_period * auxpole1_hz);
 
     pars->alg_index = 20;
 
@@ -632,7 +632,7 @@ static void regRstInitI(struct reg_rst_pars  *pars,
 /*---------------------------------------------------------------------------------------------------------*/
 enum reg_status regRstInit(struct reg_rst_pars  *pars,
                            double                iter_period,
-                           uint32_t              period_iters,
+                           uint32_t              reg_period_iters,
                            struct reg_load_pars *load,
                            float                 auxpole1_hz,
                            float                 auxpoles2_hz,
@@ -663,14 +663,14 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
     uint32_t    i;
     double      t0_correction;
 
-    pars->reg_mode           = reg_mode;
-    pars->period_iters       = period_iters;
-    pars->inv_period_iters   = 1.0 / (float)period_iters;
-    pars->period             = iter_period * (double)period_iters;
-    pars->alg_index          = 0;
-    pars->dead_beat          = 0;
-    pars->pure_delay_periods = pure_delay_periods;
-    pars->modulus_margin     = 0.0;
+    pars->reg_mode             = reg_mode;
+    pars->reg_period_iters     = reg_period_iters;
+    pars->inv_reg_period_iters = 1.0 / (float)reg_period_iters;
+    pars->reg_period           = iter_period * (double)reg_period_iters;
+    pars->alg_index            = 0;
+    pars->dead_beat            = 0;
+    pars->pure_delay_periods   = pure_delay_periods;
+    pars->modulus_margin       = 0.0;
 
     // if AUXPOLE1 = 0.0 -> MANUAL RST coefficients
 
@@ -926,7 +926,7 @@ float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, u
 
     // Adjust ref delay to account for the acquisition iteration time between regulation iterations
 
-    ref_delay_periods = pars->ref_delay_periods - (float)iteration_index * pars->inv_period_iters;
+    ref_delay_periods = pars->ref_delay_periods - (float)iteration_index * pars->inv_reg_period_iters;
 
     // Convert track delay to integer and fractional parts
 

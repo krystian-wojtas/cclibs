@@ -37,7 +37,7 @@
 /*---------------------------------------------------------------------------------------------------------*/
 static uint32_t ccRunAbort(double iter_time)
 /*---------------------------------------------------------------------------------------------------------*\
-  This will initialise a RAMP function that will take over the from the running function and will smoothly
+  This will initialize a RAMP function that will take over the from the running function and will smoothly
   ramp to the minimum reference value given in the limits. This is only supported when regulating current
   or field.  In this example, the rate of change is calculated from the ref values in the RST history.
 \*---------------------------------------------------------------------------------------------------------*/
@@ -55,20 +55,20 @@ static uint32_t ccRunAbort(double iter_time)
 
     if(config.acceleration <= 0.0)
     {
-        config.acceleration = config.linear_rate / (10.0 * conv.period);
+        config.acceleration = config.linear_rate / (10.0 * conv.reg_period);
     }
 
     // Make ramp symmetric with deceleration = acceleration
 
     config.deceleration = config.acceleration;
 
-    // Initialise a RAMP to take over the running function.
+    // Initialize a RAMP to take over the running function.
 
     fgRampCalc(&config,
                &ccpars_ramp.ramp_pars,
                 ccrun.reg_time,                                                // time of last RST calculation
                 regRstPrevRefRT(&conv.rst_vars),                               // last reference value
-                regRstDeltaRefRT(&conv.rst_vars) / conv.period,                // last reference rate
+                regRstDeltaRefRT(&conv.rst_vars) / conv.reg_period,            // last reference rate
                &meta);
 
     // Check that abort duration is not too large (limit to 50000 iterations)
@@ -144,7 +144,7 @@ void ccRunSimulation(void)
 
         // If converter has not tripped
 
-        if(conv.reg_mode != REG_NONE)
+        if(ccrun.vs_tripped_flag == 0)
         {
             // if first iteration of regulation period then calculate new reference value
 

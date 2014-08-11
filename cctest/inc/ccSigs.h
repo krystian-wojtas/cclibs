@@ -65,6 +65,7 @@ enum ccsig_idx
     ANA_I_REF,                  // Current reference
     ANA_I_REF_LIMITED,          // Current reference after limits applied
     ANA_I_REF_RST,              // Current reference stored in RST history (limited and after back-calculation)
+    ANA_I_REF_DELAYED,          // Current reference delayed
 
     ANA_I_MAGNET,               // Current in the magnet
     ANA_I_CIRCUIT,              // Current in the circuit
@@ -153,6 +154,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "I_REF",                  ANALOG,         "TRAIL_STEP" },
     { "I_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "I_REF_RST",              ANALOG,         "TRAIL_STEP" },
+    { "I_REF_DELAYED",          ANALOG,         "TRAIL_STEP" },
 
     { "I_MAGNET",               ANALOG,         "TRAIL_STEP" },
     { "I_CIRCUIT",              ANALOG,         "TRAIL_STEP" },

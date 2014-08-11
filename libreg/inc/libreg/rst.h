@@ -42,7 +42,7 @@
 // Constants
 
 #define REG_N_RST_COEFFS           10                           // RST order + 1 (must be <= REG_RST_HISTORY_MASK)
-#define REG_RST_HISTORY_MASK       15                           // History buffer index mask (must be 2^N-1)
+#define REG_RST_HISTORY_MASK       31                           // History buffer index mask (must be 2^N-1)
 #define REG_MM_WARNING_THRESHOLD   0.4                          // REG_WARNING level for Modulus Margin
 
 // Regulation RST algorithm structures
@@ -73,11 +73,11 @@ struct reg_rst_pars                                             // RST algorithm
 {
     enum reg_status             status;                         // Regulation parameters status
     enum reg_mode               reg_mode;                       // Regulation mode (REG_CURRENT | REG_FIELD)
-    uint32_t                    period_iters;                   // Regulation period (in iterations)
+    uint32_t                    reg_period_iters;               // Regulation period (in iterations)
     uint32_t                    alg_index;                      // Algorithm index (1-5) - based on pure delay
     uint32_t                    dead_beat;                      // 0 = not dead-beat, 1-3 = dead-beat(1-3)
-    double                      period;                         // Regulation period
-    float                       inv_period_iters;               // 1/period_iters
+    double                      reg_period;                     // Regulation period
+    float                       inv_reg_period_iters;           // 1/reg_period_iters
     float                       ref_advance;                    // Reference advance time
     float                       pure_delay_periods;             // Pure delay in regulation periods
     float                       track_delay_periods;            // Track delay in regulation periods
@@ -118,7 +118,7 @@ struct reg_rst_vars                                             // RST algorithm
 extern "C" {
 #endif
 
-enum reg_status regRstInit        (struct reg_rst_pars *pars, double iter_period, uint32_t period_iters,
+enum reg_status regRstInit        (struct reg_rst_pars *pars, double iter_period, uint32_t reg_period_iters,
                                    struct reg_load_pars *load, float auxpole1_hz, float auxpoles2_hz, float auxpoles2_z,
                                    float auxpole4_hz, float auxpole5_hz,
                                    float pure_delay_periods, float track_delay_periods, enum reg_mode reg_mode,

@@ -78,9 +78,20 @@ CCPARS_GLOBAL_EXT struct ccpars_enum function_type[]
 
 // Regulation mode enum constants from libreg
 
+CCPARS_GLOBAL_EXT struct ccpars_enum reg_actuation[]
+#ifdef GLOBALS
+= {
+    { REG_VOLTAGE_REF,    "VOLTAGE" },
+    { REG_CURRENT_REF,    "CURRENT" },
+    { 0,                   NULL     },
+}
+#endif
+;
+
 CCPARS_GLOBAL_EXT struct ccpars_enum reg_mode[]
 #ifdef GLOBALS
 = {
+    { REG_NONE,       "NONE"    },
     { REG_VOLTAGE,    "VOLTAGE" },
     { REG_CURRENT,    "CURRENT" },
     { REG_FIELD,      "FIELD"   },
@@ -120,6 +131,7 @@ struct ccpars_global
     float               stop_delay;         // Time after end of last ref function
     float               iter_period;        // Global iteration period
     float               abort_time;         // Time to abort the ref function (limits are required)
+    uint32_t            actuation;          // Converter actuation (VOLTAGE REF or CURRENT REF)
     uint32_t            reverse_time;       // Reverse time flag (tests ref function with decreasing time)
     uint32_t            reg_mode[MAX_FUNCS];// Regulation modes (VOLTAGE, CURRENT or FIELD)
     uint32_t            function[MAX_FUNCS];// Ref function types
@@ -142,6 +154,7 @@ CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
         1.0,                 // GLOBAL STOP_DELAY
         1.0E-3,              // GLOBAL ITER_PERIOD
         0.0,                 // GLOBAL ABORT_TIME
+        REG_VOLTAGE_REF,     // GLOBAL ACTUATION
         CC_DISABLED,         // GLOBAL REVERSE_TIME
         { REG_VOLTAGE },     // GLOBAL REG_MODE
         { FG_SINE },         // GLOBAL FUNCTION
@@ -164,6 +177,7 @@ enum global_pars_index_enum
     GLOBAL_STOP_DELAY        ,
     GLOBAL_ITER_PERIOD       ,
     GLOBAL_ABORT_TIME        ,
+    GLOBAL_ACTUATION         ,
     GLOBAL_REVERSE_TIME      ,
     GLOBAL_REG_MODE          ,
     GLOBAL_FUNCTION          ,
@@ -186,6 +200,7 @@ CCPARS_GLOBAL_EXT struct ccpars global_pars[]
     { "STOP_DELAY",        PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.stop_delay         }, 1 },
     { "ITER_PERIOD",       PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.iter_period        }, 1 },
     { "ABORT_TIME",        PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.abort_time         }, 1 },
+    { "ACTUATION",         PAR_ENUM,         1, 1, reg_actuation,    { .i = &ccpars_global.actuation          }, 1 },
     { "REVERSE_TIME",      PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.reverse_time       }, 1 },
     { "REG_MODE",          PAR_ENUM, MAX_FUNCS, 1, reg_mode,         { .i =  ccpars_global.reg_mode           }, 1 },
     { "FUNCTION",          PAR_ENUM, MAX_FUNCS, 1, function_type,    { .i =  ccpars_global.function           }, 1 },

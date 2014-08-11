@@ -92,22 +92,22 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
     // Calculate float/integer scalings for FIR filter stages
 
     filter->float_to_integer = INT32_MAX / (longest_fir_len * max_meas_value);
-    filter->integer_to_float = 1.0 / (filter->float_to_integer * (float)(total_fir_len - longest_fir_len));
+    filter->integer_to_float = 1.0 / (filter->float_to_integer * (float)(filter->fir_length[1]));
     
-    // Initialise the FIR filter stages
+    // Initialize the FIR filter stages
     
     filter->fir_accumulator[0] = filter->fir_accumulator[1] = 0;
 
     memset(filter->fir_buf[0], 0, total_fir_len * sizeof(int32_t));
 
-    // Initialise FIR filter stages to the value in filter->signal[REG_MEAS_UNFILTERED]
+    // Initialize FIR filter stages to the value in filter->signal[REG_MEAS_UNFILTERED]
 
     while(total_fir_len--)
     {
         regMeasFirFilterRT(filter);
     }
 
-    // Initialise extrapolation buffer
+    // Initialize extrapolation buffer
 
     while(extrapolation_len_iters--)
     {

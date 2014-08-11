@@ -30,6 +30,14 @@
 
 // Regulation parameters source (operational or test) enum
 
+enum reg_actuation
+{
+    REG_VOLTAGE_REF,                                    ///< Actuation is a voltage reference
+    REG_CURRENT_REF                                     ///< Actuation is a current reference
+};
+
+// Regulation parameters source (operational or test) enum
+
 enum reg_rst_source
 {
     REG_OPERATIONAL_RST_PARS,                           ///< Use operational RST parameters
@@ -101,12 +109,13 @@ struct reg_conv                                         ///< Global converter re
 
     // Regulation reference and measurement variables and parameters
 
+    enum   reg_actuation		actuation;				///< Converter actuation: Voltage reference or current reference
     enum   reg_mode             reg_mode;               ///< Regulation mode: Field, Current or Voltage
     enum   reg_rst_source       reg_rst_source;         ///< RST parameter source (Operational or Test)
     struct reg_conv_signal     *reg_signal;             ///< Pointer to currently regulated signal structure (reg.i or reg.b)
 
     uint32_t                    iteration_counter;      ///< Iteration counter (within each regulation period)
-    double                      period;                 ///< Regulation period
+    double                      reg_period;             ///< Regulation period
     float                       ref_advance;            ///< Time to advance reference function
 
     float                       meas;                   ///< Field or current regulated measurement
@@ -150,7 +159,7 @@ struct reg_conv                                         ///< Global converter re
 extern "C" {
 #endif
 
-void     regConvInit              (struct reg_conv *conv, double iter_period);
+void     regConvInit              (struct reg_conv *conv, double iter_period, enum reg_actuation actuation);
 uint32_t regConvRstInit           (struct reg_conv *conv, struct reg_conv_signal *reg_signal,
                                    enum reg_mode reg_mode, enum reg_rst_source reg_rst_source, uint32_t reg_period_iters,
                                    float auxpole1_hz, float auxpoles2_hz, float auxpoles2_z, float auxpole4_hz, float auxpole5_hz,

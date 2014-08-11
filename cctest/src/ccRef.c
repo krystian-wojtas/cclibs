@@ -533,7 +533,7 @@ uint32_t ccRefStartGen(struct fg_plep_pars *pars, const double *time, float *ref
         {
             // Calculate rate of rise
 
-            ccpars_start.config.linear_rate = regRstDeltaRefRT(&conv.rst_vars) / conv.period;
+            ccpars_start.config.linear_rate = regRstDeltaRefRT(&conv.rst_vars) / conv.reg_period;
 
             // Initialise PLEP function to continue this ramp rate up to the start plateau
 

@@ -36,7 +36,7 @@
 
 // Constants
 
-#define CC_VERSION                  4.00
+#define CC_VERSION                  4.01
 #define CC_PATH_LEN                 256
 #define CC_ABBREVIATED_ARG_LEN      20
 #define CC_INPUT_FILE_NEST_LIMIT    4
