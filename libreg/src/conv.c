@@ -279,7 +279,7 @@ static void regConvSetModeNoneOrVoltageRT(struct reg_conv *conv, enum reg_mode r
 
             default:    // NONE
 
-                conv->v.ref_sat = conv->v.ref = 0.0;
+                conv->v.ref_sat = conv->v.ref;
                 break;
         }
 

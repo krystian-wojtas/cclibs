@@ -2,6 +2,7 @@
 ._*
 *.csv
 *.swp
+.keep
 html/
 Darwin/
 Linux/
@@ -9,6 +10,10 @@ i686/
 dep/
 obj/
 ti/
+pdf/
+latex/
+html/
+man/
 webplots/
 debug/
 .DS_Store

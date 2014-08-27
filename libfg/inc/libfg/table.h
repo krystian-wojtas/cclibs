@@ -1,37 +1,42 @@
-/*
-  Copyright CERN 2014
-
-  License:  This file is part of libfg.
-
-            libfg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-/**
+/*!
  * @file    table.h
- * @author  cclibs-devs@cern.ch
  * @date    May 2014
- * @brief   Header file for table.c : Linearly interpolated table functions
+ * @brief   Generate linearly interpolated table functions.
+ * @see     http://cern.ch/cclibs
  *
- * The same TABLE configuration can be used with the SPLINE function to smoothly iterpolate
- * the table of points.
+ * The same TABLE configuration can be used with the SPLINE function
+ * to smoothly iterpolate the table of points.
  *
- * The fgTableGen function receives time as a pointer to constant float rather than as a float value.
- * This allows the user to initialise an array of pointers to functions with the pointer to the
- * fgTableGen function.  If time is passed by value then the compiler promotes the float to double
- * and prevents the correct initialisation.
+ * fgTableGen() receives time as a pointer to constant float rather than as a
+ * float value. This allows the user to initialise an array of pointers to
+ * functions with the pointer to fgTableGen(). If time is passed by value then
+ * the compiler promotes the float to double and prevents the correct initialisation.
  *
- * @see http://cern.ch/cclibs
+ * <h2>Contact</h2>
+ *
+ * cclibs-devs@cern.ch
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libfg.
+ *
+ * libfg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef LIBFG_TABLE_H
@@ -41,24 +46,29 @@
 
 // Types
 
-struct fg_table_config              // Table function configuration (also used by spline.c)
+/*!
+ * Table function configuration
+ */
+struct fg_table_config
 {
-    float       *ref;               // Table reference values
-    float       *time;              // Table time values
-    uintptr_t   ref_n_elements;     // Number of elements in reference array
-    uintptr_t   time_n_elements;    // Number of elements in time array
+    float       *ref;               //!< Table reference values
+    float       *time;              //!< Table time values
+    uintptr_t   ref_n_elements;     //!< Number of elements in reference array
+    uintptr_t   time_n_elements;    //!< Number of elements in time array
 };
 
-struct fg_table_pars                // Table function parameters
+/*!
+ * Table function parameters
+ */
+struct fg_table_pars
 {
-    uint32_t    seg_idx;            // Segment index
-    uint32_t    prev_seg_idx;       // Previous segment index for which gradient was calculated
-    uintptr_t   n_elements;         // Number of elements in table
-    float       delay;              // Time before start of function
-    float       *ref;               // Table reference values
-    float       *time;              // Table time values
-    float       seg_grad;           // Gradient of reference for segment prev_seg_idx
-
+    uint32_t    seg_idx;            //!< Segment index
+    uint32_t    prev_seg_idx;       //!< Previous segment index for which gradient was calculated
+    uintptr_t   n_elements;         //!< Number of elements in table
+    float       delay;              //!< Time before start of function
+    float       *ref;               //!< Table reference values
+    float       *time;              //!< Table time values
+    float       seg_grad;           //!< Gradient of reference for segment fg_table_pars::prev_seg_idx
 };
 
 #ifdef __cplusplus
@@ -78,4 +88,3 @@ enum fg_error   fgTableInit(struct fg_limits *limits, enum fg_limits_polarity li
 
 #endif
 // EOF
-

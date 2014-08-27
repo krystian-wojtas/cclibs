@@ -313,7 +313,7 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
             }
 
-            signals[ANA_REG_MEAS].time_offset = (uint32_t)(conv.i.meas.delay_iters[conv.i.meas.reg_select] + 0.499) * conv.iter_period;
+            signals[ANA_REG_MEAS].time_offset = -conv.iter_period * (uint32_t)(conv.i.meas.delay_iters[conv.i.meas.reg_select] + 0.499);
         }
 
         // Current simulation signals

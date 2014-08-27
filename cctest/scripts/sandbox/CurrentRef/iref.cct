@@ -19,6 +19,9 @@ VS V_REF_DELAY                  1.0
 
 IREG PERIOD_ITERS               1
 MEAS I_FIR_LENGTHS              4 2
+MEAS I_SIM_NOISE_PP             0.0
+MEAS I_REG_SELECT               UNFILTERED
+MEAS I_DELAY_ITERS              2.0
 
 LIMITS I_POS                    10.0
 LIMITS I_RATE                   0.0

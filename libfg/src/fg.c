@@ -1,32 +1,45 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     fg.c                                                                        Copyright CERN 2014
-
-  License:  This file is part of libfg.
-
-            libfg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Function generation library top level source file
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file      fg.c
+ * @brief     Function generation library top-level source file.
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libfg.
+ *
+ * libfg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "libfg.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
 struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, float init_ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  When a function is initialised a meta structure is filled with a summary of the function including the
-  min/max and start and end values.  This function is used to reset all the fields in the meta structure.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * Reset all the fields in the meta structure.
+ *
+ * When a function is initialised a meta structure is filled with a summary of the function including the
+ * min/max and start and end values.  This function is used to reset all the fields in the meta structure.
+ *
+ * @param[out] meta       Reference metadata to reset
+ * @param[out] local_meta Reference metadata to reset if <em>meta</em> is NULL
+ * @param[in]  init_ref   Value for reference start, min and max
+ * @retval     *meta      Pointer to the structure that was reset
+ */
 {
     uint32_t idx;
 
@@ -55,9 +68,12 @@ struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, f
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void fgSetMinMax(struct fg_meta *meta, float ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This helper function is used to set the meta min and max fields
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This helper function is used to set the meta min and max fields
+ *
+ * @param[out] meta Reference metadata to set
+ * @param[in]  ref  Value for reference min and max
+ */
 {
     if(ref > meta->range.max)
     {
@@ -71,11 +87,22 @@ void fgSetMinMax(struct fg_meta *meta, float ref)
 /*---------------------------------------------------------------------------------------------------------*/
 enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
                          float ref, float rate, float acceleration, struct fg_meta *meta)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function is called when a function is initialised to check the function value, rate and acceleration
-  against the supplied limits.  It will also call a user supplied call back if supplied to allow further
-  checks.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * Check function value, rate and acceleration against the supplied limits.
+ *
+ * This function is called when a function is initialised to check the function value, rate and acceleration
+ * against the supplied limits.  It will also call a user supplied call back if supplied to allow further
+ * checks.
+ *
+ * @param[in]  limits          Limits to check against
+ * @param[in]  limits_polarity Invert limits? Only required for unipolar converters
+ * @param[in]  ref             Reference level
+ * @param[in]  rate            Rate of change
+ * @param[in]  acceleration    Acceleration
+ * @param[out] meta            Reference metadata structure used to return detailed error codes
+ * @retval fg_error            FG_OK on success, error code on failure: FG_OUT_OF_LIMITS, FG_OUT_OF_RATE_LIMITS,
+ *                             FG_OUT_OF_ACCELERATION_LIMITS or the result of fg_limits::user_check_limits()
+ */
 {
     float    max;
     float    min;
@@ -155,4 +182,3 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
     return(FG_OK);
 }
 // EOF
-

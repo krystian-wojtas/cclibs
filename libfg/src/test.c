@@ -1,23 +1,29 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     test.c                                                                      Copyright CERN 2014
-
-  License:  This file is part of libfg.
-
-            libfg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Generate test functions (STEPS, SQUARE, SINE or COSINE)
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  test.c
+ * @brief Generate test functions (STEPS, SQUARE, SINE or COSINE)
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libfg.
+ *
+ * libfg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "libfg/test.h"
 
@@ -28,7 +34,7 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
                          float                      delay,
                          float                      ref,
                          struct fg_test_pars       *pars,
-                         struct fg_meta            *meta)          // NULL if not required
+                         struct fg_meta            *meta)          //!< NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
     enum fg_error  fg_error;       // Limits status
@@ -146,10 +152,10 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function derives the reference for a test function (STEPS, SQUARE, SINE or COSINE).
-  It returns 1 while the function is in progress and 0 when it has been completed.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function derives the reference for a test function (STEPS, SQUARE, SINE or COSINE).
+ * It returns 1 while the function is in progress and 0 when it has been completed.
+ */
 {
     uint32_t    period_idx;
     double      ref_time;
@@ -238,4 +244,3 @@ uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
     return(1);
 }
 // EOF
-

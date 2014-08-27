@@ -1,29 +1,36 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     ramp.c                                                                      Copyright CERN 2014
-
-  License:  This file is part of libfg.
-
-            libfg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Generate RAMP function based on Parabola - Parabola with time shift when value is limited
-
-  Notes:    RAMP is a special function that responds by adjusting a time shift if the reference is 
-            rate limited by the calling application. This effectively slows the reference time so that
-            the function will continue smoothly when the reference is no longer limited. As a consequence,
-            the function duration returned in *meta will be wrong if the reference is limited at any 
-            time during the generation of the function. In addition, time must never go backwards.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  ramp.c
+ * @brief Generate fast ramp based on Parabola-Parabola function
+ *
+ * RAMP is a special function that responds by adjusting a time shift if the
+ * reference is rate-limited by the calling application. This effectively slows
+ * the reference time so that the function will continue smoothly when the
+ * reference is no longer limited. As a consequence, the function duration
+ * returned in fg_meta::meta will be wrong if the reference is limited at any
+ * time during the generation of the function. In addition, time must never go backwards.
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libfg.
+ *
+ * libfg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "libfg/ramp.h"
 
@@ -34,7 +41,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
                          float                      delay,
                          float                      ref,
                          struct fg_ramp_pars       *pars,
-                         struct fg_meta            *meta)          // NULL if not required
+                         struct fg_meta            *meta)          //!< NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
     enum fg_error  fg_error;                     // Reference limits status
@@ -78,20 +85,20 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function derives the reference for the previously initialised ramp function at the given time.
-  It returns zero if time is beyond the end of the function, and 1 otherwise. *ref should point to the
-  the reference value from the previous iteration. This may have been clipped if any limits were reached.
-
-  The input pars structure contains the coordinates of the transition points between the segments of the
-  ramp function: 
-
-   - pars->time[0], pars->ref[0]: Max/min of first (accelerating) parabola;
-   - pars->time[1], pars->ref[1]: Connection between accelerating and decelerating parabolas;
-   - pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also end of the ramp function.
-  
-  NOTE: Unlike the other libfg functions, TIME MUST NOT GO BACKWARDS. 
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function derives the reference for the previously initialised ramp function at the given time.
+ * It returns zero if time is beyond the end of the function, and 1 otherwise. *ref should point to the
+ * the reference value from the previous iteration. This may have been clipped if any limits were reached.
+ *
+ * The input pars structure contains the coordinates of the transition points between the segments of the
+ * ramp function:
+ *
+ * - pars->time[0], pars->ref[0]: Max/min of first (accelerating) parabola;
+ * - pars->time[1], pars->ref[1]: Connection between accelerating and decelerating parabolas;
+ * - pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also end of the ramp function.
+ *
+ * NOTE: Unlike the other libfg functions, TIME MUST NOT GO BACKWARDS.
+ */
 {
     uint32_t    func_running_flag = 1;      // Returned value
     uint32_t    time_shift_alg    = 0;      // Time shift adjustment algorithm index
@@ -275,12 +282,12 @@ void fgRampCalc(struct fg_ramp_config *config,
                 float                  init_ref,
                 float                  init_rate,
                 struct fg_meta        *meta)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function calculates ramp parameters. 
-
-  Please refer to the comments in function fgRampGen for information regarding the contents of the output
-  pars structure, and in particular the usage of pars->time[], pars->ref[].
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function calculates ramp parameters.
+ *
+ * Please refer to the comments in function fgRampGen for information regarding the contents of the output
+ * pars structure, and in particular the usage of pars->time[], pars->ref[].
+ */
 {
     float       delta_ref;              // Initial ref minus final ref
     float       ref0;                   // Ref at t=0 for first parabola
@@ -353,4 +360,3 @@ void fgRampCalc(struct fg_ramp_config *config,
     meta->range.end = config->final;
 }
 // EOF
-

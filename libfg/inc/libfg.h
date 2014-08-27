@@ -1,25 +1,33 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     libfg.h                                                                     Copyright CERN 2014
-
-  License:  This file is part of libfg.
-
-            libfg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Function generation library top level header file
-
-  Contact:  cclibs-devs@cern.ch
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file      libfg.h
+ * @brief     Function generation library top-level header file
+ *
+ * <h2>Contact</h2>
+ *
+ * cclibs-devs@cern.ch
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libfg.
+ *
+ * libfg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef LIBFG_H
 #define LIBFG_H
@@ -34,8 +42,9 @@
 #define FG_PI                   3.141592653589793238462643383279
 #define FG_ERR_DATA_LEN         4
 
-// FG Library error numbers
-
+/*!
+ * FG Library error numbers
+ */
 enum fg_error
 {
     FG_OK,
@@ -48,50 +57,53 @@ enum fg_error
     FG_OUT_OF_VOLTAGE_LIMITS
 };
 
-// Polarity of limits
-
+/*!
+ * Polarity of limits
+ */
 enum fg_limits_polarity
 {
-    FG_LIMITS_POL_NORMAL,                  // Normal limits with no manipulation
-    FG_LIMITS_POL_NEGATIVE,                // Limits should be inverted
-    FG_LIMITS_POL_AUTO                     // Limits should be tested based upon the polarity of the reference
+    FG_LIMITS_POL_NORMAL,                  //!< Normal limits with no manipulation
+    FG_LIMITS_POL_NEGATIVE,                //!< Limits should be inverted
+    FG_LIMITS_POL_AUTO                     //!< Limits should be tested based upon the polarity of the reference
 };
 
-// Reference meta data structure
-// NB: The fg_meta_error sub-structure is useful in case the reference function was rejected.
-
+/*!
+ * Reference metadata structure.
+ */
 struct fg_meta
 {
-    struct fg_meta_error
+    struct
     {
-        uint32_t    index;                 // Error index from Init function
-        float       data[FG_ERR_DATA_LEN]; // Error debug data
-    } error;
+        uint32_t    index;                 //!< Error index from Init function
+        float       data[FG_ERR_DATA_LEN]; //!< Error debug data
+    } error;                               //!< Used to indicate why the reference function was rejected
 
-    float       duration;                  // Function duration
+    float       duration;                  //!< Function duration
 
     struct
     {
-        float   start;                     // Reference value at start of function
-        float   end;                       // Reference value at the end of the function
-        float   min;                       // Minimum value of the function
-        float   max;                       // Maximum value of the function
+        float   start;                     //!< Reference value at start of function
+        float   end;                       //!< Reference value at the end of the function
+        float   min;                       //!< Minimum value of the function
+        float   max;                       //!< Maximum value of the function
     } range;
 };
 
-// Reference limits structure
-
+/*!
+ * Reference limits structure
+ */
 struct fg_limits
 {
-    float       pos;                       // Positive reference limit
-    float       min;                       // Minimum absolute reference limit
-    float       neg;                       // Negative reference limit
-    float       rate;                      // Rate of change limit
-    float       acceleration;              // Acceleration limit
-    uint32_t    user_data;                 // User data available to user_check_limits() function
+    float       pos;                       //!< Positive reference limit
+    float       min;                       //!< Minimum absolute reference limit
+    float       neg;                       //!< Negative reference limit
+    float       rate;                      //!< Rate of change limit
+    float       acceleration;              //!< Acceleration limit
+    uint32_t    user_data;                 //!< User data available to user_check_limits() function
 
-    // User callback for checking reference
-
+    /*!
+     * User callback for checking reference
+     */
     enum fg_error (*user_check_limits)(struct fg_limits *limits, uint32_t invert_limits,
                                        float ref, float rate, float acceleration, struct fg_meta *meta);
 };
@@ -113,4 +125,3 @@ enum fg_error   fgCheckRef  (struct fg_limits *limits, enum fg_limits_polarity l
 
 #endif
 // EOF
-

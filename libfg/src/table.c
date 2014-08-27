@@ -1,23 +1,29 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     table.c                                                                     Copyright CERN 2014
-
-  License:  This file is part of libfg.
-
-            libfg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Generate linearly interpolated table functions
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  table.c
+ * @brief Generate linearly interpolated table functions.
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libfg.
+ *
+ * libfg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "string.h"
 #include "libfg/table.h"
@@ -29,7 +35,7 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
                           float                     delay,
                           float                     min_time_step,
                           struct fg_table_pars     *pars,
-                          struct fg_meta           *meta)          // NULL if not required
+                          struct fg_meta           *meta)          //!< NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
     enum fg_error  fg_error;       // Limit checking status
@@ -130,9 +136,9 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function derives the reference for table functions.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function derives the reference for table functions.
+ */
 {
     double   ref_time;                               // Time since end of run delay
 
@@ -179,4 +185,3 @@ uint32_t fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
     return(1);
 }
 // EOF
-

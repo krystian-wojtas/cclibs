@@ -1,32 +1,39 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     plep.c                                                                      Copyright CERN 2014
-
-  License:  This file is part of libfg.
-
-            libfg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Generate Parabola - Linear - Expential - Parabola (PLEP) functions
-
-  Notes:    A PLEP can have up to five segments: Parabola - Linear - Expential - Parabola - Parabola
-            The exponential is only required when ramping down a 1-quadrant converter.
-            The normalised PLEP is always calculated as a negative going function.  If the PLEP is
-            positive then it is reflected around zero.  The PLEP can start and end with a
-            non-zero rate of change.  The function is defined by ref[] and time[] arrays
-            in the parameters structure.  These contain the segment times and normalised values.
-
-            See PLEPn.pdf in the doc directory for details
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  plep.c
+ * @brief Generate Parabola - Linear - Expential - Parabola (PLEP) functions
+ *
+ * A PLEP can have up to five segments: Parabola - Linear - Expential - Parabola - Parabola.
+ * The exponential is only required when ramping down a 1-quadrant converter.
+ * The normalised PLEP is always calculated as a negative going function. If
+ * the PLEP is positive then it is reflected around zero. The PLEP can start
+ * and end with a non-zero rate of change. The function is defined by the
+ * arrays fg_plep_pars::ref and fg_plep_pars::time. These contain the segment
+ * times and normalised values.
+ * 
+ * See PLEPn.pdf in the doc directory for details
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libfg.
+ *
+ * libfg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "libfg/plep.h"
 
@@ -37,7 +44,7 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
                          float                      delay,
                          float                      ref,
                          struct fg_plep_pars       *pars,
-                         struct fg_meta            *meta)          // NULL if not required
+                         struct fg_meta            *meta)          //!< NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
     enum fg_error  fg_error;                     // Limits status
@@ -115,24 +122,23 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function derives the reference for the previously initialised PLEP function at the given time.
-  It returns zero if time is beyond the end of the function, and 1 otherwise.
-
-  The input pars structure contains the coordinates of the transition points between the segments of the
-  PLEP function, except for the point at index 0 which is used slightly differently (see details below).
-
-  Finally, the coordinates are defined for a normalised, descending, PLEP function. The reference must be
-  adjusted (de-normalised) in fgPlepGen if the PLEP is ascending - this simply involves flipping the sign.
-
-   - pars->time[0], pars->ref[0]: TOP of the first parabola (NOT the beginning of the first parabola);
-   - pars->time[1], pars->ref[1]: End of the first parabola;
-   - pars->time[2], pars->ref[2]: End of the linear segment;
-   - pars->time[3], pars->ref[3]: End of the exponential segments;
-   - pars->time[4], pars->ref[4]: End of the second (decelerating) parabola;
-   - pars->time[5], pars->ref[5]: End of the third (accelerating) parabola and end of the PLEP function.
-
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function derives the reference for the previously initialised PLEP function at the given time.
+ * It returns zero if time is beyond the end of the function, and 1 otherwise.
+ *
+ * The input pars structure contains the coordinates of the transition points between the segments of the
+ * PLEP function, except for the point at index 0 which is used slightly differently (see details below).
+ *
+ * Finally, the coordinates are defined for a normalised, descending, PLEP function. The reference must be
+ * adjusted (de-normalised) in fgPlepGen if the PLEP is ascending - this simply involves flipping the sign.
+ *
+ * - pars->time[0], pars->ref[0]: TOP of the first parabola (NOT the beginning of the first parabola);
+ * - pars->time[1], pars->ref[1]: End of the first parabola;
+ * - pars->time[2], pars->ref[2]: End of the linear segment;
+ * - pars->time[3], pars->ref[3]: End of the exponential segments;
+ * - pars->time[4], pars->ref[4]: End of the second (decelerating) parabola;
+ * - pars->time[5], pars->ref[5]: End of the third (accelerating) parabola and end of the PLEP function.
+ */
 {
     uint32_t    ref_running_f = 1;         // reference running flag is the return value
     float       r;
@@ -209,20 +215,20 @@ void  fgPlepCalc(struct fg_plep_config *config,
                  float                  init_ref,
                  float                  init_rate,
                  struct fg_meta        *meta)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function calculates PLEP parameters.  This function must be re-entrant because it can be called
-  to calculate the PLEP coefficients for an already moving reference.
-
-  The reference scale is normalised if the PLEP is ascending.  This reflects the function about the 
-  zero to make the calculated PLEP always descending.
-
-  Please refer to the comments in function fgPlepGen for information regarding the contents of the output
-  pars structure, and in particular the usage of pars->time[i], pars->ref[i] for all indexes.
-
-  Note that if delay is non-zero then init_rate should be zero.
-
-  The function returns the minimum value of the function.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function calculates PLEP parameters. This function must be re-entrant because it can be called
+ * to calculate the PLEP coefficients for an already moving reference.
+ *
+ * The reference scale is normalised if the PLEP is ascending. This reflects the function about the
+ * zero to make the calculated PLEP always descending.
+ *
+ * Please refer to the comments in function fgPlepGen for information regarding the contents of the output
+ * pars structure, and in particular the usage of pars->time[i], pars->ref[i] for all indexes.
+ *
+ * Note that if delay is non-zero then init_rate should be zero.
+ *
+ * The function returns the minimum value of the function.
+ */
 {
     uint32_t    i;                      // Loop variable
     uint32_t    par_b4_lin_flag;        // Decelerating parabola before Linear flag
@@ -463,4 +469,3 @@ void  fgPlepCalc(struct fg_plep_config *config,
     meta->range.end = config->final;
 }
 // EOF
-

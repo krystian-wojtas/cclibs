@@ -149,7 +149,8 @@ static float regModulusMargin(struct reg_rst_pars *pars)
 
     if(pars->alg_index == 1)
     {
-        pars->modulus_margin = regAbsComplexRatio(pars->asbr, pars->as, 0.5);
+        pars->modulus_margin      = regAbsComplexRatio(pars->asbr, pars->as, 0.5);
+        pars->modulus_margin_freq = 0.5 / pars->reg_period;
     }
     else // for algorithms 2-5, scan for minimum abs_S_p_y (this is the modulus margin)
     {

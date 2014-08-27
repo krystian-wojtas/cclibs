@@ -56,10 +56,10 @@ enum reg_status                                                 // Regulation st
 
 enum reg_mode                                                   // Converter regulation mode
 {
-    REG_NONE,                                                   // No regulation mode set
     REG_VOLTAGE,                                                // Open loop (voltage reference)
     REG_CURRENT,                                                // Closed loop on current
-    REG_FIELD                                                   // Closed loop on field
+    REG_FIELD,                                                  // Closed loop on field
+    REG_NONE                                                    // No regulation mode set
 };
 
 struct reg_rst                                                  // RST polynomial arrays and track delay

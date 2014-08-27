@@ -1,23 +1,29 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     pppl.c                                                                      Copyright CERN 2014
-
-  License:  This file is part of libfg.
-
-            libfg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Generate Parabola - Parabola - Parabola - Linear (PPPL) functions
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  pppl.c
+ * @brief Generate Parabola - Parabola - Parabola - Linear (PPPL) functions
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libfg.
+ *
+ * libfg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "libfg/pppl.h"
 
@@ -28,7 +34,7 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
                          float                      delay,
                          float                      ref,
                          struct fg_pppl_pars       *pars,
-                         struct fg_meta            *meta)          // NULL if not required
+                         struct fg_meta            *meta)          //!< NULL if not required
 /*---------------------------------------------------------------------------------------------------------*/
 {
     enum fg_error  fg_error;                     // Status from limits checking
@@ -271,10 +277,10 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function derives the reference for PPPL functions.  Returns 0 if ref_time is beyond end of the
-  function.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function derives the reference for PPPL functions. Returns 0 if ref_time is beyond end of the
+ * function.
+ */
 {
     double seg_time;                                    // Time within segment
 
@@ -315,4 +321,3 @@ uint32_t fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
     return(1);
 }
 // EOF
-
