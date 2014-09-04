@@ -1,8 +1,6 @@
 /*!
- * @file    trim.c
- * @brief   Generate linear and cubic trim functions
- *
- * For information on the cubic and linear trims, consult the documenation in doc/CTRIM_LTRIM.pdf
+ * @file  trim.c
+ * @brief Generate linear and cubic trim functions
  *
  * <h2>Copyright</h2>
  *
@@ -29,15 +27,13 @@
 
 #include "libfg/trim.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
 enum fg_error fgTrimInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
                          struct fg_trim_config     *config,
                          float                      delay,
                          float                      ref,
                          struct fg_trim_pars       *pars,
-                         struct fg_meta            *meta)          // NULL if not required
-/*---------------------------------------------------------------------------------------------------------*/
+                         struct fg_meta            *meta)
 {
     enum fg_error  fg_error;       // Status from limits checking
     uint32_t       invert_flag;    // Inverted trim flag
@@ -178,9 +174,8 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
     return(FG_OK);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 uint32_t fgTrimGen(struct fg_trim_pars *pars, const double *time, float *ref)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     double ref_time;
 
@@ -209,4 +204,5 @@ uint32_t fgTrimGen(struct fg_trim_pars *pars, const double *time, float *ref)
 
     return(1);
 }
+
 // EOF

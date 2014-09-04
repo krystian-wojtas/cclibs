@@ -27,15 +27,13 @@
 
 #include "libfg/test.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
 enum fg_error fgTestInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
                          struct fg_test_config     *config,
                          float                      delay,
                          float                      ref,
                          struct fg_test_pars       *pars,
-                         struct fg_meta            *meta)          //!< NULL if not required
-/*---------------------------------------------------------------------------------------------------------*/
+                         struct fg_meta            *meta)
 {
     enum fg_error  fg_error;       // Limits status
     uint32_t       n_cyc;          // int(num_cycles)
@@ -150,12 +148,8 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
     return(FG_OK);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
-/*!
- * This function derives the reference for a test function (STEPS, SQUARE, SINE or COSINE).
- * It returns 1 while the function is in progress and 0 when it has been completed.
- */
 {
     uint32_t    period_idx;
     double      ref_time;
@@ -243,4 +237,5 @@ uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 
     return(1);
 }
+
 // EOF

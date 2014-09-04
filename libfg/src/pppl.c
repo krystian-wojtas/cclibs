@@ -1,6 +1,6 @@
 /*!
  * @file  pppl.c
- * @brief Generate Parabola - Parabola - Parabola - Linear (PPPL) functions
+ * @brief Generate Parabola-Parabola-Parabola-Linear (PPPL) functions
  *
  * <h2>Copyright</h2>
  *
@@ -27,15 +27,13 @@
 
 #include "libfg/pppl.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
 enum fg_error fgPpplInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
                          struct fg_pppl_config     *config,
                          float                      delay,
                          float                      ref,
                          struct fg_pppl_pars       *pars,
-                         struct fg_meta            *meta)          //!< NULL if not required
-/*---------------------------------------------------------------------------------------------------------*/
+                         struct fg_meta            *meta)
 {
     enum fg_error  fg_error;                     // Status from limits checking
     uint32_t       n_pppls;                      // Number of PPPLs
@@ -275,12 +273,8 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
 
     return(FG_OK);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 uint32_t fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
-/*!
- * This function derives the reference for PPPL functions. Returns 0 if ref_time is beyond end of the
- * function.
- */
 {
     double seg_time;                                    // Time within segment
 
@@ -320,4 +314,5 @@ uint32_t fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
 
     return(1);
 }
+
 // EOF

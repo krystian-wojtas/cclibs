@@ -2,13 +2,19 @@
  * @file    test.h
  * @brief   Generate test functions (STEPS, SQUARE, SINE or COSINE)
  *
- * Four different types of test function are supported in the test function family.
- * 
- * fgTestGen() receives time as a pointer to constant float rather than as a
- * float value. This allows the user to initialise an array of pointers to
- * functions with the pointer to fgTestGen(). If time is passed by value then
- * the compiler promotes the float to double and prevents the correct initialisation.
+ * Four types of test function are supported in the test function family:
  *
+ * <ul>
+ * <li>STEPS:  the reference is stepped up or down from its initial value to
+ *             fg_test_config::amplitude_pp in equal-sized steps.</li>
+ * <li>SQUARE: creates a square wave of amplitude fg_test_config::amplitude_pp
+ *             at each period.</li>
+ * <li>SINE:   creates a sine wave of amplitude fg_test_config::amplitude_pp at
+ *             each period. If fg_test_config::use_window != 0, the curve is
+ *             smoothed at the beginning of the first and end of the last period.</li>
+ * <li>COSINE: creates a cosine wave with the same behaviour as SINE.</li>
+ * </ul>
+ * 
  * <h2>Contact</h2>
  *
  * cclibs-devs@cern.ch
@@ -90,14 +96,50 @@ extern "C" {
 
 // External functions
 
-uint32_t        fgTestGen (struct fg_test_pars *pars, const double *time, float *ref);
-enum fg_error   fgTestInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                           struct fg_test_config *config, float delay, float ref,
-                           struct fg_test_pars *pars, struct fg_meta *meta);
+/*!
+ * Check Test function configuration and initialise parameters.
+ *
+ * @param[in]  limits           Limits to check each segment against
+ * @param[in]  limits_polarity  Polarity limits to check each segment against
+ * @param[in]  config           Test configuration parameters
+ * @param[in]  delay            RUN_DELAY, delay before the start of the function
+ * @param[in]  ref              Initial reference value
+ * @param[out] pars             Test function parameters
+ * @param[out] meta             Diagnostic information. Set to NULL if not required.
+ *
+ * @retval FG_OK on success
+ * @retval FG_BAD_PARAMETER if invalid function type requested
+ * @retval FG_INVALID_TIME if total time is too long (\f$>10^{6}s\f$)
+ * @retval FG_OUT_OF_LIMITS if reference value exceeds limits
+ * @retval FG_OUT_OF_RATE_LIMITS if rate of change of reference exceeds limits
+ * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
+ */
+enum fg_error fgTestInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
+                         struct fg_test_config *config, float delay, float ref,
+                         struct fg_test_pars *pars, struct fg_meta *meta);
+
+/*!
+ * Generate the reference for the Test functions.
+ *
+ * @param[in]  pars             Test function parameters
+ * @param[in]  time             Current time within the function. Note that time
+ *                              is passed by const reference rather than by value.
+ *                              This allows the user to initialise an array of
+ *                              pointers to functions with the pointer to
+ *                              fgTestGen(). If time is passed by value then the
+ *                              compiler promotes the float to double and prevents
+ *                              correct initialisation.
+ * @param[out] ref              Derived reference value
+ *
+ * @retval 0 when function has completed
+ * @retval 1 if time is within the function.
+ */
+uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
+
 // EOF

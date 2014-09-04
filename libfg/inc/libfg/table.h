@@ -1,16 +1,17 @@
 /*!
  * @file    table.h
- * @date    May 2014
  * @brief   Generate linearly interpolated table functions.
- * @see     http://cern.ch/cclibs
  *
- * The same TABLE configuration can be used with the SPLINE function
- * to smoothly iterpolate the table of points.
+ * This function is provided with a list of reference values and times that the
+ * reference values take effect, i.e. it calculates the reference by table lookup.
  *
- * fgTableGen() receives time as a pointer to constant float rather than as a
- * float value. This allows the user to initialise an array of pointers to
- * functions with the pointer to fgTableGen(). If time is passed by value then
- * the compiler promotes the float to double and prevents the correct initialisation.
+ * Using linear interpolation results in an error between the actual linear
+ * reference and the ideal parabolic reference. It can be shown that for parabola
+ * \f$y = \frac{at^{2}}{2}\f$, the maximum interpolation error for segment
+ * \f$0 \leq t \leq T\f$ is \f$\epsilon_{max} = \frac{aT^{2}}{8}\f$.
+ *
+ * \image html  Interpolation_error.png
+ * \image latex Interpolation_error.png "Linear interpolation error" width=0.5\textwidth
  *
  * <h2>Contact</h2>
  *
@@ -77,14 +78,50 @@ extern "C" {
 
 // External functions
 
-uint32_t        fgTableGen (struct fg_table_pars *pars, const double *time, float *ref);
-enum fg_error   fgTableInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                            struct fg_table_config *config, float delay, float min_time_step,
-                            struct fg_table_pars *pars, struct fg_meta *meta);
+/*!
+ * Check Table function configuration and initialise parameters.
+ *
+ * @param[in]  limits           Limits to check each segment against
+ * @param[in]  limits_polarity  Polarity limits to check each segment against
+ * @param[in]  config           Table configuration parameters
+ * @param[in]  delay            RUN_DELAY, delay before the start of the function
+ * @param[in]  min_time_step    Minimum time between interpolation points
+ * @param[out] pars             Table function parameters
+ * @param[out] meta             Diagnostic information. Set to NULL if not required.
+ *
+ * @retval FG_OK on success
+ * @retval FG_BAD_ARRAY_LEN if there are less than two points, or elements of config are different lengths
+ * @retval FG_INVALID_TIME if first time value is not zero, or time values are not at least min_time_step seconds apart
+ * @retval FG_OUT_OF_LIMITS if reference value exceeds limits
+ * @retval FG_OUT_OF_RATE_LIMITS if rate of change of reference exceeds limits
+ * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
+ */
+enum fg_error fgTableInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
+                          struct fg_table_config *config, float delay, float min_time_step,
+                          struct fg_table_pars *pars, struct fg_meta *meta);
+
+/*!
+ * Generate the reference for the Table function.
+ *
+ * @param[in]  pars             Table function parameters
+ * @param[in]  time             Current time within the function. Note that time
+ *                              is passed by const reference rather than by value.
+ *                              This allows the user to initialise an array of
+ *                              pointers to functions with the pointer to
+ *                              fgTableGen(). If time is passed by value then the
+ *                              compiler promotes the float to double and prevents
+ *                              correct initialisation.
+ * @param[out] ref              Derived reference value
+ *
+ * @retval 0 if time is beyond the end of the function
+ * @retval 1 if time is within a segment (or before the start of the first segment)
+ */
+uint32_t fgTableGen(struct fg_table_pars *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
+
 // EOF

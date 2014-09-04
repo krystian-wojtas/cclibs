@@ -1,6 +1,6 @@
 /*!
  * @file      libfg.h
- * @brief     Function generation library top-level header file
+ * @brief     Function Generation library top-level header file
  *
  * <h2>Contact</h2>
  *
@@ -68,7 +68,7 @@ enum fg_limits_polarity
 };
 
 /*!
- * Reference metadata structure.
+ * Diagnostic metadata structure
  */
 struct fg_meta
 {
@@ -114,14 +114,55 @@ struct fg_limits
 extern "C" {
 #endif
 
-struct fg_meta *fgResetMeta (struct fg_meta *meta, struct fg_meta *local_meta, float init_ref);
-void            fgSetMinMax (struct fg_meta *meta, float ref);
-enum fg_error   fgCheckRef  (struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                             float ref, float rate, float acceleration, struct fg_meta *meta);
+/*!
+ * Reset all the metadata fields.
+ *
+ * When a function is initialised, a meta structure is filled with a summary of the function including the
+ * min/max and start and end values.
+ *
+ * @param[out] meta       Reference metadata to reset
+ * @param[out] local_meta Reference metadata to reset if <em>meta</em> is NULL
+ * @param[in]  init_ref   Value for reference start, min and max
+ *
+ * @return Pointer to the structure that was reset
+ */
+struct fg_meta *fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, float init_ref);
+
+/*!
+ * Set the meta min and max fields
+ *
+ * @param[out] meta Reference metadata to set
+ * @param[in]  ref  Value for reference min and max
+ */
+void fgSetMinMax(struct fg_meta *meta, float ref);
+
+/*!
+ * Check function value, rate and acceleration against the supplied limits.
+ *
+ * When a function is initialised, this is called to check the function value,
+ * rate and acceleration against the supplied limits. It will also call a user
+ * supplied call back (if supplied) to perform further checks.
+ *
+ * @param[in]  limits          Limits to check against
+ * @param[in]  limits_polarity Invert limits? Only required for unipolar converters
+ * @param[in]  ref             Reference level
+ * @param[in]  rate            Rate of change
+ * @param[in]  acceleration    Acceleration
+ * @param[out] meta            Reference metadata structure used to return detailed error codes
+ *
+ * @retval FG_OK on success
+ * @retval FG_OUT_OF_LIMITS if function value is out of limits
+ * @retval FG_OUT_OF_RATE_LIMITS if function rate of change is out of limits
+ * @retval FG_OUT_OF_ACCELERATION_LIMITS if function acceleration is out of limits
+ * @retval other the return value of fg_limits::user_check_limits()
+ */
+enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
+                         float ref, float rate, float acceleration, struct fg_meta *meta);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
+
 // EOF

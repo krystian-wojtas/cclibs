@@ -28,15 +28,13 @@
 #include "string.h"
 #include "libfg/table.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
 enum fg_error fgTableInit(struct fg_limits         *limits,
                           enum   fg_limits_polarity limits_polarity,
                           struct fg_table_config   *config,
                           float                     delay,
                           float                     min_time_step,
                           struct fg_table_pars     *pars,
-                          struct fg_meta           *meta)          //!< NULL if not required
-/*---------------------------------------------------------------------------------------------------------*/
+                          struct fg_meta           *meta)
 {
     enum fg_error  fg_error;       // Limit checking status
     uint32_t       i;              // loop variable
@@ -134,11 +132,8 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 
     return(FG_OK);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 uint32_t fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
-/*!
- * This function derives the reference for table functions.
- */
 {
     double   ref_time;                               // Time since end of run delay
 
@@ -184,4 +179,5 @@ uint32_t fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
 
     return(1);
 }
+
 // EOF

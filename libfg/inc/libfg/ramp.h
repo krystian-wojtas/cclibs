@@ -1,13 +1,17 @@
 /*!
- * @file    ramp.h
- * @brief   Generate fast ramp based on Parabola-Parabola function
- *
- * Parabolic-Parabolic function with time shift when rate limited.
+ * @file  ramp.h
+ * @brief Generate fast ramp based on Parabola-Parabola function.
  * 
- * The RAMP function is special amongst all the functions in libfg because it
- * uses the ref passed by pointer from the previous iteration to adjust the
- * function time. This allows a smooth parabolic end to the function, even if
- * the function was rate-limited by the calling application.
+ * RAMP is a special function which responds by adjusting a time-shift if the
+ * reference is rate-limited by the calling application. The reference is passed
+ * by pointer from iteration to iteration. This effectively slows the reference
+ * time, allowing a smooth parabolic end to the function, even if the function
+ * was rate-limited by the calling application. The function will continue
+ * smoothly when the reference is no longer limited.
+ *
+ * Note that the function duration returned in fg_meta::meta will be wrong if the
+ * reference is limited at any time during the generation of the function. Also,
+ * time must never go backwards.
  *
  * <h2>Contact</h2>
  *
@@ -85,16 +89,85 @@ extern "C" {
 
 // External functions
 
-void            fgRampCalc(struct fg_ramp_config *config, struct fg_ramp_pars *pars,
-                           float delay, float init_ref, float init_rate, struct fg_meta *meta);
-uint32_t        fgRampGen (struct fg_ramp_pars *pars, const double *time, float *ref);
-enum fg_error   fgRampInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                           struct fg_ramp_config *config, float delay, float ref,
-                           struct fg_ramp_pars *pars, struct fg_meta *meta);
+/*!
+ * Check Ramp function configuration and initialise parameters.
+ *
+ * @param[in]  limits           Limits to check each segment against
+ * @param[in]  limits_polarity  Polarity limits to check each segment against
+ * @param[in]  config           Ramp configuration parameters
+ * @param[in]  delay            RUN_DELAY, delay before the start of the function
+ * @param[in]  ref              Initial reference value
+ * @param[out] pars             Ramp function parameters
+ * @param[out] meta             Diagnostic information. Set to NULL if not required.
+ *
+ * @retval FG_OK on success
+ * @retval FG_BAD_PARAMETER if fg_ramp_pars::acceleration == 0 or fg_ramp_pars::deceleration == 0
+ * @retval FG_OUT_OF_LIMITS if reference value exceeds limits
+ * @retval FG_OUT_OF_RATE_LIMITS if rate of change of reference exceeds limits
+ * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
+ */
+enum fg_error fgRampInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
+                         struct fg_ramp_config *config, float delay, float ref,
+                         struct fg_ramp_pars *pars, struct fg_meta *meta);
+
+/*!
+ * Generate the reference for the Ramp function.
+ *
+ * Derive the reference for the previously-initialised Ramp function at the given time.
+ *
+ * <strong>NOTE</strong>: Unlike the other libfg functions, TIME MUST NOT GO BACKWARDS.
+ *
+ * @param[in]  pars             Ramp function parameters, containing the
+ *                              coordinates of the transition points between the
+ *                              segments of the ramp function:
+ *                              <ul>
+ *                              <li>pars->time[0], pars->ref[0]: Max/min of first (accelerating) parabola</li>
+ *                              <li>pars->time[1], pars->ref[1]: Connection between accelerating and decelerating parabolas</li>
+ *                              <li>pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also end of the ramp function</li>
+ *                              </ul>
+ * @param[in]  time             Current time within the function. Note that time
+ *                              is passed by const reference rather than by value.
+ *                              This allows the user to initialise an array of
+ *                              pointers to functions with the pointer to
+ *                              fgRampGen(). If time is passed by value then the
+ *                              compiler promotes the float to double and prevents
+ *                              correct initialisation.
+ * @param[out] ref              Pointer to the reference value from the previous
+ *                              iteration. This may have been clipped if any
+ *                              limits were reached.
+ *
+ * @retval 0 if time is beyond the end of the function.
+ * @retval 1 if time is within the function.
+ */
+uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref);
+
+/*!
+ * Calculate Ramp function parameters.
+ *
+ * @param[in]     config        Ramp configuration parameters
+ * @param[in,out] pars          Ramp function parameters. The parameters from the
+ *                              previous iteration are used to calculate the
+ *                              parameters for the current iteration.
+ *                              <em>pars</em> is updated with the new parameters.
+ *                              The coordinates of the transition points between
+ *                              the segments of the ramp function are:
+ *                              <ul>
+ *                              <li>pars->time[0], pars->ref[0]: Max/min of first (accelerating) parabola</li>
+ *                              <li>pars->time[1], pars->ref[1]: Connection between accelerating and decelerating parabolas</li>
+ *                              <li>pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also end of the ramp function</li>
+ *                              </ul>
+ * @param[in]     delay         RUN_DELAY, delay before the start of the function
+ * @param[in]     init_ref      Initial reference value
+ * @param[in]     init_rate     Initial linear rate of change
+ * @param[out]    meta          Diagnostic information. Set to NULL if not required.
+ */
+void fgRampCalc(struct fg_ramp_config *config, struct fg_ramp_pars *pars,
+                float delay, float init_ref, float init_rate, struct fg_meta *meta);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
+
 // EOF
