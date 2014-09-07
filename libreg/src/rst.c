@@ -1,26 +1,32 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     rst.c                                                                       Copyright CERN 2014
-
-  License:  This file is part of libreg.
-
-            libreg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  RST regulation algorithm functions
-
-  Notes:    Libreg uses Landau notation for the RST algorithm.
-            In Longchamp notation, R and S are exchanged.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  rst.c
+ * @brief RST regulation algorithm functions
+ *
+ * Libreg uses Landau notation for the RST algorithm.
+ * In Longchamp notation, R and S are exchanged.
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libreg.
+ *
+ * libreg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <stdio.h>
 #include <math.h>
@@ -50,9 +56,9 @@ typedef struct complex
 static double regVectorMultiply (double *p, double *m, int32_t p_order, int32_t m_idx);
 static float  regAbsComplexRatio(double *num, double *den, double k);
 
-//-----------------------------------------------------------------------------------------------------------
+
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
-//-----------------------------------------------------------------------------------------------------------
+
 static int32_t regJuryTest(struct reg_rst_pars *pars)
 {
     int32_t     i;
@@ -136,7 +142,7 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
 
     return(0);
 }
-//-----------------------------------------------------------------------------------------------------------
+
 static float regModulusMargin(struct reg_rst_pars *pars)
 {
     int32_t     frequency_index;
@@ -211,9 +217,8 @@ static float regModulusMargin(struct reg_rst_pars *pars)
 
     return(pars->modulus_margin);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 static float regAbsComplexRatio(double *num, double *den, double k)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     int32_t     idx;
     double      cosine;
@@ -238,7 +243,7 @@ static float regAbsComplexRatio(double *num, double *den, double k)
     return(sqrt(num_exp.real * num_exp.real + num_exp.imag * num_exp.imag) /
            sqrt(den_exp.real * den_exp.real + den_exp.imag * den_exp.imag));
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 static void regRstInitPII(struct reg_rst_pars  *pars,
                           struct reg_load_pars *load,
                           float                 auxpole1_hz,
@@ -246,25 +251,25 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
                           float                 auxpoles2_z,
                           float                 auxpole4_hz,
                           float                 auxpole5_hz)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function prepares coefficients for the RST regulation algorithm. It chooses the algorithm to use
-  based on pars->pure_delay_iters. It is divided into 5 ranges, two result in dead-beat PII
-  controllers and two non-dead-beat PII controllers. To work the bandwidth of the voltage source and
-  FIR filter notches must be at least ten times the bandwidth because they not included in the load model.
-
-  It can be used with slow inductive circuits as well as fast or even resistive loads.  For fast loads,
-  auxpole1_hz is set to 1.0E+5 and z to 0.8.  Normally auxpole1_hz should equal auxpoles2_hz and z should be 0.5.
-
-  The pure_delay_iters parameter informs the algorithm of the pure delay around the loop.  This can be
-  a dynamic behaviour (i.e. of the voltage source or filters) crudely modelled as a pure delay for low
-  frequencies, or it can be real pure delay due to computation or communications delays.
-
-  Support for pure delays above 40% of the period is restricted to loads without a parallel resistor
-  (i.e. one pole and no zero).
-
-  The calculation of the RST coefficients requires double precision floating point, even though the
-  coefficients themselves are stored as single precision.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function prepares coefficients for the RST regulation algorithm. It chooses the algorithm to use
+ * based on pars->pure_delay_iters. It is divided into 5 ranges, two result in dead-beat PII
+ * controllers and two non-dead-beat PII controllers. To work the bandwidth of the voltage source and
+ * FIR filter notches must be at least ten times the bandwidth because they not included in the load model.
+ * 
+ * It can be used with slow inductive circuits as well as fast or even resistive loads. For fast loads,
+ * auxpole1_hz is set to 1.0E+5 and z to 0.8. Normally auxpole1_hz should equal auxpoles2_hz and z should be 0.5.
+ * 
+ * The pure_delay_iters parameter informs the algorithm of the pure delay around the loop. This can be
+ * a dynamic behaviour (i.e. of the voltage source or filters) crudely modelled as a pure delay for low
+ * frequencies, or it can be real pure delay due to computation or communications delays.
+ * 
+ * Support for pure delays above 40% of the period is restricted to loads without a parallel resistor
+ * (i.e. one pole and no zero).
+ * 
+ * The calculation of the RST coefficients requires double precision floating point, even though the
+ * coefficients themselves are stored as single precision.
+ */
 {
     uint32_t    idx;
     int32_t     s_idx = 0;
@@ -561,9 +566,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->asbr[idx] = regVectorMultiply(pars->b, pars->rst.r, 1, r_idx) + pars->as[idx];
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     int32_t    p_idx;
     double     product = 0.0;
@@ -575,14 +579,14 @@ static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m
 
     return(product);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 static void regRstInitPI(struct reg_rst_pars  *pars,
                          struct reg_load_pars *load,
                          float                 auxpole1_hz)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function prepares coefficients for the RST regulation algorithm to implement a proportional-integral
-  controller.  It can be used with fast slightly inductive circuits.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function prepares coefficients for the RST regulation algorithm to implement a proportional-integral
+ * controller. It can be used with fast slightly inductive circuits.
+ */
 {
     float a1 = -exp(-pars->reg_period * (load->ohms_ser + load->ohms_mag) * load->inv_henrys);
     float b1 = (1.0 + a1) / (load->ohms_ser + load->ohms_mag);
@@ -604,14 +608,14 @@ static void regRstInitPI(struct reg_rst_pars  *pars,
     pars->rst.t[0] = pars->rst.r[0];
     pars->rst.t[1] = pars->rst.r[1];
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 static void regRstInitI(struct reg_rst_pars  *pars,
                         struct reg_load_pars *load,
                         float                 auxpole1_hz)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function prepares coefficients for the RST regulation algorithm to implement an Integrator only.
-  This can be used with resistive circuits.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function prepares coefficients for the RST regulation algorithm to implement an Integrator only.
+ * This can be used with resistive circuits.
+ */
 {
     float b1 = 1.0 / (load->ohms_ser + load->ohms_mag);
     float c1 = -exp(-M_TWO_PI * pars->reg_period * auxpole1_hz);
@@ -630,7 +634,7 @@ static void regRstInitI(struct reg_rst_pars  *pars,
 
     pars->rst.t[0] = 1.0 + c1;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 enum reg_status regRstInit(struct reg_rst_pars  *pars,
                            double                iter_period,
                            uint32_t              reg_period_iters,
@@ -644,22 +648,22 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
                            float                 track_delay_periods,
                            enum reg_mode         reg_mode,
                            struct reg_rst       *manual)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function prepares coefficients for the RST regulation algorithm based on the paper CERN EDMS 686163
-  by Hugues Thiesen with extensions from Martin Veenstra and Michele Martino, to allow a pure loop delay to
-  be accommodated. The function returns REG_OK on success and REG_FAULT if s[0] is too small (<1E-10) or
-  is unstable (has poles outside the unit circle).
-
-  Notes:    The algorithms can calculate the RST coefficients from the parameters
-            auxpole1_hz/auxpoles2_hz/auxpoles2_z/auxpole4_hz/auxpole5_hz/pure_delay_periods and the load parameters.
-            This only works well if the voltage source bandwidth and FIR notch are much faster
-            than the closed loop bandwidth (>10x). Three controllers are selectable:  I, PI, PII.
-            For the PII, the regulator may or may not be dead-beat according to the pure delay.
-
-            If the voltage source bandwidth is less than a factor 10 above the closed loop bandwidth
-            then the algorithms will not produce good results and the RST coefficients will need
-            to be calculated manually using Matlab.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function prepares coefficients for the RST regulation algorithm based on the paper CERN EDMS 686163
+ * by Hugues Thiesen with extensions from Martin Veenstra and Michele Martino, to allow a pure loop delay to
+ * be accommodated. The function returns REG_OK on success and REG_FAULT if s[0] is too small (<1E-10) or
+ * is unstable (has poles outside the unit circle).
+ * 
+ * Notes: The algorithms can calculate the RST coefficients from the parameters
+ * auxpole1_hz/auxpoles2_hz/auxpoles2_z/auxpole4_hz/auxpole5_hz/pure_delay_periods and the load parameters.
+ * This only works well if the voltage source bandwidth and FIR notch are much faster
+ * than the closed loop bandwidth (>10x). Three controllers are selectable: I, PI, PII.
+ * For the PII, the regulator may or may not be dead-beat according to the pure delay.
+ * 
+ * If the voltage source bandwidth is less than a factor 10 above the closed loop bandwidth
+ * then the algorithms will not produce good results and the RST coefficients will need
+ * to be calculated manually using Matlab.
+ */
 {
     uint32_t    i;
     double      t0_correction;
@@ -767,21 +771,21 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
 
     return(pars->status);
 }
-//-----------------------------------------------------------------------------------------------------------
-// Real-Time Functions
-//-----------------------------------------------------------------------------------------------------------
-float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function returns the actuation based on the supplied reference and measurement using the RST
-  parameters.  If the actuation is clipped then regRstCalcRef must be called to re-calculate the
-  reference to put in the history.
 
-  Implementation notes:
-        Computing the actuation requires a better precision than 32-bit floating point for
-        the intermediate results. This is achieved by using the type double for the local variable act.
-        On TI C32 DSP, 'double' is simply an alias for 'float' i.e. 32-bit FP. However that DSP can take
-        advantage of the extended 40-bit FP precision of its FPU, by defining double to be long double.
-\*---------------------------------------------------------------------------------------------------------*/
+// Real-Time Functions
+
+float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas)
+/*!
+ * This function returns the actuation based on the supplied reference and measurement using the RST
+ * parameters. If the actuation is clipped then regRstCalcRef must be called to re-calculate the
+ * reference to put in the history.
+ * 
+ * Implementation notes:
+ * Computing the actuation requires a better precision than 32-bit floating point for
+ * the intermediate results. This is achieved by using the type double for the local variable act.
+ * On TI C32 DSP, 'double' is simply an alias for 'float' i.e. 32-bit FP. However that DSP can take
+ * advantage of the extended 40-bit FP precision of its FPU, by defining double to be long double.
+ */
 {
     double      act;
     uint32_t    var_idx;
@@ -822,23 +826,23 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
 
     return(act);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function must be called in two situations:
-
-    1. After calling regRstCalcAct() if the actuation has been clipped due to limits in the actuator.
-
-    2. If the system is running with an open loop actuation
-
-  The function saves the new actuation in the RST history and re-calculates the reference which is returned.
-
-  Implementation notes:
-        Computing the actuation requires a better precision than 32-bit floating point for
-        the intermediate results. This is achieved by using the type double for the local variable ref.
-        On TI C32 DSP, 'double' is simply an alias for 'float' i.e. 32-bit FP. However that DSP can take
-        advantage of the extended 40-bit FP precision of its FPU, by defining double to be long double.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function must be called in two situations:
+ * 
+ * 1. After calling regRstCalcAct() if the actuation has been clipped due to limits in the actuator.
+ * 
+ * 2. If the system is running with an open loop actuation
+ * 
+ * The function saves the new actuation in the RST history and re-calculates the reference which is returned.
+ * 
+ * Implementation notes:
+ * Computing the actuation requires a better precision than 32-bit floating point for
+ * the intermediate results. This is achieved by using the type double for the local variable ref.
+ * On TI C32 DSP, 'double' is simply an alias for 'float' i.e. 32-bit FP. However that DSP can take
+ * advantage of the extended 40-bit FP precision of its FPU, by defining double to be long double.
+ */
 {
     double      ref;
     uint32_t    var_idx;
@@ -877,12 +881,12 @@ float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
 
     return(ref);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regRstTrackDelayRT(struct reg_rst_vars *vars, float period, float max_ref_rate)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function must be called after calling regRstCalcAct() and BEFORE calling regRstHistory() to measure
-  the track delay.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function must be called after calling regRstCalcAct() and BEFORE calling regRstHistory() to measure
+ * the track delay.
+ */
 {
     float    meas_track_delay_periods   = 0.0;
     float    delta_ref                  = regRstDeltaRefRT(vars);
@@ -909,14 +913,14 @@ void regRstTrackDelayRT(struct reg_rst_vars *vars, float period, float max_ref_r
 
     vars->meas_track_delay_periods = meas_track_delay_periods;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, uint32_t iteration_index)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will return the reference delayed by ref_delay_periods for the next iteration.
-  It should be called after regRstHistory() and regErrCheckLimits() have been called to prepare the delayed
-  reference for the following iteration.  It can be called every acquisition iteration between regulation
-  iterations, or just on the regulation iterations, as required.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function will return the reference delayed by ref_delay_periods for the next iteration.
+ * It should be called after regRstHistory() and regErrCheckLimits() have been called to prepare the delayed
+ * reference for the following iteration. It can be called every acquisition iteration between regulation
+ * iterations, or just on the regulation iterations, as required.
+ */
 {
     int32_t  delay_int;
     float    ref_delay_periods;
@@ -957,11 +961,11 @@ float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, u
 
     return(vars->ref[(vars->history_index + 1) & REG_RST_HISTORY_MASK]);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 float regRstAverageVrefRT(struct reg_rst_vars *vars)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will return the average RST actuation (V_REF) over the past few iterations.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function will return the average RST actuation (V_REF) over the past few iterations.
+ */
 {
     uint32_t    i;
     uint32_t    var_idx  = vars->history_index;
@@ -974,5 +978,5 @@ float regRstAverageVrefRT(struct reg_rst_vars *vars)
 
     return(sum_vref * (1.0 / REG_AVE_V_REF_LEN));
 }
-// EOF
 
+// EOF

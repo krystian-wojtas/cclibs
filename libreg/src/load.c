@@ -1,66 +1,40 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     load.c                                                                      Copyright CERN 2014
-
-  License:  This file is part of libreg.
-
-            libreg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Load related functions
-
-  Authors:  Quentin King
-            Martin Veenstra
-            Hugues Thiesen
-
-  Notes:    The load model is shown in this figure:
-
-                               O--[OHMS_SER]---+--[OHMS_MAG]--[HENRYS]--+--O
-                                               |                        |
-                                               +-------[OHMS_PAR]-------+
-
-            A simple linear magnet saturation model is supported:
-
-                                            L
-                                            ^
-                                            |
-                                   HENRYS ->|-----------
-                                            |           \
-                                            |            \
-                                            |             \
-                                            |              \
-                                            |               \
-                                            |                --- <- HENRYS_SAT
-                                            |
-                                            |
-                                           0+-----------+----+--> I
-                                            0           ^    ^
-                                                        |    |
-                                                        |I_SAT_END
-                                                        |
-                                                   I_SAT_START
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  load.c
+ * @brief Converter Control Regulation library Load-related functions
+ * @author Quentin King
+ * @author Martin Veenstra
+ * @author Hugues Thiesen
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libreg.
+ *
+ * libreg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <math.h>
 #include "libreg/load.h"
 
-//-----------------------------------------------------------------------------------------------------------
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
-//-----------------------------------------------------------------------------------------------------------
+
 void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag, float henrys,
                  float gauss_per_amp)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will initialise the load structure with the specified load parameters
-\*---------------------------------------------------------------------------------------------------------*/
 {
    // Save the load parameters
 
@@ -118,11 +92,8 @@ void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, flo
     load->sat.i_start = 1.0E30;
     load->sat.i_end   = 0.0;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regLoadInitSat(struct reg_load_pars *load, float henrys_sat, float i_sat_start, float i_sat_end)
-/*---------------------------------------------------------------------------------------------------------*\
- This function processes the magnet saturation parameters and calculates the linear model slope.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     if(load->henrys > 0.0 && henrys_sat > 0.0 && henrys_sat < load->henrys &&
        i_sat_end > 0.0 && i_sat_end > i_sat_start)
@@ -143,13 +114,10 @@ void regLoadInitSat(struct reg_load_pars *load, float henrys_sat, float i_sat_st
         load->sat.i_end   = 0.0;
     }
 }
-//-----------------------------------------------------------------------------------------------------------
+
 // Real-Time Functions
-//-----------------------------------------------------------------------------------------------------------
+
 float regLoadCurrentToFieldRT(struct reg_load_pars *load, float i_meas)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function estimates the field based on current.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float b_meas;
     float abs_i_meas;
@@ -179,17 +147,12 @@ float regLoadCurrentToFieldRT(struct reg_load_pars *load, float i_meas)
         b_meas = load->gauss_per_amp * load->sat.l_clip * di_end + load->sat.b_end;
     }
 
-    // Return b meas after adjust sign to match i_meas
+    // Return b_meas after adjusting sign to match i_meas
 
     return(i_meas < 0.0 ? -b_meas : b_meas);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 float regLoadFieldToCurrentRT(struct reg_load_pars *load, float b_meas)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function estimates the current based on the field according to the saturation model of the magnet.
-  Beware: This function requires a sqrt() call so it may take a long time depending upon the floating-point
-  support of the CPU.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float i_meas;
     float abs_b_meas;
@@ -229,55 +192,26 @@ float regLoadFieldToCurrentRT(struct reg_load_pars *load, float b_meas)
         i_meas = db_end / (load->gauss_per_amp * load->sat.l_clip);
     }
 
-    // Return b meas after adjust sign to match i_meas
+    // Return i_meas after adjusting sign to match b_meas
 
     return(b_meas < 0.0 ? -i_meas : i_meas);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 float regLoadVrefSatRT(struct reg_load_pars *load, float i_meas, float v_ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will help to linearise the effects of magnet saturation when regulating current.  This is
-  not required if regulating field.
-
-  This assumes that:
-
-        L = load->henrys                        for i_meas <= load->sat.i_start
-        L = load->henrys x f                    for i_meas  > load->sat.i_start && meas < load->sat.i_end
-        L = load->sat.henrys                    for i_meas  > load->sat.i_end
-
-  where f = (1.0 - load->sat.l_rate) * (|i_meas| - load->sat.i_start)
-
-  where load->sat.l_rate = (1.0 - henrys_sat/henrys) / (load->sat.i_end - load->sat.i_start)
-
-  Given v_ref = I.R + L.dI/dt then for |i_meas| > load->sat.i_start:
-
-        v_ref_sat = I.R + f.L.dI/dt = f.v_ref + (1 - f).I.R
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float f = regLoadSatFactorRT(load, i_meas);
 
     return(f * v_ref + (1.0 - f) * i_meas * load->ohms);
 }
-/*---------------------------------------------------------------------------------------------------------*/
-float regLoadInverseVrefSatRT(struct reg_load_pars *load, float i_meas, float v_ref_sat)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function does the opposite of regLoadVrefSat:
 
-               v_ref_sat - (1 - f)I.R
-       v_ref = ----------------------
-                          f
-\*---------------------------------------------------------------------------------------------------------*/
+float regLoadInverseVrefSatRT(struct reg_load_pars *load, float i_meas, float v_ref_sat)
 {
     float f = regLoadSatFactorRT(load, i_meas);
 
     return((v_ref_sat - (1.0 - f) * i_meas * load->ohms) / f);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 float regLoadSatFactorRT(struct reg_load_pars *load, float i_meas)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function calculates the saturation factor f for the load for the given measured current.  Is uses
-  the simple linear saturation model defined in reg_load: L = L0 . regLoadCalcSatFactor(&load,i_meas)
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float sat_factor   = 1.0;
     float delta_i_meas = fabs(i_meas) - load->sat.i_start;
@@ -294,5 +228,5 @@ float regLoadSatFactorRT(struct reg_load_pars *load, float i_meas)
 
     return(sat_factor);
 }
-// EOF
 
+// EOF

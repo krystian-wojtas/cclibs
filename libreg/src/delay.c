@@ -1,40 +1,36 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     delay.c                                                                     Copyright CERN 2014
-
-  License:  This file is part of libreg.
-
-            libreg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Signal delay functions
-
-            These functions use a circular buffer and linear interpolation to provide a programmable
-            delay line for signals.  It is used by the regulation error calculation functions and
-            can be used to simulate measurement filter delays etc.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  delay.c
+ * @brief Converter Control Regulation library signal delay functions
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libreg.
+ *
+ * libreg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <math.h>
 #include "libreg/delay.h"
 
-//-----------------------------------------------------------------------------------------------------------
-// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
-//-----------------------------------------------------------------------------------------------------------
+// Non-Real-Time Functions: do not call these from the real-time thread or interrupt
+
 void regDelayInitDelay(struct reg_delay *delay, float delay_iters)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function initialises the reg_delay structure parameters.  The undersampled_flag can be used to
-  suppress the linear interpolation between samples.  When set it assumes that the signal settles to
-  the new value immediately.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float delay_int;
 
@@ -54,11 +50,8 @@ void regDelayInitDelay(struct reg_delay *delay, float delay_iters)
     delay->delay_frac = modff(delay_iters, &delay_int);
     delay->delay_int  = (int32_t)delay_int;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regDelayInitVars(struct reg_delay *delay, float initial_signal)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function can be called to initialise the reg_delay structure variables.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    i;
 
@@ -67,13 +60,10 @@ void regDelayInitVars(struct reg_delay *delay, float initial_signal)
         delay->buf[i] = initial_signal;
     }
 }
-//-----------------------------------------------------------------------------------------------------------
+
 // Real-Time Functions
-//-----------------------------------------------------------------------------------------------------------
+
 float regDelaySignalRT(struct reg_delay *delay, float signal, uint32_t under_sampled_flag)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function should be called after the delay structure has been initialised.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float s0;
     float s1;
@@ -92,5 +82,5 @@ float regDelaySignalRT(struct reg_delay *delay, float signal, uint32_t under_sam
 
     return(s0);
 }
-// EOF
 
+// EOF

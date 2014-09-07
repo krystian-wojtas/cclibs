@@ -1,38 +1,36 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     err.c                                                                       Copyright CERN 2014
-
-  License:  This file is part of libreg.
-
-            libreg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Regulation error functions
-
-            These functions can be used for any sort of regulation (current, field, voltage).  They
-            maintain a history of the reference so that the measurement can be compared against the
-            reference taking into account the tracking delay.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  err.c
+ * @brief Converter Control Regulation library regulation error functions
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libreg.
+ *
+ * libreg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <math.h>
 #include "libreg/err.h"
 
-//-----------------------------------------------------------------------------------------------------------
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
-//-----------------------------------------------------------------------------------------------------------
+
 void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_threshold)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function can be called to initialise the warning and fault limits of the reg_err structure.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     // Set the new fault and warning limits
 
@@ -53,13 +51,10 @@ void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_
         err->fault.filter = 0.0;
     }
 }
-//-----------------------------------------------------------------------------------------------------------
+
 // Real-Time Functions
-//-----------------------------------------------------------------------------------------------------------
+
 void regErrResetLimitsVarsRT(struct reg_err *err)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function can be called to reset the reg_err structure variables, except for the max_abs_err.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     err->err            = 0.0;
 
@@ -69,12 +64,14 @@ void regErrResetLimitsVarsRT(struct reg_err *err)
     err->fault.flag     = 0;
     err->fault.filter   = 0.0;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
+/*!     
+ * Manage the warning and fault limits by applying hysteresis to a first-order filter of the limit exceeded flag.
+ *
+ * @param[in,out] err_limit    Limit threshold and flags
+ * @param[in]     abs_err      Absolute error
+ */
 static void regErrLimitRT(struct reg_err_limit *err_limit, float abs_err)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function manages the warning and fault limits by applying hysteresis to a first order filter of the
-  limit exceeded flag.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float threshold = err_limit->threshold;
 
@@ -85,7 +82,7 @@ static void regErrLimitRT(struct reg_err_limit *err_limit, float abs_err)
         threshold *= 0.5;
     }
 
-    // Use first order filter on the threshold exceeded flag
+    // Use first-order filter on the threshold exceeded flag
     
     err_limit->filter *= 0.9;
 
@@ -98,15 +95,9 @@ static void regErrLimitRT(struct reg_err_limit *err_limit, float abs_err)
 
     err_limit->flag = err_limit->filter > 0.3;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regErrCheckLimitsRT(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err,
                          float delayed_ref, float meas)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function can be called to calculate the regulation error and to check the error limits (if supplied).
-  The calculation of the error can be enabled by setting enable_err.
-  The calculation of the max_abs_err can be enabled by setting enable_max_abs_err to be non-zero,
-  otherwise max_abs_err is zeroed.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float       abs_error;
 
@@ -154,5 +145,5 @@ void regErrCheckLimitsRT(struct reg_err *err, uint32_t enable_err, uint32_t enab
         regErrLimitRT(&err->fault, abs_error);
     }
 }
-// EOF
 
+// EOF

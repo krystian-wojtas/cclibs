@@ -1,56 +1,50 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     meas.c                                                                      Copyright CERN 2014
-
-  License:  This file is part of libreg.
-
-            libreg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  This provides measurement related functions for libreg.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  meas.c
+ * @brief Converter Control Regulation library measurement-related functions
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libreg.
+ *
+ * libreg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <string.h>
 #include "libreg.h"
 
+/*!
+ * Classical two-stage box-car FIR filter used by regMeasFilterRT() and regMeasFilterInit().
+ *
+ * @param[in,out] filter    Measurement filter parameters and values
+ * @returns Value of reg_meas_filter::fir_accumulator adjusted by reg_meas_filter::integer_to_float factor
+ */
 static float regMeasFirFilterRT(struct reg_meas_filter *filter);
 
-//-----------------------------------------------------------------------------------------------------------
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
-//-----------------------------------------------------------------------------------------------------------
+
 void regMeasFilterInitBuffer(struct reg_meas_filter *filter, int32_t *buf)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function allows the buffer for the measurement filter to be defined.  The buffer is used for both
-  FIR filter stages and the extrapolation history, so it needs to be long enough to cover all three
-  requirements: fir_length[0] + fir_length[1] + extrapolation_len_iters
-\*---------------------------------------------------------------------------------------------------------*/
 {
     filter->fir_buf[0] = buf;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
                        uint32_t extrapolation_len_iters, float pos, float neg, float meas_delay_iters)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function initialises the FIR measurement filter.  It needs the lengths of the FIR filter stages
-  and the extrapolation buffer length. It also needs to calculate scale factors for the FIR filters
-  from the pos/neg limits for the measurement being filtered. This is necessary because the filter must
-  work with integers to avoid rounding errors. The meas_delay_iters parameter must define the delay in
-  the "unfiltered" measurement - this is the hardware filtering delay.
-
-  The filter history buffers will be initialised using filter->signal[REG_MEAS_UNFILTERED] as the input
-  and then it will be restarted. This can be done at background level while the filter is being called
-  in real-time, but the filter will be bypassed during the initialisation process, so expect a perturbation
-  and potential instability.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    total_fir_len;
     uint32_t    longest_fir_len;
@@ -120,33 +114,23 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
 
     filter->enable = 1;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regMeasSetRegSelect(struct reg_meas_filter *filter, enum reg_meas_select reg_select)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function sets the selector of the regulation measurement.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     filter->reg_select = reg_select;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regMeasSetNoiseAndTone(struct reg_noise_and_tone *noise_and_tone, float noise_pp,
                             float tone_amp, uint32_t tone_half_period_iters)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will set the noise and tone characteristics for a simulated measurement.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     noise_and_tone->noise_pp = noise_pp;
     noise_and_tone->tone_amp = tone_amp;
     noise_and_tone->tone_half_period_iters = tone_half_period_iters;
 }
-//-----------------------------------------------------------------------------------------------------------
+
 // Real-Time Functions
-//-----------------------------------------------------------------------------------------------------------
+
 static float regMeasFirFilterRT(struct reg_meas_filter *filter)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function implements the classical two-stage box-car FIR filter used by regMeasFilter() and
-  regMeasFilterInitHistory().
-\*---------------------------------------------------------------------------------------------------------*/
 {
     int32_t input_integer;
     float   input_meas = filter->signal[REG_MEAS_UNFILTERED];
@@ -196,13 +180,8 @@ static float regMeasFirFilterRT(struct reg_meas_filter *filter)
 
     return(filter->integer_to_float * (float)filter->fir_accumulator[1]);
 }
-//-----------------------------------------------------------------------------------------------------------
+
 void regMeasFilterRT(struct reg_meas_filter *filter)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function is called in real-time to filter the measurement with a 2-stage cascaded box car filter and
-  then uses extrapolation to estimate the measurement without the measurement and FIR filtering delay.
-  If the filter is not running then the output is simply the unfiltered input.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float   old_filtered_value;
 
@@ -237,12 +216,8 @@ void regMeasFilterRT(struct reg_meas_filter *filter)
                                                (filter->signal[REG_MEAS_FILTERED] - old_filtered_value);
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 float regMeasNoiseAndToneRT(struct reg_noise_and_tone *noise_and_tone)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function uses a simple pseudo random number generator to generate a roughly white noise and a
-  square wave to simulate a tone. The frequency of the tone is defined by its half-period in iterations.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float            noise;                                 // Roughly white noise
     float            tone;                                  // Square wave tone
@@ -283,14 +258,8 @@ float regMeasNoiseAndToneRT(struct reg_noise_and_tone *noise_and_tone)
 
     return(noise + tone);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regMeasRateRT(struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will store the filtered measurement in the rate estimation history at the regulation
-  period (defined by period_iters) and calculate the estimated rate using least-squares regression
-  through the past four saved values. See libreg/doc/measurement/least_squares.xlsx for the
-  theory behind this implementation.
-\*---------------------------------------------------------------------------------------------------------*/
 {
     float    *history_buf = meas_rate->history_buf;     // Local pointer to history buffer for efficiency
     uint32_t  idx;                                      // Local copy of index of most recent sample
@@ -312,4 +281,5 @@ void regMeasRateRT(struct reg_meas_rate *meas_rate, float filtered_meas, float p
                                                               history_buf[(idx - 2) & REG_MEAS_RATE_BUF_MASK]));
     }
 }
+
 // EOF

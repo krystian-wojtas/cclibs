@@ -1,24 +1,30 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     conv.c                                                                      Copyright CERN 2014
-
-  License:  This file is part of libreg.
-
-            libreg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  This provides a higher level access to libreg with functions that combine all the elements
-            needed to regulate current or field in converter.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  conv.c
+ * @brief Provide higher-level access to libreg with functions that combine all the elements
+ * needed to regulate current or field in the converter.
+ *
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libreg.
+ *
+ * libreg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -29,9 +35,8 @@
 static void regConvSetModeNoneOrVoltageRT   (struct reg_conv *conv, enum reg_mode reg_mode);
 static void regConvSetModeFieldOrCurrentRT  (struct reg_conv *conv, enum reg_mode reg_mode, uint32_t iteration_counter);
 
-//-----------------------------------------------------------------------------------------------------------
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
-//-----------------------------------------------------------------------------------------------------------
+
 void regConvInit(struct reg_conv *conv, double iter_period, enum reg_actuation actuation)
 {
     conv->iter_period    = iter_period;
@@ -57,7 +62,7 @@ void regConvInit(struct reg_conv *conv, double iter_period, enum reg_actuation a
 
     regConvSetModeNoneOrVoltageRT(conv, REG_NONE);
 }
-//-----------------------------------------------------------------------------------------------------------
+
 uint32_t regConvRstInit(struct reg_conv        *conv,
                         struct reg_conv_signal *reg_signal,
                         enum reg_mode           reg_mode,
@@ -142,11 +147,11 @@ uint32_t regConvRstInit(struct reg_conv        *conv,
 
     return(use_next_pars);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regConvInitSimLoad(struct reg_conv *conv, enum reg_mode reg_mode, float sim_load_tc_error)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will initialize the simulated load structures with the specified load parameters
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function will initialize the simulated load structures with the specified load parameters
+ */
 {
     regSimLoadTcError(&conv->sim_load_pars, &conv->load_pars, sim_load_tc_error);
 
@@ -175,7 +180,7 @@ void regConvInitSimLoad(struct reg_conv *conv, enum reg_mode reg_mode, float sim
     conv->i.meas.signal[REG_MEAS_FILTERED] = conv->i.meas.signal[REG_MEAS_UNFILTERED] = conv->sim_load_vars.circuit_current;
     conv->b.meas.signal[REG_MEAS_FILTERED] = conv->b.meas.signal[REG_MEAS_UNFILTERED] = conv->sim_load_vars.magnet_field;
 }
-//-----------------------------------------------------------------------------------------------------------
+
 void regConvInitMeas(struct reg_conv *conv, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p)
 {
     static struct reg_meas_signal null_signal = { 0.0, REG_MEAS_SIGNAL_OK };
@@ -184,9 +189,9 @@ void regConvInitMeas(struct reg_conv *conv, struct reg_meas_signal *v_meas_p, st
     conv->i.input_p = (i_meas_p == NULL ? &null_signal : i_meas_p);;
     conv->v.input_p = (v_meas_p == NULL ? &null_signal : v_meas_p);
 }
-//-----------------------------------------------------------------------------------------------------------
+
 // Real-Time Functions
-//-----------------------------------------------------------------------------------------------------------
+
 static void regConvSwitchRstParsRT(struct reg_conv_signal *conv_signal, enum reg_rst_source rst_source)
 {
     struct reg_rst_pars *rst_pars;
@@ -221,7 +226,7 @@ static void regConvSwitchRstParsRT(struct reg_conv_signal *conv_signal, enum reg
         }
     }
 }
-//-----------------------------------------------------------------------------------------------------------
+
 void regConvSetModeRT(struct reg_conv *conv, enum reg_mode reg_mode, enum reg_rst_source rst_source, uint32_t iteration_counter)
 {
     // Switch RST parameters when required by non-real-time thread
@@ -256,7 +261,7 @@ void regConvSetModeRT(struct reg_conv *conv, enum reg_mode reg_mode, enum reg_rs
 
     conv->i.err.max_abs_err = conv->b.err.max_abs_err = 0.0;
 }
-//-----------------------------------------------------------------------------------------------------------
+
 static void regConvSetModeNoneOrVoltageRT(struct reg_conv *conv, enum reg_mode reg_mode)
 {
     if(reg_mode == REG_VOLTAGE)
@@ -310,7 +315,7 @@ static void regConvSetModeNoneOrVoltageRT(struct reg_conv *conv, enum reg_mode r
     regErrResetLimitsVarsRT(&conv->i.err);
     regErrResetLimitsVarsRT(&conv->b.err);
 }
-//-----------------------------------------------------------------------------------------------------------
+
 static void regConvSetModeFieldOrCurrentRT(struct reg_conv *conv, enum reg_mode reg_mode, uint32_t iteration_counter)
 {
     uint32_t                idx;
@@ -384,7 +389,7 @@ static void regConvSetModeFieldOrCurrentRT(struct reg_conv *conv, enum reg_mode 
 
     conv->ref = conv->ref_limited = conv->ref_rst = rst_vars->ref[rst_vars->history_index];
 }
-//-----------------------------------------------------------------------------------------------------------
+
 uint32_t regConvSetMeasRT(struct reg_conv *conv, uint32_t use_sim_meas)
 {
     // Switch RST parameters when required by non-real-time thread
@@ -525,7 +530,7 @@ uint32_t regConvSetMeasRT(struct reg_conv *conv, uint32_t use_sim_meas)
 
     return(conv->iteration_counter);
 }
-//-----------------------------------------------------------------------------------------------------------
+
 uint32_t regConvRegulateRT(struct reg_conv *conv,                 // Regulation structure
                            float           *ref,                  // Ref for voltage, current or field
                            uint32_t         enable_max_abs_err)   // Enable max abs error calculation
@@ -641,13 +646,13 @@ uint32_t regConvRegulateRT(struct reg_conv *conv,                 // Regulation 
 
     return(conv->iteration_counter == 0);
 }
-//-----------------------------------------------------------------------------------------------------------
+
 void regConvSimulateRT(struct reg_conv *conv, float v_perturbation)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will simulate the voltage source and load and the measurements of the voltage, current
-  and field. The voltage reference comes from conv->v.ref_limited which is calculated by calling
-  regConverter().  A voltage perturbation can be included in the simulation via the v_perturbation parameter.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function will simulate the voltage source and load and the measurements of the voltage, current
+ * and field. The voltage reference comes from conv->v.ref_limited which is calculated by calling
+ * regConverter(). A voltage perturbation can be included in the simulation via the v_perturbation parameter.
+ */
 {
     float v_circuit;      // Simulated v_circuit without V_REF_DELAY
 
@@ -704,4 +709,5 @@ void regConvSimulateRT(struct reg_conv *conv, float v_perturbation)
     conv->i.sim.signal += regMeasNoiseAndToneRT(&conv->i.sim.noise_and_tone);
     conv->v.sim.signal += regMeasNoiseAndToneRT(&conv->v.sim.noise_and_tone);
 }
+
 // EOF

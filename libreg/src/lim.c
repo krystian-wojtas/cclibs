@@ -1,59 +1,63 @@
-/*---------------------------------------------------------------------------------------------------------*\
-  File:     lim.c                                                                       Copyright CERN 2014
-
-  License:  This file is part of libreg.
-
-            libreg is free software: you can redistribute it and/or modify
-            it under the terms of the GNU Lesser General Public License as published by
-            the Free Software Foundation, either version 3 of the License, or
-            (at your option) any later version.
-
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU Lesser General Public License for more details.
-
-            You should have received a copy of the GNU Lesser General Public License
-            along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-  Purpose:  Limit functions for field/current/voltage reference and field/current measurement
-
-  Notes:    Voltage reference limits for some 4-quadrant converters need to protect against excessive
-            power losses in the output stage when ramping down the current.  This can be done by
-            defining an exclusion zone for positive voltages in quadrants 4 and 1 and the software
-            will rotate the zone by 180 degrees to define the exclusion zone for negative voltages
-            in quadrants 3 and 2.  For example:
-                                                    ^ Voltage
-                                                    |
-                                    +---------------+---------------+  <- V_POS
-                                    |excl./         |               |
-                                    |zone/          |               |
-                                    |   /           |               |
-                                    |  /            |               |
-                                    | / Quadrant 4  |  Quadrant 1   |
-                                    |/              |               |
-                                    |               |               |
-                                    +---------------+---------------+-> Current
-                                    |               |               |
-                                    |               |              /|
-                                    |   Quadrant 3  |  Quadrant 2 / |
-                                    |               |            /  |
-                                    |               |           /   |
-                                    |               |          /excl|
-                                    |               |         / zone|
-                                    +---------------+---------------+ <- V_NEG
-                                  I_NEG                           I_POS
-
-  Authors:  Quentin.King@cern.ch
-            Pierre.Dejoue@cern.ch
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * @file  lim.c
+ * @brief Limit functions for field/current/voltage reference and field/current measurement
+ * @author Quentin.King@cern.ch
+ * @author Pierre.Dejoue@cern.ch
+ *
+ * Voltage reference limits for some 4-quadrant converters need to protect against excessive
+ * power losses in the output stage when ramping down the current. This can be done by
+ * defining an exclusion zone for positive voltages in quadrants 4 and 1 and the software
+ * will rotate the zone by 180 degrees to define the exclusion zone for negative voltages
+ * in quadrants 3 and 2. For example:
+ * ^ Voltage
+ * |
+ * +---------------+---------------+ <- V_POS
+ * |excl./ | |
+ * |zone/ | |
+ * | / | |
+ * | / | |
+ * | / Quadrant 4 | Quadrant 1 |
+ * |/ | |
+ * | | |
+ * +---------------+---------------+-> Current
+ * | | |
+ * | | /|
+ * | Quadrant 3 | Quadrant 2 / |
+ * | | / |
+ * | | / |
+ * | | /excl|
+ * | | / zone|
+ * +---------------+---------------+ <- V_NEG
+ * I_NEG I_POS
+ * 
+ * <h2>Copyright</h2>
+ *
+ * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Public License version 3.
+ * 
+ * <h2>License</h2>
+ *
+ * This file is part of libreg.
+ *
+ * libreg is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <math.h>
 #include "libreg/lim.h"
 
-//-----------------------------------------------------------------------------------------------------------
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
-//-----------------------------------------------------------------------------------------------------------
+
 void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
                     float low_lim, float zero_lim, uint32_t invert_limits)
 {
@@ -69,7 +73,7 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
     lim_meas->flags.low  = 0;
     lim_meas->flags.zero = 0;
 }
-//-----------------------------------------------------------------------------------------------------------
+
 void regLimMeasRmsInit(struct reg_lim_meas *lim_meas, float rms_trip, float rms_warning, float rms_tc, float iter_period)
 {
     if(rms_tc > 0.0)
@@ -88,12 +92,12 @@ void regLimMeasRmsInit(struct reg_lim_meas *lim_meas, float rms_trip, float rms_
     lim_meas->flags.rms_trip    = 0;
     lim_meas->flags.rms_warning = 0;
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim,
                    uint32_t invert_limits)
-/*---------------------------------------------------------------------------------------------------------*\
- This function will initialise the field/current reference limits.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function will initialise the field/current reference limits.
+ */
 {
     lim_ref->invert_limits = invert_limits;
     lim_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
@@ -112,13 +116,13 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, fl
         lim_ref->min_clip       = 0.0;
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
                     float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits)
-/*---------------------------------------------------------------------------------------------------------*\
- This function will initialise the voltage reference limits.  Voltage reference limits use the same
- structure as field/current limits but have different behaviour.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function will initialise the voltage reference limits. Voltage reference limits use the same
+ * structure as field/current limits but have different behaviour.
+ */
 {
     float delta_i_quadrants41;
 
@@ -153,14 +157,14 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
 
     regLimVrefCalcRT(lim_v_ref, 0.0);
 }
-//-----------------------------------------------------------------------------------------------------------
+
 // Real-Time Functions
-//-----------------------------------------------------------------------------------------------------------
+
 void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
-/*---------------------------------------------------------------------------------------------------------*\
- This function will check the measurement against the trip levels and the absolute measurement against
- the low and zero limits with hysteresis to avoid toggling. It also
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function will check the measurement against the trip levels and the absolute measurement against
+ * the low and zero limits with hysteresis to avoid toggling. It also
+ */
 {
     float abs_meas = fabs(meas);
 
@@ -256,13 +260,13 @@ void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
         }
     }
 }
-//-----------------------------------------------------------------------------------------------------------
+
 void regLimVrefCalcRT(struct reg_lim_ref *lim_v_ref, float i_meas)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will use the measured current to work out the voltage limits based on the operating
-  zone for the voltage source.  The user defines the exclusion zone for positive voltages in quadrants 41
-  and the function rotates the zone to calculate the exclusion zone for negative voltages in quadrants 32.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function will use the measured current to work out the voltage limits based on the operating
+ * zone for the voltage source. The user defines the exclusion zone for positive voltages in quadrants 41
+ * and the function rotates the zone to calculate the exclusion zone for negative voltages in quadrants 32.
+ */
 {
     float   v_lim;
 
@@ -311,24 +315,24 @@ void regLimVrefCalcRT(struct reg_lim_ref *lim_v_ref, float i_meas)
         }
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
 float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function applies clip and rate limits to the field, current or voltage reference.
-
-  Implementation notes:
-    On equipments where the rate limit is several orders of magnitude smaller than the reference limit, it
-    is possible that the margin on the rate limit (REG_LIM_CLIP, usually 1 per mil) is too small compared to
-    the relative precision of 32-bit floating-points (considered bounded by REG_LIM_FP32_MARGIN, that
-    is 2.0E-07 in this library). A consequence of that was observed as a false positive on the rate
-    clipping. That can happen if:
-
-       REG_LIM_CLIP * rate_lim * period << LIM_REG_FP32_MARGIN * lim_ref->max_clip
-
-    That is the reason why a margin equal to (LIM_REG_FP32_MARGIN * ref) is kept on the rate clip limit in
-    this function. In most cases it is insignificant, but it will prevent the false positive in the rare
-    cases mentioned above.
-\*---------------------------------------------------------------------------------------------------------*/
+/*!
+ * This function applies clip and rate limits to the field, current or voltage reference.
+ * 
+ * Implementation notes:
+ * On equipments where the rate limit is several orders of magnitude smaller than the reference limit, it
+ * is possible that the margin on the rate limit (REG_LIM_CLIP, usually 1 per mil) is too small compared to
+ * the relative precision of 32-bit floating-points (considered bounded by REG_LIM_FP32_MARGIN, that
+ * is 2.0E-07 in this library). A consequence of that was observed as a false positive on the rate
+ * clipping. That can happen if:
+ * 
+ * REG_LIM_CLIP * rate_lim * period << LIM_REG_FP32_MARGIN * lim_ref->max_clip
+ * 
+ * That is the reason why a margin equal to (LIM_REG_FP32_MARGIN * ref) is kept on the rate clip limit in
+ * this function. In most cases it is insignificant, but it will prevent the false positive in the rare
+ * cases mentioned above.
+ */
 {
     float       delta_ref;
     float       rate_lim_ref;
@@ -403,5 +407,5 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
 
     return(ref);
 }
-// EOF
 
+// EOF
