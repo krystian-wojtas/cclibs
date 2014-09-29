@@ -530,7 +530,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
              return(EXIT_FAILURE);
         }
 
-        ccSigsFlot(flot_file);
+        ccSigsFlot(flot_file, filename);
 
         fclose(flot_file);
     }

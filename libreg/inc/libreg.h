@@ -2,13 +2,14 @@
  * @file  libreg.h
  * @brief Converter Control Regulation library header file
  *
- * The regulation library provides support for:
- * 
- * 1. Field, Current and voltage limits
- * 2. RST based regulation (Landau notation)
- * 3. Regulation error calculation
- * 4. Voltage source simulation
- * 5. Magnet load definition and simulation
+ * The converter control regulation library provides support for:
+ * <ol>
+ * <li>Field, Current and voltage limits</li>
+ * <li>RST-based regulation</li>
+ * <li>Regulation error calculation</li>
+ * <li>Voltage source simulation</li>
+ * <li>Magnet load definition and simulation</li>
+ * </ol>
  * 
  * <h2>Contact</h2>
  *

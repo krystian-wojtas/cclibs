@@ -215,7 +215,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
 void     ccSigsInit              (void);
 void     ccSigsStore             (double time);
 void     ccSigsStoreCursor       (enum ccsig_idx idx, char *cursor_label);
-void     ccSigsFlot              (FILE *f);
+void     ccSigsFlot              (FILE *f, char *filename);
 uint32_t ccSigsReportBadValues   (void);
 
 #endif

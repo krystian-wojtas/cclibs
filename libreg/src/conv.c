@@ -1,7 +1,6 @@
 /*!
  * @file  conv.c
- * @brief Provide higher-level access to libreg with functions that combine all the elements
- * needed to regulate current or field in the converter.
+ * @brief Converter Control Regulation library higher-level functions.
  *
  * <h2>Copyright</h2>
  *
@@ -149,9 +148,6 @@ uint32_t regConvRstInit(struct reg_conv        *conv,
 }
 
 void regConvInitSimLoad(struct reg_conv *conv, enum reg_mode reg_mode, float sim_load_tc_error)
-/*!
- * This function will initialize the simulated load structures with the specified load parameters
- */
 {
     regSimLoadTcError(&conv->sim_load_pars, &conv->load_pars, sim_load_tc_error);
 
@@ -531,9 +527,9 @@ uint32_t regConvSetMeasRT(struct reg_conv *conv, uint32_t use_sim_meas)
     return(conv->iteration_counter);
 }
 
-uint32_t regConvRegulateRT(struct reg_conv *conv,                 // Regulation structure
-                           float           *ref,                  // Ref for voltage, current or field
-                           uint32_t         enable_max_abs_err)   // Enable max abs error calculation
+uint32_t regConvRegulateRT(struct reg_conv *conv,
+                           float           *ref,
+                           uint32_t         enable_max_abs_err)
 {
     uint32_t    history_index;
     struct reg_conv_signal *reg_signal = conv->reg_signal;  // Pointer to currently regulated signal structure (conv->b or conv->i)
@@ -648,11 +644,6 @@ uint32_t regConvRegulateRT(struct reg_conv *conv,                 // Regulation 
 }
 
 void regConvSimulateRT(struct reg_conv *conv, float v_perturbation)
-/*!
- * This function will simulate the voltage source and load and the measurements of the voltage, current
- * and field. The voltage reference comes from conv->v.ref_limited which is calculated by calling
- * regConverter(). A voltage perturbation can be included in the simulation via the v_perturbation parameter.
- */
 {
     float v_circuit;      // Simulated v_circuit without V_REF_DELAY
 

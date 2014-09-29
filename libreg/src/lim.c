@@ -1,35 +1,9 @@
 /*!
- * @file  lim.c
- * @brief Limit functions for field/current/voltage reference and field/current measurement
+ * @file   lim.c
+ * @brief  Converter Control Regulation library limit functions for field/current/voltage reference and field/current measurement
  * @author Quentin.King@cern.ch
  * @author Pierre.Dejoue@cern.ch
  *
- * Voltage reference limits for some 4-quadrant converters need to protect against excessive
- * power losses in the output stage when ramping down the current. This can be done by
- * defining an exclusion zone for positive voltages in quadrants 4 and 1 and the software
- * will rotate the zone by 180 degrees to define the exclusion zone for negative voltages
- * in quadrants 3 and 2. For example:
- * ^ Voltage
- * |
- * +---------------+---------------+ <- V_POS
- * |excl./ | |
- * |zone/ | |
- * | / | |
- * | / | |
- * | / Quadrant 4 | Quadrant 1 |
- * |/ | |
- * | | |
- * +---------------+---------------+-> Current
- * | | |
- * | | /|
- * | Quadrant 3 | Quadrant 2 / |
- * | | / |
- * | | / |
- * | | /excl|
- * | | / zone|
- * +---------------+---------------+ <- V_NEG
- * I_NEG I_POS
- * 
  * <h2>Copyright</h2>
  *
  * Copyright CERN 2014. This project is released under the GNU Lesser General
@@ -95,9 +69,6 @@ void regLimMeasRmsInit(struct reg_lim_meas *lim_meas, float rms_trip, float rms_
 
 void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim,
                    uint32_t invert_limits)
-/*!
- * This function will initialise the field/current reference limits.
- */
 {
     lim_ref->invert_limits = invert_limits;
     lim_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
@@ -119,10 +90,6 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, fl
 
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
                     float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits)
-/*!
- * This function will initialise the voltage reference limits. Voltage reference limits use the same
- * structure as field/current limits but have different behaviour.
- */
 {
     float delta_i_quadrants41;
 
@@ -161,10 +128,6 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
 // Real-Time Functions
 
 void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
-/*!
- * This function will check the measurement against the trip levels and the absolute measurement against
- * the low and zero limits with hysteresis to avoid toggling. It also
- */
 {
     float abs_meas = fabs(meas);
 
@@ -262,11 +225,6 @@ void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
 }
 
 void regLimVrefCalcRT(struct reg_lim_ref *lim_v_ref, float i_meas)
-/*!
- * This function will use the measured current to work out the voltage limits based on the operating
- * zone for the voltage source. The user defines the exclusion zone for positive voltages in quadrants 41
- * and the function rotates the zone to calculate the exclusion zone for negative voltages in quadrants 32.
- */
 {
     float   v_lim;
 
@@ -317,21 +275,21 @@ void regLimVrefCalcRT(struct reg_lim_ref *lim_v_ref, float i_meas)
 }
 
 float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref)
-/*!
- * This function applies clip and rate limits to the field, current or voltage reference.
+/*! 
+ * <h3>Implementation Notes</h3>
+ *
+ * On equipment where the rate limit is several orders of magnitude smaller than the
+ * reference limit, it is possible that #REG_LIM_CLIP (margin on the rate limit,
+ * usually 1 per mil) is too small compared to the relative precision of 32-bit floating-point
+ * arithmetic (considered bounded by #REG_LIM_FP32_MARGIN = 2.0E-07 in this library).
+ * A consequence of that was observed as a false positive on the rate clipping. That
+ * can happen if:
  * 
- * Implementation notes:
- * On equipments where the rate limit is several orders of magnitude smaller than the reference limit, it
- * is possible that the margin on the rate limit (REG_LIM_CLIP, usually 1 per mil) is too small compared to
- * the relative precision of 32-bit floating-points (considered bounded by REG_LIM_FP32_MARGIN, that
- * is 2.0E-07 in this library). A consequence of that was observed as a false positive on the rate
- * clipping. That can happen if:
+ * #REG_LIM_CLIP \f$\times\f$ reg_lim_ref::rate_clip \f$\times\f$ period \f$\ll\f$ #REG_LIM_FP32_MARGIN \f$\times\f$ reg_lim_ref::max_clip
  * 
- * REG_LIM_CLIP * rate_lim * period << LIM_REG_FP32_MARGIN * lim_ref->max_clip
- * 
- * That is the reason why a margin equal to (LIM_REG_FP32_MARGIN * ref) is kept on the rate clip limit in
- * this function. In most cases it is insignificant, but it will prevent the false positive in the rare
- * cases mentioned above.
+ * That is the reason why a margin equal to (#REG_LIM_FP32_MARGIN \f$\times\f$ prev_ref)
+ * is kept on the rate clip limit in this function. In most cases it is insignificant,
+ * but it will prevent the false positive in the rare cases mentioned above.
  */
 {
     float       delta_ref;

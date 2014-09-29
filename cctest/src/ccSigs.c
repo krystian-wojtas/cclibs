@@ -63,9 +63,9 @@ static void ccSigsEnableSignal(enum ccsig_idx idx)
 
     if(ccpars_global.flot_output == CC_ENABLED && signals[idx].type != CURSOR && signals[idx].buf == NULL)
     {
-        // Allocate space for overflow point since flot_index will stop at MAX_FLOT_POINTS
+        // Allocate space for overflow point since flot_index will stop at FLOT_POINTS_MAX
 
-        signals[idx].buf = (float *)calloc(MAX_FLOT_POINTS+1, sizeof(double));  // On Mac, floats are doubles
+        signals[idx].buf = (float *)calloc(ccpars_global.flot_points_max+1, sizeof(double));  // On Mac, floats are doubles
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -503,7 +503,7 @@ void ccSigsStore(double time)
 
     // Increment FLOT data index, but clip to max number of FLOT points
 
-    if(flot_index < MAX_FLOT_POINTS)
+    if(flot_index < ccpars_global.flot_points_max)
     {
         flot_index++;
     }
@@ -579,7 +579,7 @@ static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccSigsFlot(FILE *f)
+void ccSigsFlot(FILE *f, char *filename)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will print the flot data and footer
 \*---------------------------------------------------------------------------------------------------------*/
@@ -595,14 +595,14 @@ void ccSigsFlot(FILE *f)
 
     // Warn user if FLOT data was truncated
 
-    if(flot_index >= MAX_FLOT_POINTS)
+    if(flot_index >= ccpars_global.flot_points_max)
     {
-        printf("Warning - FLOT data truncated to %u points\n",MAX_FLOT_POINTS);
+        printf("Warning - FLOT data truncated to %u points\n",ccpars_global.flot_points_max);
     }
 
     // Print start of FLOT html page including flot path to all the javascript libraries
 
-    fprintf(f,flot[0],FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
+    fprintf(f,flot[0],filename,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
 
     // Time of end of FLOT data
 
