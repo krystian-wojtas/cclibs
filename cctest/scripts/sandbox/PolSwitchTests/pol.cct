@@ -2,7 +2,7 @@
 
 GLOBAL RUN_DELAY            1.0
 GLOBAL STOP_DELAY           5.0
-GLOBAL ITER_PERIOD          1.0E-3
+GLOBAL ITER_PERIOD_US       1000
 GLOBAL FUNCTION             TABLE
 GLOBAL REG_MODE             CURRENT
 GLOBAL FG_LIMITS            ENABLED
@@ -12,7 +12,7 @@ GLOBAL GROUP                sandbox
 GLOBAL PROJECT              PolSwitchTests
 
 # Limits parameters
- 
+
 LIMITS I_POS                750.0
 LIMITS I_MIN                10.0
 LIMITS I_NEG                0.0
@@ -71,9 +71,9 @@ IREG AUXPOLES2_Z            0.5
 
 LOAD POL_SWI_AUTO           DISABLED
 
-# -- INVERT_LIMITS DISABLED
+# -- INVERT LIMITS DISABLED
 
-LIMITS INVERT_LIMITS        DISABLED
+LIMITS INVERT               DISABLED
 
 GLOBAL FILE					amps-table-01
 READ table
@@ -84,9 +84,9 @@ READ table_pos
 GLOBAL FILE					amps-table-03
 READ table_neg
 
-# -- INVERT_LIMITS ENABLED --
+# -- INVERT LIMITS ENABLED --
 
-LIMITS INVERT_LIMITS        ENABLED
+LIMITS INVERT               ENABLED
 
 GLOBAL FILE					amps-table-04
 READ table
@@ -103,9 +103,9 @@ READ table_neg
 LOAD POL_SWI_AUTO           ENABLED
 
 
-# -- INVERT_LIMITS DISABLED --
+# -- INVERT LIMITS DISABLED --
 
-LIMITS INVERT_LIMITS        DISABLED
+LIMITS INVERT               DISABLED
 
 GLOBAL FILE					amps-table-07
 READ table
@@ -116,9 +116,9 @@ READ table_pos
 GLOBAL FILE					amps-table-09
 READ table_neg
 
-# -- INVERT_LIMITS ENABLED --
+# -- INVERT LIMITS ENABLED --
 
-LIMITS INVERT_LIMITS        ENABLED
+LIMITS INVERT               ENABLED
 
 GLOBAL FILE					amps-table-10
 READ table

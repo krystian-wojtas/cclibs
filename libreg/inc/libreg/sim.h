@@ -37,7 +37,8 @@
 
 // Constants
 
-#define REG_N_VS_SIM_COEFFS     4                               //!< Number of Voltage Source simulation coefficients
+#define REG_N_VS_SIM_COEFFS                     4               //!< Number of Voltage Source simulation coefficients
+#define REG_VS_SIM_UNDERSAMPLED_THRESHOLD       0.25            //!< Threshold for calculated VS delay in iteration periods
 
 // Simulation structures
 
@@ -78,7 +79,6 @@ struct reg_sim_vs_pars
     float                       num  [REG_N_VS_SIM_COEFFS];     //!< Numerator coefficients b0, b1, b2, etc. See also #REG_N_VS_SIM_COEFFS
     float                       den  [REG_N_VS_SIM_COEFFS];     //!< Denominator coefficients a0, a2, a2, etc. See also #REG_N_VS_SIM_COEFFS
     float                       v_ref_delay_iters;              //!< Delay before the voltage reference is applied to the voltage source
-    float                       vs_tustin_delay_iters;          //!< Tustin model delay for steady ramp in iterations
     float                       vs_delay_iters;                 //!< Voltage source delay for steady ramp in iterations
     float                       gain;                           //!< \f[gain = \frac{\sum den}{\sum num}\f]
     uint32_t                    vs_undersampled_flag;           //!< Simulated voltage source is under-sampled flag
@@ -107,24 +107,13 @@ extern "C" {
  * @param[out]    sim_load_pars        Load simulation parameters object to update
  * @param[in]     load_pars            Load parameters
  * @param[in]     sim_load_tc_error    Simulation load time constant error. If the Tc
- *                                     error is zero, simply copy the load parameters,
- *                                     otherwise distort the load parameters to have
- *                                     the required Tc error.
+ *                                     error is zero, the simulation will simply use load_pars.
+ *                                     Otherwise it will initialise the simulated load using
+ *                                     distorted load_pars so that the simulated load time
+ *                                     constant will mismatch the load_pars time constants by
+ *                                     the required factor (i.e. 0.1 = 10% error in Tc).
  */
-void regSimLoadTcError(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars, float sim_load_tc_error);
-
-/*!
- * Initialise the load simulation. reg_sim_load_pars::period_tc_ratio is set to the
- * ratio of the simulation period and the time constant of the load's primary pole.
- * If this is greater than 3.0 then the load is considered to be under-sampled and
- * Ohm's law will be used when simulating the load. 
- *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
- *
- * @param[in,out] sim_load_pars        Load simulation parameters object to update
- * @param[in]     sim_period           Simulation period
- */
-void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, float sim_period);
+void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars, float sim_load_tc_error, float sim_period);
 
 /*!
  * Initialises the load simulation with the field b_init.
@@ -160,34 +149,23 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
 void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init);
 
 /*!
- * Calculates the z-transform. This function uses the Tustin algorithm for a voltage source with a
- * second order s-transform with one optional real zero. If the voltage source model is under-sampled,
- * the Tustin algorithm is not used. For background on calculating the delay for a steady ramp, see
- * <a href="../load/FirstSecondOrder.pdf">Review of First- and Second-Order System Response</a>, p.36.
- *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
- *
- * @param[in,out] pars                 Load simulation parameters object to update
- * @param[in]     iter_period          Iteration period
- * @param[in]     bandwidth            Bandwidth (-3 dB). If zero or negative, set
- *                                     reg_sim_vs_pars::vs_tustin_delay_iters to zero and
- *                                     exit. The user's model will be used.
- * @param[in]     z                    Damping
- * @param[in]     tau_zero             Time constant. Set to zero if not used.
- */
-void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float iter_period, float bandwidth, float z, float tau_zero);
-
-/*!
- * Calculate the gain and voltage source delay for a steady ramp. This function sets or clears
+ * Initialise voltage source model. This function sets or clears
  * reg_sim_vs_pars::vs_undersampled_flag.
  *
  * This is a non-Real-Time function: do not call from the real-time thread or interrupt
  *
  * @param[in,out] pars                 Load simulation parameters object to update
- * @param[in,out] vars                 Load simulation values object to update
+ * @param[in]     iter_period          Simulation iteration period
  * @param[in]     v_ref_delay_iters    Delay before the voltage reference is applied to the voltage source
+ * @param[in]     bandwidth            VS 2nd order model bandwidth (-3 dB). Set to zero to use num,den.
+ * @param[in]     z                    2nd order model damping
+ * @param[in]     tau_zero             2nd order optional zero time constant. Set to zero if not used.
+ * @param[in]     num                  VS model numerator coefficients (used if bandwidth is zero)
+ * @param[in]     den                  VS model denominator coefficients (used if bandwidth is zero)
  */
-void regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref_delay_iters);
+void regSimVsInit(struct reg_sim_vs_pars *pars, float iter_period, float v_ref_delay_iters,
+                  float bandwidth, float z, float tau_zero,
+                  float num[REG_N_VS_SIM_COEFFS], float den[REG_N_VS_SIM_COEFFS]);
 
 /*!
  * Initialise the voltage source simulation history to be in steady-state with the given

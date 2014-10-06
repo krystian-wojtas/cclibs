@@ -1,6 +1,6 @@
 # CCTEST - PLEP test script
 
-GLOBAL ITER_PERIOD      1.0E-2
+GLOBAL ITER_PERIOD_US   10000
 GLOBAL GROUP            sandbox
 GLOBAL PROJECT          PlepTests
 GLOBAL FUNCTION         PLEP
@@ -16,117 +16,117 @@ PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep02
-     
+
 PLEP INITIAL_REF         1000.0
 PLEP FINAL_REF          12000.0
 PLEP ACCELERATION       10000.0
 PLEP LINEAR_RATE         5000.0
 PLEP FINAL_RATE         -3000.0
 PLEP EXP_TC                 0.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep03
-     
+
 PLEP INITIAL_REF        12000.0
 PLEP FINAL_REF           5000.0
 PLEP ACCELERATION        1000.0
 PLEP LINEAR_RATE         5000.0
 PLEP FINAL_RATE             0.0
 PLEP EXP_TC                 5.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep04
-     
+
 PLEP INITIAL_REF         1000.0
 PLEP FINAL_REF          12000.0
 PLEP ACCELERATION       10000.0
 PLEP LINEAR_RATE         5000.0
 PLEP FINAL_RATE          3000.0
 PLEP EXP_TC                 0.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep05
-     
+
 PLEP INITIAL_REF        12000.0
 PLEP FINAL_REF           1000.0
 PLEP ACCELERATION       10000.0
 PLEP LINEAR_RATE         5000.0
 PLEP FINAL_RATE          3000.0
 PLEP EXP_TC                 0.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep06
-     
+
 PLEP INITIAL_REF        -2000.0
 PLEP FINAL_REF           3000.0
 PLEP ACCELERATION       10000.0
 PLEP LINEAR_RATE         5000.0
 PLEP FINAL_RATE          3000.0
 PLEP EXP_TC                 0.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep07
-     
+
 PLEP INITIAL_REF        12000.0
 PLEP FINAL_REF           1000.0
 PLEP ACCELERATION        5000.0
 PLEP LINEAR_RATE         3000.0
 PLEP FINAL_RATE             0.0
 PLEP EXP_TC                 3.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep08
-     
+
 PLEP INITIAL_REF       -12000.0
 PLEP FINAL_REF          -1000.0
 PLEP ACCELERATION        5000.0
 PLEP LINEAR_RATE         3000.0
 PLEP FINAL_RATE             0.0
 PLEP EXP_TC                 3.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep09
-     
+
 PLEP INITIAL_REF        -2000.0
 PLEP FINAL_REF         -10000.0
 PLEP ACCELERATION       10000.0
 PLEP LINEAR_RATE         5000.0
 PLEP FINAL_RATE             0.0
 PLEP EXP_TC                 5.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep10
-     
+
 PLEP INITIAL_REF       -12000.0
 PLEP FINAL_REF          10000.0
 PLEP ACCELERATION       10000.0
 PLEP LINEAR_RATE         5000.0
 PLEP FINAL_RATE         -8000.0
 PLEP EXP_TC                 0.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep11
-     
+
 PLEP INITIAL_REF       -12000.0
 PLEP FINAL_REF          10000.0
 PLEP ACCELERATION       10000.0
 PLEP LINEAR_RATE         5000.0
 PLEP FINAL_RATE             0.0
 PLEP EXP_TC                 5.0
-PLEP EXP_FINAL              0.0     
+PLEP EXP_FINAL              0.0
 RUN
 
 GLOBAL FILE             plep12
-     
+
 PLEP INITIAL_REF        12000.0
 PLEP FINAL_REF             10.0
 PLEP ACCELERATION       10000.0

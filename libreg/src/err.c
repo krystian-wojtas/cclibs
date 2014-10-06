@@ -28,6 +28,8 @@
 #include <math.h>
 #include "libreg/err.h"
 
+
+
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
 void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_threshold)
@@ -52,23 +54,29 @@ void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_
     }
 }
 
+
+
 // Real-Time Functions
 
-void regErrResetLimitsVarsRT(struct reg_err *err)
+void regErrResetLimitsVarsRT(struct reg_err *err, uint32_t inhibit_max_abs_err_counter)
 {
     err->err            = 0.0;
+    err->max_abs_err    = 0.0;
 
     err->warning.flag   = 0;
     err->warning.filter = 0.0;
 
     err->fault.flag     = 0;
     err->fault.filter   = 0.0;
+
+    err->inhibit_max_abs_err_counter = inhibit_max_abs_err_counter;
 }
+
 
 /*!     
  * Manage the warning and fault limits by applying hysteresis to a first-order filter of the limit exceeded flag.
  *
- * @param[in,out] err_limit    Limit threshold and flags
+ * @param[in,out] err_limit    Pointer to regulation error limit threshold and flags structure
  * @param[in]     abs_err      Absolute error
  */
 static void regErrLimitRT(struct reg_err_limit *err_limit, float abs_err)
@@ -96,8 +104,9 @@ static void regErrLimitRT(struct reg_err_limit *err_limit, float abs_err)
     err_limit->flag = err_limit->filter > 0.3;
 }
 
-void regErrCheckLimitsRT(struct reg_err *err, uint32_t enable_err, uint32_t enable_max_abs_err,
-                         float delayed_ref, float meas)
+
+
+void regErrCheckLimitsRT(struct reg_err *err, float delayed_ref, float meas)
 {
     float       abs_error;
 
@@ -105,32 +114,26 @@ void regErrCheckLimitsRT(struct reg_err *err, uint32_t enable_err, uint32_t enab
 
     err->delayed_ref = delayed_ref;
 
-    // Suppress error calculation if enable_err is zero
-
-    if(enable_err == 0)
-    {
-        regErrResetLimitsVarsRT(err);
-        return;
-    }
-
     // Calculate regulation error
 
     err->err = delayed_ref - meas;
 
     abs_error = fabs(err->err);
 
-    // Calculate or reset max abs err
+    // Down count the max_abs_err inhibit counter
 
-    if(enable_max_abs_err != 0)
+    if(err->inhibit_max_abs_err_counter > 0)
     {
-        if(abs_error > err->max_abs_err)
+        // When down counter hits zero, reset max_abs_err to the current abs error value
+
+        if(--err->inhibit_max_abs_err_counter == 0)
         {
             err->max_abs_err = abs_error;
         }
     }
-    else
+    else if(abs_error > err->max_abs_err)
     {
-        err->max_abs_err = 0.0;
+        err->max_abs_err = abs_error;
     }
 
     // Check error warning and fault thresholds only if the threshold level is non-zero

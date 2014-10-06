@@ -36,23 +36,22 @@
 
 struct ccrun_vars
 {
-    uint32_t               num_iterations;             ///< Number of iterations for the simulation
-    double                 reg_time;                   ///< Time of last iteration when regulation algorithm ran
-    float                  feedforward_v_ref;          ///< Feed-forward reference for START function
-    uint32_t               feedforward_control;        ///< Feed-forward control for START function
-    uint32_t               ireg_flag;                  ///< Run includes current regulation
-    uint32_t               breg_flag;                  ///< Run includes field regulation
-    uint32_t               vs_tripped_flag;            ///< Voltage source tripped by measurement limit
-    uint32_t               func_idx;                   ///< Active reference function index
-    uint32_t               num_functions;              ///< Number of reference functions to run
-    float                  func_duration;              ///< Duration of the active reference function
-    uint32_t             (*fgen_func)();               ///< Function to generate the active reference
-    void                  *fg_pars;                    ///< Parameter structure for active reference
-    struct fg_limits      *fg_limits;                  ///< Pointer to fg_limits (b/i/v)
-    struct reg_lim_ref     fg_lim_v_ref;               ///< Libreg voltage measurement limits structure for fg converter limits
-    struct fg_meta         fg_meta[MAX_FUNCS];         ///< Reference function meta data for all functions
-    float                  ref_advance[MAX_FUNCS];     ///< Ref advance used with each function (for debugging)
-    float                  max_abs_err[MAX_FUNCS];     ///< Max absolute regulation for each function (when regulation is active)
+    uint32_t               num_iterations;             //!< Number of iterations for the simulation
+    uint32_t               ireg_flag;                  //!< Run includes current regulation
+    uint32_t               breg_flag;                  //!< Run includes field regulation
+    uint32_t               vs_tripped_flag;            //!< Voltage source tripped by measurement limit
+    uint32_t               func_idx;                   //!< Active reference function index
+    uint32_t               num_functions;              //!< Number of reference functions to run
+    float                  func_duration;              //!< Duration of the active reference function
+    uint32_t             (*fgen_func)();               //!< Function to generate the active reference
+    void                  *fg_pars;                    //!< Parameter structure for active reference
+    struct fg_limits      *fg_limits;                  //!< Pointer to fg_limits (b/i/v)
+    struct reg_lim_ref     fg_lim_v_ref;               //!< Libreg voltage measurement limits structure for fg converter limits
+
+    double                 func_start_time[MAX_FUNCS]; //!< Time in iteration of the start of the function
+    struct fg_meta         fg_meta        [MAX_FUNCS]; //!< Reference function meta data for all functions
+    float                  ref_advance    [MAX_FUNCS]; //!< Ref advance used with each function (for debugging)
+    float                  max_abs_err    [MAX_FUNCS]; //!< Max absolute regulation for each function (when regulation is active)
 };
 
 CCRUN_EXT struct ccrun_vars ccrun;

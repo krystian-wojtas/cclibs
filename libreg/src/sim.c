@@ -30,18 +30,14 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include "libreg/sim.h"
 
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
-void regSimLoadTcError(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars,
-                       float sim_load_tc_error)
+void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars, float sim_load_tc_error, float sim_period)
 {
-    float sim_load_tc_factor;
-
-    sim_load_pars->tc_error = sim_load_tc_error;
-
     // If Tc error is zero, simply copy load parameters into sim load parameters structure.
 
     if(sim_load_tc_error == 0.0)
@@ -49,11 +45,11 @@ void regSimLoadTcError(struct reg_sim_load_pars *sim_load_pars, struct reg_load_
         sim_load_pars->load_pars = *load_pars;
     }
 
-    // else initialise simulated load with distorted the load parameters to have required Tc error
+    // else initialise simulated load with distorted load parameters to have required Tc error
 
     else
     {
-        sim_load_tc_factor = sim_load_tc_error / (sim_load_tc_error + 2.0);
+        float sim_load_tc_factor = sim_load_tc_error / (sim_load_tc_error + 2.0);
 
         regLoadInit(&sim_load_pars->load_pars,
                     load_pars->ohms_ser * (1.0 - sim_load_tc_factor),
@@ -67,18 +63,20 @@ void regSimLoadTcError(struct reg_sim_load_pars *sim_load_pars, struct reg_load_
                        load_pars->sat.i_start,
                        load_pars->sat.i_end);
     }
-}
 
-void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, float sim_period)
-{
+    sim_load_pars->tc_error               = sim_load_tc_error;
     sim_load_pars->period_tc_ratio        = sim_period / sim_load_pars->load_pars.tc;
     sim_load_pars->load_undersampled_flag = (sim_load_pars->period_tc_ratio > 3.0);
 }
+
+
 
 void regSimLoadSetField(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float b_init)
 {
     regSimLoadSetCurrent(pars, vars, regLoadFieldToCurrentRT(&pars->load_pars, b_init));
 }
+
+
 
 void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float i_init)
 {
@@ -93,6 +91,8 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
     regSimLoadRT(pars, vars, 0, vars->circuit_voltage);
 }
 
+
+
 void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init)
 {
     if(pars->load_undersampled_flag == 0)
@@ -105,7 +105,10 @@ void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_va
     regSimLoadRT(pars, vars, 0, v_init);
 }
 
-void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float iter_period, float bandwidth, float z, float tau_zero)
+
+
+void regSimVsInit(struct reg_sim_vs_pars *pars, float iter_period, float v_ref_delay_iters, float bandwidth, float z, float tau_zero,
+                  float num[REG_N_VS_SIM_COEFFS], float den[REG_N_VS_SIM_COEFFS])
 {
     float       natural_freq;
     float       f_pw;
@@ -115,124 +118,130 @@ void regSimVsInitTustin(struct reg_sim_vs_pars *pars, float iter_period, float b
     float       d;
     float       de;
     float       y;
-
-    // Return immediately if bandwidth is zero or negative - the user's model will be used
-
-    if(bandwidth <= 0.0)
-    {
-        pars->vs_tustin_delay_iters = 0.0;
-        return;
-    }
-
-    // Calculate the natural frequency from the bandwidth and damping
-
-    z2 = z * z;
-    natural_freq = bandwidth / sqrt(1.0 - 2.0 * z2 + sqrt(2.0 - 4.0 * z2 + 4 * z2 * z2));
-
-    // Calculate the delay for a steady ramp (see doc/model/FirstSecondOrder.pdf page 36)
-
-    pars->vs_tustin_delay_iters = 2.0 * z / (2.0 * M_PI * natural_freq * iter_period);
-
-    // If voltage source model is too under-sampled then do not attempt Tustin algorithm
-
-    if(bandwidth > 0.8 / iter_period)
-    {
-        pars->den[0] = pars->num[0] = 1.0;
-        pars->den[1] = pars->den[2] = pars->den[3] = pars->num[1] = pars->num[2] = pars->num[3] = 0.0;
-        return;
-    }
-
-    // Tustin will match z-transform and s-transform at frequency f_pw
-
-    if(z < 0.7)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
-    {
-        f_pw = natural_freq * sqrt(1.0 - 2.0 * z2);
-        w  = M_PI * iter_period * f_pw;
-        b  = tan(w) / w;
-    }
-    else              // else heavily damped, there is no resonance peak: f_pw = 0 (minimizes approximation error)
-    {
-        w  = 0.0;
-        b  = 1.0;
-    }
-
-    // Calculate intermediate variables
-
-    d  = 2.0 * tau_zero / (iter_period * b);
-    y  = M_PI * iter_period * b * natural_freq;
-    de = 1.0 / (y * y + 2.0 * z * y + 1.0);
-
-    // Numerator (b0, b1, b2, b3) coefficients
-
-    pars->num[0] = (y * y * (1.0 + d)) * de;
-    pars->num[1] = (y * y * 2.0) * de;
-    pars->num[2] = (y * y * (1.0 - d)) * de;
-    pars->num[3] = 0.0;
-
-    // Denominator (a0, a1, a2, a3) coefficient
-
-    pars->den[0] = 1.0;
-    pars->den[1] = (y * y * 2.0 - 2.0) * de;
-    pars->den[2] = (y * y - 2.0 * z * y + 1.0) * de;
-    pars->den[3] = 0.0;
-}
-
-void regSimVsInit(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref_delay_iters)
-{
-    uint32_t        i;
-    float           sum_num  = 0.0;         // Sum(b_i)
-    float           sum_den  = 0.0;         // Sum(a_i)
+    uint32_t    i;
+    float       sum_num        = 0.0;
+    float       sum_den        = 0.0;
 
     // Save v_ref_delay so that it can be used later by regConvPureDelay()
 
     pars->v_ref_delay_iters = v_ref_delay_iters;
 
-    // Calculate gain of voltage source model and delay for a steady ramp
+    // If bandwidth is positive, use Tustin to calculate z-transform for voltage source using 2nd order model
 
-    pars->vs_delay_iters = 0.0;         // Steady ramp delay = Sum(i.(a_i - b_i)) / Sum(b_i)
-
-    for(i = 0 ; i < REG_N_VS_SIM_COEFFS ; i++)
+    if(bandwidth > 0.0)
     {
-        sum_num += pars->num[i];
-        sum_den += pars->den[i];
+        // Calculate the natural frequency from the bandwidth and damping
 
-        pars->vs_delay_iters += (float)i * (pars->num[i] - pars->den[i]);
-    }
+        z2 = z * z;
+        natural_freq = bandwidth / sqrt(1.0 - 2.0 * z2 + sqrt(2.0 - 4.0 * z2 + 4 * z2 * z2));
 
-    // Protect gain against Inf if the denominator is zero
+        // Calculate the delay for a steady ramp (see doc/pdf/model/FirstSecondOrder.pdf page 36)
 
-    if(sum_den != 0.0)
-    {
-       pars->gain = sum_num / sum_den;
+        pars->vs_delay_iters = 2.0 * z / (2.0 * M_PI * natural_freq * iter_period);
+
+        // If voltage source model is too under-sampled then do not attempt Tustin algorithm
+
+        if(pars->vs_delay_iters < REG_VS_SIM_UNDERSAMPLED_THRESHOLD)
+        {
+            pars->vs_undersampled_flag = 1;
+            pars->gain = 1.0;
+        }
+        else
+        {
+            pars->vs_undersampled_flag = 0;
+
+            // Tustin will match z-transform and s-transform at frequency f_pw
+
+            if(z < 0.7)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
+            {
+                f_pw = natural_freq * sqrt(1.0 - 2.0 * z2);
+                w  = M_PI * iter_period * f_pw;
+                b  = tan(w) / w;
+            }
+            else              // else heavily damped, there is no resonance peak: f_pw = 0 (minimizes approximation error)
+            {
+                w  = 0.0;
+                b  = 1.0;
+            }
+
+            // Calculate intermediate variables
+
+            d  = 2.0 * tau_zero / (iter_period * b);
+            y  = M_PI * iter_period * b * natural_freq;
+            de = 1.0 / (y * y + 2.0 * z * y + 1.0);
+
+            // Numerator (b0, b1, b2, b3) coefficients
+
+            pars->num[0] = (y * y * (1.0 + d)) * de;
+            pars->num[1] = (y * y * 2.0) * de;
+            pars->num[2] = (y * y * (1.0 - d)) * de;
+            pars->num[3] = 0.0;
+
+            // Denominator (a0, a1, a2, a3) coefficient
+
+            pars->den[0] = 1.0;
+            pars->den[1] = (y * y * 2.0 - 2.0) * de;
+            pars->den[2] = (y * y - 2.0 * z * y + 1.0) * de;
+            pars->den[3] = 0.0;
+
+            // Set the gain to 1
+
+            pars->gain = 1.0;
+        }
     }
     else
     {
-        pars->gain = 0.0;
-    }
+        // Use voltage source model provided in num and den arrays
 
-    // Protect against Inf if numerator is zero
+        memcpy(pars->num, num, sizeof(num));
+        memcpy(pars->den, den, sizeof(den));
 
-    if(sum_num != 0.0)
-    {
-        pars->vs_delay_iters /= sum_num;
-    }
-    else
-    {
+        pars->vs_undersampled_flag  = 0;
+
+        // Calculate gain of voltage source model and delay for a steady ramp
+        // Steady ramp delay = Sum(i.(num[i] - den[i])) / Sum(num[i])
+
         pars->vs_delay_iters = 0.0;
+
+        for(i = 0 ; i < REG_N_VS_SIM_COEFFS ; i++)
+        {
+            sum_num += pars->num[i];
+            sum_den += pars->den[i];
+
+            pars->vs_delay_iters += (float)i * (pars->num[i] - pars->den[i]);
+        }
+
+        // Protect gain against Inf if the denominator is zero
+
+        if(sum_den != 0.0 || sum_num != 0.0)
+        {
+            pars->gain           = 0.0;
+            pars->vs_delay_iters = 0.0;
+        }
+        else
+        {
+           pars->gain            = sum_num / sum_den;
+           pars->vs_delay_iters /= sum_num;
+        }
+
+        // If vs delay is too short, then consider the model to be under sampled
+
+        if(pars->vs_delay_iters < REG_VS_SIM_UNDERSAMPLED_THRESHOLD)
+        {
+            pars->vs_undersampled_flag = 1;
+        }
     }
 
-    // Set or clear under-sampled flag
+    // If model is under sampled, set model to be transparent
 
-    if(pars->num[0] == 1.0)
+    if(pars->vs_undersampled_flag == 1)
     {
-        pars->vs_delay_iters = pars->vs_tustin_delay_iters;
-        pars->vs_undersampled_flag = 1;
-    }
-    else
-    {
-        pars->vs_undersampled_flag = 0;
+        pars->den[0] = pars->num[0] = 1.0;
+        pars->den[1] = pars->den[2] = pars->den[3] = pars->num[1] = pars->num[2] = pars->num[3] = 0.0;
     }
 }
+
+
 
 float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_circuit)
 {
@@ -344,7 +353,7 @@ float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *var
     else // else when load is under sampled the inductive transients are ignored and ohms law is used
     {
         vars->circuit_current = v_circuit * pars->load_pars.gain2;
-        vars->magnet_current  = vars->circuit_current * pars->load_pars.ohms2;
+        vars->magnet_current  = vars->circuit_current * pars->load_pars.gain3;
     }
 
     // Remember load voltage for next iteration

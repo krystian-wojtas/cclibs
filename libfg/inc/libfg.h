@@ -51,10 +51,9 @@ enum fg_error
     FG_BAD_ARRAY_LEN,
     FG_BAD_PARAMETER,
     FG_INVALID_TIME,
-    FG_OUT_OF_ACCELERATION_LIMITS,
     FG_OUT_OF_LIMITS,
     FG_OUT_OF_RATE_LIMITS,
-    FG_OUT_OF_VOLTAGE_LIMITS
+    FG_OUT_OF_ACCELERATION_LIMITS,
 };
 
 /*!
@@ -99,13 +98,6 @@ struct fg_limits
     float       neg;                       //!< Negative reference limit
     float       rate;                      //!< Rate of change limit
     float       acceleration;              //!< Acceleration limit
-    uint32_t    user_data;                 //!< User data available to user_check_limits() function
-
-    /*!
-     * User callback for checking reference
-     */
-    enum fg_error (*user_check_limits)(struct fg_limits *limits, uint32_t invert_limits,
-                                       float ref, float rate, float acceleration, struct fg_meta *meta);
 };
 
 // External functions

@@ -100,6 +100,18 @@ CCPARS_GLOBAL_EXT struct ccpars_enum reg_mode[]
 #endif
 ;
 
+// Regulation error rate control enum
+
+CCPARS_EXT struct ccpars_enum reg_err_rate[]
+#ifdef GLOBALS
+= {
+    { REG_ERR_RATE_REGULATION,   "REGULATION"     },
+    { REG_ERR_RATE_MEASUREMENT,  "MEASUREMENT"    },
+    { 0,                          NULL            },
+}
+#endif
+;
+
 // Output format enum
 
 enum cc_csv_format
@@ -126,46 +138,48 @@ CCPARS_GLOBAL_EXT struct ccpars_enum csv_format[]
 
 struct ccpars_global
 {
-    float               pre_func_delay;     // Pre-function time delay (time added between functions).
-    float               run_delay;          // Delay given to libfg for each function
-    float               stop_delay;         // Time after end of last ref function
-    float               iter_period;        // Global iteration period
-    float               abort_time;         // Time to abort the ref function (limits are required)
-    uint32_t            flot_points_max;    // Maximum number of allowed Flot points
-    uint32_t            actuation;          // Converter actuation (VOLTAGE REF or CURRENT REF)
-    uint32_t            reverse_time;       // Reverse time flag (tests ref function with decreasing time)
-    uint32_t            reg_mode[MAX_FUNCS];// Regulation modes (VOLTAGE, CURRENT or FIELD)
-    uint32_t            function[MAX_FUNCS];// Ref function types
-    uint32_t            fg_limits;          // Enable limits for function generator initialisation
-    uint32_t            sim_load;           // Enable load simulation
-    uint32_t            stop_on_error;      // Enable stop on error - this will stop reading the file
-    uint32_t            csv_format;         // CSV output data format
-    uint32_t            flot_output;        // FLOT webplot output control (ENABLED or DISABLED)
-    uint32_t            debug_output;       // Debug output control (ENABLED or DISABLED)
-    char *              group;              // Test group name (e.g. sandbox or tests)
-    char *              project;            // Project name (e.g. SPS_MPS)
-    char *              file;               // Results filename root (exclude .csv or .html)
+    float                       pre_func_delay;     // Pre-function time delay (time added between functions).
+    float                       run_delay;          // Delay given to libfg for each function
+    float                       stop_delay;         // Time after end of last ref function
+    uint32_t                    iter_period_us;     // Global iteration period (us)
+    float                       abort_time;         // Time to abort the ref function (limits are required)
+    uint32_t                    flot_points_max;    // Maximum number of allowed Flot points
+    enum reg_actuation          actuation;          // Converter actuation (VOLTAGE REF or CURRENT REF)
+    enum reg_enabled_disabled   reverse_time;       // Reverse time flag (tests ref function with decreasing time)
+    enum reg_mode               reg_mode[MAX_FUNCS];// Regulation modes (VOLTAGE, CURRENT or FIELD)
+    enum fg_types               function[MAX_FUNCS];// Ref function types
+    enum reg_err_rate           reg_err_rate;       // Regulation error rate control
+    uint32_t                    fg_limits;          // Enable limits for function generator initialisation
+    uint32_t                    sim_load;           // Enable load simulation
+    uint32_t                    stop_on_error;      // Enable stop on error - this will stop reading the file
+    uint32_t                    csv_format;         // CSV output data format
+    uint32_t                    flot_output;        // FLOT webplot output control (ENABLED or DISABLED)
+    uint32_t                    debug_output;       // Debug output control (ENABLED or DISABLED)
+    char *                      group;              // Test group name (e.g. sandbox or tests)
+    char *                      project;            // Project name (e.g. SPS_MPS)
+    char *                      file;               // Results filename root (exclude .csv or .html)
 };
 
 CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
 #ifdef GLOBALS
-= {//   Default value           Parameter
-        0.1,                 // GLOBAL PRE_FUNC_DELAY
-        1.0,                 // GLOBAL RUN_DELAY
-        1.0,                 // GLOBAL STOP_DELAY
-        1.0E-3,              // GLOBAL ITER_PERIOD
-        0.0,                 // GLOBAL ABORT_TIME
-        100000,              // GLOBAL FLOT_POINTS_MAX
-        REG_VOLTAGE_REF,     // GLOBAL ACTUATION
-        CC_DISABLED,         // GLOBAL REVERSE_TIME
-        { REG_VOLTAGE },     // GLOBAL REG_MODE
-        { FG_SINE },         // GLOBAL FUNCTION
-        CC_DISABLED,         // GLOBAL FG_LIMITS
-        CC_DISABLED,         // GLOBAL SIM_LOAD
-        CC_ENABLED,          // GLOBAL STOP_ON_ERROR
-        CC_NONE,             // GLOBAL CSV_FORMAT
-        CC_ENABLED,          // GLOBAL FLOT_OUTPUT
-        CC_ENABLED,          // GLOBAL DEBUG_OUTPUT
+= {//   Default value                  Parameter
+        0.1,                        // GLOBAL PRE_FUNC_DELAY
+        1.0,                        // GLOBAL RUN_DELAY
+        1.0,                        // GLOBAL STOP_DELAY
+        1000,                       // GLOBAL ITER_PERIOD_US
+        0.0,                        // GLOBAL ABORT_TIME
+        100000,                     // GLOBAL FLOT_POINTS_MAX
+        REG_VOLTAGE_REF,            // GLOBAL ACTUATION
+        REG_DISABLED,               // GLOBAL REVERSE_TIME
+        { REG_VOLTAGE },            // GLOBAL REG_MODE
+        { FG_SINE },                // GLOBAL FUNCTION
+        REG_ERR_RATE_REGULATION,    // GLOBAL REG_ERR_RATE
+        REG_DISABLED,               // GLOBAL FG_LIMITS
+        REG_DISABLED,               // GLOBAL SIM_LOAD
+        REG_ENABLED,                // GLOBAL STOP_ON_ERROR
+        CC_NONE,                    // GLOBAL CSV_FORMAT
+        REG_ENABLED,                // GLOBAL FLOT_OUTPUT
+        REG_ENABLED,                // GLOBAL DEBUG_OUTPUT
 }
 #endif
 ;
@@ -177,13 +191,14 @@ enum global_pars_index_enum
     GLOBAL_PRE_FUNC_DELAY    ,
     GLOBAL_RUN_DELAY         ,
     GLOBAL_STOP_DELAY        ,
-    GLOBAL_ITER_PERIOD       ,
+    GLOBAL_ITER_PERIOD_US    ,
     GLOBAL_ABORT_TIME        ,
     GLOBAL_FLOT_POINTS_MAX   ,
     GLOBAL_ACTUATION         ,
     GLOBAL_REVERSE_TIME      ,
     GLOBAL_REG_MODE          ,
     GLOBAL_FUNCTION          ,
+    GLOBAL_REG_ERR_RATE      ,
     GLOBAL_FG_LIMITS         ,
     GLOBAL_SIM_LOAD          ,
     GLOBAL_STOP_ON_ERROR     ,
@@ -201,13 +216,14 @@ CCPARS_GLOBAL_EXT struct ccpars global_pars[]
     { "PRE_FUNC_DELAY",    PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.pre_func_delay     }, 1 },
     { "RUN_DELAY",         PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.run_delay          }, 1 },
     { "STOP_DELAY",        PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.stop_delay         }, 1 },
-    { "ITER_PERIOD",       PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.iter_period        }, 1 },
+    { "ITER_PERIOD_US",    PAR_UNSIGNED,     1, 1, NULL,             { .i = &ccpars_global.iter_period_us     }, 1 },
     { "ABORT_TIME",        PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.abort_time         }, 1 },
     { "FLOT_POINTS_MAX",   PAR_UNSIGNED,     1, 1, NULL,             { .i = &ccpars_global.flot_points_max    }, 1 },
     { "ACTUATION",         PAR_ENUM,         1, 1, reg_actuation,    { .i = &ccpars_global.actuation          }, 1 },
     { "REVERSE_TIME",      PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.reverse_time       }, 1 },
     { "REG_MODE",          PAR_ENUM, MAX_FUNCS, 1, reg_mode,         { .i =  ccpars_global.reg_mode           }, 1 },
     { "FUNCTION",          PAR_ENUM, MAX_FUNCS, 1, function_type,    { .i =  ccpars_global.function           }, 1 },
+    { "REG_ERR_RATE",      PAR_ENUM,         1, 1, reg_err_rate,     { .i = &ccpars_global.reg_err_rate       }, 1 },
     { "FG_LIMITS",         PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.fg_limits          }, 1 },
     { "SIM_LOAD",          PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.sim_load           }, 1 },
     { "STOP_ON_ERROR",     PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.stop_on_error      }, 1 },

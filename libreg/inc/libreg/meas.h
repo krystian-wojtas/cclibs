@@ -166,16 +166,6 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
                        uint32_t extrapolation_len_iters, float pos, float neg, float meas_delay_iters);
 
 /*!
- * Set the selector of the regulation measurement.
- *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
- *
- * @param[out]    filter                     Measurement filter object to update
- * @param[in]     reg_select                 Filter selector
- */
-void regMeasSetRegSelect(struct reg_meas_filter *filter, enum reg_meas_select reg_select);
-
-/*!
  * Set the noise and tone characteristics for a simulated measurement.
  *
  * This is a non-Real-Time function: do not call from the real-time thread or interrupt

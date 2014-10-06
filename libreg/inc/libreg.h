@@ -41,7 +41,45 @@
 #ifndef LIBREG_H
 #define LIBREG_H
 
-// Include header files
+// Libreg enum constants
+
+/*!
+ * DISABLED/ENABLED constants
+ */
+enum reg_enabled_disabled
+{
+    REG_DISABLED,                                       //!< Disabled
+    REG_ENABLED                                         //!< Enabled
+};
+
+/*!
+ * Regulation parameters actuation (voltage or current)
+ */
+enum reg_actuation
+{
+    REG_VOLTAGE_REF,                                    //!< Actuation is a voltage reference
+    REG_CURRENT_REF                                     //!< Actuation is a current reference
+};
+
+/*!
+ * Regulation parameters source (operational or test)
+ */
+enum reg_rst_source
+{
+    REG_OPERATIONAL_RST_PARS,                           //!< Use operational RST parameters
+    REG_TEST_RST_PARS                                   //!< Use test RST parameters
+};
+
+/*!
+ * Regulation error rate control
+ */
+enum reg_err_rate
+{
+    REG_ERR_RATE_REGULATION,                            //!< Calculate regulation error at regulation rate
+    REG_ERR_RATE_MEASUREMENT                            //!< Calculate regulation error at measurement rate
+};
+
+// Include all libreg header files
 
 #include <stdint.h>
 #include <libreg/delay.h>
@@ -51,6 +89,7 @@
 #include <libreg/meas.h>
 #include <libreg/rst.h>
 #include <libreg/sim.h>
+#include <pars.h>
 #include <libreg/conv.h>
 
 #endif // LIBREG_H

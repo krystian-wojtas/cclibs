@@ -82,16 +82,12 @@ struct reg_load_pars
     float                       gauss_per_amp;                  //!< Field-to-current ratio for the magnet
     float                       ohms;                           //!< Resistance corresponding to load pole
     float                       tc;                             //!< Time constant for load pole
+    float                       ohms1;                          //!< \f$ 1 + \frac{R_s}{R_p}\f$
+    float                       ohms2;                          //!< \f$ 1 + \frac{R_m}{R_p}\f$
     float                       gain0;                          //!< Load gain 0
     float                       gain1;                          //!< Load gain 1
-    float                       ohms1;                          //!< Load gain 2
-    float                       gain2;                          //!< Load gain 3 (steady state gain)
-    float                       ohms2;                          //!< Load gain 4
-
-    //! \f$R_p\f$ insignificance factor = gain1/gain0. gain10 is not used in the
-    //! library but indicates to the application whether the parallel resistance
-    //! is significant. If gain10 > 10 then \f$R_p\f$ is insignificant.
-    float                       gain10;
+    float                       gain2;                          //!< Load gain 2 (steady state gain)
+    float                       gain3;                          //!< Load gain 3 (magnet current / circuit current)
                                                           
     /*!
      * Saturation structure

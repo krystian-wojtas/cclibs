@@ -49,7 +49,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     // Calculate ramp parameters always with zero initial ramp rate
 
-    fgRampCalc(config, pars, delay, ref, 0.0, meta);
+    fgRampCalc(config, delay, ref, 0.0, pars, meta);
 
     // Check limits if supplied
 
@@ -74,6 +74,8 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     return(FG_OK);
 }
+
+
 
 uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 {
@@ -253,11 +255,13 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
     return(func_running_flag);
 }
 
+
+
 void fgRampCalc(struct fg_ramp_config *config,
-                struct fg_ramp_pars   *pars,
                 float                  delay,
                 float                  init_ref,
                 float                  init_rate,
+                struct fg_ramp_pars   *pars,
                 struct fg_meta        *meta)
 {
     float       delta_ref;              // Initial ref minus final ref
@@ -330,5 +334,4 @@ void fgRampCalc(struct fg_ramp_config *config,
 
     meta->range.end = config->final;
 }
-
 // EOF

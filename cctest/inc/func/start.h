@@ -25,7 +25,7 @@
 #define CCPARS_START_H
 
 #include "libfg.h"
-#include "libfg/plep.h"
+#include "libfg/ramp.h"
 
 // GLOBALS is defined in source file where global variables should be defined
 
@@ -39,26 +39,24 @@
 
 struct ccpars_start
 {
-    // START file data
+    // cctest START parameters
 
-    float                       feedforward_v_ref;       // Initial voltage reference for feedforward
-    float                       closeloop_level;         // Measurement threshold to close the loop
-    struct fg_plep_config       config;                  // Libfg config struct for PLEP
+    struct fg_ramp_config       config;                 // Libfg config struct for START
 
-    // Libfg PLEP (used for START) variables
+    // Libfg RAMP variables
 
-    struct fg_plep_pars         plep_pars;               // Libfg parameters for PLEP
+    struct fg_ramp_pars         pars;                   // Libfg parameters for START
 };
 
 CCPARS_START_EXT struct ccpars_start ccpars_start
 #ifdef GLOBALS
-= {//   Default value           Parameter
-        1.0,                 // START FEEDFORWARD_V_REF
-        0.5,                 // START CLOSELOOP_LEVEL
-        {
-            1.0,             // START FINAL_REF
-            1.0,             // START ACCELERATION
-        }
+= {// Default value         Parameter
+    {
+        0.0,             // config.final - this is set to LIMIT MIN and is not a parameter
+        5.0,             // START ACCELERATION
+        3.0,             // START LINEAR_RATE
+        10.0,            // START DECELERTION
+    }
 }
 #endif
 ;
@@ -67,11 +65,10 @@ CCPARS_START_EXT struct ccpars_start ccpars_start
 
 CCPARS_START_EXT struct ccpars   start_pars[]
 #ifdef GLOBALS
-= {// "Signal name"         type, max_n_els,min_n_els,*enum,        *value,                        num_defaults
-    { "FEEDFORWARD_V_REF",  PAR_FLOAT,     1,       1, NULL, { .f = &ccpars_start.feedforward_v_ref   }, 1 },
-    { "CLOSELOOP_LEVEL",    PAR_FLOAT,     1,       1, NULL, { .f = &ccpars_start.closeloop_level     }, 1 },
-    { "FINAL_REF",          PAR_FLOAT,     1,       1, NULL, { .f = &ccpars_start.config.final        }, 1 },
-    { "ACCELERATION",       PAR_FLOAT,     1,       1, NULL, { .f = &ccpars_start.config.acceleration }, 1 },
+= {// "Signal name"   type, max_n_els,min_n_els,*enum,        *value,                       num_defaults
+    { "ACCELERATION", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_start.config.acceleration }, 1 },
+    { "LINEAR_RATE",  PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_start.config.linear_rate  }, 1 },
+    { "DECELERATION", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_start.config.deceleration }, 1 },
     { NULL }
 }
 #endif

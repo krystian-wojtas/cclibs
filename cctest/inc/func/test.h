@@ -38,14 +38,14 @@
 
 struct ccpars_test
 {
-    // Test file data
+    // cctest TEST parameters
 
-    float                      initial_ref;             // Initial reference
-    struct fg_test_config      config;                  // Libfg config struct for TEST
+    float                       initial_ref;            // Initial reference
+    struct fg_test_config       config;                 // Libfg config struct for TEST
 
-    // Libfg test variables
+    // Libfg TEST variables
 
-    struct fg_test_pars        test_pars;               // Libfg parameters for TEST
+    struct fg_test_pars         pars;                   // Libfg parameters for TEST
 };
 
 CCPARS_TEST_EXT struct ccpars_test ccpars_test
@@ -57,7 +57,7 @@ CCPARS_TEST_EXT struct ccpars_test ccpars_test
             2.0,             // TEST AMPLITUDE_PP
             3.0,             // TEST NUM_CYCLES
             2.0,             // TEST PERIOD
-            CC_ENABLED       // TEST WINDOW
+            REG_ENABLED      // TEST WINDOW
         }
 }
 #endif

@@ -38,14 +38,14 @@
 
 struct ccpars_trim
 {
-    // Trim file data
+    // cctest TRIM parameters
 
     float                       initial_ref;            // Initial reference
     struct fg_trim_config       config;                 // Libfg config struct for TRIM
 
-    // Libfg trim variables
+    // Libfg TRIM variables
 
-    struct fg_trim_pars        trim_pars;               // Libfg parameters for TRIM
+    struct fg_trim_pars         pars;                   // Libfg parameters for TRIM
 };
 
 CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim

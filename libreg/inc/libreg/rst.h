@@ -142,7 +142,6 @@ struct reg_rst_pars
 {
     enum reg_status             status;                         //!< Regulation parameters status
     enum reg_mode               reg_mode;                       //!< Regulation mode (#REG_CURRENT | #REG_FIELD)
-    uint32_t                    reg_period_iters;               //!< Regulation period (in iterations)
     uint32_t                    alg_index;                      //!< Algorithm index (1-5). Based on pure delay
     uint32_t                    dead_beat;                      //!< 0 = not dead-beat, 1-3 = dead-beat (1-3)
     double                      reg_period;                     //!< Regulation period
@@ -172,10 +171,11 @@ struct reg_rst_vars
 {
     uint32_t                    history_index;                  //!< Index to latest entry in the history
     float                       prev_ref_rate;                  //!< Ref rate from previous iteration
-    float                       meas_track_delay_periods;       //!< Measured track_delay in regulation periods
-    float                       ref [REG_RST_HISTORY_MASK+1];   //!< RST calculated reference history. See also #REG_RST_HISTORY_MASK.
-    float                       meas[REG_RST_HISTORY_MASK+1];   //!< RST measurement history. See also #REG_RST_HISTORY_MASK.
-    float                       act [REG_RST_HISTORY_MASK+1];   //!< RST actuation history. See also #REG_RST_HISTORY_MASK.
+
+    float                       openloop_ref[REG_RST_HISTORY_MASK+1]; //!< Openloop calculated reference history. See also #REG_RST_HISTORY_MASK.
+    float                       ref         [REG_RST_HISTORY_MASK+1]; //!< RST calculated reference history. See also #REG_RST_HISTORY_MASK.
+    float                       meas        [REG_RST_HISTORY_MASK+1]; //!< RST measurement history. See also #REG_RST_HISTORY_MASK.
+    float                       act         [REG_RST_HISTORY_MASK+1]; //!< RST actuation history. See also #REG_RST_HISTORY_MASK.
 };
 
 // RST macro "functions"
@@ -212,9 +212,8 @@ extern "C" {
  * This is a non-Real-Time function: do not call from the real-time thread or interrupt
  *
  * @param[out] pars                   RST parameters object to update with the new coefficients.
- * @param[in]  iter_period            Base iteration period in seconds.
- * @param[in]  reg_period_iters       Regulation period. Specified as an integer number of iteration periods,
- *                                    as regulation can only run on iteration boundaries.
+ * @param[in]  reg_period_iters       Regulation period in iterations.
+ * @param[in]  reg_period             Regulation period in seconds.
  * @param[in]  load                   Load parameters struct. Used to calculate RST coefficients.
  * @param[in]  auxpole1_hz            Frequency of (real) auxillary pole 1. Used to calculate RST coefficients.
  *                                    If auxpole1_hz \f$\leq 0\f$, the I, PI and PII controllers are not used
@@ -236,13 +235,13 @@ extern "C" {
  *                                    regulator being used; set to 1 in the case of the dead-beat PII algorithm.
  *                                    Used to calculate the error in the response of the regulation loop.
  * @param[in]  reg_mode               Regulation mode (voltage, current or field)
- * @param[in]  manual                 Pre-calculated RST parameters.
+ * @param[in]  manual                 Pre-calculated RST parameters. These are used if auxpoles1_hz is zero.
  *
  * @retval     REG_OK on success
  * @retval     REG_WARNING if reg_rst_pars::modulus_margin < #REG_MM_WARNING_THRESHOLD
  * @retval     REG_FAULT if s[0] is too small (\f$<1\times 10^{-10}\f$) or is unstable (has poles outside the unit circle)
  */
-enum reg_status regRstInit(struct reg_rst_pars *pars, double iter_period, uint32_t reg_period_iters,
+enum reg_status regRstInit(struct reg_rst_pars *pars, uint32_t reg_period_iters, double reg_period,
                            struct reg_load_pars *load, float auxpole1_hz, float auxpoles2_hz,
                            float auxpoles2_z, float auxpole4_hz, float auxpole5_hz,
                            float pure_delay_periods, float track_delay_periods,
@@ -252,16 +251,15 @@ enum reg_status regRstInit(struct reg_rst_pars *pars, double iter_period, uint32
  * Use the supplied RST parameters to calculate the actuation based on the supplied reference and measurement values.
  * If the actuation is clipped then regRstCalcRefRT() must be called to re-calculate the reference to put in the history.
  *
- * This is a Real-Time function (thread safe).
+ * This is a Real-Time function.
  *
  * @param[in]     pars    RST coefficients and parameters
  * @param[in,out] vars    History of actuation, measurement and reference values. Updated with new values by this function.
  * @param[in]     ref     Latest reference value
- * @param[in]     meas    Latest measurement value
  *
  * @returns       New actuation value
  */
-float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas);
+float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref);
 
 /*!
  * Use the supplied RST parameters to back-calculate the reference based on the supplied actuation and measurement values.
@@ -272,29 +270,27 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
  * </ol>
  * The function saves the new actuation in the RST history and back-calculates the reference, which is returned.
  *
- * This is a Real-Time function (thread safe).
+ * This is a Real-Time function.
  *
  * @param[in]     pars    RST coefficients and parameters
  * @param[in,out] vars    History of actuation, measurement and reference values. Updated with new values by this function.
  * @param[in]     act     Latest actuation value
- * @param[in]     meas    Latest measurement value
  *
  * @returns       Back-calculated reference value
  */
-float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas);
+float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act);
 
 /*!
  * Measure the tracking delay if the reference is changing.
- * This function must be called after calling regRstCalcActRT() and <em>before</em> calling regRstIncHistoryIndexRT().
+ * This function must be called after calling regRstCalcRefRT().
  *
- * This is a Real-Time function (thread safe).
+ * This is a Real-Time function.
  *
- * @param[in,out] vars            History of actuation, measurement and reference values. reg_rst_vars::meas_track_delay_periods
- *                                is updated by this function.
- * @param[in]     period          Unused.
- * @param[in]     max_ref_rate    Unused.
+ * @param[in]     vars            History of regulation actuation, measurement and reference values.
+ *
+ * @returns       Measured track delay in regulation period (clipped between 0.5 and 3.5)
  */
-void regRstTrackDelayRT(struct reg_rst_vars *vars, float period, float max_ref_rate);
+float regRstTrackDelayRT(struct reg_rst_vars *vars);
 
 /*!
  * Calculate the delayed reference for the next iteration.
@@ -303,7 +299,7 @@ void regRstTrackDelayRT(struct reg_rst_vars *vars, float period, float max_ref_r
  * reference for the following iteration. It can be called every acquisition iteration between regulation
  * iterations, or just on the regulation iterations, as required.
  *
- * This is a Real-Time function (thread safe).
+ * This is a Real-Time function.
  *
  * @param[in]     pars               RST parameters. The amount of delay is specified by reg_rst_pars::ref_delay_periods and
  *                                   reg_rst_pars::inv_reg_period_iters.
@@ -318,7 +314,7 @@ float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, u
 /*!
  * Calculate the average RST actuation (V_REF) over the past #REG_AVE_V_REF_LEN iterations.
  *
- * This is a Real-Time function (thread safe).
+ * This is a Real-Time function.
  *
  * @param[in]     vars    History of actuation values.
  *

@@ -37,7 +37,7 @@ static unsigned flot_index;      // Index into flot buffers
 static float    dig_offset;      // Offset to stack digital signals for FGCSPY and LVDV output formats
 
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccSigsEnableSignal(enum ccsig_idx idx)
+void ccSigsEnableSignal(enum ccsig_idx idx)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will enable a signal and define its type to be ANALOG, DIGITAL or CURSOR. If the
   CSV output format is FGCSPY or LVDV then for each new digital signal the offset is moved down by -1.0
@@ -46,7 +46,7 @@ static void ccSigsEnableSignal(enum ccsig_idx idx)
 {
     // Enable signal
 
-    signals[idx].control = CC_ENABLED;
+    signals[idx].control = REG_ENABLED;
 
     // Set offset for digital signals for FGCSPY and LVDV output formats
 
@@ -61,7 +61,7 @@ static void ccSigsEnableSignal(enum ccsig_idx idx)
 
     // If FLOT output enabled then allocate buffer memory for non-Cursor signals
 
-    if(ccpars_global.flot_output == CC_ENABLED && signals[idx].type != CURSOR && signals[idx].buf == NULL)
+    if(ccpars_global.flot_output == REG_ENABLED && signals[idx].type != CURSOR && signals[idx].buf == NULL)
     {
         // Allocate space for overflow point since flot_index will stop at FLOT_POINTS_MAX
 
@@ -83,7 +83,7 @@ static void ccSigsStoreAnalog(enum ccsig_idx idx, float ana_value)
 
     // Store analogue value if signal is enabled
 
-    if(signals[idx].control == CC_ENABLED)
+    if(signals[idx].control == REG_ENABLED)
     {
         // If value is bad then store zero and increment bad value counter
 
@@ -97,7 +97,7 @@ static void ccSigsStoreAnalog(enum ccsig_idx idx, float ana_value)
 
         // If FLOT output enabled then also save value in the FLOT buffer
 
-        if(ccpars_global.flot_output == CC_ENABLED)
+        if(ccpars_global.flot_output == REG_ENABLED)
         {
             signals[idx].buf[flot_index] = ana_value;
         }
@@ -118,7 +118,7 @@ static void ccSigsStoreDigital(enum ccsig_idx idx, uint32_t dig_value)
 
     // Store digital level as a float using the digital offset, if signal is enabled
 
-    if(signals[idx].control == CC_ENABLED)
+    if(signals[idx].control == REG_ENABLED)
     {
         signals[idx].value = signals[idx].dig_offset;       // Initialise value to digital zero
 
@@ -138,7 +138,7 @@ static void ccSigsStoreDigital(enum ccsig_idx idx, uint32_t dig_value)
 
         // If FLOT output enabled then also save value in the FLOT buffer
 
-        if(ccpars_global.flot_output == CC_ENABLED)
+        if(ccpars_global.flot_output == REG_ENABLED)
         {
             signals[idx].buf[flot_index] = signals[idx].value;
         }
@@ -177,21 +177,21 @@ void ccSigsInit(void)
 
     for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
     {
-        signals[idx].control        = CC_DISABLED;
+        signals[idx].control        = REG_DISABLED;
         signals[idx].num_bad_values = 0;
         signals[idx].time_offset    = 0.0;
     }
 
     // Voltage reference is always enabled when converter actuation is voltage ref
 
-    if(conv.actuation == REG_VOLTAGE_REF)
+    if(ccpars_global.actuation == REG_VOLTAGE_REF)
     {
         ccSigsEnableSignal(ANA_V_REF);
     }
 
     // Enable additional signals with simulating load
 
-    if(ccpars_global.sim_load == CC_ENABLED)
+    if(ccpars_global.sim_load == REG_ENABLED)
     {
         // Set time offset for circuit simulation signals - if the voltage source is under-sampled then
         // include the steady ramp delay, otherwise the dynamic response is actually simulated
@@ -199,7 +199,7 @@ void ccSigsInit(void)
         signals[ANA_B_MAGNET ].time_offset =
         signals[ANA_I_MAGNET ].time_offset =
         signals[ANA_I_CIRCUIT].time_offset =
-        signals[ANA_V_CIRCUIT].time_offset = ccpars_global.iter_period * (ccpars_vs.v_ref_delay_iters +
+        signals[ANA_V_CIRCUIT].time_offset = conv.iter_period * (ccpars_vs.v_ref_delay_iters +
                                             (conv.sim_vs_pars.vs_undersampled_flag == 0 ? 0.0 : conv.sim_vs_pars.vs_delay_iters));
 
         // Enable cursor signals only if CSV output is for the Labview Dataviewer (LVDV)
@@ -209,7 +209,7 @@ void ccSigsInit(void)
             ccSigsEnableSignal(CSR_FUNC);
         }
 
-        if(conv.actuation == REG_VOLTAGE_REF)
+        if(ccpars_global.actuation == REG_VOLTAGE_REF)
         {
             // Voltage source simulation signals
 
@@ -313,7 +313,7 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
             }
 
-            signals[ANA_REG_MEAS].time_offset = -conv.iter_period * (uint32_t)(conv.i.meas.delay_iters[conv.i.meas.reg_select] + 0.499);
+            signals[ANA_REG_MEAS].time_offset = -conv.iter_period * (uint32_t)(conv.i.meas.delay_iters[ccpars_meas.i_reg_select] + 0.499);
         }
 
         // Current simulation signals
@@ -342,6 +342,23 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(DIG_I_RMS_FLT);
             }
         }
+
+        // RMS_LOAD current signals
+
+        if(ccpars_limits.i_rms_load_tc > 0.0)
+        {
+            ccSigsEnableSignal(ANA_I_RMS_LOAD);
+
+            if(ccpars_limits.i_rms_load_warning > 0.0)
+            {
+                ccSigsEnableSignal(DIG_I_RMS_LOAD_WARN);
+            }
+
+            if(ccpars_limits.i_rms_load_fault > 0.0)
+            {
+                ccSigsEnableSignal(DIG_I_RMS_LOAD_FLT);
+            }
+        }
     }
 
     // If CSV output is enabled, write header to CSV file
@@ -355,7 +372,7 @@ void ccSigsInit(void)
 
         for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
         {
-            if(signals[idx].control == CC_ENABLED)
+            if(signals[idx].control == REG_ENABLED)
             {
                 fprintf(cctest.csv_file,",%s%s", signals[idx].name,
                         ccpars_global.csv_format == CC_FGCSPY &&
@@ -371,7 +388,7 @@ void ccSigsInit(void)
 
             for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
             {
-                if(signals[idx].control == CC_ENABLED)
+                if(signals[idx].control == REG_ENABLED)
                 {
                     fprintf(cctest.csv_file,",%s",signals[idx].meta_data);
                 }
@@ -393,9 +410,9 @@ void ccSigsStore(double time)
 
     // Store other signals when simulating load - if they are not enabled then they are ignored
 
-    if(ccpars_global.sim_load == CC_ENABLED)
+    if(ccpars_global.sim_load == REG_ENABLED)
     {
-        if(conv.actuation == REG_CURRENT_REF)
+        if(ccpars_global.actuation == REG_CURRENT_REF)
         {
             ccSigsStoreAnalog (ANA_I_REF,          conv.ref);
             ccSigsStoreAnalog (ANA_I_REF_LIMITED,  conv.ref_limited);
@@ -452,7 +469,8 @@ void ccSigsStore(double time)
 
         ccSigsStoreAnalog (ANA_I_MAGNET,       conv.sim_load_vars.magnet_current);
         ccSigsStoreAnalog (ANA_I_CIRCUIT,      conv.sim_load_vars.circuit_current);
-        ccSigsStoreAnalog (ANA_I_RMS,          sqrtf(conv.i.lim_meas.meas2_filter));
+        ccSigsStoreAnalog (ANA_I_RMS,          sqrtf(conv.lim_i_rms.meas2_filter));
+        ccSigsStoreAnalog (ANA_I_RMS_LOAD,     sqrtf(conv.lim_i_rms_load.meas2_filter));
         ccSigsStoreAnalog (ANA_I_MEAS,         conv.i.meas.signal[REG_MEAS_UNFILTERED]);
         ccSigsStoreAnalog (ANA_I_MEAS_FLTR,    conv.i.meas.signal[REG_MEAS_FILTERED]);
         ccSigsStoreAnalog (ANA_I_MEAS_EXTR,    conv.i.meas.signal[REG_MEAS_EXTRAPOLATED]);
@@ -464,7 +482,7 @@ void ccSigsStore(double time)
         ccSigsStoreAnalog (ANA_V_CIRCUIT,      conv.sim_load_vars.circuit_voltage);
         ccSigsStoreAnalog (ANA_V_MEAS,         conv.v.meas);
 
-        ccSigsStoreAnalog( ANA_TRACK_DLY,      conv.rst_vars.meas_track_delay_periods);
+        ccSigsStoreAnalog( ANA_TRACK_DLY,      conv.track_delay_periods);
 
         ccSigsStoreAnalog (ANA_B_ERR,          conv.b.err.err);
         ccSigsStoreAnalog (ANA_I_ERR,          conv.i.err.err);
@@ -487,8 +505,10 @@ void ccSigsStore(double time)
         ccSigsStoreDigital(DIG_I_MEAS_LOW,     conv.i.lim_meas.flags.low);
         ccSigsStoreDigital(DIG_I_MEAS_ZERO,    conv.i.lim_meas.flags.zero);
 
-        ccSigsStoreDigital(DIG_I_RMS_WARN,     conv.i.lim_meas.flags.rms_warning);
-        ccSigsStoreDigital(DIG_I_RMS_FLT,      conv.i.lim_meas.flags.rms_trip);
+        ccSigsStoreDigital(DIG_I_RMS_WARN,     conv.lim_i_rms.flags.warning);
+        ccSigsStoreDigital(DIG_I_RMS_FLT,      conv.lim_i_rms.flags.fault);
+        ccSigsStoreDigital(DIG_I_RMS_LOAD_WARN,conv.lim_i_rms_load.flags.warning);
+        ccSigsStoreDigital(DIG_I_RMS_LOAD_FLT, conv.lim_i_rms_load.flags.fault);
 
         ccSigsStoreDigital(DIG_I_REF_CLIP,     conv.i.lim_ref.flags.clip);
         ccSigsStoreDigital(DIG_I_REF_RATE_CLIP,conv.i.lim_ref.flags.rate);
@@ -522,7 +542,7 @@ void ccSigsStore(double time)
 
         for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
         {
-            if(signals[idx].control == CC_ENABLED)
+            if(signals[idx].control == REG_ENABLED)
             {
                 fputc(',',cctest.csv_file);
 
@@ -559,7 +579,7 @@ static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n
     double         time;
     uint32_t       iteration_idx;
 
-    if(signals[sig_idx].control == CC_ENABLED)
+    if(signals[sig_idx].control == REG_ENABLED)
     {
         fprintf(f,"\"INVALID_%c\": { lines: { show:false }, points: { show:true },\ndata:[", label);
 
@@ -589,7 +609,6 @@ void ccSigsFlot(FILE *f, char *filename)
     uint32_t       sig_idx;
     uint32_t       n_points = 0;
     double         time;
-    double         start_func_time;
     float          time_offset;
     struct cccmds *cmd;
 
@@ -603,10 +622,6 @@ void ccSigsFlot(FILE *f, char *filename)
     // Print start of FLOT html page including flot path to all the javascript libraries
 
     fprintf(f,flot[0],filename,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
-
-    // Time of end of FLOT data
-
-    start_func_time = 0.0;
 
     // For each function
 
@@ -623,13 +638,13 @@ void ccSigsFlot(FILE *f, char *filename)
 
             switch(ccpars_global.function[func_idx])
             {
-            default: break;     // Suppress gcc warning
+            default: break;     // Suppress compiler warning
 
             case FG_TABLE:
 
                 for(iteration_idx = 0 ; iteration_idx < table_pars[0].num_elements ; iteration_idx++)
                 {
-                    time = start_func_time + ccpars_global.run_delay + ccpars_table.time[iteration_idx];
+                    time = ccrun.func_start_time[func_idx] + ccpars_global.run_delay + ccpars_table.time[iteration_idx];
 
                     fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);
                     n_points++;
@@ -638,32 +653,32 @@ void ccSigsFlot(FILE *f, char *filename)
 
             case FG_PPPL:
 
-                time = start_func_time + ccpars_global.run_delay;
+                time = ccrun.func_start_time[func_idx] + ccpars_global.run_delay;
 
                 fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref);
                 n_points++;
 
-                for(iteration_idx = 0 ; iteration_idx < ccpars_pppl.pppl_pars.num_segs ; iteration_idx++)
+                for(iteration_idx = 0 ; iteration_idx < ccpars_pppl.pars.num_segs ; iteration_idx++)
                 {
-                    time = start_func_time + ccpars_pppl.pppl_pars.time[iteration_idx];
+                    time = ccrun.func_start_time[func_idx] + ccpars_pppl.pars.time[iteration_idx];
 
-                    fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pppl_pars.a0[iteration_idx]);
+                    fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pars.a0[iteration_idx]);
                     n_points++;
                 }
                 break;
 
             case FG_PLEP:
 
-                time = start_func_time + ccpars_global.run_delay;
+                time = ccrun.func_start_time[func_idx] + ccpars_global.run_delay;
 
                 fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref);
                 n_points++;
 
                 for(iteration_idx = 0 ; iteration_idx <= FG_PLEP_N_SEGS ; iteration_idx++)
                 {
-                    time = start_func_time + ccpars_plep.plep_pars.time[iteration_idx];
+                    time = ccrun.func_start_time[func_idx] + ccpars_plep.pars.time[iteration_idx];
 
-                    fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.plep_pars.normalisation * ccpars_plep.plep_pars.ref[iteration_idx]);
+                    fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.pars.normalisation * ccpars_plep.pars.ref[iteration_idx]);
                     n_points++;
                 }
                 break;
@@ -671,8 +686,6 @@ void ccSigsFlot(FILE *f, char *filename)
 
             fputs("]\n },\n",f);
         }
-
-        start_func_time += ccrun.fg_meta[func_idx].duration + ccpars_global.pre_func_delay;
     }
 
     // Highlight invalid points if enabled
@@ -688,7 +701,7 @@ void ccSigsFlot(FILE *f, char *filename)
 
     for(sig_idx = 0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
     {
-        if(signals[sig_idx].control == CC_ENABLED && signals[sig_idx].type == ANALOG)
+        if(signals[sig_idx].control == REG_ENABLED && signals[sig_idx].type == ANALOG)
         {
             time_offset = signals[sig_idx].time_offset;
 
@@ -705,7 +718,7 @@ void ccSigsFlot(FILE *f, char *filename)
                    signals[sig_idx].meta_data[0] != 'T' ||
                    signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
                 {
-                    if(ccpars_global.reverse_time == CC_DISABLED)
+                    if(ccpars_global.reverse_time == REG_DISABLED)
                     {
                         time = conv.iter_period * iteration_idx + time_offset;
                     }
@@ -730,7 +743,7 @@ void ccSigsFlot(FILE *f, char *filename)
 
     for(sig_idx = 0, dig_offset = -DIG_STEP/2.0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
     {
-        if(signals[sig_idx].control == CC_ENABLED && signals[sig_idx].type == DIGITAL)
+        if(signals[sig_idx].control == REG_ENABLED && signals[sig_idx].type == DIGITAL)
         {
             dig_offset -= 1.0;
 
@@ -747,7 +760,7 @@ void ccSigsFlot(FILE *f, char *filename)
                    signals[sig_idx].meta_data[0] != 'T' ||
                    signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
                 {
-                    if(ccpars_global.reverse_time == CC_DISABLED)
+                    if(ccpars_global.reverse_time == REG_DISABLED)
                     {
                         time = conv.iter_period * iteration_idx;
                     }
@@ -802,7 +815,7 @@ uint32_t ccSigsReportBadValues(void)
 
     for(idx = 0 ; idx < NUM_SIGNALS ; idx++)
     {
-        if(signals[idx].control == CC_ENABLED && signals[idx].num_bad_values > 0)
+        if(signals[idx].control == REG_ENABLED && signals[idx].num_bad_values > 0)
         {
             printf("Bad values for %-20s : %6u\n",signals[idx].name, signals[idx].num_bad_values);
             exit_status = EXIT_FAILURE;

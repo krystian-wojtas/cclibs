@@ -25,6 +25,7 @@
 #define CCPARS_H
 
 #include <stdint.h>
+#include <libreg.h>
 
 // GLOBALS should be defined in the source file where global variables should be defined
 
@@ -87,17 +88,11 @@ CCPARS_EXT struct ccpars_report ccpars_report;
 
 // ENABLED/DISABLED enum
 
-enum cc_enabled_disabled
-{
-    CC_DISABLED,
-    CC_ENABLED
-};
-
 CCPARS_EXT struct ccpars_enum enabled_disabled[]
 #ifdef GLOBALS
 = {
-    { CC_DISABLED,      "DISABLED"      },
-    { CC_ENABLED,       "ENABLED"       },
+    { REG_DISABLED,     "DISABLED"      },
+    { REG_ENABLED,      "ENABLED"       },
     { 0,                NULL            },
 }
 #endif

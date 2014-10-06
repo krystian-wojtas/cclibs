@@ -38,14 +38,14 @@
 
 struct ccpars_plep
 {
-    // PLEP file data
+    // cctest PLEP parameters
 
     float                       initial_ref;
-    struct fg_plep_config       config;                  // Libfg config struct for PLEP
+    struct fg_plep_config       config;                 // Libfg config struct for PLEP
 
     // Libfg PLEP variables
 
-    struct fg_plep_pars         plep_pars;               // Libfg parameters for PLEP
+    struct fg_plep_pars         pars;                   // Libfg parameters for PLEP
 };
 
 CCPARS_PLEP_EXT struct ccpars_plep ccpars_plep

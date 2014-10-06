@@ -330,7 +330,7 @@ static void ccParsPrintDebugLoad(FILE *f, char *prefix, struct reg_load_pars *lo
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain0"),      load_pars->gain0);
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain1"),      load_pars->gain1);
     fprintf(f,"%s" FLOAT_FORMAT "\n",  ccParsDebugLabel(prefix, "gain2"),      load_pars->gain2);
-    fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel(prefix, "gain10"),     load_pars->gain10);
+    fprintf(f,"%s" FLOAT_FORMAT "\n\n",ccParsDebugLabel(prefix, "gain3"),      load_pars->gain3);
 
     if(load_pars->sat.i_end > 0.0)
     {
@@ -379,7 +379,7 @@ void ccParsPrintDebug(FILE *f)
 {
     uint32_t     i;
 
-    if(ccpars_global.sim_load == CC_ENABLED)
+    if(ccpars_global.sim_load == REG_ENABLED)
     {
         ccParsPrintDebugLoad(f, "LOAD", &conv.load_pars);
 
@@ -406,7 +406,6 @@ void ccParsPrintDebug(FILE *f)
 
         fprintf(f,"%s"     INT_FORMAT   "\n",   ccParsDebugLabel("SIMVS", "vs_undersampled_flag"), conv.sim_vs_pars.vs_undersampled_flag);
         fprintf(f,"\n%-*s" FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_delay_iters",       conv.sim_vs_pars.vs_delay_iters);
-        fprintf(f,"%-*s"   FLOAT_FORMAT "\n",   PARS_INDENT, "SIMVS vs_tustin_delay_iters",conv.sim_vs_pars.vs_tustin_delay_iters);
         fprintf(f,"%-*s"   FLOAT_FORMAT "\n\n", PARS_INDENT, "SIMVS gain",                 conv.sim_vs_pars.gain);
 
 

@@ -290,7 +290,7 @@ uint32_t ccCmdsRead(uint32_t cmd_idx, char **remaining_line)
         }
         else // else when reading from file, break out if error reported and stop on error is enabled
         {
-            if(ccpars_global.stop_on_error == CC_ENABLED && exit_status == EXIT_FAILURE)
+            if(ccpars_global.stop_on_error == REG_ENABLED && exit_status == EXIT_FAILURE)
             {
                 break;
             }
@@ -399,36 +399,17 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
     // Initialise run, the load model and the reference functions
 
-    if(ccInitRun()       == EXIT_FAILURE ||
-       ccInitLoad()      == EXIT_FAILURE ||
-       ccInitFunctions() == EXIT_FAILURE)
+    if(ccInitFunctions() == EXIT_FAILURE ||
+      (ccpars_global.sim_load == REG_ENABLED && ccInitSimLoad() == EXIT_FAILURE))
     {
+        // If STOP_ON_ERROR is DISABLED then dump debug data automatically to stdout
+
+        if(ccpars_global.stop_on_error == REG_DISABLED)
+        {
+            ccParsPrintDebug(stdout);
+        }
+
         return(EXIT_FAILURE);
-    }
-
-    // If the load will be simulated, initialise the limits, regulation and simulation
-
-    if(ccpars_global.sim_load == CC_ENABLED)
-    {
-        if(ccInitLimits()     == EXIT_FAILURE ||
-           ccInitSimulation() == EXIT_FAILURE)
-        {
-            return(EXIT_FAILURE);
-        }
-        // Initialise regulation - must be after ccInitSimulation()
-
-        if((ccrun.breg_flag == 1 && ccInitRegulation(&ccpars_breg, &conv.b, REG_FIELD,   "FIELD"  ) == EXIT_FAILURE) ||
-           (ccrun.ireg_flag == 1 && ccInitRegulation(&ccpars_ireg, &conv.i, REG_CURRENT, "CURRENT") == EXIT_FAILURE))
-        {
-            // If STOP_ON_ERROR is DISABLED then dump debug data automatically to stdout
-
-            if(ccpars_global.stop_on_error == CC_DISABLED)
-            {
-                ccParsPrintDebug(stdout);
-            }
-
-            return(EXIT_FAILURE);
-        }
     }
 
     // Open CSV output file
@@ -467,7 +448,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
     // Run the test
 
-    if(ccpars_global.sim_load == CC_ENABLED)
+    if(ccpars_global.sim_load == REG_ENABLED)
     {
         // Generate functions and simulate voltage source and load and regulate if required
 
@@ -479,7 +460,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
     {
         // Generate reference function only - no load simulation: this is just to test libfg functions
 
-        if(ccpars_global.reverse_time == CC_DISABLED)
+        if(ccpars_global.reverse_time == REG_DISABLED)
         {
             printf("Generating function(s) to %s/%s/%s\n",
                     ccpars_global.group, ccpars_global.project, filename);
@@ -504,7 +485,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
     // Write FLOT data if required
 
-    if(ccpars_global.flot_output == CC_ENABLED)
+    if(ccpars_global.flot_output == REG_ENABLED)
     {
         FILE    *flot_file;
         char     flot_path[CC_PATH_LEN];
@@ -537,7 +518,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
     // Write Debug file if required
 
-    if(ccpars_global.debug_output == CC_ENABLED)
+    if(ccpars_global.debug_output == REG_ENABLED)
     {
         FILE    *debug_file;
         char     debug_path[CC_PATH_LEN];

@@ -2,10 +2,10 @@
 
 GLOBAL RUN_DELAY            0.1
 GLOBAL STOP_DELAY           0.1
-GLOBAL ITER_PERIOD          1.0E-4
+GLOBAL ITER_PERIOD_US       100
 GLOBAL STOP_ON_ERROR        DISABLED
 GLOBAL REG_MODE             CURRENT
-GLOBAL FG_LIMITS            ENABLED
+GLOBAL FG_LIMITS            DISABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL GROUP                sandbox
 GLOBAL PROJECT              RSTtests
@@ -19,7 +19,7 @@ LIMITS B_RATE               10000.0
 LIMITS B_ACCELERATION       0.0
 LIMITS B_ERR_WARNING        0.0
 LIMITS B_ERR_FAULT          0.0
-                            
+
 LIMITS I_POS                4000.0
 LIMITS I_MIN                0.0
 LIMITS I_NEG                -4000.0
@@ -28,7 +28,7 @@ LIMITS I_ACCELERATION       0.0
 LIMITS I_ERR_WARNING        1.0
 #LIMITS I_ERR_FAULT          10.0
 LIMITS I_QUADRANTS41        0.0,0.0
-                            
+
 LIMITS V_POS                450.0
 LIMITS V_NEG                -450.0
 LIMITS V_RATE               5.0E5
@@ -50,9 +50,9 @@ LOAD OHMS_SER               0.0
 LOAD OHMS_PAR               1.0E8
 LOAD OHMS_MAG               0.3
 LOAD HENRYS                 0.2
-LOAD HENRYS_SAT             0.2
-LOAD I_SAT_START            0.0
-LOAD I_SAT_END              0.0
+LOAD HENRYS_SAT             0.1
+LOAD I_SAT_START            60.0
+LOAD I_SAT_END              90.0
 LOAD GAUSS_PER_AMP          0.75
 LOAD PERTURB_VOLTS          10.0
 LOAD PERTURB_TIME           0.0
@@ -60,12 +60,12 @@ LOAD SIM_TC_ERROR           0.1
 
 # Measurement parameters
 
-MEAS B_REG_SELECT           EXTRAPOLATED
+MEAS B_REG_SELECT           UNFILTERED
 MEAS I_REG_SELECT           UNFILTERED
 MEAS B_DELAY_ITERS          1.3
 MEAS I_DELAY_ITERS          1.3
 MEAS V_DELAY_ITERS          1.3
-MEAS B_FIR_LENGTHS          10, 7
+MEAS B_FIR_LENGTHS          10, 1
 MEAS I_FIR_LENGTHS          10, 1
 MEAS B_SIM_NOISE_PP         0.00
 MEAS I_SIM_NOISE_PP         0.00
@@ -93,34 +93,22 @@ TEST NUM_CYCLES             2
 TEST PERIOD                 0.5
 TEST WINDOW                 ENABLED
 
-# Test 1 - unfiltered
-             
-GLOBAL REG_MODE             CURRENT
-MEAS I_REG_SELECT           UNFILTERED
 
-IREG PERIOD_ITERS           10
-IREG AUXPOLE1_HZ            90
-IREG AUXPOLES2_HZ           90
-IREG AUXPOLE4_HZ            90
-IREG AUXPOLE5_HZ            90
-IREG AUXPOLES2_Z            0.5
+# Test 5 - unfiltered - Field regulation
 
-# Test 2 - filtered
-             
-MEAS I_REG_SELECT           FILTERED
+GLOBAL REG_MODE             FIELD
+MEAS B_REG_SELECT           UNFILTERED
 
-VS V_REF_DELAY_ITERS        1.5
+BREG PERIOD_ITERS           10
+BREG AUXPOLE1_HZ            30
+BREG AUXPOLES2_HZ           30
+BREG AUXPOLE4_HZ            30
+BREG AUXPOLE5_HZ            30
+BREG AUXPOLES2_Z            0.5
 
-# PLP verse CTRIM closed-loop tests
-
-PLEP   INITIAL_REF         10
-PLEP   FINAL_REF           100
-PLEP   ACCELERATION        5000
-PLEP   LINEAR_RATE         400
-
-GLOBAL FUNCTION             PLEP
-GLOBAL ABORT_TIME           0.2
-GLOBAL FILE                 aborted-plep
+VS V_REF_DELAY_ITERS        0.5
+GLOBAL FILE                 nn-gauss-pppl-unf-0.29
+GLOBAL FUNCTION             PPPL
 RUN
 
 # EOF

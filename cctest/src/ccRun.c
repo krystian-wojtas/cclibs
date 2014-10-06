@@ -47,7 +47,7 @@ static uint32_t ccRunAbort(double iter_time)
 
     // Set up RAMP configuration from limits (either current or field according to mode)
 
-    config.final        = ccrun.fg_limits->min;
+    config.final        = 0.0;
     config.linear_rate  = ccrun.fg_limits->rate;
     config.acceleration = ccrun.fg_limits->acceleration;
 
@@ -65,10 +65,10 @@ static uint32_t ccRunAbort(double iter_time)
     // Initialize a RAMP to take over the running function.
 
     fgRampCalc(&config,
-               &ccpars_ramp.ramp_pars,
-                ccrun.reg_time,                                                // time of last RST calculation
-                regRstPrevRefRT(&conv.rst_vars),                               // last reference value
-                regRstDeltaRefRT(&conv.rst_vars) / conv.reg_period,            // last reference rate
+               iter_time,                                                       // time of last RST calculation
+               regRstPrevRefRT(&conv.reg_signal->rst_vars),                     // last reference value
+               regRstDeltaRefRT(&conv.reg_signal->rst_vars) / conv.reg_period,  // last reference rate
+               &ccpars_ramp.pars,
                &meta);
 
     // Check that abort duration is not too large (limit to 50000 iterations)
@@ -87,7 +87,7 @@ static uint32_t ccRunAbort(double iter_time)
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccRunStartFunction(uint32_t func_idx)
+static void ccRunStartFunction(uint32_t func_idx, double func_start_time)
 /*---------------------------------------------------------------------------------------------------------*\
   This function tests the ability to open and re-close the loop regulating current or field.  The user can
   specify the time and duration of a period of open-loop to be included with-in a run in closed loop.
@@ -97,9 +97,10 @@ static void ccRunStartFunction(uint32_t func_idx)
     ccrun.fgen_func     = funcs[ccpars_global.function[func_idx]].fgen_func;
     ccrun.fg_pars       = funcs[ccpars_global.function[func_idx]].fg_pars;
 
-    regConvSetModeRT(&conv, ccpars_global.reg_mode[func_idx], REG_OPERATIONAL_RST_PARS, 0);
+    regConvSetModeRT(&conv, ccpars_global.reg_mode[func_idx]);
 
-    ccrun.ref_advance[func_idx] = conv.ref_advance;
+    ccrun.ref_advance    [func_idx] = conv.ref_advance;
+    ccrun.func_start_time[func_idx] = func_start_time;
 
     ccSigsStoreCursor(CSR_FUNC,function_type[func_idx].string);
 }
@@ -126,7 +127,11 @@ void ccRunSimulation(void)
     ccrun.func_idx        = 0;
     ccrun.vs_tripped_flag = 0;
 
-    ccRunStartFunction(0);
+    // Call once with conv.reg_mode equal REG_NONE to set iteration counters
+
+    regConvSetMeasRT(&conv, REG_OPERATIONAL_RST_PARS, 0, 0, 1);
+
+    ccRunStartFunction(0,0);
 
     ref_time = conv.ref_advance;
 
@@ -140,7 +145,7 @@ void ccRunSimulation(void)
         good_meas_f = ccpars_meas.invalid_meas_period_iters == 0 ||
                      (iteration_idx % ccpars_meas.invalid_meas_period_iters) >= ccpars_meas.invalid_meas_repeat_iters;
 
-        reg_iteration_counter = regConvSetMeasRT(&conv, good_meas_f);
+        reg_iteration_counter = regConvSetMeasRT(&conv, REG_OPERATIONAL_RST_PARS, 0, 0, good_meas_f);
 
         // If converter has not tripped
 
@@ -151,17 +156,8 @@ void ccRunSimulation(void)
             if(reg_iteration_counter == 0)
             {
                 func_run_f = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &ref);
-            }
 
-            // Regulate converter - this returns 1 on iterations when the current or field regulation
-            // algorithm is executed.
-
-            if(regConvRegulateRT(&conv, &ref, 1) == 1)
-            {
-                // Record time of iterations when current or field regulation algorithm runs.
-                // This is used by START function.
-
-                ccrun.reg_time = ref_time;
+                regConvRegulateRT(&conv, &ref);
 
                // Check for function abort based on the abort time
 
@@ -196,19 +192,20 @@ void ccRunSimulation(void)
 
         // Check if any condition requires the converter to trip
 
-        if(ccrun.vs_tripped_flag          == 0 &&
-          (conv.b.lim_meas.flags.trip     == 1 ||
-           conv.i.lim_meas.flags.trip     == 1 ||
-           conv.i.lim_meas.flags.rms_trip == 1 ||
-           conv.b.err.fault.flag          == 1 ||
-           conv.i.err.fault.flag          == 1 ||
-           conv.v.err.fault.flag          == 1))
+        if(ccrun.vs_tripped_flag           == 0 &&
+          (conv.b.lim_meas.flags.trip      == 1 ||
+           conv.i.lim_meas.flags.trip      == 1 ||
+           conv.lim_i_rms.flags.fault      == 1 ||
+           conv.lim_i_rms_load.flags.fault == 1 ||
+           conv.b.err.fault.flag           == 1 ||
+           conv.i.err.fault.flag           == 1 ||
+           conv.v.err.fault.flag           == 1))
         {
             // Simulate converter trip - switch regulation mode to NONE
 
             ccrun.vs_tripped_flag = 1;
 
-            regConvSetModeRT(&conv, REG_NONE, REG_OPERATIONAL_RST_PARS, 0);
+            regConvSetModeRT(&conv, REG_NONE);
 
             ccSigsStoreCursor(CSR_FUNC,"TRIP!");
 
@@ -252,7 +249,7 @@ void ccRunSimulation(void)
 
                     func_start_time += ccrun.func_duration + ccpars_global.pre_func_delay;
 
-                    ccRunStartFunction(ccrun.func_idx);
+                    ccRunStartFunction(ccrun.func_idx, func_start_time);
 
                     ref_time = iter_time - func_start_time + conv.ref_advance;
                 }

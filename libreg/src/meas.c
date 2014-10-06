@@ -36,12 +36,15 @@
  */
 static float regMeasFirFilterRT(struct reg_meas_filter *filter);
 
+
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
 void regMeasFilterInitBuffer(struct reg_meas_filter *filter, int32_t *buf)
 {
     filter->fir_buf[0] = buf;
 }
+
+
 
 void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
                        uint32_t extrapolation_len_iters, float pos, float neg, float meas_delay_iters)
@@ -98,7 +101,7 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
 
     while(total_fir_len--)
     {
-        regMeasFirFilterRT(filter);
+        filter->signal[REG_MEAS_FILTERED] = regMeasFirFilterRT(filter);
     }
 
     // Initialize extrapolation buffer
@@ -115,10 +118,7 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
     filter->enable = 1;
 }
 
-void regMeasSetRegSelect(struct reg_meas_filter *filter, enum reg_meas_select reg_select)
-{
-    filter->reg_select = reg_select;
-}
+
 
 void regMeasSetNoiseAndTone(struct reg_noise_and_tone *noise_and_tone, float noise_pp,
                             float tone_amp, uint32_t tone_half_period_iters)
@@ -127,6 +127,8 @@ void regMeasSetNoiseAndTone(struct reg_noise_and_tone *noise_and_tone, float noi
     noise_and_tone->tone_amp = tone_amp;
     noise_and_tone->tone_half_period_iters = tone_half_period_iters;
 }
+
+
 
 // Real-Time Functions
 
@@ -181,6 +183,8 @@ static float regMeasFirFilterRT(struct reg_meas_filter *filter)
     return(filter->integer_to_float * (float)filter->fir_accumulator[1]);
 }
 
+
+
 void regMeasFilterRT(struct reg_meas_filter *filter)
 {
     float   old_filtered_value;
@@ -216,6 +220,8 @@ void regMeasFilterRT(struct reg_meas_filter *filter)
                                                (filter->signal[REG_MEAS_FILTERED] - old_filtered_value);
     }
 }
+
+
 
 float regMeasNoiseAndToneRT(struct reg_noise_and_tone *noise_and_tone)
 {
@@ -258,6 +264,8 @@ float regMeasNoiseAndToneRT(struct reg_noise_and_tone *noise_and_tone)
 
     return(noise + tone);
 }
+
+
 
 void regMeasRateRT(struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters)
 {

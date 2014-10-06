@@ -145,7 +145,10 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref);
  * Calculate Ramp function parameters.
  *
  * @param[in]     config        Ramp configuration parameters
- * @param[in,out] pars          Ramp function parameters. The parameters from the
+ * @param[in]     delay         RUN_DELAY, delay before the start of the function
+ * @param[in]     init_ref      Initial reference value
+ * @param[in]     init_rate     Initial linear rate of change
+ * @param[out]    pars          Ramp function parameters. The parameters from the
  *                              previous iteration are used to calculate the
  *                              parameters for the current iteration.
  *                              <em>pars</em> is updated with the new parameters.
@@ -156,13 +159,10 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref);
  *                              <li>pars->time[1], pars->ref[1]: Connection between accelerating and decelerating parabolas</li>
  *                              <li>pars->time[2], pars->ref[2]: End of the second (decelerating) parabola, also end of the ramp function</li>
  *                              </ul>
- * @param[in]     delay         RUN_DELAY, delay before the start of the function
- * @param[in]     init_ref      Initial reference value
- * @param[in]     init_rate     Initial linear rate of change
  * @param[out]    meta          Diagnostic information. Set to NULL if not required.
  */
-void fgRampCalc(struct fg_ramp_config *config, struct fg_ramp_pars *pars,
-                float delay, float init_ref, float init_rate, struct fg_meta *meta);
+void fgRampCalc(struct fg_ramp_config *config, float delay, float init_ref, float init_rate,
+                struct fg_ramp_pars *pars, struct fg_meta *meta);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,6 @@
 # CCTEST - RAMP tests script
 
-GLOBAL ITER_PERIOD          1.0E-3
+GLOBAL ITER_PERIOD_US       1000
 GLOBAL FUNCTION             RAMP
 GLOBAL FG_LIMITS            ENABLED
 GLOBAL SIM_LOAD             ENABLED
@@ -13,7 +13,7 @@ VS V_REF_DELAY_ITERS        1.0
 VS BANDWIDTH                2000
 VS TAU_ZERO                 0.0
 VS Z                        0.9
-   
+
 # Load parameters
 
 LOAD OHMS_SER               0.2
@@ -44,7 +44,7 @@ LIMITS I_ACCELERATION       0.0
 LIMITS I_ERR_WARNING        0.0
 LIMITS I_ERR_FAULT          0.0
 LIMITS I_QUADRANTS41        0.0,0.0
-   
+
 LIMITS V_POS                1.5
 LIMITS V_NEG                -30.0
 LIMITS V_RATE               50

@@ -2,7 +2,7 @@
 
 GLOBAL RUN_DELAY            0.1
 GLOBAL STOP_DELAY           0.1
-GLOBAL ITER_PERIOD          1.0E-3
+GLOBAL ITER_PERIOD_US       1000
 GLOBAL FUNCTION             TABLE
 GLOBAL STOP_ON_ERROR        ENABLED
 GLOBAL REG_MODE             CURRENT
@@ -55,7 +55,7 @@ MEAS V_SIM_NOISE_PP         0.05
 MEAS TONE_HALF_PERIOD_ITERS 100
 MEAS I_SIM_TONE_AMP         0.0
 
-# Current regulation 
+# Current regulation
 
 IREG PERIOD_ITERS           3
 IREG AUXPOLE1_HZ            20

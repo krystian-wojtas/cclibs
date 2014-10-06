@@ -40,24 +40,24 @@ struct ccpars_load
 {
     // Load file parameters
 
-    float                   ohms_ser;         // Series resistance
-    float                   ohms_par;         // Parallel resistance
-    float                   ohms_mag;         // Magnet resistance
+    float                       ohms_ser;         // Series resistance
+    float                       ohms_par;         // Parallel resistance
+    float                       ohms_mag;         // Magnet resistance
 
-    float                   henrys;           // Unsaturated magnet inductance
-    float                   henrys_sat;       // Saturated magnet inductance
+    float                       henrys;           // Unsaturated magnet inductance
+    float                       henrys_sat;       // Saturated magnet inductance
 
-    float                   i_sat_start;      // Current at start of saturation
-    float                   i_sat_end;        // Current at end of saturation
+    float                       i_sat_start;      // Current at start of saturation
+    float                       i_sat_end;        // Current at end of saturation
 
-    float                   gauss_per_amp;    // Field to current ratio (G/A)
+    float                       gauss_per_amp;    // Field to current ratio (G/A)
 
-    float                   perturb_volts;    // Open loop voltage perturbation
-    float                   perturb_time;     // Time for open loop voltage perturbation
+    float                       perturb_volts;    // Open loop voltage perturbation
+    float                       perturb_time;     // Time for open loop voltage perturbation
 
-    float                   sim_tc_error;     // Error factor for simulation
+    float                       sim_tc_error;     // Error factor for simulation
 
-    uint32_t                pol_swi_auto;     // Auto polarity switch will follow function
+    enum reg_enabled_disabled   pol_swi_auto;     // Auto polarity switch will follow function
 };
 
 CCPARS_LOAD_EXT struct ccpars_load ccpars_load
@@ -74,7 +74,7 @@ CCPARS_LOAD_EXT struct ccpars_load ccpars_load
         0.0,                 // LOAD PERTURB_VOLTS
         0.0,                 // LOAD PERTURB_TIME
         0.0,                 // LOAD SIM_TC_ERROR
-        CC_DISABLED,         // LOAD POL_SWI_AUTO
+        REG_DISABLED,        // LOAD POL_SWI_AUTO
 }
 #endif
 ;

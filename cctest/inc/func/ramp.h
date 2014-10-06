@@ -38,15 +38,15 @@
 
 struct ccpars_ramp
 {
-    // RAMP file data
+    // cctest RAMP parameters
 
     float                       initial_ref;
     float                       initial_rate;
-    struct fg_ramp_config       config;                     // Libfg config struct for RAMP
+    struct fg_ramp_config       config;                 // Libfg config struct for RAMP
 
     // Libfg RAMP variables
 
-    struct fg_ramp_pars         ramp_pars;                  // Libfg parameters for RAMP
+    struct fg_ramp_pars         pars;                   // Libfg parameters for RAMP
 };
 
 CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp

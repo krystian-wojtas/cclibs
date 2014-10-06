@@ -2,7 +2,7 @@
 
 GLOBAL RUN_DELAY                1.0
 GLOBAL STOP_DELAY               1.0
-GLOBAL ITER_PERIOD              1.0E-2
+GLOBAL ITER_PERIOD_US           10000
 GLOBAL FUNCTION                 PLEP
 GLOBAL STOP_ON_ERROR            ENABLED
 GLOBAL REG_MODE                 CURRENT

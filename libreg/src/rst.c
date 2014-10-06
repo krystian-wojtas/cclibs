@@ -53,6 +53,8 @@ typedef struct complex
 static double regVectorMultiply (double *p, double *m, int32_t p_order, int32_t m_idx);
 static float  regAbsComplexRatio(double *num, double *den, double k);
 
+
+
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
 static int32_t regJuryTest(struct reg_rst_pars *pars)
@@ -139,6 +141,8 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
     return(0);
 }
 
+
+
 static float regModulusMargin(struct reg_rst_pars *pars)
 {
     int32_t     frequency_index;
@@ -214,6 +218,8 @@ static float regModulusMargin(struct reg_rst_pars *pars)
     return(pars->modulus_margin);
 }
 
+
+
 static float regAbsComplexRatio(double *num, double *den, double k)
 {
     int32_t     idx;
@@ -239,6 +245,8 @@ static float regAbsComplexRatio(double *num, double *den, double k)
     return(sqrt(num_exp.real * num_exp.real + num_exp.imag * num_exp.imag) /
            sqrt(den_exp.real * den_exp.real + den_exp.imag * den_exp.imag));
 }
+
+
 
 /*
  * This function prepares coefficients for the RST regulation algorithm. It chooses the algorithm to use
@@ -576,6 +584,8 @@ static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m
     return(product);
 }
 
+
+
 /*
  * This function prepares coefficients for the RST regulation algorithm to implement a proportional-integral
  * controller. It can be used with fast slightly inductive circuits.
@@ -605,6 +615,8 @@ static void regRstInitPI(struct reg_rst_pars  *pars,
     pars->rst.t[1] = pars->rst.r[1];
 }
 
+
+
 /*
  * This function prepares coefficients for the RST regulation algorithm to implement an Integrator only.
  * This can be used with resistive circuits.
@@ -631,9 +643,11 @@ static void regRstInitI(struct reg_rst_pars  *pars,
     pars->rst.t[0] = 1.0 + c1;
 }
 
+
+
 enum reg_status regRstInit(struct reg_rst_pars  *pars,
-                           double                iter_period,
                            uint32_t              reg_period_iters,
+                           double                reg_period,
                            struct reg_load_pars *load,
                            float                 auxpole1_hz,
                            float                 auxpoles2_hz,
@@ -649,9 +663,8 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
     double      t0_correction;
 
     pars->reg_mode             = reg_mode;
-    pars->reg_period_iters     = reg_period_iters;
     pars->inv_reg_period_iters = 1.0 / (float)reg_period_iters;
-    pars->reg_period           = iter_period * (double)reg_period_iters;
+    pars->reg_period           = reg_period;
     pars->alg_index            = 0;
     pars->dead_beat            = 0;
     pars->pure_delay_periods   = pure_delay_periods;
@@ -752,9 +765,11 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
     return(pars->status);
 }
 
+
+
 // Real-Time Functions
 
-float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, float meas)
+float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref)
 /*!
  * <h3>Implementation Notes</h3>
  *
@@ -780,7 +795,7 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
 
     var_idx = vars->history_index;
     act     = pars->rst.t[0]      * (double)ref -
-              pars->rst.r[0]      * (double)meas +
+              pars->rst.r[0]      * (double)vars->meas[var_idx] +
               pars->t0_correction * (double)ref;
 
     for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
@@ -794,18 +809,18 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
     
     act *= pars->inv_s0;
 
-    // Save latest act, meas and ref in history
-
+    // ****** THESE LINES CAN BE DELETED ONCE CalcRefRT() is called every time
     var_idx = vars->history_index;
-
-    vars->ref [var_idx] = ref;
-    vars->meas[var_idx] = meas;
     vars->act [var_idx] = act;
+    vars->ref [var_idx] = ref;
+    // ****** THESE LINES CAN BE DELETED ONCE CalcRefRT() is called every time
 
     return(act);
 }
 
-float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, float meas)
+
+
+float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act)
 /*!
  * <h3>Implementation Notes</h3>
  *
@@ -830,7 +845,7 @@ float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
     // Use RST coefficients to calculate new actuation from reference
 
     var_idx = vars->history_index;
-    ref     = pars->rst.s[0] * (double)act + pars->rst.r[0] * (double)meas;
+    ref     = pars->rst.s[0] * (double)act + pars->rst.r[0] * (double)vars->meas[var_idx];
 
     for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
     {
@@ -848,13 +863,14 @@ float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
     var_idx = vars->history_index;
 
     vars->act [var_idx] = act;
-    vars->meas[var_idx] = meas;
     vars->ref [var_idx] = ref;
 
     return(ref);
 }
 
-void regRstTrackDelayRT(struct reg_rst_vars *vars, float period, float max_ref_rate)
+
+
+float regRstTrackDelayRT(struct reg_rst_vars *vars)
 {
     float    meas_track_delay_periods   = 0.0;
     float    delta_ref                  = regRstDeltaRefRT(vars);
@@ -879,8 +895,10 @@ void regRstTrackDelayRT(struct reg_rst_vars *vars, float period, float max_ref_r
         }
     }
 
-    vars->meas_track_delay_periods = meas_track_delay_periods;
+    return(meas_track_delay_periods);
 }
+
+
 
 float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, uint32_t iteration_index)
 {
@@ -923,6 +941,8 @@ float regRstDelayedRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, u
 
     return(vars->ref[(vars->history_index + 1) & REG_RST_HISTORY_MASK]);
 }
+
+
 
 float regRstAverageVrefRT(struct reg_rst_vars *vars)
 {

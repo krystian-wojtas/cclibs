@@ -1,6 +1,6 @@
 # Test default parameters
 
-GLOBAL ITER_PERIOD              1.0E-3
+GLOBAL ITER_PERIOD_US           1000
 GLOBAL GROUP                    sandbox
 GLOBAL PROJECT                  CurrentRef
 

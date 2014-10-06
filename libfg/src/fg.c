@@ -55,6 +55,8 @@ struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, f
     return(meta);
 }
 
+
+
 void fgSetMinMax(struct fg_meta *meta, float ref)
 {
     if(ref > meta->range.max)
@@ -66,6 +68,8 @@ void fgSetMinMax(struct fg_meta *meta, float ref)
         meta->range.min = ref;
     }
 }
+
+
 
 enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
                          float ref, float rate, float acceleration, struct fg_meta *meta)
@@ -136,13 +140,6 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
         meta->error.data[2] = acceleration;
 
         return(FG_OUT_OF_ACCELERATION_LIMITS);
-    }
-
-    // Call user function to check reference if supplied
-
-    if(limits->user_check_limits)
-    {
-        return(limits->user_check_limits(limits, invert_limits, ref, rate, acceleration, meta));
     }
 
     return(FG_OK);

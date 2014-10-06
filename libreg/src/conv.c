@@ -25,21 +25,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Define LIBREG_CONV_SOURCE to define regConvParsInit() in pars.h
+
+#define LIBREG_CONV_SOURCE
+
+// Include header files
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "libreg.h"
+#include "init_pars.h"
 
-// static function declarations
+// Static function declarations
 
-static void regConvSetModeNoneOrVoltageRT   (struct reg_conv *conv, enum reg_mode reg_mode);
-static void regConvSetModeFieldOrCurrentRT  (struct reg_conv *conv, enum reg_mode reg_mode, uint32_t iteration_counter);
+static void regConvSetModeNoneOrVoltageRT(struct reg_conv *conv, enum reg_mode reg_mode);
 
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
-void regConvInit(struct reg_conv *conv, double iter_period, enum reg_actuation actuation)
+void regConvInit(struct reg_conv *conv, uint32_t iter_period_us,
+                 enum reg_enabled_disabled field_regulation, enum reg_enabled_disabled current_regulation)
 {
-    conv->iter_period    = iter_period;
-    conv->actuation      = actuation;
+    conv->iter_period_us = iter_period_us;
+    conv->iter_period    = iter_period_us * 1.0E-6;
+
+    conv->b.regulation   = field_regulation;
+    conv->i.regulation   = current_regulation;
+
     conv->reg_mode       = REG_NONE;
     conv->reg_rst_source = REG_OPERATIONAL_RST_PARS;
     conv->reg_signal     = &conv->i;
@@ -48,134 +60,586 @@ void regConvInit(struct reg_conv *conv, double iter_period, enum reg_actuation a
 
     conv->b.op_rst_pars.next     = &conv->b.op_rst_pars.pars[0];
     conv->b.op_rst_pars.active   = &conv->b.op_rst_pars.pars[1];
+    conv->b.op_rst_pars.use_next_pars = 0;
+
     conv->b.test_rst_pars.next   = &conv->b.test_rst_pars.pars[0];
     conv->b.test_rst_pars.active = &conv->b.test_rst_pars.pars[1];
+    conv->b.test_rst_pars.use_next_pars = 0;
 
     conv->i.op_rst_pars.next     = &conv->i.op_rst_pars.pars[0];
     conv->i.op_rst_pars.active   = &conv->i.op_rst_pars.pars[1];
+    conv->i.op_rst_pars.use_next_pars = 0;
+
     conv->i.test_rst_pars.next   = &conv->i.test_rst_pars.pars[0];
     conv->i.test_rst_pars.active = &conv->i.test_rst_pars.pars[1];
+    conv->i.test_rst_pars.use_next_pars = 0;
 
     conv->b.rst_pars = conv->b.op_rst_pars.active;
     conv->i.rst_pars = conv->i.op_rst_pars.active;
 
     regConvSetModeNoneOrVoltageRT(conv, REG_NONE);
+
+    // Initialize libreg parameter structures in conv and set par_mask so that all init functions are executed
+
+    regConvParsInit(conv);
 }
 
-uint32_t regConvRstInit(struct reg_conv        *conv,
-                        struct reg_conv_signal *reg_signal,
-                        enum reg_mode           reg_mode,
-                        enum reg_rst_source     reg_rst_source,
-                        uint32_t                reg_period_iters,
-                        float                   auxpole1_hz,
-                        float                   auxpoles2_hz,
-                        float                   auxpoles2_z,
-                        float                   auxpole4_hz,
-                        float                   auxpole5_hz,
-                        float                   pure_delay_periods,
-                        float                   track_delay_periods,
-                        double                  manual_r[REG_N_RST_COEFFS],
-                        double                  manual_s[REG_N_RST_COEFFS],
-                        double                  manual_t[REG_N_RST_COEFFS])
+
+
+static void regConvRstInit(struct reg_conv        *conv,
+                           enum reg_mode           reg_mode,
+                           enum reg_rst_source     reg_rst_source,
+                           uint32_t                reg_period_iters,
+                           float                   auxpole1_hz,
+                           float                   auxpoles2_hz,
+                           float                   auxpoles2_z,
+                           float                   auxpole4_hz,
+                           float                   auxpole5_hz,
+                           float                   pure_delay_periods,
+                           float                   track_delay_periods,
+                           double                  manual_r[REG_N_RST_COEFFS],
+                           double                  manual_s[REG_N_RST_COEFFS],
+                           double                  manual_t[REG_N_RST_COEFFS])
 {
     struct reg_conv_rst_pars   *conv_rst_pars;
-    struct reg_rst              manual;
-    uint32_t                    use_next_pars = 0;
+    struct reg_conv_signal     *reg_signal;
 
     // Set pointer to the reg_conv_rst_pars structure for FIELD/CURRENT regulation with OPERATIONAL/TEST parameters
 
-    if(reg_mode == REG_FIELD)
+    reg_signal    = (reg_mode       == REG_FIELD                ? &conv->b                 : &conv->i);
+    conv_rst_pars = (reg_rst_source == REG_OPERATIONAL_RST_PARS ? &reg_signal->op_rst_pars : &reg_signal->test_rst_pars);
+
+    // Set debug pointer to the RST pars structure that will be initialized
+
+    conv_rst_pars->debug = conv_rst_pars->next;
+
+    // Update the period for the signal - the period is common to operational and test parameters
+
+    reg_signal->reg_period_iters = reg_period_iters;
+    reg_signal->reg_period       = conv->iter_period * (double)reg_period_iters;
+
+    // When actuation is CURRENT_REF then don't try to initialize the RST regulation,
+    // just prepare the periods so that the delayed_reg calculation works
+
+    if(conv->par_values.global_actuation[0] == REG_CURRENT_REF)
     {
-        conv_rst_pars = (reg_rst_source == REG_OPERATIONAL_RST_PARS ? &conv->b.op_rst_pars : &conv->b.test_rst_pars);
+        conv_rst_pars->next->status               = REG_OK;
+        conv_rst_pars->next->reg_mode             = REG_CURRENT;
+        conv_rst_pars->next->inv_reg_period_iters = 1.0 / (float)reg_period_iters;
+        conv_rst_pars->next->reg_period           = reg_signal->reg_period;
+
+        conv_rst_pars->use_next_pars              = 1;
     }
-    else
+    else // Actuation is VOLTAGE_REF
     {
-        conv_rst_pars = (reg_rst_source == REG_OPERATIONAL_RST_PARS ? &conv->i.op_rst_pars : &conv->i.test_rst_pars);
-    }
+        struct reg_rst manual;
 
-    // If use next pars flag is not currently set
+        // Prepare structure with manual RST coefficients
 
-    if(conv_rst_pars->use_next_pars == 0)
-    {
-        // When actuation is CURRENT_REF then don't try to initialize the RST regulation,
-        // just prepare the periods so that the delayed_reg calculation works
+        memcpy(manual.r, manual_r, REG_N_RST_COEFFS * sizeof(double));  // On Mac, gcc returns an error compiling sizeof(manual_r)
+        memcpy(manual.s, manual_s, REG_N_RST_COEFFS * sizeof(double));
+        memcpy(manual.t, manual_t, REG_N_RST_COEFFS * sizeof(double));
 
-        if(conv->actuation == REG_CURRENT_REF)
+        // if pure_delay_periods is zero then calculate it
+
+        if(pure_delay_periods <= 0.0)
         {
-            conv_rst_pars->next->reg_period_iters     = 1;
-            conv_rst_pars->next->inv_reg_period_iters = 1;
-            conv_rst_pars->next->reg_period           = conv->iter_period;
-            conv_rst_pars->use_next_pars              = 1;
-        }
-        else // Actuation is VOLTAGE_REF
-        {
-             // Prepare structure with manual RST coefficients
-
-            memcpy(manual.r, manual_r, REG_N_RST_COEFFS * sizeof(double));  // On Mac, gcc returns an error compiling sizeof(manual_r)
-            memcpy(manual.s, manual_s, REG_N_RST_COEFFS * sizeof(double));
-            memcpy(manual.t, manual_t, REG_N_RST_COEFFS * sizeof(double));
-
-            // if pure_delay_periods is zero then calculate it
-
-            if(pure_delay_periods <= 0.0)
-            {
-                pure_delay_periods = (conv->sim_vs_pars.v_ref_delay_iters + conv->sim_vs_pars.vs_delay_iters +
-                                      reg_signal->meas.delay_iters[reg_signal->meas.reg_select]) / (float)reg_period_iters;
-            }
-
-            // if new RST parameters are valid then request switch of RST parameters by RT thread
-
-            if(regRstInit(conv_rst_pars->next, conv->iter_period, reg_period_iters, &conv->load_pars,
-                          auxpole1_hz, auxpoles2_hz, auxpoles2_z, auxpole4_hz, auxpole5_hz,
-                          pure_delay_periods, track_delay_periods, reg_mode, &manual) != REG_FAULT)
-            {
-                // conv_rst_pars->use_next_pars can be reset at any time by the real-time thread
-                // so the local use_next_pars is returned
-
-                conv_rst_pars->use_next_pars = 1;
-            }
+            pure_delay_periods = (conv->sim_vs_pars.v_ref_delay_iters + conv->sim_vs_pars.vs_delay_iters +
+                                  reg_signal->meas.delay_iters[reg_signal->meas.reg_select]) / (float)reg_period_iters;
         }
 
-        // Save pointer to the newly initialized RST parameters for debug reporting to the user
+        // if new RST parameters are valid then request switch of RST parameters by RT thread
 
-        conv_rst_pars->debug = conv_rst_pars->next;
-        use_next_pars = 1;
+        if(regRstInit(conv_rst_pars->next, reg_period_iters, reg_signal->reg_period, &conv->load_pars,
+                      auxpole1_hz, auxpoles2_hz, auxpoles2_z, auxpole4_hz, auxpole5_hz,
+                      pure_delay_periods, track_delay_periods, reg_mode, &manual) != REG_FAULT)
+        {
+            // conv_rst_pars->use_next_pars can be reset at any time by the real-time thread
+            // so the local use_next_pars is returned
+
+            conv_rst_pars->use_next_pars = 1;
+        }
     }
-
-    // use_next_pars will be zero if conv_rst_pars->use_next_pars is already 1 from a previous call to the function
-
-    return(use_next_pars);
 }
 
-void regConvInitSimLoad(struct reg_conv *conv, enum reg_mode reg_mode, float sim_load_tc_error)
-{
-    regSimLoadTcError(&conv->sim_load_pars, &conv->load_pars, sim_load_tc_error);
 
-    regSimLoadInit(&conv->sim_load_pars, conv->iter_period);
+
+void regConvPars(struct reg_conv *conv, uint32_t pars_mask)
+{
+    uint32_t        i;
+    uint32_t        flags;
+    uint32_t        load_select;
+    char           *value_p;
+    struct reg_par *par;
+
+    // Update load_select if it supplied by calling program and if it is valid
+
+    if(conv->pars.load_select.value != REG_PAR_NOT_USED)
+    {
+        load_select = *((uint32_t*)conv->pars.load_select.value);
+
+        if(load_select < REG_N_LOADS)
+        {
+            conv->par_values.load_select[0] = load_select;
+        }
+    }
+
+    load_select = conv->par_values.load_select[0];
+
+    // Scan all active parameters for changes
+
+    par = (struct reg_par *)&conv->pars;
+
+    for(i = 0 ; i < REG_N_PARS ; i++, par++)
+    {
+        if(par->value != REG_PAR_NOT_USED)
+        {
+            flags = par->flags;
+
+            // Skip parameters that must be ignored or are not relevant
+
+            if((conv->reg_mode     == REG_NONE    || (flags & REG_MODE_NONE_ONLY) == 0) &&
+               (conv->b.regulation == REG_ENABLED || (flags & REG_FIELD_REG     ) == 0) &&
+               (conv->i.regulation == REG_ENABLED || (flags & REG_CURRENT_REG   ) == 0))
+            {
+                value_p = (char*)par->value;
+
+                // If parameter is an array based on load select then point to scalar value addressed by load_select
+
+                if((flags & REG_LOAD_SELECT) != 0)
+                {
+                    value_p += load_select * par->sizeof_type;
+                }
+
+                // If parameter value has changed
+
+                if(memcmp(par->copy_of_value,value_p,par->size_in_bytes) != 0)
+                {
+                    // Save the changed value and set flags for this parameter
+
+                    memcpy(par->copy_of_value,value_p,par->size_in_bytes);
+
+                    pars_mask |= flags;
+                }
+            }
+        }
+    }
+
+    // Check every parameter flag in hierarchical order
+
+    // REG_PAR_SIM_VS
+
+    if((pars_mask & REG_PAR_SIM_VS) != 0)
+    {
+        regSimVsInit(          &conv->sim_vs_pars,
+                                conv->iter_period,
+                                conv->par_values.vs_v_ref_delay_iters[0],
+                                conv->par_values.vs_bandwidth[0],
+                                conv->par_values.vs_z[0],
+                                conv->par_values.vs_tau_zero[0],
+                                conv->par_values.vs_sim_den,
+                                conv->par_values.vs_sim_num);
+    }
+
+    // REG_PAR_INVERT_LIMITS
+
+    if((pars_mask & REG_PAR_INVERT_LIMITS) != 0)
+    {
+        regLimMeasInvert(      &conv->i.lim_meas,
+                                conv->par_values.limits_invert[0]);
+        regLimMeasInvert(      &conv->b.lim_meas,
+                                conv->par_values.limits_invert[0]);
+        regLimRefInvert(       &conv->b.lim_ref,
+                                conv->par_values.limits_invert[0]);
+        regLimRefInvert(       &conv->i.lim_ref,
+                                conv->par_values.limits_invert[0]);
+        regLimRefInvert(       &conv->v.lim_ref,
+                                conv->par_values.limits_invert[0]);
+}
+
+    // REG_PAR_V_LIMITS_REF
+
+    if((pars_mask & REG_PAR_V_LIMITS_REF) != 0)
+    {
+        regLimVrefInit(        &conv->v.lim_ref,
+                                conv->par_values.limits_v_pos[0],
+                                conv->par_values.limits_v_neg[0],
+                                conv->par_values.limits_v_rate[0],
+                                conv->par_values.limits_i_quadrants41,
+                                conv->par_values.limits_v_quadrants41);
+    }
+
+    // REG_PAR_V_LIMITS_ERR
+
+    if((pars_mask & REG_PAR_V_LIMITS_ERR) != 0)
+    {
+        regErrInitLimits(      &conv->v.err,
+                                conv->par_values.limits_v_err_warning[0],
+                                conv->par_values.limits_v_err_fault[0]);
+    }
+
+    // REG_PAR_I_LIMITS_MEAS (reg mode NONE only)
+
+    if((pars_mask & REG_PAR_I_LIMITS_MEAS) != 0)
+    {
+        regLimMeasInit(        &conv->i.lim_meas,
+                                conv->par_values.limits_i_pos[0],
+                                conv->par_values.limits_i_neg[0],
+                                conv->par_values.limits_i_pos[0] * conv->par_values.limits_i_low_div_pos[0],
+                                conv->par_values.limits_i_pos[0] * conv->par_values.limits_i_zero_div_pos[0]);
+    }
+
+    // REG_PAR_I_LIMITS_REF
+
+    if((pars_mask & REG_PAR_I_LIMITS_REF) != 0)
+    {
+        regLimRefInit (        &conv->i.lim_ref,
+                                conv->par_values.limits_i_pos[0],
+                                conv->par_values.limits_i_neg[0],
+                                conv->par_values.limits_i_rate[0],
+                                conv->par_values.limits_i_closeloop[0]);
+    }
+
+    // REG_PAR_I_LIMITS_ERR
+
+    if((pars_mask & REG_PAR_I_LIMITS_ERR) != 0)
+    {
+        regErrInitLimits(      &conv->i.err,
+                                conv->par_values.limits_i_err_warning[0],
+                                conv->par_values.limits_i_err_fault[0]);
+    }
+
+    // REG_PAR_B_LIMITS_MEAS (reg mode NONE only)
+
+    if((pars_mask & REG_PAR_B_LIMITS_MEAS) != 0)
+    {
+        regLimMeasInit(        &conv->b.lim_meas,
+                                conv->par_values.limits_b_pos[0],
+                                conv->par_values.limits_b_neg[0],
+                                conv->par_values.limits_b_pos[0] * conv->par_values.limits_b_low_div_pos[0],
+                                conv->par_values.limits_b_pos[0] * conv->par_values.limits_b_zero_div_pos[0]);
+    }
+
+    // REG_PAR_B_LIMITS_REF
+
+    if((pars_mask & REG_PAR_B_LIMITS_REF) != 0)
+    {
+        regLimRefInit (        &conv->b.lim_ref,
+                                conv->par_values.limits_b_pos[0],
+                                conv->par_values.limits_b_neg[0],
+                                conv->par_values.limits_b_rate[0],
+                                conv->par_values.limits_b_closeloop[0]);
+    }
+
+    // REG_PAR_B_LIMITS_ERR
+
+    if((pars_mask & REG_PAR_B_LIMITS_ERR) != 0)
+    {
+        regErrInitLimits(      &conv->b.err,
+                                conv->par_values.limits_b_err_warning[0],
+                                conv->par_values.limits_b_err_fault[0]);
+    }
+
+    // REG_PAR_I_LIMITS_RMS
+
+    if((pars_mask & REG_PAR_I_LIMITS_RMS) != 0)
+    {
+        regLimRmsInit(         &conv->lim_i_rms,
+                                conv->par_values.limits_i_rms_warning[0],
+                                conv->par_values.limits_i_rms_fault[0],
+                                conv->par_values.limits_i_rms_tc[0],
+                                conv->iter_period);
+    }
+
+    // REG_PAR_I_LIMITS_RMS_LOAD
+
+    if((pars_mask & REG_PAR_I_LIMITS_RMS_LOAD) != 0)
+    {
+        regLimRmsInit(         &conv->lim_i_rms_load,
+                                conv->par_values.limits_i_rms_load_warning[0],
+                                conv->par_values.limits_i_rms_load_fault[0],
+                                conv->par_values.limits_i_rms_load_tc[0],
+                                conv->iter_period);
+    }
+
+    // REG_PAR_I_MEAS_REG_SELECT
+
+    if((pars_mask & REG_PAR_I_MEAS_REG_SELECT) != 0)
+    {
+        conv->i.meas.reg_select = conv->par_values.meas_i_reg_select[0];
+    }
+
+    // REG_PAR_I_MEAS_FILTER (reg mode NONE only)
+
+    if((pars_mask & REG_PAR_I_MEAS_FILTER) != 0)
+    {
+        regMeasFilterInit(     &conv->i.meas,
+                                conv->par_values.meas_i_fir_lengths,
+                                conv->par_values.ireg_period_iters[0],
+                                conv->par_values.limits_i_pos[0],
+                                conv->par_values.limits_i_neg[0],
+                                conv->par_values.meas_i_delay_iters[0]);
+    }
+
+    // REG_PAR_B_MEAS_REG_SELECT
+
+    if((pars_mask & REG_PAR_B_MEAS_REG_SELECT) != 0)
+    {
+        conv->b.meas.reg_select = conv->par_values.meas_b_reg_select[0];
+    }
+
+    // REG_PAR_B_MEAS_FILTER (reg mode NONE only and field regulation ENABLED)
+
+    if((pars_mask & REG_PAR_B_MEAS_FILTER) != 0 && conv->b.regulation == REG_ENABLED)
+    {
+        regMeasFilterInit(     &conv->b.meas,
+                                conv->par_values.meas_b_fir_lengths,
+                                conv->par_values.breg_period_iters[0],
+                                conv->par_values.limits_b_pos[0],
+                                conv->par_values.limits_b_neg[0],
+                                conv->par_values.meas_b_delay_iters[0]);
+    }
+
+    // REG_PAR_MEAS_SIM_DELAYS (reg mode NONE only)
+
+    if((pars_mask & REG_PAR_MEAS_SIM_DELAYS) != 0)
+    {
+        regDelayInitDelay(     &conv->b.sim.meas_delay,
+                                conv->par_values.vs_v_ref_delay_iters[0] + conv->par_values.meas_b_delay_iters[0] - 1.0);
+
+        regDelayInitDelay(     &conv->i.sim.meas_delay,
+                                conv->par_values.vs_v_ref_delay_iters[0] + conv->par_values.meas_i_delay_iters[0] - 1.0);
+
+        regDelayInitDelay(     &conv->v.sim.meas_delay,
+                                conv->par_values.vs_v_ref_delay_iters[0] + conv->par_values.meas_v_delay_iters[0] - 1.0);
+    }
+
+    // REG_PAR_MEAS_SIM_NOISE_AND_TONE
+
+    if((pars_mask & REG_PAR_MEAS_SIM_NOISE_AND_TONE) != 0)
+    {
+        // Current and field measurement simulations have noise and tone
+
+        regMeasSetNoiseAndTone(&conv->b.sim.noise_and_tone,
+                                conv->par_values.meas_b_sim_noise_pp[0],
+                                conv->par_values.meas_b_sim_tone_amp[0],
+                                conv->par_values.meas_tone_half_period_iters[0]);
+
+        regMeasSetNoiseAndTone(&conv->i.sim.noise_and_tone,
+                                conv->par_values.meas_i_sim_noise_pp[0],
+                                conv->par_values.meas_i_sim_tone_amp[0],
+                                conv->par_values.meas_tone_half_period_iters[0]);
+
+        // Voltage measurement simulation only had noise and no tone
+
+        regMeasSetNoiseAndTone(&conv->v.sim.noise_and_tone,
+                                conv->par_values.meas_v_sim_noise_pp[0],
+                                0.0,
+                                0);
+    }
+
+    // REG_PAR_LOAD
+
+    if((pars_mask & REG_PAR_LOAD) != 0)
+    {
+        regLoadInit(           &conv->load_pars,
+                                conv->par_values.load_ohms_ser[0],
+                                conv->par_values.load_ohms_par[0],
+                                conv->par_values.load_ohms_mag[0],
+                                conv->par_values.load_henrys[0],
+                                conv->par_values.load_gauss_per_amp[0]);
+    }
+
+    // REG_PAR_LOAD_SAT
+
+    if((pars_mask & REG_PAR_LOAD) != 0)
+    {
+        regLoadInitSat(        &conv->load_pars,
+                                conv->par_values.load_henrys_sat[0],
+                                conv->par_values.load_i_sat_start[0],
+                                conv->par_values.load_i_sat_end[0]);
+    }
+
+    // REG_PAR_LOAD_SIM
+
+    if((pars_mask & REG_PAR_LOAD_SIM) != 0)
+    {
+        regSimLoadInit(        &conv->sim_load_pars,
+                               &conv->load_pars,
+                                conv->par_values.load_sim_tc_error[0],
+                                conv->iter_period);
+    }
+
+    // REG_PAR_IREG_OP
+
+    if((pars_mask & REG_PAR_IREG_OP) != 0)
+    {
+        // Loop until updated parameters have been accepted. This may take one iteration period
+        // before the real-time thread/interrupt executes and processes a pending set of RST parameters
+
+        while(conv->i.op_rst_pars.use_next_pars == 1);
+
+        regConvRstInit(         conv,
+                                REG_CURRENT,
+                                REG_OPERATIONAL_RST_PARS,
+                                conv->par_values.ireg_period_iters[0],
+                                conv->par_values.ireg_op_auxpole1_hz[0],
+                                conv->par_values.ireg_op_auxpoles2_hz[0],
+                                conv->par_values.ireg_op_auxpoles2_z[0],
+                                conv->par_values.ireg_op_auxpole4_hz[0],
+                                conv->par_values.ireg_op_auxpole5_hz[0],
+                                conv->par_values.ireg_op_pure_delay_periods[0],
+                                conv->par_values.ireg_op_track_delay_periods[0],
+                                conv->par_values.ireg_op_r,
+                                conv->par_values.ireg_op_s,
+                                conv->par_values.ireg_op_t);
+    }
+
+    // REG_PAR_IREG_TEST
+
+    if((pars_mask & REG_PAR_IREG_TEST) != 0)
+    {
+        // Loop until updated parameters have been accepted. This may take one iteration period
+        // before the real-time thread/interrupt executes and processes a pending set of RST parameters
+
+        while(conv->i.test_rst_pars.use_next_pars == 1);
+
+        regConvRstInit(         conv,
+                                REG_CURRENT,
+                                REG_TEST_RST_PARS,
+                                conv->par_values.ireg_period_iters[0],
+                                conv->par_values.ireg_test_auxpole1_hz[0],
+                                conv->par_values.ireg_test_auxpoles2_hz[0],
+                                conv->par_values.ireg_test_auxpoles2_z[0],
+                                conv->par_values.ireg_test_auxpole4_hz[0],
+                                conv->par_values.ireg_test_auxpole5_hz[0],
+                                conv->par_values.ireg_test_pure_delay_periods[0],
+                                conv->par_values.ireg_test_track_delay_periods[0],
+                                conv->par_values.ireg_test_r,
+                                conv->par_values.ireg_test_s,
+                                conv->par_values.ireg_test_t);
+    }
+
+    // REG_PAR_BREG_OP
+
+    if((pars_mask & REG_PAR_BREG_OP) != 0 && conv->b.regulation == REG_ENABLED)
+    {
+        // Loop until updated parameters have been accepted. This may take one iteration period
+        // before the real-time thread/interrupt executes and processes a pending set of RST parameters
+
+        while(conv->b.op_rst_pars.use_next_pars == 1);
+
+        regConvRstInit(         conv,
+                                REG_FIELD,
+                                REG_OPERATIONAL_RST_PARS,
+                                conv->par_values.breg_period_iters[0],
+                                conv->par_values.breg_op_auxpole1_hz[0],
+                                conv->par_values.breg_op_auxpoles2_hz[0],
+                                conv->par_values.breg_op_auxpoles2_z[0],
+                                conv->par_values.breg_op_auxpole4_hz[0],
+                                conv->par_values.breg_op_auxpole5_hz[0],
+                                conv->par_values.breg_op_pure_delay_periods[0],
+                                conv->par_values.breg_op_track_delay_periods[0],
+                                conv->par_values.breg_op_r,
+                                conv->par_values.breg_op_s,
+                                conv->par_values.breg_op_t);
+    }
+
+    // REG_PAR_BREG_TEST
+
+    if((pars_mask & REG_PAR_BREG_TEST) != 0 && conv->b.regulation == REG_ENABLED)
+    {
+        // Loop until updated parameters have been accepted. This may take one iteration period
+        // before the real-time thread/interrupt executes and processes a pending set of RST parameters
+
+        while(conv->b.test_rst_pars.use_next_pars == 1);
+
+        regConvRstInit(         conv,
+                                REG_FIELD,
+                                REG_TEST_RST_PARS,
+                                conv->par_values.breg_period_iters[0],
+                                conv->par_values.breg_test_auxpole1_hz[0],
+                                conv->par_values.breg_test_auxpoles2_hz[0],
+                                conv->par_values.breg_test_auxpoles2_z[0],
+                                conv->par_values.breg_test_auxpole4_hz[0],
+                                conv->par_values.breg_test_auxpole5_hz[0],
+                                conv->par_values.breg_test_pure_delay_periods[0],
+                                conv->par_values.breg_test_track_delay_periods[0],
+                                conv->par_values.breg_test_r,
+                                conv->par_values.breg_test_s,
+                                conv->par_values.breg_test_t);
+    }
+}
+
+
+
+void regConvInitSim(struct reg_conv *conv, enum reg_mode reg_mode, float meas)
+{
+    // Initialize all libreg parameters
+
+    regConvPars(conv, 0xFFFFFFFF);
+
+    // Initialize load simulation
 
     switch(reg_mode)
     {
-    default:
+    case REG_NONE:
 
-        regSimLoadSetVoltage(&conv->sim_load_pars, &conv->sim_load_vars, conv->v.meas);
+        regSimLoadSetVoltage(&conv->sim_load_pars, &conv->sim_load_vars, 0.0);
+        break;
+
+    case REG_VOLTAGE:
+
+        regSimLoadSetVoltage(&conv->sim_load_pars, &conv->sim_load_vars, meas * conv->sim_vs_pars.gain);
         break;
 
     case REG_CURRENT:
 
-        regSimLoadSetCurrent(&conv->sim_load_pars, &conv->sim_load_vars, conv->i.meas.signal[REG_MEAS_UNFILTERED]);
+        regSimLoadSetCurrent(&conv->sim_load_pars, &conv->sim_load_vars, meas);
         break;
 
     case REG_FIELD:
 
-        regSimLoadSetField(&conv->sim_load_pars, &conv->sim_load_vars, conv->b.meas.signal[REG_MEAS_UNFILTERED]);
+        regSimLoadSetField(&conv->sim_load_pars, &conv->sim_load_vars, meas);
         break;
     }
 
     conv->v.meas = conv->sim_load_vars.circuit_voltage;
 
-    conv->i.meas.signal[REG_MEAS_FILTERED] = conv->i.meas.signal[REG_MEAS_UNFILTERED] = conv->sim_load_vars.circuit_current;
-    conv->b.meas.signal[REG_MEAS_FILTERED] = conv->b.meas.signal[REG_MEAS_UNFILTERED] = conv->sim_load_vars.magnet_field;
+    conv->i.meas.signal[REG_MEAS_UNFILTERED] = conv->sim_load_vars.circuit_current;
+    conv->b.meas.signal[REG_MEAS_UNFILTERED] = conv->sim_load_vars.magnet_field;
+
+    // Initialize simulated measurement delay histories
+
+    regDelayInitVars(&conv->b.sim.meas_delay, conv->b.meas.signal[REG_MEAS_UNFILTERED]);
+    regDelayInitVars(&conv->i.sim.meas_delay, conv->i.meas.signal[REG_MEAS_UNFILTERED]);
+    regDelayInitVars(&conv->v.sim.meas_delay, conv->v.meas);
+
+    // Initialize current and field (if enabled) filter histories
+
+    regConvPars(conv, conv->b.regulation == REG_ENABLED ? REG_PAR_B_MEAS_FILTER | REG_PAR_I_MEAS_FILTER  : REG_PAR_I_MEAS_FILTER);
+
+    // Initialize voltage source model history according to the actuation because for CURRENT_REF,
+    // the model is used for the current in the load rather than the voltage from the voltage source
+
+    if(conv->par_values.global_actuation[0] == REG_VOLTAGE_REF)
+    {
+        conv->v.ref_sat     =
+        conv->v.ref_limited =
+        conv->v.ref         = regSimVsInitHistory(&conv->sim_vs_pars, &conv->sim_vs_vars, conv->v.meas);
+    }
+    else // Actuation is CURRENT_REF
+    {
+        conv->ref_limited = meas;
+        conv->sim_load_vars.magnet_current = conv->ref_limited * conv->sim_vs_pars.gain;
+
+        regSimVsInitHistory(&conv->sim_vs_pars, &conv->sim_vs_vars, conv->sim_load_vars.magnet_current);
+    }
+
+    regConvSimulateRT(conv, 0.0);
 }
+
+
 
 void regConvInitMeas(struct reg_conv *conv, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p)
 {
@@ -186,101 +650,105 @@ void regConvInitMeas(struct reg_conv *conv, struct reg_meas_signal *v_meas_p, st
     conv->v.input_p = (v_meas_p == NULL ? &null_signal : v_meas_p);
 }
 
+
+
 // Real-Time Functions
 
-static void regConvSwitchRstParsRT(struct reg_conv_signal *conv_signal, enum reg_rst_source rst_source)
+/*!
+ * Function to prepare real-time processing each iteration for a regulation signal (Field or Current)
+ *
+ * This function is called to check if the RST coefficient have been updated by the non-real-time thread
+ * and is also able to set the iteration period when the reg_mode is NONE. This allows synchronous
+ * regulation by multiple systems.
+ *
+ * @param[in,out]     conv        Pointer to converter regulation structure
+ * @param[in]         reg_mode    Regulation signal to process (REG_FIELD or REG_CURRENT)
+ * @param[in]         unix_time   Unix_time for this iteration
+ * @param[in]         us_time     Microsecond time for this iteration
+ */
+static void regConvPrepareSignalRT(struct reg_conv *conv, enum reg_mode reg_mode, uint32_t unix_time, uint32_t us_time)
 {
-    struct reg_rst_pars *rst_pars;
+    struct reg_rst_pars    *rst_pars;
+    struct reg_conv_signal *reg_signal = reg_mode == REG_FIELD ? &conv->b : &conv->i;
 
-    // Switch operation RST parameter pointers when switch flag is active
+    // If the option of regulation for this signal is enabled
 
-    if(conv_signal->op_rst_pars.use_next_pars != 0)
+    if(reg_signal->regulation == REG_ENABLED)
     {
-        rst_pars                        = conv_signal->op_rst_pars.next;
-        conv_signal->op_rst_pars.next   = conv_signal->op_rst_pars.active;
-        conv_signal->op_rst_pars.active = rst_pars;
-        conv_signal->op_rst_pars.use_next_pars = 0;
+        // Switch operation RST parameter pointers when switch flag is active
 
-        if(rst_source == REG_OPERATIONAL_RST_PARS)
+        if(reg_signal->op_rst_pars.use_next_pars != 0)
         {
-            conv_signal->rst_pars = rst_pars;
+            rst_pars                       = reg_signal->op_rst_pars.next;
+            reg_signal->op_rst_pars.next   = reg_signal->op_rst_pars.active;
+            reg_signal->op_rst_pars.active = rst_pars;
+            reg_signal->op_rst_pars.use_next_pars = 0;
         }
-    }
 
-    // Switch test RST parameter pointers when switch flag is active
+        // Switch test RST parameter pointers when switch flag is active
 
-    if(conv_signal->test_rst_pars.use_next_pars != 0)
-    {
-        rst_pars                          = conv_signal->test_rst_pars.next;
-        conv_signal->test_rst_pars.next   = conv_signal->test_rst_pars.active;
-        conv_signal->test_rst_pars.active = rst_pars;
-        conv_signal->test_rst_pars.use_next_pars = 0;
-
-        if(rst_source == REG_TEST_RST_PARS)
+        if(reg_signal->test_rst_pars.use_next_pars != 0)
         {
-            conv_signal->rst_pars = rst_pars;
+            rst_pars                         = reg_signal->test_rst_pars.next;
+            reg_signal->test_rst_pars.next   = reg_signal->test_rst_pars.active;
+            reg_signal->test_rst_pars.active = rst_pars;
+            reg_signal->test_rst_pars.use_next_pars = 0;
+        }
+
+        // Set rst_pars pointer to link to the active RST parameters (operational or test)
+
+        reg_signal->rst_pars = conv->reg_rst_source == REG_OPERATIONAL_RST_PARS ? reg_signal->op_rst_pars.active : reg_signal->test_rst_pars.active;
+
+        // Increment iteration counter for this new iteration
+
+        reg_signal->iteration_counter++;
+
+        // Set regulation iteration counter from the time when reg_mode is NONE
+
+        if(conv->reg_mode == REG_NONE)
+        {
+            /*!
+             * If multiple systems must synchronize their regulation periods, then the regulation
+             * period (reg_period_iters * iter_period_us) should divide into 12s exactly.
+             * This awk script lists the periods in microseconds from 100us to 10000us (10kHz to 10Hz) that do this:
+             *     awk 'BEGIN { for(us=100 ; us<=100000 ; us++) { g = 12000000/us; if (int(g) == g) print us}}'
+             */
+
+            reg_signal->iteration_counter = ((((unix_time % 12) * 1000000) + us_time) / conv->iter_period_us) % reg_signal->reg_period_iters;
         }
     }
 }
 
-void regConvSetModeRT(struct reg_conv *conv, enum reg_mode reg_mode, enum reg_rst_source rst_source, uint32_t iteration_counter)
-{
-    // Switch RST parameters when required by non-real-time thread
 
-    regConvSwitchRstParsRT(&conv->b, conv->reg_rst_source);
-    regConvSwitchRstParsRT(&conv->i, conv->reg_rst_source);
-
-    // If regulation mode has changed
-
-    if(reg_mode != conv->reg_mode)
-    {
-        switch(reg_mode)
-        {
-            case REG_NONE:
-            case REG_VOLTAGE:
-
-                regConvSetModeNoneOrVoltageRT(conv, reg_mode);
-                break;
-
-            default:    // CURRENT or FIELD
-
-                regConvSetModeFieldOrCurrentRT(conv, reg_mode, iteration_counter);
-                break;
-        }
-
-        // Store the new regulation mode
-
-        conv->reg_mode = reg_mode;
-    }
-
-    // Reset max abs error whenever regSetMode is called, even if the mode doesn't change
-
-    conv->i.err.max_abs_err = conv->b.err.max_abs_err = 0.0;
-}
 
 static void regConvSetModeNoneOrVoltageRT(struct reg_conv *conv, enum reg_mode reg_mode)
 {
     if(reg_mode == REG_VOLTAGE)
     {
-        // Voltage regulation - Initialise voltage references according to previous regulation mode
+        // Voltage regulation - Initialize voltage references according to previous regulation mode
 
         switch(conv->reg_mode)
         {
             case REG_FIELD:
 
-                conv->v.ref = regRstAverageVrefRT(&conv->rst_vars);
+                conv->v.ref     = regRstAverageVrefRT(&conv->b.rst_vars);
                 conv->v.ref_sat = conv->v.ref;
+
+                regErrResetLimitsVarsRT(&conv->b.err, 0);
                 break;
 
             case REG_CURRENT:
 
-                conv->v.ref = regRstAverageVrefRT(&conv->rst_vars);
-                conv->v.ref_sat = regLoadVrefSatRT(&conv->load_pars, conv->rst_vars.meas[0], conv->v.ref);
+                conv->v.ref     = regRstAverageVrefRT(&conv->i.rst_vars);
+                conv->v.ref_sat = regLoadVrefSatRT(&conv->load_pars, conv->i.rst_vars.meas[0], conv->v.ref);
+
+                regErrResetLimitsVarsRT(&conv->i.err, 0);
                 break;
 
             default:    // NONE
 
                 conv->v.ref_sat = conv->v.ref;
+                regErrResetLimitsVarsRT(&conv->i.err, REG_INHIBIT_MAX_ABS_ERR_ITERATIONS);
                 break;
         }
 
@@ -291,28 +759,31 @@ static void regConvSetModeNoneOrVoltageRT(struct reg_conv *conv, enum reg_mode r
         conv->v.ref         = 0.0;
         conv->v.ref_sat     = 0.0;
         conv->v.ref_limited = 0.0;
+
+        regErrResetLimitsVarsRT(&conv->b.err, 0);
+        regErrResetLimitsVarsRT(&conv->i.err, 0);
+        regErrResetLimitsVarsRT(&conv->v.err, 0);
     }
 
     // Clear field and current regulation variables
 
-    conv->meas        = 0.0;
-    conv->ref         = 0.0;
-    conv->ref_limited = 0.0;
-    conv->ref_rst     = 0.0;
-    conv->ref_delayed = 0.0;
+    conv->meas                = 0.0;
+    conv->ref                 = 0.0;
+    conv->ref_limited         = 0.0;
+    conv->ref_rst             = 0.0;
+    conv->ref_openloop        = 0.0;
+    conv->ref_delayed         = 0.0;
+    conv->track_delay_periods = 0.0;
 
-    conv->iteration_counter = 0;
-    conv->flags.ref_clip    = 0;
-    conv->flags.ref_rate    = 0;
+    conv->flags.ref_clip      = 0;
+    conv->flags.ref_rate      = 0;
 
-    conv->rst_vars.meas_track_delay_periods = 0.0;
     conv->ref_advance = conv->iter_period * (conv->sim_vs_pars.v_ref_delay_iters + conv->sim_vs_pars.vs_delay_iters);
-
-    regErrResetLimitsVarsRT(&conv->i.err);
-    regErrResetLimitsVarsRT(&conv->b.err);
 }
 
-static void regConvSetModeFieldOrCurrentRT(struct reg_conv *conv, enum reg_mode reg_mode, uint32_t iteration_counter)
+
+
+static void regConvSetModeFieldOrCurrentRT(struct reg_conv *conv, enum reg_mode reg_mode)
 {
     uint32_t                idx;
     float                   ref_offset;
@@ -320,52 +791,50 @@ static void regConvSetModeFieldOrCurrentRT(struct reg_conv *conv, enum reg_mode 
     float                   v_ref;
     struct reg_conv_signal *reg_signal;
     struct reg_rst_pars    *rst_pars;
-    struct reg_rst_vars    *rst_vars = &conv->rst_vars;
+    struct reg_rst_vars    *rst_vars;
 
-    // If closing loop on current, adjust v_ref for magnet saturation assuming current is invariant.
-    // This assumes it is unlikely that the current regulation will start with the current ramping
-    // fast while deep into the magnet saturation zone.
+    // Get points to RST parameters and variables
 
     reg_signal = conv->reg_signal = (reg_mode == REG_FIELD ? &conv->b : &conv->i);
-
-    rst_pars         = reg_signal->rst_pars;
-    conv->reg_period = rst_pars->reg_period;
+    rst_vars   = &reg_signal->rst_vars;
+    rst_pars   = reg_signal->rst_pars;
 
     // If actuation is CURRENT_REF then current regulation is open-loop in libreg
 
-    if(conv->actuation == REG_CURRENT_REF )
+    if(conv->par_values.global_actuation[0] == REG_CURRENT_REF)
     {
         regConvSetModeNoneOrVoltageRT(conv, REG_NONE);
 
         rst_pars->ref_delay_periods = conv->ref_advance / conv->iter_period;
 
-        conv->meas = reg_signal->meas.signal[reg_signal->meas.reg_select];
+        conv->reg_period = conv->iter_period;
+        conv->meas       = reg_signal->meas.signal[reg_signal->meas.reg_select];
 
         for(idx = 0; idx <= REG_RST_HISTORY_MASK; idx++)
         {
-            rst_vars->act [idx] = 0.0;
-            rst_vars->meas[idx] = conv->meas;
-            rst_vars->ref [idx] = conv->meas;
+            rst_vars->act         [idx] = 0.0;
+            rst_vars->meas        [idx] = conv->meas;
+            rst_vars->ref         [idx] = conv->meas;
+            rst_vars->openloop_ref[idx] = conv->meas;
         }
     }
     else // Actuation is VOLTAGE_REF
     {
+        conv->reg_period = rst_pars->reg_period;
         rate  = (conv->reg_mode != REG_NONE    ? reg_signal->rate.estimate : 0.0);
         v_ref = (conv->reg_mode == REG_CURRENT ? regLoadInverseVrefSatRT(&conv->load_pars, conv->i.meas.signal[REG_MEAS_UNFILTERED], conv->v.ref_limited) :
-                                                      conv->v.ref_limited);
+                                                 conv->v.ref_limited);
 
-        conv->meas        = reg_signal->meas.signal[reg_signal->meas.reg_select] - rate * iteration_counter * conv->iter_period;
+        conv->meas        = reg_signal->meas.signal[reg_signal->meas.reg_select] - rate * reg_signal->iteration_counter * conv->iter_period;
         conv->ref_advance = rst_pars->track_delay_periods * rst_pars->reg_period - reg_signal->meas.delay_iters[reg_signal->meas.reg_select] * conv->iter_period;
 
         rst_pars->ref_delay_periods = rst_pars->track_delay_periods +
                                      (reg_signal->meas.delay_iters[REG_MEAS_FILTERED] - reg_signal->meas.delay_iters[reg_signal->meas.reg_select]) /
-                                     (float)rst_pars->reg_period_iters;
+                                     (float)reg_signal->reg_period_iters;
 
-        regErrResetLimitsVarsRT(&reg_signal->err);
+        regErrResetLimitsVarsRT(&reg_signal->err, REG_INHIBIT_MAX_ABS_ERR_ITERATIONS);
 
         // Prepare RST histories - assuming that v_ref has been constant when calculating rate
-
-        conv->iteration_counter = iteration_counter;
 
         ref_offset  = rate * conv->ref_advance;
 
@@ -381,17 +850,26 @@ static void regConvSetModeFieldOrCurrentRT(struct reg_conv *conv, enum reg_mode 
 
     rst_vars->history_index = idx - 1;
 
-    conv->ref_delayed = regRstDelayedRefRT(rst_pars, &conv->rst_vars, 0);
+    conv->ref_delayed = regRstDelayedRefRT(rst_pars, &reg_signal->rst_vars, 0);
 
     conv->ref = conv->ref_limited = conv->ref_rst = rst_vars->ref[rst_vars->history_index];
 }
 
-uint32_t regConvSetMeasRT(struct reg_conv *conv, uint32_t use_sim_meas)
-{
-    // Switch RST parameters when required by non-real-time thread
 
-    regConvSwitchRstParsRT(&conv->b, conv->reg_rst_source);
-    regConvSwitchRstParsRT(&conv->i, conv->reg_rst_source);
+
+uint32_t regConvSetMeasRT(struct reg_conv *conv, enum reg_rst_source reg_rst_source, uint32_t unix_time, uint32_t us_time, uint32_t use_sim_meas)
+{
+    uint32_t iteration_counter;
+    float    i_meas_unfiltered;
+
+    // Receive reg_rst_source for this iteration
+
+    conv->reg_rst_source = reg_rst_source;
+
+    // Check for new RST parameters and manage iteration counters
+
+    regConvPrepareSignalRT(conv, REG_FIELD,   unix_time, us_time);
+    regConvPrepareSignalRT(conv, REG_CURRENT, unix_time, us_time);
 
     // Use simulated or real measurements as required
 
@@ -416,18 +894,41 @@ uint32_t regConvSetMeasRT(struct reg_conv *conv, uint32_t use_sim_meas)
         conv->v.input.status = REG_MEAS_SIGNAL_OK;
     }
 
-    // Update iteration counter based on regulation mode
+    // If regulating CURRENT or FIELD then calculate the delayed reference
 
     if(conv->reg_mode == REG_CURRENT || conv->reg_mode == REG_FIELD)
     {
-        // Calculate delayed reference to use below with regulation error calculation
+        // Note that regRstDelayedRefRT requires the iteration counter to run from 1 - reg_period_iters so it is
+        // used after incrementing in regConvSignalRT() and before being wrapped
 
-        conv->ref_delayed = regRstDelayedRefRT(conv->reg_signal->rst_pars, &conv->rst_vars, ++conv->iteration_counter);
+        conv->ref_delayed = regRstDelayedRefRT(conv->reg_signal->rst_pars, &conv->reg_signal->rst_vars, conv->reg_signal->iteration_counter);
+    }
 
-        if(conv->iteration_counter >= conv->reg_signal->rst_pars->reg_period_iters)
-        {
-            conv->iteration_counter = 0;
-        }
+    // Wrap iteration counters
+
+    if(conv->i.iteration_counter >= conv->i.reg_period_iters)
+    {
+        conv->i.iteration_counter = 0;
+    }
+
+    if(conv->b.iteration_counter >= conv->b.reg_period_iters)
+    {
+        conv->b.iteration_counter = 0;
+    }
+
+    // Prepare to return the iteration counter for the active regulation mode
+
+    if(conv->reg_mode == REG_CURRENT)
+    {
+        iteration_counter = conv->i.iteration_counter;
+    }
+    else if(conv->reg_mode == REG_FIELD)
+    {
+        iteration_counter = conv->b.iteration_counter;
+    }
+    else // REG_NONE or REG_VOLTAGE
+    {
+        iteration_counter = 0;
     }
 
     // Check voltage measurement
@@ -452,196 +953,267 @@ uint32_t regConvSetMeasRT(struct reg_conv *conv, uint32_t use_sim_meas)
         {
             // If regulating current then use delayed ref adjusted by the regulation error as the measurement
 
-            conv->i.meas.signal[REG_MEAS_UNFILTERED] = conv->ref_delayed - conv->i.err.err;
+            i_meas_unfiltered = conv->i.meas.signal[REG_MEAS_UNFILTERED] = conv->ref_delayed - conv->i.err.err;
         }
         else
         {
             // If not regulating current then extrapolate previous value using the current rate of change
 
-            conv->i.meas.signal[REG_MEAS_UNFILTERED] += conv->i.rate.estimate * conv->iter_period;
+            i_meas_unfiltered = conv->i.meas.signal[REG_MEAS_UNFILTERED] += conv->i.rate.estimate * conv->iter_period;
         }
 
         conv->i.invalid_input_counter++;
     }
     else
     {
-        conv->i.meas.signal[REG_MEAS_UNFILTERED] = conv->i.input.signal;
+        i_meas_unfiltered = conv->i.meas.signal[REG_MEAS_UNFILTERED] = conv->i.input.signal;
     }
 
-    // Check field measurement
+    // Filter the current measurement and prepare to estimate the measurement rate
 
-    if(conv->b.input.status != REG_MEAS_SIGNAL_OK)
+    regMeasFilterRT(&conv->i.meas);
+    regMeasRateRT  (&conv->i.rate, conv->i.meas.signal[REG_MEAS_FILTERED],
+                     conv->i.rst_pars->reg_period, conv->i.reg_period_iters);
+
+    // Check current measurement and RMS limits
+
+    regLimMeasRT   (&conv->i.lim_meas,     i_meas_unfiltered);
+    regLimMeasRmsRT(&conv->lim_i_rms,      i_meas_unfiltered);
+    regLimMeasRmsRT(&conv->lim_i_rms_load, i_meas_unfiltered);
+
+    // Update RST history index and store new measurement
+
+    if(conv->i.iteration_counter == 0)
     {
-        if(conv->reg_mode == REG_FIELD)
-        {
-            // If regulating field then use delayed ref adjusted by the regulation error as the measurement
+        regRstIncHistoryIndexRT(&conv->i.rst_vars);
+        conv->i.rst_vars.meas[conv->i.rst_vars.history_index] = conv->i.meas.signal[conv->i.meas.reg_select];
+    }
 
-            conv->b.meas.signal[REG_MEAS_UNFILTERED] = conv->ref_delayed - conv->b.err.err;
+    // Check field measurement if option of field regulation is ENABLED
+
+    if(conv->b.regulation == REG_ENABLED)
+    {
+        if(conv->b.input.status != REG_MEAS_SIGNAL_OK)
+        {
+            if(conv->reg_mode == REG_FIELD)
+            {
+                // If regulating field then use delayed ref adjusted by the regulation error as the measurement
+
+                conv->b.meas.signal[REG_MEAS_UNFILTERED] = conv->ref_delayed - conv->b.err.err;
+            }
+            else
+            {
+                // If not regulating current then extrapolate previous value using the current rate of change
+
+                conv->b.meas.signal[REG_MEAS_UNFILTERED] += conv->b.rate.estimate * conv->iter_period;
+            }
+
+            conv->b.invalid_input_counter++;
         }
         else
         {
-            // If not regulating current then extrapolate previous value using the current rate of change
-
-            conv->b.meas.signal[REG_MEAS_UNFILTERED] += conv->b.rate.estimate * conv->iter_period;
+            conv->b.meas.signal[REG_MEAS_UNFILTERED] = conv->b.input.signal;
         }
 
-        conv->b.invalid_input_counter++;
+        // Filter the field measurement, prepare to estimate measurement rate and apply limits
+
+        regMeasFilterRT(&conv->b.meas);
+        regMeasRateRT  (&conv->b.rate,conv->b.meas.signal[REG_MEAS_FILTERED],
+                         conv->b.rst_pars->reg_period,conv->b.reg_period_iters);
+        regLimMeasRT   (&conv->b.lim_meas, conv->b.meas.signal[REG_MEAS_UNFILTERED]);
+
+        // Update RST history index and store new measurement
+
+        if(conv->b.iteration_counter == 0)
+        {
+            regRstIncHistoryIndexRT(&conv->b.rst_vars);
+
+            conv->b.rst_vars.meas[conv->b.rst_vars.history_index] = conv->b.meas.signal[conv->b.meas.reg_select];
+        }
     }
-    else
-    {
-        conv->b.meas.signal[REG_MEAS_UNFILTERED] = conv->b.input.signal;
-    }
 
-    // Check current measurement limits
+    // When actuation is VOLTAGE_REF and the converter is running, then manage the voltage related limits
 
-    regLimMeasRT(&conv->i.lim_meas, conv->i.meas.signal[REG_MEAS_UNFILTERED]);
-
-    // Check field measurement limits only when regulating field
-
-    if(conv->reg_mode == REG_FIELD)
-    {
-        regLimMeasRT(&conv->b.lim_meas, conv->b.meas.signal[REG_MEAS_UNFILTERED]);
-    }
-
-    // When actuation is VOLTAGE_REF, then manage the voltage related limits
-
-    if(conv->actuation == REG_VOLTAGE_REF)
+    if(conv->par_values.global_actuation[0] == REG_VOLTAGE_REF && conv->reg_mode != REG_NONE)
     {
         // Calculate and check the voltage regulation limits
 
-        regErrCheckLimitsRT(&conv->v.err, 1, 1, conv->v.err.delayed_ref, conv->v.meas);
+        regErrCheckLimitsRT(&conv->v.err, conv->v.err.delayed_ref, conv->v.meas);
 
         // Calculate voltage reference limits for the measured current (V limits can depend on current)
 
-        regLimVrefCalcRT(&conv->v.lim_ref, conv->i.meas.signal[REG_MEAS_UNFILTERED]);
+        regLimVrefCalcRT(&conv->v.lim_ref, i_meas_unfiltered);
     }
 
-    // Filter the field and current measurements and prepare to estimate measurement rate
-
-    regMeasFilterRT(&conv->b.meas);
-    regMeasRateRT  (&conv->b.rate,conv->b.meas.signal[REG_MEAS_FILTERED],conv->b.rst_pars->reg_period,conv->b.rst_pars->reg_period_iters);
-
-    regMeasFilterRT(&conv->i.meas);
-    regMeasRateRT  (&conv->i.rate,conv->i.meas.signal[REG_MEAS_FILTERED],conv->i.rst_pars->reg_period,conv->i.rst_pars->reg_period_iters);
-
-    return(conv->iteration_counter);
+    return(iteration_counter);
 }
 
-uint32_t regConvRegulateRT(struct reg_conv *conv,
-                           float           *ref,
-                           uint32_t         enable_max_abs_err)
+
+
+void regConvSetModeRT(struct reg_conv *conv, enum reg_mode reg_mode)
 {
-    uint32_t    history_index;
-    struct reg_conv_signal *reg_signal = conv->reg_signal;  // Pointer to currently regulated signal structure (conv->b or conv->i)
+    // If regulation mode has changed
 
-    // If actuation is CURRENT_REF then control is open loop so just apply current reference limits
-
-    if(conv->actuation == REG_CURRENT_REF)
+    if(reg_mode != conv->reg_mode)
     {
-        conv->ref         = *ref;
-        conv->ref_limited = regLimRefRT(&conv->i.lim_ref, conv->iter_period, conv->ref, conv->ref_limited);
-        conv->meas        = reg_signal->meas.signal[reg_signal->meas.reg_select];
-
-        // Store ref_limited in RST history to allow delayed reference calculation and
-        // store meas in RST history to allow delay to be removed when logging
-
-        regRstIncHistoryIndexRT(&conv->rst_vars);
-        history_index = conv->rst_vars.history_index;
-        conv->rst_vars.ref [history_index] = conv->ref_limited;
-        conv->rst_vars.meas[history_index] = conv->meas;
-    }
-    else // Actuation is VOLTAGE_REF
-    {
-        switch(conv->reg_mode)
+        switch(reg_mode)
         {
-        case REG_NONE:
+            case REG_NONE:
+            case REG_VOLTAGE:
 
-            break;
+                regConvSetModeNoneOrVoltageRT(conv, reg_mode);
+                break;
 
-        case REG_VOLTAGE:
+            case REG_CURRENT:
+            case REG_FIELD:
 
-            conv->v.ref = conv->v.ref_sat = *ref;
+                regConvSetModeFieldOrCurrentRT(conv, reg_mode);
+                break;
+        }
 
-            conv->v.ref_limited = regLimRefRT(&conv->v.lim_ref, conv->iter_period, conv->v.ref, conv->v.ref_limited);
+        // Store the new regulation mode
 
-            conv->flags.ref_clip = conv->v.lim_ref.flags.clip;
-            conv->flags.ref_rate = conv->v.lim_ref.flags.rate;
+        conv->reg_mode = reg_mode;
+    }
+}
 
-            *ref = conv->v.ref_limited;
-            break;
 
-        default: // REG_CURRENT or REG_FIELD
 
-            // Regulate current or field at the regulation period
+void regConvRegulateSignalRT(struct reg_conv *conv, enum reg_mode reg_mode, float *ref)
+{
+    struct reg_conv_signal *reg_signal = reg_mode == REG_FIELD ? &conv->b : &conv->i;
 
-            if(conv->iteration_counter == 0)
+    if(reg_signal->regulation == REG_ENABLED)
+    {
+        // If voltage reference was already calculated, ref will equal NULL
+
+        if(ref == NULL)
+        {
+            // Save voltage reference in RST actuation history - compensate for magnet saturation for CURRENT regulation
+
+            if(reg_signal->iteration_counter == 0)
             {
-                float v_ref;
-                float unfiltered_meas;
-
-                conv->ref       = *ref;
-                conv->meas      = reg_signal->meas.signal[reg_signal->meas.reg_select];
-                unfiltered_meas = conv->i.meas.signal[REG_MEAS_UNFILTERED];
-                regRstIncHistoryIndexRT(&conv->rst_vars);
+                reg_signal->rst_vars.act[reg_signal->rst_vars.history_index] = reg_mode == REG_CURRENT ?
+                        regLoadInverseVrefSatRT(&conv->load_pars, conv->i.meas.signal[REG_MEAS_UNFILTERED], conv->v.ref_limited) :
+                        conv->v.ref_limited;
+            }
+        }
+        else
+        {
+            if(reg_signal->iteration_counter == 0)
+            {
+                conv->ref  = *ref;
+                conv->meas = reg_signal->meas.signal[reg_signal->meas.reg_select];
 
                 // Apply current reference clip and rate limits
 
                 conv->ref_limited = regLimRefRT(&reg_signal->lim_ref, conv->reg_period, conv->ref, conv->ref_limited);
 
-                // Calculate voltage reference using RST algorithm
+                // If Actuation is VOLTAGE_REF
 
-                conv->v.ref = regRstCalcActRT(reg_signal->rst_pars, &conv->rst_vars, conv->ref_limited, conv->meas);
-
-                // Calculate magnet saturation compensation when regulating current only
-
-                conv->v.ref_sat = (conv->reg_mode == REG_CURRENT ? regLoadVrefSatRT(&conv->load_pars, unfiltered_meas, conv->v.ref) : conv->v.ref);
-
-                // Apply voltage reference clip and rate limits
-
-                conv->v.ref_limited = regLimRefRT(&conv->v.lim_ref, conv->reg_period, conv->v.ref_sat, conv->v.ref_limited);
-
-                // If voltage reference has been clipped
-
-                if(conv->v.lim_ref.flags.clip || conv->v.lim_ref.flags.rate)
+                if(conv->par_values.global_actuation[0] == REG_VOLTAGE_REF)
                 {
-                    // Back calculate the new v_ref before the saturation compensation when regulating current only
+                    float v_ref;
 
-                    v_ref = (conv->reg_mode == REG_CURRENT ? regLoadInverseVrefSatRT(&conv->load_pars, unfiltered_meas, conv->v.ref_limited) : conv->v.ref_limited);
+                    // Calculate voltage reference using RST algorithm
 
-                    // Back calculate new current reference to keep RST histories balanced
+                    conv->v.ref = regRstCalcActRT(reg_signal->rst_pars, &reg_signal->rst_vars, conv->ref_limited);
 
-                    conv->ref_rst = regRstCalcRefRT(reg_signal->rst_pars, &conv->rst_vars, v_ref, conv->meas);
+                    // Calculate magnet saturation compensation when regulating current only
 
-                    // Mark current reference as rate limited
+                    conv->v.ref_sat = (reg_mode == REG_CURRENT ? regLoadVrefSatRT(&conv->load_pars, conv->i.meas.signal[REG_MEAS_UNFILTERED], conv->v.ref) : conv->v.ref);
 
-                    reg_signal->lim_ref.flags.rate = 1;
+                    // Apply voltage reference clip and rate limits
+
+                    conv->v.ref_limited = regLimRefRT(&conv->v.lim_ref, conv->reg_period, conv->v.ref_sat, conv->v.ref_limited);
+
+                    // If voltage reference has been clipped
+
+                    if(conv->v.lim_ref.flags.clip || conv->v.lim_ref.flags.rate)
+                    {
+                        // Back calculate the new v_ref before the saturation compensation when regulating current only
+
+                        v_ref = (reg_mode == REG_CURRENT ? regLoadInverseVrefSatRT(&conv->load_pars, conv->i.meas.signal[REG_MEAS_UNFILTERED], conv->v.ref_limited) : conv->v.ref_limited);
+
+                        // Back calculate new current reference to keep RST histories balanced
+
+                        conv->ref_rst = regRstCalcRefRT(reg_signal->rst_pars, &reg_signal->rst_vars, v_ref);
+
+                        // Mark current reference as rate limited
+
+                        reg_signal->lim_ref.flags.rate = 1;
+                    }
+                    else
+                    {
+                        conv->ref_rst = conv->ref_limited;
+                    }
+
+                    conv->flags.ref_clip = reg_signal->lim_ref.flags.clip;
+                    conv->flags.ref_rate = reg_signal->lim_ref.flags.rate;
+
+                    conv->track_delay_periods = regRstTrackDelayRT(&conv->reg_signal->rst_vars);
+
+                    *ref = conv->ref_rst;
                 }
-                else
+                else // Actuation is CURRENT_REF
                 {
-                    conv->ref_rst = conv->ref_limited;
+                    conv->i.rst_vars.ref[conv->i.rst_vars.history_index] = conv->ref_limited;
                 }
-
-                conv->flags.ref_clip = reg_signal->lim_ref.flags.clip;
-                conv->flags.ref_rate = reg_signal->lim_ref.flags.rate;
-
-                regRstTrackDelayRT(&conv->rst_vars, conv->reg_period,reg_signal->lim_ref.rate_clip);
-
-                *ref = conv->ref_rst;
             }
 
             // Monitor regulation error using the delayed reference and the filtered measurement
 
-            if(reg_signal->err_rate == REG_ERR_RATE_MEASUREMENT || conv->iteration_counter == 0)
+            if(conv->par_values.global_reg_err_rate[0] == REG_ERR_RATE_MEASUREMENT || reg_signal->iteration_counter == 0)
             {
-                regErrCheckLimitsRT(&reg_signal->err, 1, enable_max_abs_err,
-                                    conv->ref_delayed, reg_signal->meas.signal[REG_MEAS_FILTERED]);
+                regErrCheckLimitsRT(&reg_signal->err, conv->ref_delayed, reg_signal->meas.signal[REG_MEAS_FILTERED]);
             }
-            break;
         }
-     }
-
-    return(conv->iteration_counter == 0);
+    }
 }
+
+
+void regConvRegulateRT(struct reg_conv *conv, float *ref)
+{
+    switch(conv->reg_mode)
+    {
+    case REG_NONE:
+
+        break;
+
+    case REG_VOLTAGE:
+
+        // *ref is a voltage reference so just apply limits
+
+        conv->v.ref_sat = conv->v.ref = *ref;
+
+        conv->v.ref_limited = regLimRefRT(&conv->v.lim_ref, conv->iter_period, conv->v.ref, conv->v.ref_limited);
+
+        conv->flags.ref_clip = conv->v.lim_ref.flags.clip;
+        conv->flags.ref_rate = conv->v.lim_ref.flags.rate;
+
+        *ref = conv->v.ref_limited;
+
+        // Keep RST act history up to date for field and current regulation
+
+        regConvRegulateSignalRT(conv, REG_FIELD,   NULL);
+        regConvRegulateSignalRT(conv, REG_CURRENT, NULL);
+        break;
+
+     case REG_CURRENT:
+
+         regConvRegulateSignalRT(conv, REG_CURRENT, ref);
+         regConvRegulateSignalRT(conv, REG_FIELD,   NULL);
+         break;
+
+     case REG_FIELD:
+
+         regConvRegulateSignalRT(conv, REG_FIELD,   ref);
+         regConvRegulateSignalRT(conv, REG_CURRENT, NULL);
+         break;
+    }
+}
+
+
 
 void regConvSimulateRT(struct reg_conv *conv, float v_perturbation)
 {
@@ -649,7 +1221,7 @@ void regConvSimulateRT(struct reg_conv *conv, float v_perturbation)
 
     // If Actuation is VOLTAGE
 
-    if(conv->actuation == REG_VOLTAGE_REF)
+    if(conv->par_values.global_actuation[0] == REG_VOLTAGE_REF)
     {
         // Simulate voltage source response to v_ref without taking into account V_REF_DELAY
 

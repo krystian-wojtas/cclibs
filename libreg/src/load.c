@@ -49,32 +49,29 @@ void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, flo
     if(ohms_par > 1.0E-10)     // Rp greater than zero (magnet included in circuit)
     {
         load->ohms1 = 1.0 + ohms_ser / ohms_par;
-        load->ohms2 = 1.0 / (1.0 + ohms_mag / ohms_par);
+        load->ohms2 = 1.0 + ohms_mag / ohms_par;
         load->ohms  = ohms_mag + ohms_ser / load->ohms1;
 
         load->gain0 = 1.0 / (ohms_par * load->ohms1);
-        load->gain2 = 1.0 / (ohms_ser + ohms_mag / (1.0 + ohms_mag / ohms_par));
+        load->gain2 = 1.0 / (ohms_ser + ohms_mag / load->ohms2);
         load->gain1 = load->gain2 - load->gain0;
+        load->gain3 = 1.0 / load->ohms2;
 
         load->tc    = load->henrys / load->ohms;
     }
     else                       // Rp is effectively zero (i.e. no magnet in the circuit)
     {
-        load->ohms2  = 0.0;
+        load->ohms2  = 1.0E30;
         load->ohms   = ohms_ser;
 
         load->gain0  = 1.0 / ohms_ser;
         load->gain1  = 0.0;
         load->gain2  = load->gain0;
+        load->gain3  = 0.0;
 
         load->tc     = 1.0E-20;
         load->henrys = 0.0;
     }
-
-    // gain10 is not used in the library but indicates to the application the significance of
-    // the parallel resistance.  If gain10 > 10 then the parallel resistor is not significant.
-
-    load->gain10 = load->gain1 / load->gain0;
 
     // Clip inv_henrys to avoid infinity
 

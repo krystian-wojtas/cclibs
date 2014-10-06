@@ -51,8 +51,8 @@ CCPARS_GLOBAL_EXT struct ccpars_enum reg_meas_select[]
 
 struct ccpars_meas
 {
-    uint32_t                b_reg_select;               // Field   measurement for regulation selector
-    uint32_t                i_reg_select;               // Current measurement for regulation selector
+    enum reg_meas_select    b_reg_select;               // Field   measurement for regulation selector
+    enum reg_meas_select    i_reg_select;               // Current measurement for regulation selector
 
     float                   b_delay_iters;              // Field   measurement delay in iterations
     float                   i_delay_iters;              // Current measurement delay in iterations

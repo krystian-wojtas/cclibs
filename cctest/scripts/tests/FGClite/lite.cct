@@ -2,7 +2,7 @@
 
 GLOBAL RUN_DELAY                1.0
 GLOBAL STOP_DELAY               1.0
-GLOBAL ITER_PERIOD              1.0E-3
+GLOBAL ITER_PERIOD_US           1000
 GLOBAL FUNCTION                 PLEP
 GLOBAL STOP_ON_ERROR            ENABLED
 GLOBAL REG_MODE                 CURRENT
@@ -59,8 +59,8 @@ MEAS INVALID_MEAS_PERIOD_ITERS  0
 
 # Current regulation
 
-IREG AUXPOLE1_HZ                2
-IREG AUXPOLES2_HZ               2
+IREG AUXPOLE1_HZ                1
+IREG AUXPOLES2_HZ               1
 IREG AUXPOLES2_Z                0.5
 
 # PLEP function

@@ -40,15 +40,15 @@
 
 struct ccpars_table
 {
-    // Table file data
+    // cctest TABLE parameters
 
-    float       ref [TABLE_LEN];                        // Reference array
-    float       time[TABLE_LEN];                        // Time array
+    float                       ref [TABLE_LEN];        // Reference array
+    float                       time[TABLE_LEN];        // Time array
 
-    // Libfg table variables
+    // Libfg TABLE variables
 
     struct fg_table_config      config;                 // Libfg config struct for TABLE
-    struct fg_table_pars        table_pars;             // Libfg parameters for TABLE
+    struct fg_table_pars        pars;                   // Libfg parameters for TABLE
 };
 
 CCPARS_TABLE_EXT struct ccpars_table ccpars_table

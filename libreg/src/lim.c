@@ -28,14 +28,12 @@
  */
 
 #include <math.h>
-#include "libreg/lim.h"
+#include "libreg.h"
 
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
-void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
-                    float low_lim, float zero_lim, uint32_t invert_limits)
+void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim, float low_lim, float zero_lim)
 {
-    lim_meas->invert_limits   = invert_limits;
     lim_meas->pos_trip        = pos_lim  * (1.0 + REG_LIM_TRIP);
     lim_meas->neg_trip        = neg_lim  * (1.0 + REG_LIM_TRIP);
     lim_meas->low             = low_lim;
@@ -43,72 +41,82 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
     lim_meas->low_hysteresis  = low_lim  * (1.0 - REG_LIM_HYSTERESIS);
     lim_meas->zero_hysteresis = zero_lim * (1.0 - REG_LIM_HYSTERESIS);
 
-    lim_meas->flags.trip = 0;
-    lim_meas->flags.low  = 0;
-    lim_meas->flags.zero = 0;
+    lim_meas->flags.trip = REG_DISABLED;
+    lim_meas->flags.low  = REG_DISABLED;
+    lim_meas->flags.zero = REG_DISABLED;
 }
 
-void regLimMeasRmsInit(struct reg_lim_meas *lim_meas, float rms_trip, float rms_warning, float rms_tc, float iter_period)
+
+
+void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fault, float rms_tc, float iter_period)
 {
     if(rms_tc > 0.0)
     {
-        lim_meas->meas2_filter_factor = iter_period / rms_tc;
-
-        lim_meas->rms2_trip               = rms_trip * rms_trip;
-        lim_meas->rms2_warning            = rms_warning * rms_warning;
-        lim_meas->rms2_warning_hysteresis = lim_meas->rms2_warning * (1.0 - 2.0 * REG_LIM_HYSTERESIS);
+        lim_rms->meas2_filter_factor     = iter_period / rms_tc;
+        lim_rms->rms2_fault              = rms_fault * rms_fault;
+        lim_rms->rms2_warning            = rms_warning * rms_warning;
+        lim_rms->rms2_warning_hysteresis = lim_rms->rms2_warning * (1.0 - 2.0 * REG_LIM_HYSTERESIS);
     }
     else
     {
-        lim_meas->meas2_filter_factor = 0.0;
+        lim_rms->meas2_filter_factor = 0.0;
     }
 
-    lim_meas->flags.rms_trip    = 0;
-    lim_meas->flags.rms_warning = 0;
+    lim_rms->flags.fault   = REG_DISABLED;
+    lim_rms->flags.warning = REG_DISABLED;
 }
 
-void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim,
-                   uint32_t invert_limits)
-{
-    lim_ref->invert_limits = invert_limits;
-    lim_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
-    lim_ref->max_clip      = pos_lim  * (1.0 + REG_LIM_CLIP);
 
-    // Determine if converter is unipolar or bipolar
+
+void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim, float closeloop)
+{
+    lim_ref->rate_clip = rate_lim * (1.0 + REG_LIM_CLIP);
+    lim_ref->max_clip  = pos_lim  * (1.0 + REG_LIM_CLIP);
+
+    // Determine if reference is unipolar or bipolar
 
     if(neg_lim < 0.0)
     {
-        lim_ref->flags.unipolar = 0;
-        lim_ref->min_clip = neg_lim * (1.0 + REG_LIM_CLIP);
+        lim_ref->flags.unipolar = REG_DISABLED;
+        lim_ref->min_clip       = neg_lim * (1.0 + REG_LIM_CLIP);
+        lim_ref->closeloop      = 0.0;
     }
     else
     {
-        lim_ref->flags.unipolar = 1;
+        lim_ref->flags.unipolar = REG_ENABLED;
         lim_ref->min_clip       = 0.0;
+        lim_ref->closeloop      = closeloop;
     }
 }
 
+
+
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
-                    float i_quadrants41[2], float v_quadrants41[2], uint32_t invert_limits)
+                    float i_quadrants41[2], float v_quadrants41[2])
 {
-    float delta_i_quadrants41;
+    lim_v_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
+    lim_v_ref->max_clip_user = pos_lim  * (1.0 + REG_LIM_CLIP);
 
-    lim_v_ref->invert_limits  = invert_limits;
-    lim_v_ref->flags.unipolar = (neg_lim > REG_LIM_V_DIODE);    // Set unipolar flag allowing diode voltage
-    lim_v_ref->rate_clip      = rate_lim * (1.0 + REG_LIM_CLIP);
+    // Determine if converter is unipolar or bipolar in voltage
 
-    // Set max/min user clip limits
+    if(neg_lim < 0.0)
+    {
+        lim_v_ref->flags.unipolar = REG_DISABLED;
+        lim_v_ref->min_clip_user  = neg_lim * (1.0 + REG_LIM_CLIP);
+    }
+    else
+    {
+        lim_v_ref->flags.unipolar = REG_ENABLED;
+        lim_v_ref->min_clip_user  = 0.0;
+    }
 
-    lim_v_ref->max_clip_user = pos_lim * (1.0 + REG_LIM_CLIP);
-    lim_v_ref->min_clip_user = neg_lim * (1.0 + REG_LIM_CLIP);
-
-    // Disable Q41 exclusion zone before changing to avoid real-time thread have inconsistent values
+    // Disable Q41 exclusion zone before changing to avoid real-time thread having inconsistent values
 
     lim_v_ref->i_quadrants41_max = -1.0E10;
 
     // Quadrants 41 exclusion zone: At least a 1A spread is needed to activate Q41 limiter
 
-    delta_i_quadrants41 = i_quadrants41[1] - i_quadrants41[0];
+    float delta_i_quadrants41 = i_quadrants41[1] - i_quadrants41[0];
 
     if(delta_i_quadrants41 >= 1.0)
     {
@@ -125,6 +133,8 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
     regLimVrefCalcRT(lim_v_ref, 0.0);
 }
 
+
+
 // Real-Time Functions
 
 void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
@@ -133,7 +143,7 @@ void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
 
     // Invert measurement if limits are inverted
 
-    if(lim_meas->invert_limits != 0)
+    if(lim_meas->invert_limits == REG_ENABLED)
     {
         meas = -meas;
     }
@@ -142,87 +152,98 @@ void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
 
     if((meas > lim_meas->pos_trip) || (lim_meas->neg_trip < 0.0 && meas < lim_meas->neg_trip))
     {
-        lim_meas->flags.trip = 1;
+        lim_meas->flags.trip = REG_ENABLED;
     }
     else
     {
-        lim_meas->flags.trip = 0;
-    }
-    
-    // RMS measurement test
-
-    if(lim_meas->meas2_filter_factor > 0.0)
-    {
-        // Use first order filter on measurement squared
-
-        lim_meas->meas2_filter += (meas * meas - lim_meas->meas2_filter) * lim_meas->meas2_filter_factor;
-
-        // Apply trip limit if defined
-
-        if(lim_meas->rms2_trip > 0.0 && lim_meas->meas2_filter > lim_meas->rms2_trip)
-        {
-            lim_meas->flags.rms_trip = 1;
-        }
-        else
-        {
-            lim_meas->flags.rms_trip = 0;
-        }
-
-        // Apply warning limit (with hysteresis if defined)
-
-        if(lim_meas->rms2_warning > 0.0)
-        {
-            if(lim_meas->flags.rms_warning == 0)
-            {
-                if(lim_meas->meas2_filter > lim_meas->rms2_warning)
-                {
-                    lim_meas->flags.rms_warning = 1;
-                }
-            }
-            else
-            {
-                if(lim_meas->meas2_filter < lim_meas->rms2_warning_hysteresis)
-                {
-                    lim_meas->flags.rms_warning = 0;
-                }
-            }
-        }
+        lim_meas->flags.trip = REG_DISABLED;
     }
 
     // Zero flag
 
-    if(lim_meas->flags.zero)
+    if(lim_meas->zero > 0.0)
     {
-        if(abs_meas > lim_meas->zero)
+        if(lim_meas->flags.zero == REG_ENABLED)
         {
-            lim_meas->flags.zero = 0;
+            if(abs_meas > lim_meas->zero)
+            {
+                lim_meas->flags.zero = REG_DISABLED;
+            }
         }
-    }
-    else
-    {
-        if(abs_meas < lim_meas->zero_hysteresis)
+        else
         {
-            lim_meas->flags.zero = 1;
+            if(abs_meas < lim_meas->zero_hysteresis)
+            {
+                lim_meas->flags.zero = REG_ENABLED;
+            }
         }
     }
 
     // Low flag
 
-    if(lim_meas->flags.low)
+    if(lim_meas->low > 0.0)
     {
-        if(abs_meas > lim_meas->low)
+        if(lim_meas->flags.low)
         {
-            lim_meas->flags.low = 0;
+            if(abs_meas > lim_meas->low)
+            {
+                lim_meas->flags.low = REG_DISABLED;
+            }
         }
-    }
-    else
-    {
-        if(abs_meas < lim_meas->low_hysteresis)
+        else
         {
-            lim_meas->flags.low = 1;
+            if(abs_meas < lim_meas->low_hysteresis)
+            {
+                lim_meas->flags.low = REG_ENABLED;
+            }
         }
     }
 }
+
+
+
+void regLimMeasRmsRT(struct reg_lim_rms *lim_rms, float meas)
+{
+    if(lim_rms->meas2_filter_factor > 0.0)
+    {
+        // Use first order filter on measurement squared
+
+        lim_rms->meas2_filter += (meas * meas - lim_rms->meas2_filter) * lim_rms->meas2_filter_factor;
+
+        // Apply trip limit if defined
+
+        if(lim_rms->rms2_fault > 0.0 && lim_rms->meas2_filter > lim_rms->rms2_fault)
+        {
+            lim_rms->flags.fault = REG_ENABLED;
+        }
+        else
+        {
+            lim_rms->flags.fault = REG_DISABLED;
+        }
+
+        // Apply warning limit if defined (with hysteresis)
+
+        if(lim_rms->rms2_warning > 0.0)
+        {
+            if(lim_rms->flags.warning == REG_DISABLED)
+            {
+                if(lim_rms->meas2_filter > lim_rms->rms2_warning)
+                {
+                    lim_rms->flags.warning = REG_ENABLED;
+                }
+            }
+            else
+            {
+                if(lim_rms->meas2_filter < lim_rms->rms2_warning_hysteresis)
+                {
+                    lim_rms->flags.warning = REG_DISABLED;
+                }
+            }
+        }
+    }
+}
+
+
 
 void regLimVrefCalcRT(struct reg_lim_ref *lim_v_ref, float i_meas)
 {
@@ -230,7 +251,7 @@ void regLimVrefCalcRT(struct reg_lim_ref *lim_v_ref, float i_meas)
 
     // Invert i_meas when limits are inverted
 
-    if(lim_v_ref->invert_limits != 0)
+    if(lim_v_ref->invert_limits == REG_ENABLED)
     {
         i_meas = -i_meas;
     }
@@ -274,6 +295,8 @@ void regLimVrefCalcRT(struct reg_lim_ref *lim_v_ref, float i_meas)
     }
 }
 
+
+
 float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float prev_ref)
 /*! 
  * <h3>Implementation Notes</h3>
@@ -298,21 +321,21 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
 
     // Clip reference to absolute limits taking into account the invert flag
 
-    if(lim_ref->invert_limits == 0)
+    if(lim_ref->invert_limits == REG_DISABLED)
     {
         if(ref < lim_ref->min_clip)
         {
             ref = lim_ref->min_clip;
-            lim_ref->flags.clip = 1;
+            lim_ref->flags.clip = REG_ENABLED;
         }
         else if(ref > lim_ref->max_clip)
         {
             ref = lim_ref->max_clip;
-            lim_ref->flags.clip = 1;
+            lim_ref->flags.clip = REG_ENABLED;
         }
         else
         {
-            lim_ref->flags.clip = 0;
+            lim_ref->flags.clip = REG_DISABLED;
         }
     }
     else
@@ -320,16 +343,16 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
         if(ref > -lim_ref->min_clip)
         {
             ref = -lim_ref->min_clip;
-            lim_ref->flags.clip = 1;
+            lim_ref->flags.clip = REG_ENABLED;
         }
         else if(ref < -lim_ref->max_clip)
         {
             ref = -lim_ref->max_clip;
-            lim_ref->flags.clip = 1;
+            lim_ref->flags.clip = REG_ENABLED;
         }
         else
         {
-            lim_ref->flags.clip = 0;
+            lim_ref->flags.clip = REG_DISABLED;
         }
     }
 
@@ -346,7 +369,7 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
             if(ref > rate_lim_ref)
             {
                 ref = rate_lim_ref;
-                rate_lim_flag = 1;
+                rate_lim_flag = REG_ENABLED;
             }
         }
         else if(delta_ref < 0.0)            // else if change is negative
@@ -356,7 +379,7 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
             if(ref < rate_lim_ref)
             {
                 ref = rate_lim_ref;
-                rate_lim_flag = 1;
+                rate_lim_flag = REG_ENABLED;
             }
         }
     }

@@ -69,7 +69,8 @@ enum ccsig_idx
 
     ANA_I_MAGNET,               // Current in the magnet
     ANA_I_CIRCUIT,              // Current in the circuit
-    ANA_I_RMS,                  // Filtered RMS circuit current
+    ANA_I_RMS,                  // Filtered RMS circuit current for converter protection
+    ANA_I_RMS_LOAD,             // Filtered RMS circuit current for load protections
     ANA_I_MEAS,                 // Unfiltered measured current
     ANA_I_MEAS_FLTR,            // Filtered measured current
     ANA_I_MEAS_EXTR,            // Extrapolated measured current
@@ -107,6 +108,8 @@ enum ccsig_idx
 
     DIG_I_RMS_WARN,
     DIG_I_RMS_FLT,
+    DIG_I_RMS_LOAD_WARN,
+    DIG_I_RMS_LOAD_FLT,
 
     DIG_I_REF_CLIP,
     DIG_I_REF_RATE_CLIP,
@@ -128,7 +131,7 @@ struct signals
     char                       *name;                   // Signal name
     enum ccsig_type             type;                   // Signal type (CURSON, ANALOG, DIGITAL)
     char                       *meta_data;              // LVDV meta data (CURSOR, TRAIL_STEP)
-    enum cc_enabled_disabled    control;                // Signal in use flag (ENABLED/DISABLED)
+    enum reg_enabled_disabled   control;                // Signal in use flag (ENABLED/DISABLED)
     float                       dig_offset;             // Digital trace offset
     float                       time_offset;            // Time offset for trace
     float                       value;                  // Signal value
@@ -159,6 +162,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "I_MAGNET",               ANALOG,         "TRAIL_STEP" },
     { "I_CIRCUIT",              ANALOG,         "TRAIL_STEP" },
     { "I_RMS",                  ANALOG,         ""           },
+    { "I_RMS_LOAD",             ANALOG,         ""           },
     { "I_MEAS",                 ANALOG,         ""           },
     { "I_MEAS_FLTR",            ANALOG,         ""           },
     { "I_MEAS_EXTR",            ANALOG,         ""           },
@@ -196,6 +200,8 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
 
     { "I_RMS_WARN",             DIGITAL,        "TRAIL_STEP" },
     { "I_RMS_FLT",              DIGITAL,        "TRAIL_STEP" },
+    { "I_RMS_LOAD_WARN",        DIGITAL,        "TRAIL_STEP" },
+    { "I_RMS_LOAD_FLT",         DIGITAL,        "TRAIL_STEP" },
 
     { "I_REF_CLIP",             DIGITAL,        "TRAIL_STEP" },
     { "I_REF_RATE_CLIP",        DIGITAL,        "TRAIL_STEP" },

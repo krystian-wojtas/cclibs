@@ -38,14 +38,14 @@
 
 struct ccpars_pppl
 {
-    // PPPL file data
+    // cctest PPPL parameters
 
     float                       initial_ref;
-    struct fg_pppl_config       config;                 // Use Libfg for configuration data
+    struct fg_pppl_config       config;                 // Libfg config struct for PPPL
 
-    // Libfg pppl variables
+    // Libfg PPPL variables
 
-    struct fg_pppl_pars         pppl_pars;             // Libfg parameters for PPPL
+    struct fg_pppl_pars         pars;                   // Libfg parameters for PPPL
 };
 
 CCPARS_PPPL_EXT struct ccpars_pppl ccpars_pppl
