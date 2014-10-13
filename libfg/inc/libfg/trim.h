@@ -78,8 +78,8 @@ struct fg_trim_config
  */
 struct fg_trim_pars
 {
-    float               delay;          //!< Time before start of function
-    float               end_time;       //!< Time at end of function (delay + duration)
+    double              delay;          //!< Time before start of function
+    float               duration;       //!< Function duration
     float               time_offset;    //!< Timebase offset for cubic
     float               ref_initial;    //!< Initial reference
     float               ref_final;      //!< Final reference
@@ -112,7 +112,7 @@ extern "C" {
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
 enum fg_error fgTrimInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                           struct fg_trim_config *config, float delay, float ref,
+                           struct fg_trim_config *config, float delay, float init_ref,
                            struct fg_trim_pars *pars, struct fg_meta *meta);
 
 /*!
@@ -128,10 +128,10 @@ enum fg_error fgTrimInit(struct fg_limits *limits, enum fg_limits_polarity limit
  *                             correct initialisation.
  * @param[out] ref             Derived reference value
  *
- * @retval 0 if time is beyond the end of the function
- * @retval 1 if time is within the function (or before the start of the function)
+ * @retval false    if time is beyond the end of the function
+ * @retval true     if time is within the function (or before the start of the function)
  */
-uint32_t fgTrimGen (struct fg_trim_pars *pars, const double *time, float *ref);
+bool fgTrimGen (struct fg_trim_pars *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }

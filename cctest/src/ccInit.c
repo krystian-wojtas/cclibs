@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <math.h>
+#include <string.h>
 
 // Include cctest program header files
 
@@ -177,11 +178,23 @@ uint32_t ccInitFunctions(void)
 
         func = &funcs[ccpars_global.function[func_idx]];
 
-        exit_status = func->init_func(&ccrun.fg_meta[func_idx]);
+        exit_status = func->init_func(&ccrun.func[func_idx].fg_meta);
+
+        if(exit_status == EXIT_FAILURE)
+        {
+            return(EXIT_FAILURE);
+        }
 
         // Mark command for this function as enabled to include parameters in FLOT colorbox pop-up
 
         cmds[func->cmd_idx].enabled = 1;
+    }
+
+    // Only report PREFUNC parameters when there is more than one function
+
+    if(ccrun.num_functions > 1)
+    {
+        cmds[CMD_PREFUNC].enabled = 1;
     }
 
     // Enable the commands whose parameters should be included in FLOT colorbox pop-up
@@ -190,6 +203,11 @@ uint32_t ccInitFunctions(void)
     cmds[CMD_LIMITS].enabled = 1;
 
     // Initialize converter structure
+
+    free(conv.b.meas.fir_buf[0]);
+    free(conv.i.meas.fir_buf[0]);
+
+    memset(&conv, 0, sizeof(conv));
 
     regConvInit(&conv, ccpars_global.iter_period_us, ccrun.breg_flag, ccrun.ireg_flag);
 
@@ -233,14 +251,10 @@ uint32_t ccInitSimLoad(void)
 
     // Prepare measurement FIR buffers
 
-    free(conv.b.meas.fir_buf[0]);
-
     regMeasFilterInitBuffer(&conv.b.meas, calloc((ccpars_meas.b_fir_lengths[0] + ccpars_meas.b_fir_lengths[1] +
                                                   ccpars_breg.period_iters),sizeof(uint32_t)));
 
     // Initialize current measurement filter
-
-    free(conv.i.meas.fir_buf[0]);
 
     regMeasFilterInitBuffer(&conv.i.meas, calloc((ccpars_meas.i_fir_lengths[0] + ccpars_meas.i_fir_lengths[1] +
                                                   ccpars_ireg.period_iters),sizeof(uint32_t)));
@@ -344,7 +358,7 @@ uint32_t ccInitSimLoad(void)
 
     // Initialize simulation
 
-    regConvInitSim(&conv, ccpars_global.reg_mode[0], ccrun.fg_meta[0].range.start);
+    regConvInitSim(&conv, ccpars_global.reg_mode[0], ccrun.func[0].fg_meta.range.start);
 
 
     // Check simulated voltage source gain

@@ -1,0 +1,123 @@
+# CCTEST - PSB2GEV tests script
+
+GLOBAL RUN_DELAY            0.1
+GLOBAL STOP_DELAY           0.1
+GLOBAL ITER_PERIOD_US       100
+GLOBAL FUNCTION             TABLE
+GLOBAL STOP_ON_ERROR        ENABLED
+GLOBAL REG_MODE             CURRENT
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL GROUP                tests
+GLOBAL PROJECT              PSB2GEV
+
+# Voltage source parameters
+
+VS V_REF_DELAY_ITERS        5.0
+VS BANDWIDTH                200
+VS TAU_ZERO                 0.0
+VS Z                        0.9
+
+# Measurement parameters
+
+MEAS I_REG_SELECT           FILTERED
+MEAS I_DELAY_ITERS          1.3
+MEAS V_DELAY_ITERS          1.3
+MEAS I_FIR_LENGTHS          30,1
+MEAS I_SIM_NOISE_PP         0.03
+MEAS V_SIM_NOISE_PP         0.05
+MEAS TONE_HALF_PERIOD_ITERS 100
+MEAS I_SIM_TONE_AMP         0.0
+
+# Current regulation
+
+IREG PERIOD_ITERS           30
+IREG AUXPOLE1_HZ            30
+IREG AUXPOLES2_HZ           30
+IREG AUXPOLES2_Z            0.5
+
+# Limits
+
+LIMITS I_POS                6000.0
+LIMITS I_MIN                0.0
+LIMITS I_NEG                -6000.0
+LIMITS I_RATE               50000.0
+LIMITS I_ACCELERATION       5.0E6
+LIMITS I_ERR_WARNING        5.0
+LIMITS I_ERR_FAULT          0.0
+LIMITS I_QUADRANTS41        0.0,0.0
+
+LIMITS V_POS                25000.0
+LIMITS V_NEG                -25000.0
+LIMITS V_RATE               0.0
+LIMITS V_ACCELERATION       0.0
+LIMITS V_ERR_WARNING        0.0
+LIMITS V_ERR_FAULT          0.0
+LIMITS V_QUADRANTS41        0.0,0.0
+
+# CCTEST load file: PSB main defocussing quads
+
+LOAD OHMS_SER               0.00
+LOAD OHMS_PAR               1.0E8
+LOAD OHMS_MAG               0.086
+LOAD HENRYS                 0.009
+LOAD I_SAT_START            0.0
+LOAD I_SAT_END              0.0
+LOAD SIM_TC_ERROR           0.1
+
+READ functions/amps/table_qd
+GLOBAL FILE                 psb-rqd
+RUN
+
+# CCTEST load file: PSB main focussing quads
+
+LOAD OHMS_SER               0.00
+LOAD OHMS_PAR               1.0E8
+LOAD OHMS_MAG               0.086
+LOAD HENRYS                 0.009
+LOAD SIM_TC_ERROR           0.1
+
+READ functions/amps/table_qf
+GLOBAL FILE                 psb-rqf
+RUN
+
+# CCTEST load file: PSB Main dipoles
+
+LOAD OHMS_SER               0.00
+LOAD OHMS_PAR               1.0E8
+LOAD OHMS_MAG               0.25
+LOAD HENRYS                 0.09
+LOAD HENRYS_SAT             0.08
+LOAD I_SAT_START            4000.0
+LOAD I_SAT_END              5500.0
+LOAD SIM_TC_ERROR           0.05
+
+GLOBAL FILE                 psb-rb
+READ functions/amps/table_d
+RUN
+
+GLOBAL FILE                 psb-rb-quantization-0.1V
+VS QUANTIZATION             0.1
+RUN
+
+GLOBAL FILE                 psb-rb-quantization-0.3V
+VS QUANTIZATION             0.3
+RUN
+
+GLOBAL FILE                 psb-rb-quantization-1V
+VS QUANTIZATION             1
+RUN
+
+GLOBAL FILE                 psb-rb-quantization-3V
+VS QUANTIZATION             3
+RUN
+
+GLOBAL FILE                 psb-rb-quantization-10V
+VS QUANTIZATION             10
+RUN
+
+GLOBAL FILE                 psb-rb-quantization-30V
+VS QUANTIZATION             30
+RUN
+
+# EOF

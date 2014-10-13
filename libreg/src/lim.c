@@ -48,7 +48,7 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
 
 
 
-void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fault, float rms_tc, float iter_period)
+void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fault, float rms_tc, double iter_period)
 {
     if(rms_tc > 0.0)
     {
@@ -68,8 +68,15 @@ void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fau
 
 
 
-void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim, float closeloop)
+void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, float neg_lim, float rate_lim, float closeloop)
 {
+    // Keep pos and min limits as they are used by libcc for pre-function ramps
+
+    lim_ref->min = min_lim;
+    lim_ref->pos = pos_lim;
+
+    // Set clip limits by expanding the user limits
+
     lim_ref->rate_clip = rate_lim * (1.0 + REG_LIM_CLIP);
     lim_ref->max_clip  = pos_lim  * (1.0 + REG_LIM_CLIP);
 
@@ -94,6 +101,13 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, fl
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
                     float i_quadrants41[2], float v_quadrants41[2])
 {
+    // Keep pos limit as it is used by libcc for pre-function ramps
+
+    lim_v_ref->min = 0.0;
+    lim_v_ref->pos = pos_lim;
+
+    // Expand user clip limits
+
     lim_v_ref->rate_clip     = rate_lim * (1.0 + REG_LIM_CLIP);
     lim_v_ref->max_clip_user = pos_lim  * (1.0 + REG_LIM_CLIP);
 

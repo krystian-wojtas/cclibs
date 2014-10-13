@@ -767,7 +767,65 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
 
 
 
+void regRstInitHistory(struct reg_rst_vars *vars, float ref, float act)
+{
+    uint32_t    var_idx;
+
+    for(var_idx = 0 ; var_idx <= REG_RST_HISTORY_MASK ; var_idx++)
+    {
+        vars->ref [var_idx] = ref;
+        vars->meas[var_idx] = ref;
+        vars->act [var_idx] = act;
+    }
+
+    vars->history_index = 0;
+}
+
+
+
 // Real-Time Functions
+
+void regRstInitRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float rate)
+{
+    double      meas;
+    double      ref_offset;
+    uint32_t    var_idx;
+    uint32_t    par_idx;
+
+    // Return zero immediately if parameters are invalid
+
+    if(pars->status == REG_FAULT)
+    {
+        return;
+    }
+
+    // Use RST coefficients to calculate new actuation from reference
+
+    ref_offset = rate * pars->track_delay_periods * pars->reg_period;
+
+    var_idx = vars->history_index;
+
+    vars->ref[var_idx] = vars->meas[var_idx] + ref_offset;
+
+    meas = pars->rst.t[0]      * (double)vars->ref [var_idx] -
+           pars->rst.s[0]      * (double)vars->act [var_idx] +
+           pars->t0_correction * (double)vars->ref [var_idx];
+
+    for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+    {
+        var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
+
+        vars->ref[var_idx] = vars->meas[var_idx] + ref_offset;
+
+        meas += pars->rst.t[par_idx] * (double)vars->ref [var_idx] -
+                pars->rst.s[par_idx] * (double)vars->act [var_idx] -
+                pars->rst.r[par_idx] * (double)vars->meas[var_idx];
+    }
+
+    vars->meas[vars->history_index] = meas / pars->rst.r[0];
+}
+
+
 
 float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref)
 /*!
@@ -878,7 +936,7 @@ float regRstTrackDelayRT(struct reg_rst_vars *vars)
 
     // Measure track delay if reference is changing
 
-    if(delta_ref != 0.0)
+    if(fabs(delta_ref) > 1.0E-4)
     {
         meas_track_delay_periods = 1.0 +
                 ((vars->ref[(var_idx - 1) & REG_RST_HISTORY_MASK]) - vars->meas[var_idx]) / delta_ref;

@@ -65,10 +65,10 @@ CCPARS_START_EXT struct ccpars_start ccpars_start
 
 CCPARS_START_EXT struct ccpars   start_pars[]
 #ifdef GLOBALS
-= {// "Signal name"   type, max_n_els,min_n_els,*enum,        *value,                       num_defaults
-    { "ACCELERATION", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_start.config.acceleration }, 1 },
-    { "LINEAR_RATE",  PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_start.config.linear_rate  }, 1 },
-    { "DECELERATION", PAR_FLOAT,    1,        1, NULL, { .f = &ccpars_start.config.deceleration }, 1 },
+= {// "Signal name"   type,     max_n_els,*enum,        *value,                       num_defaults
+    { "ACCELERATION", PAR_FLOAT,    1,     NULL, { .f = &ccpars_start.config.acceleration }, 1 },
+    { "LINEAR_RATE",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_start.config.linear_rate  }, 1 },
+    { "DECELERATION", PAR_FLOAT,    1,     NULL, { .f = &ccpars_start.config.deceleration }, 1 },
     { NULL }
 }
 #endif

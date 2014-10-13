@@ -65,10 +65,10 @@ CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim
 
 CCPARS_TRIM_EXT struct ccpars   trim_pars[]
 #ifdef GLOBALS
-= {// "Signal name"  type,max_n_els,min_n_els,*enum,        *value,                   num_defaults
-    { "INITIAL_REF", PAR_FLOAT,   1,        1, NULL, { .f = &ccpars_trim.initial_ref     }, 1 },
-    { "FINAL_REF",   PAR_FLOAT,   1,        1, NULL, { .f = &ccpars_trim.config.final    }, 1 },
-    { "DURATION",    PAR_FLOAT,   1,        1, NULL, { .f = &ccpars_trim.config.duration }, 1 },
+= {// "Signal name"  type,    max_n_els,*enum,        *value,                   num_defaults
+    { "INITIAL_REF", PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.initial_ref     }, 1 },
+    { "FINAL_REF",   PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.config.final    }, 1 },
+    { "DURATION",    PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.config.duration }, 1 },
     { NULL }
 }
 #endif

@@ -67,6 +67,75 @@ static enum fg_limits_polarity ccRefLimitsPolarity(uint32_t invert_limits, uint3
     return(FG_LIMITS_POL_NORMAL);          // Normal limits with no manipulation
 }
 /*---------------------------------------------------------------------------------------------------------*/
+bool ccRefDirectGen(struct fg_table_pars *pars, const double *time, float *ref)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    double          func_time;              // Time since end of run delay
+    float           prev_rate;
+    static float    prev_ref;
+    static bool     ref_running;
+
+    // Coast during run delay
+
+    func_time = *time - pars->delay;
+
+    if(func_time <= 0.0)
+    {
+        return(true);
+    }
+
+    // If DIRECT function is already running
+
+    if(pars->seg_idx > 0)
+    {
+        prev_rate = (*ref - prev_ref) / conv.reg_period;
+        prev_ref  = *ref;
+    }
+    else // DIRECT has not yet started
+    {
+        // Prepare to force initialisation of first RAMP function
+
+        ref_running   = false;
+        prev_rate     = 0.0;
+        prev_ref      = *ref;
+        ccpars_prefunc.config.final = 1.0E30;
+    }
+
+    // Scan through table to find segment containing the current time
+
+    while(func_time >= pars->time[pars->seg_idx])      // while time exceeds end of segment
+    {
+        // If vector is already complete or is now complete
+
+        if(pars->seg_idx >= pars->n_elements || ++pars->seg_idx >= pars->n_elements)
+        {
+            // Return function running flag from RAMP function
+
+            return(ref_running);
+        }
+    }
+
+    // If target reference has changed then re-arm the RAMP function
+
+    if(pars->ref[pars->seg_idx] != ccpars_prefunc.config.final)
+    {
+        struct fg_meta fg_meta;
+
+        ccpars_prefunc.config.final = pars->ref[pars->seg_idx];
+
+        fgRampCalc(&ccpars_prefunc.config,
+                   func_time - conv.reg_period,
+                   *ref,
+                   prev_rate,
+                   &ccpars_prefunc.pars,
+                   &fg_meta);
+    }
+
+    ref_running = fgRampGen(&ccpars_prefunc.pars, &func_time, ref);
+
+    return(true);
+}
+/*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccRefInitSTART(struct fg_meta *fg_meta)
 /*---------------------------------------------------------------------------------------------------------*/
 {
@@ -80,7 +149,7 @@ uint32_t ccRefInitSTART(struct fg_meta *fg_meta)
         return(EXIT_FAILURE);
     }
 
-    ccpars_start.config.final = ccrun.fg_limits->min;
+    ccpars_start.config.final = ccrun.fg_limits->min * (ccpars_limits.invert == REG_ENABLED ? -1.0 : 1.0);
 
     if(ccpars_start.config.final == 0.0)
     {

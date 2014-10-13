@@ -51,14 +51,8 @@
 
 // Constants
 
-/*!
- * Up to 8 PPPL sections can be chained together. Must match FGC_MAX_PPPLS constant in FGC XML.
- */
-#define FG_MAX_PPPLS            8
-/*!
- * Each PPPL section contains 4 segments (P-P-P-L)
- */
-#define FG_PPPL_N_SEGS          4
+#define FG_MAX_PPPLS            8               //!< Max number of PPPL sections that can be chained together
+#define FG_PPPL_N_SEGS          4               //<! Number of segments in each PPPL section (P-P-P-L = 4)
 
 // Types
 
@@ -94,7 +88,7 @@ struct fg_pppl_pars
 {
     uint32_t    seg_idx;                           //!< Current segment index
     uint32_t    num_segs;                          //!< Total number of segments (4*number of PPPLs)
-    float       delay;                             //!< Time before start of function
+    double      delay;                             //!< Time before start of function
     float       ref_initial;                       //!< Initial reference
     float       time[FG_PPPL_N_SEGS*FG_MAX_PPPLS]; //!< Times of the end of each segment. See also #FG_PPPL_N_SEGS and #FG_MAX_PPPLS.
     float       a0  [FG_PPPL_N_SEGS*FG_MAX_PPPLS]; //!< Coefficient for constant term. \f$ref = a_{2} \cdot t^{2} + a_{1} \cdot t + a_{0}\f$
@@ -111,12 +105,12 @@ extern "C" {
 /*!
  * Check PPPL configuration and initialise parameters for each segment.
  *
- * @param[in]  limits           Limits to check each segment against
- * @param[in]  limits_polarity  Polarity limits to check each segment against
- * @param[in]  config           PPPL configuration parameters
- * @param[in]  delay            RUN_DELAY, delay before the start of the function
- * @param[in]  ref              Initial reference value
- * @param[out] pars             PPPL function parameters for each segment
+ * @param[in]  limits           Pointer to fg_limits structure (or NULL).
+ * @param[in]  limits_polarity  Control of limits inversion.
+ * @param[in]  config           Pointer to fg_pppl_config structure.
+ * @param[in]  delay            Delay before the start of the function.
+ * @param[in]  init_ref         Initial reference value.
+ * @param[out] pars             Pointer to fg_pppl_pars structure.
  * @param[out] meta             Diagnostic information. Set to NULL if not required.
  *
  * @retval FG_OK on success
@@ -128,13 +122,13 @@ extern "C" {
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
 enum fg_error fgPpplInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                         struct fg_pppl_config *config, float delay, float ref,
+                         struct fg_pppl_config *config, double delay, float init_ref,
                          struct fg_pppl_pars *pars, struct fg_meta *meta);
 
 /*!
  * Generate the reference for the PPPL function.
  *
- * @param[in]  pars            PPPL function parameters for each segment
+ * @param[in]  pars            Pointer to fg_pppl_pars structure.
  * @param[in]  time            Current time within the function. Note that time
  *                             is passed by const reference rather than by value.
  *                             This allows the user to initialise an array of
@@ -144,10 +138,10 @@ enum fg_error fgPpplInit(struct fg_limits *limits, enum fg_limits_polarity limit
  *                             correct initialisation.
  * @param[out] ref             Derived reference value
  *
- * @retval 0 if time is beyond the end of the function
- * @retval 1 if time is within a segment (or before the start of the first segment)
+ * @retval false    if time is beyond the end of the function.
+ * @retval true     if time is before the end of the function.
  */
-uint32_t fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref);
+bool fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }

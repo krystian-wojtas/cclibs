@@ -31,7 +31,7 @@
 enum fg_error fgTableInit(struct fg_limits         *limits,
                           enum   fg_limits_polarity limits_polarity,
                           struct fg_table_config   *config,
-                          float                     delay,
+                          double                    delay,
                           float                     min_time_step,
                           struct fg_table_pars     *pars,
                           struct fg_meta           *meta)
@@ -127,39 +127,45 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 
     // Complete meta data
 
-    meta->duration  = pars->time[i - 1] + pars->delay;
-    meta->range.end = pars->ref[i - 1];
+    meta->duration  = pars->time[i - 1];
+    meta->range.end = pars->ref [i - 1];
 
     return(FG_OK);
 }
 
-uint32_t fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
+
+
+bool fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
 {
-    double   ref_time;                               // Time since end of run delay
+    double   func_time;                     // Time within function
 
-    // Coast during run delay
+    // Both *time and delay must be 64-bit doubles if time is UNIX time
 
-    if(*time <= pars->delay)
+    func_time = *time - pars->delay;
+
+    // Pre-acceleration coast
+
+    if(func_time <= 0.0)
     {
-        *ref = pars->ref[0];                                    // Set ref to initial value
-        return(1);
+         *ref = pars->ref[0];
+
+         return(true);
     }
 
     // Scan through table to find segment containing the current time
 
-    ref_time = *time - pars->delay;
-
-    while(ref_time >= pars->time[pars->seg_idx])      // while time exceeds end of segment
+    while(func_time >= pars->time[pars->seg_idx])      // while time exceeds end of segment
     {
         if(++pars->seg_idx >= pars->n_elements)                 // If vector complete
         {
             pars->seg_idx = pars->n_elements - 1;                   // Force segment index to last seg
             *ref          = pars->ref[pars->n_elements - 1];        // Enter coast
-            return(0);
+
+            return(false);
         }
     }
 
-    while(ref_time < pars->time[pars->seg_idx - 1])      // while time before start of segment
+    while(func_time < pars->time[pars->seg_idx - 1])      // while time before start of segment
     {
         pars->seg_idx--;
     }
@@ -175,9 +181,9 @@ uint32_t fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
 
     // Calculate reference using segment gradient
 
-    *ref = pars->ref[pars->seg_idx]  - (pars->time[pars->seg_idx] - ref_time) * pars->seg_grad;
+    *ref = pars->ref[pars->seg_idx]  - (pars->time[pars->seg_idx] - func_time) * pars->seg_grad;
 
-    return(1);
+    return(true);
 }
 
 // EOF

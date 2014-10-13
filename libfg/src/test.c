@@ -30,8 +30,8 @@
 enum fg_error fgTestInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
                          struct fg_test_config     *config,
-                         float                      delay,
-                         float                      ref,
+                         double                     delay,
+                         float                      init_ref,
                          struct fg_test_pars       *pars,
                          struct fg_meta            *meta)
 {
@@ -42,7 +42,7 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     float          range[2];       // Range of reference value
     struct fg_meta local_meta;     // Local meta data in case user meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
+    meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Prepare parameter structure
 
@@ -61,14 +61,15 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
     if(pars->duration > 1.0E6)                          // If total time is too long
     {
-        meta->error.data[0]=pars->duration;
+        meta->error.data[0] = pars->duration;
+        meta->error.data[1] = 1.0E6;
 
         return(FG_INVALID_TIME);                                // Report INVALID TIME
     }
 
     // Calculate amplitude related parameters
 
-    end = pars->ref_initial = pars->ref_final = ref;
+    end = pars->ref_initial = pars->ref_final = init_ref;
 
     fg_error = FG_OK;
 
@@ -139,89 +140,95 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
             return(FG_BAD_PARAMETER);
     }
 
-    pars->end_time = pars->duration + pars->delay;
-
     // Complete meta data
 
-    meta->duration  = pars->end_time;
+    meta->duration  = pars->duration;
     meta->range.end = end;
 
     return(FG_OK);
 }
 
-uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
+
+
+bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 {
     uint32_t    period_idx;
-    double      ref_time;
     double      radians;
     float       cos_rads = 0.0;
     float       delta_ref;
     float       new_ref;
+    double      func_time;                     // Time within function
 
-    // Coast during run delay
+    // Both *time and delay must be 64-bit doubles if time is UNIX time
 
-    if(*time <= pars->delay)
+    func_time = *time - pars->delay;
+
+    // Pre-acceleration coast
+
+    if(func_time <= 0.0)
     {
         *ref = pars->ref_initial;
-        return(1);
+
+        return(true);
     }
 
     // Operate N cycles following delay
 
-    else if(*time < pars->end_time)
+    else if(func_time < pars->duration)
     {
-        ref_time = *time - pars->delay;
-
         switch(pars->type)
         {
             case FG_TEST_STEPS:
 
-                period_idx = 1 + (uint32_t)(ref_time * pars->frequency);
+                period_idx = 1 + (uint32_t)(func_time * pars->frequency);
                 new_ref    = pars->ref_initial + pars->ref_amp * (float)period_idx;
 
                 if(*ref != new_ref) // This is an edge
                 {
                     *ref = new_ref;
                 }
-                return(1);
+
+                return(true);
 
             case FG_TEST_SQUARE:
 
-                period_idx = 1 - ((uint32_t)(2.0 * ref_time * pars->frequency) & 0x1);
+                period_idx = 1 - ((uint32_t)(2.0 * func_time * pars->frequency) & 0x1);
                 new_ref    = pars->ref_initial + (period_idx ? pars->ref_amp : 0.0);
 
                 if(*ref != new_ref) // This is an edge
                 {
                     *ref = new_ref;
                 }
-                return(1);
+
+                return(true);
 
             case FG_TEST_SINE:
 
-                radians   = (2.0 * FG_PI) * pars->frequency * ref_time;
+                radians   = (2.0 * M_PI) * pars->frequency * func_time;
                 delta_ref = pars->ref_amp * sin(radians);
                 break;
 
             case FG_TEST_COSINE:
 
-                radians   = (2.0 * FG_PI) * pars->frequency * ref_time;
+                radians   = (2.0 * M_PI) * pars->frequency * func_time;
                 cos_rads  = cos(radians);
                 delta_ref = pars->ref_amp * cos_rads;
                 break;
 
             default: // Invalid function type requested
 
-                return(0);
+                return(false);
         }
 
         // For SINE and COSINE: Apply cosine window if enabled
 
-        if(pars->use_window &&                              // If window enabled, and
-          (ref_time < pars->half_period ||                  // first or
-           pars->duration - ref_time < pars->half_period))  // last half period
+        if(pars->use_window &&                               // If window enabled, and
+          (func_time < pars->half_period ||                  // first or
+           pars->duration - func_time < pars->half_period))  // last half period
         {
-           delta_ref *= 0.5 * (1 - (pars->type == FG_TEST_SINE ?      // Calc Cosine window
-                                    cos(radians) : cos_rads));
+            // Calc Cosine window
+
+           delta_ref *= 0.5 * (1 - (pars->type == FG_TEST_SINE ? cos(radians) : cos_rads));
         }
 
         *ref = pars->ref_initial + delta_ref;
@@ -231,11 +238,12 @@ uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 
     else
     {
-        *ref = pars->ref_final;         // Set ref to final value
-        return(0);
+        *ref = pars->ref_final;
+
+        return(false);
     }
 
-    return(1);
+    return(true);
 }
 
 // EOF

@@ -107,7 +107,7 @@ void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_va
 
 
 
-void regSimVsInit(struct reg_sim_vs_pars *pars, float iter_period, float v_ref_delay_iters, float bandwidth, float z, float tau_zero,
+void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_delay_iters, float bandwidth, float z, float tau_zero,
                   float num[REG_N_VS_SIM_COEFFS], float den[REG_N_VS_SIM_COEFFS])
 {
     float       natural_freq;
@@ -213,7 +213,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, float iter_period, float v_ref_d
 
         // Protect gain against Inf if the denominator is zero
 
-        if(sum_den != 0.0 || sum_num != 0.0)
+        if(sum_den == 0.0 || sum_num == 0.0)
         {
             pars->gain           = 0.0;
             pars->vs_delay_iters = 0.0;

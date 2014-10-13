@@ -1,7 +1,0 @@
-# CCTEST TRIM file
-
-TRIM.INITIAL_REF     10.0
-TRIM.FINAL_REF       20.0
-TRIM.PERIOD          5.0
-
-# EOF

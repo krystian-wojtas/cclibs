@@ -70,7 +70,7 @@ struct fg_ramp_pars
     uint32_t    pos_ramp_flag;              //!< Positive ramp flag
     uint32_t    pre_ramp_flag;              //!< Pre-ramp flag. Set if before point of inflexion of 1st parabola
     float       init_ref;                   //!< Reference before the start of the function
-    float       delay;                      //!< Time before start of function
+    double      delay;                      //!< Time before start of function
     float       acceleration;               //!< Parabolic acceleration
     float       deceleration;               //!< Parabolic deceleration
     float       linear_rate;                //!< User linear rate
@@ -107,7 +107,7 @@ extern "C" {
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
 enum fg_error fgRampInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                         struct fg_ramp_config *config, float delay, float ref,
+                         struct fg_ramp_config *config, double delay, float init_ref,
                          struct fg_ramp_pars *pars, struct fg_meta *meta);
 
 /*!
@@ -136,10 +136,10 @@ enum fg_error fgRampInit(struct fg_limits *limits, enum fg_limits_polarity limit
  *                              iteration. This may have been clipped if any
  *                              limits were reached.
  *
- * @retval 0 if time is beyond the end of the function.
- * @retval 1 if time is within the function.
+ * @retval false    if time is beyond the end of the function.
+ * @retval true     if time is within the function.
  */
-uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref);
+bool fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref);
 
 /*!
  * Calculate Ramp function parameters.
@@ -161,7 +161,7 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref);
  *                              </ul>
  * @param[out]    meta          Diagnostic information. Set to NULL if not required.
  */
-void fgRampCalc(struct fg_ramp_config *config, float delay, float init_ref, float init_rate,
+void fgRampCalc(struct fg_ramp_config *config, double delay, float init_ref, float init_rate,
                 struct fg_ramp_pars *pars, struct fg_meta *meta);
 
 #ifdef __cplusplus

@@ -63,9 +63,9 @@ CCPARS_TABLE_EXT struct ccpars_table ccpars_table
 
 CCPARS_TABLE_EXT struct ccpars   table_pars[]
 #ifdef GLOBALS
-= {// "Signal name", type,      max_n_els, min_n_els,*enum,       *value,         num_defaults
-    { "REF",         PAR_FLOAT, TABLE_LEN,         2, NULL, { .f = ccpars_table.ref  }, 4 },
-    { "TIME",        PAR_FLOAT, TABLE_LEN,         2, NULL, { .f = ccpars_table.time }, 4 },
+= {// "Signal name", type,      max_n_els, *enum,       *value,         num_defaults
+    { "REF",         PAR_FLOAT, TABLE_LEN,  NULL, { .f = ccpars_table.ref  }, 4 },
+    { "TIME",        PAR_FLOAT, TABLE_LEN,  NULL, { .f = ccpars_table.time }, 4 },
     { NULL }
 }
 #endif

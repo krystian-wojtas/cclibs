@@ -70,7 +70,7 @@ struct fg_test_config
     float               amplitude_pp;       //!< Ref peak-to-peak amplitude
     float               num_cycles;         //!< Number of cycles/steps. This is rounded to the nearest integer.
     float               period;             //!< Period
-    uint32_t            use_window;         //!< Window control. !0 to use window for sine & cosine.
+    bool                use_window;         //!< Window control: true to use window for sine & cosine.
 };
 
 /*!
@@ -79,15 +79,14 @@ struct fg_test_config
 struct fg_test_pars
 {
     enum fg_test_type   type;               //!< Type of test function
-    uint32_t            use_window;         //!< Window control. !0 to use window for sine & cosine.
-    float               delay;              //!< Time before start of function
-    float               end_time;           //!< Time at end of function (delay + duration)
+    bool                use_window;         //!< Window control: true to use window for sine & cosine.
+    double              delay;              //!< Time before start of function
+    float               duration;           //!< period * number of cycles
     float               frequency;          //!< 1 / period
     float               half_period;        //!< period / 2
     float               ref_initial;        //!< Initial reference
     float               ref_final;          //!< Final reference after last cycle
     float               ref_amp;            //!< Reference amplitude
-    float               duration;           //!< period * number of cycles
 };
 
 #ifdef __cplusplus
@@ -103,7 +102,7 @@ extern "C" {
  * @param[in]  limits_polarity  Polarity limits to check each segment against
  * @param[in]  config           Test configuration parameters
  * @param[in]  delay            RUN_DELAY, delay before the start of the function
- * @param[in]  ref              Initial reference value
+ * @param[in]  init_ref         Initial reference value
  * @param[out] pars             Test function parameters
  * @param[out] meta             Diagnostic information. Set to NULL if not required.
  *
@@ -115,7 +114,7 @@ extern "C" {
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
 enum fg_error fgTestInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                         struct fg_test_config *config, float delay, float ref,
+                         struct fg_test_config *config, double delay, float init_ref,
                          struct fg_test_pars *pars, struct fg_meta *meta);
 
 /*!
@@ -131,10 +130,10 @@ enum fg_error fgTestInit(struct fg_limits *limits, enum fg_limits_polarity limit
  *                              correct initialisation.
  * @param[out] ref              Derived reference value
  *
- * @retval 0 when function has completed
- * @retval 1 if time is within the function.
+ * @retval false    if time is beyond the end of the function.
+ * @retval true     if time is before the end of the function.
  */
-uint32_t fgTestGen(struct fg_test_pars *pars, const double *time, float *ref);
+bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }

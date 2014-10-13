@@ -241,6 +241,7 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(ANA_B_REF);
                 ccSigsEnableSignal(ANA_B_REF_LIMITED);
                 ccSigsEnableSignal(ANA_B_REF_RST);
+                ccSigsEnableSignal(ANA_B_REF_DELAYED);
                 ccSigsEnableSignal(ANA_B_MAGNET);
                 ccSigsEnableSignal(ANA_B_MEAS);
                 ccSigsEnableSignal(ANA_B_MEAS_FLTR);
@@ -427,6 +428,8 @@ void ccSigsStore(double time)
                 ccSigsStoreAnalog (ANA_B_REF,          conv.ref);
                 ccSigsStoreAnalog (ANA_B_REF_LIMITED,  conv.ref_limited);
                 ccSigsStoreAnalog (ANA_B_REF_RST,      conv.ref_rst);
+                ccSigsStoreAnalog (ANA_B_REF_DELAYED,  conv.ref_delayed);
+
                 ccSigsStoreAnalog (ANA_I_REF,          0.0);
                 ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
                 ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
@@ -439,6 +442,8 @@ void ccSigsStore(double time)
                 ccSigsStoreAnalog (ANA_B_REF,          0.0);
                 ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
                 ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_B_REF_DELAYED,  0.0);
+
                 ccSigsStoreAnalog (ANA_I_REF,          conv.ref);
                 ccSigsStoreAnalog (ANA_I_REF_LIMITED,  conv.ref_limited);
                 ccSigsStoreAnalog (ANA_I_REF_RST,      conv.ref_rst);
@@ -450,6 +455,8 @@ void ccSigsStore(double time)
                 ccSigsStoreAnalog (ANA_B_REF,          0.0);
                 ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
                 ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_B_REF_DELAYED,  0.0);
+
                 ccSigsStoreAnalog (ANA_I_REF,          0.0);
                 ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
                 ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
@@ -609,6 +616,7 @@ void ccSigsFlot(FILE *f, char *filename)
     uint32_t       sig_idx;
     uint32_t       n_points = 0;
     double         time;
+    double         end_time;
     float          time_offset;
     struct cccmds *cmd;
 
@@ -625,67 +633,85 @@ void ccSigsFlot(FILE *f, char *filename)
 
     // For each function
 
-    for(func_idx = 0 ; func_idx < ccrun.num_functions ; func_idx++)
+    end_time = (double)flot_index * 1.0E-6 * (double)ccpars_global.iter_period_us;
+
+    for(func_idx = 0 ; func_idx < ccrun.num_functions ; func_idx++, n_points+=2)
     {
-        // Print table, pppl or plep data if selected and use points instead of lines
+        fprintf(f,"\"%u.%s\": { lines: { show:false }, points: { show:true },\ndata:[[%.6f,%.7E],[%.6f,%.7E],",
+                  func_idx+1, ccParsEnumString(function_type, ccpars_global.function[func_idx]),
+                  ccrun.func[func_idx].func_start_time,
+                  ccrun.func[func_idx].fg_meta.range.start,
+                  ccrun.func[func_idx].func_start_time + ccpars_global.run_delay,
+                  ccrun.func[func_idx].fg_meta.range.start);
 
-        if(ccpars_global.function[func_idx] == FG_TABLE ||
-           ccpars_global.function[func_idx] == FG_PPPL ||
-           ccpars_global.function[func_idx] == FG_PLEP)
+        switch(ccpars_global.function[func_idx])
         {
-            fprintf(f,"\"%u.%s\": { lines: { show:false }, points: { show:true },\ndata:[",
-                      func_idx+1, ccParsEnumString(function_type, ccpars_global.function[func_idx]));
+        default: break;     // Suppress compiler warning
 
-            switch(ccpars_global.function[func_idx])
+        case FG_TABLE:
+        case FG_DIRECT:
+
+            for(iteration_idx = 1 ; iteration_idx < (table_pars[0].num_elements-1) ; iteration_idx++)
             {
-            default: break;     // Suppress compiler warning
+                time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay + ccpars_table.time[iteration_idx];
 
-            case FG_TABLE:
-
-                for(iteration_idx = 0 ; iteration_idx < table_pars[0].num_elements ; iteration_idx++)
+                if(time < end_time)
                 {
-                    time = ccrun.func_start_time[func_idx] + ccpars_global.run_delay + ccpars_table.time[iteration_idx];
-
                     fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);
                     n_points++;
                 }
-                break;
+            }
+            break;
 
-            case FG_PPPL:
+        case FG_PPPL:
 
-                time = ccrun.func_start_time[func_idx] + ccpars_global.run_delay;
+            time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay;
 
-                fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref);
-                n_points++;
+            fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref);
+            n_points++;
 
-                for(iteration_idx = 0 ; iteration_idx < ccpars_pppl.pars.num_segs ; iteration_idx++)
+            for(iteration_idx = 1 ; iteration_idx < (ccpars_pppl.pars.num_segs-1) ; iteration_idx++)
+            {
+                time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay + ccpars_pppl.pars.time[iteration_idx];
+
+                if(time < end_time)
                 {
-                    time = ccrun.func_start_time[func_idx] + ccpars_pppl.pars.time[iteration_idx];
-
                     fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pars.a0[iteration_idx]);
                     n_points++;
                 }
-                break;
+            }
+            break;
 
-            case FG_PLEP:
+        case FG_PLEP:
 
-                time = ccrun.func_start_time[func_idx] + ccpars_global.run_delay;
+            time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay;
 
-                fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref);
-                n_points++;
+            fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref);
+            n_points++;
 
-                for(iteration_idx = 0 ; iteration_idx <= FG_PLEP_N_SEGS ; iteration_idx++)
+            for(iteration_idx = 1 ; iteration_idx <  FG_PLEP_N_SEGS ; iteration_idx++)
+            {
+                time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay + ccpars_plep.pars.time[iteration_idx];
+
+                if(time < end_time)
                 {
-                    time = ccrun.func_start_time[func_idx] + ccpars_plep.pars.time[iteration_idx];
-
                     fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.pars.normalisation * ccpars_plep.pars.ref[iteration_idx]);
                     n_points++;
                 }
-                break;
             }
-
-            fputs("]\n },\n",f);
+            break;
         }
+
+        // End of function point
+
+        time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay + ccrun.func[func_idx].fg_meta.duration;
+
+        if(time < end_time)
+        {
+            fprintf(f,"[%.6f,%.7E]", time, ccrun.func[func_idx].fg_meta.range.end);
+        }
+
+        fputs("]\n },",f);
     }
 
     // Highlight invalid points if enabled

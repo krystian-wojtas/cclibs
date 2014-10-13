@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <libreg.h>
+#include <stdbool.h>
 
 // GLOBALS should be defined in the source file where global variables should be defined
 
@@ -59,13 +60,13 @@ struct ccpars
     char               *name;
     enum ccpars_type    type;
     uint32_t            max_num_elements;
-    uint32_t            min_num_elements;
     struct ccpars_enum *ccpars_enum;
     union
     {
         double         *d;
         float          *f;
         uint32_t       *i;
+        bool           *b;
         char          **s;
     } value_p;
 

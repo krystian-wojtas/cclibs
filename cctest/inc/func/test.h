@@ -67,12 +67,12 @@ CCPARS_TEST_EXT struct ccpars_test ccpars_test
 
 CCPARS_TEST_EXT struct ccpars test_pars[]
 #ifdef GLOBALS
-= {// "Signal name"   type,max_n_els,min_n_els,*enum,                   *value,                       num_defaults
-    { "INITIAL_REF",  PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.initial_ref         }, 1 },
-    { "AMPLITUDE_PP", PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.amplitude_pp }, 1 },
-    { "NUM_CYCLES",   PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.num_cycles   }, 1 },
-    { "PERIOD",       PAR_FLOAT,   1,        1, NULL,             { .f = &ccpars_test.config.period       }, 1 },
-    { "WINDOW",       PAR_ENUM,    1,        0, enabled_disabled, { .i = &ccpars_test.config.use_window   }, 1 },
+= {// "Signal name"   type,     max_n_els,*enum,                   *value,                       num_defaults
+    { "INITIAL_REF",  PAR_FLOAT,    1,     NULL,             { .f = &ccpars_test.initial_ref         }, 1 },
+    { "AMPLITUDE_PP", PAR_FLOAT,    1,     NULL,             { .f = &ccpars_test.config.amplitude_pp }, 1 },
+    { "NUM_CYCLES",   PAR_FLOAT,    1,     NULL,             { .f = &ccpars_test.config.num_cycles   }, 1 },
+    { "PERIOD",       PAR_FLOAT,    1,     NULL,             { .f = &ccpars_test.config.period       }, 1 },
+    { "WINDOW",       PAR_ENUM,     1,     enabled_disabled, { .b = &ccpars_test.config.use_window   }, 1 },
     { NULL }
 }
 #endif

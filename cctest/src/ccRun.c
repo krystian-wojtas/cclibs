@@ -25,6 +25,7 @@
 \*---------------------------------------------------------------------------------------------------------*/
 
 #include <stdio.h>
+#include <math.h>
 
 // Include cctest program header files
 
@@ -65,8 +66,8 @@ static uint32_t ccRunAbort(double iter_time)
     // Initialize a RAMP to take over the running function.
 
     fgRampCalc(&config,
-               iter_time,                                                       // time of last RST calculation
-               regRstPrevRefRT(&conv.reg_signal->rst_vars),                     // last reference value
+               0.0,
+               regRstPrevRefRT (&conv.reg_signal->rst_vars),                    // last reference value
                regRstDeltaRefRT(&conv.reg_signal->rst_vars) / conv.reg_period,  // last reference rate
                &ccpars_ramp.pars,
                &meta);
@@ -81,28 +82,185 @@ static uint32_t ccRunAbort(double iter_time)
         return(EXIT_FAILURE);
     }
 
+    ccrun.func_start_time = iter_time + conv.ref_advance;
+
     ccrun.fgen_func = funcs[FG_RAMP].fgen_func;
     ccrun.fg_pars   = funcs[FG_RAMP].fg_pars;
+
+    // Cancel any subsequent functions
+
+    if(ccrun.pre_func_idx == 0)
+    {
+        ccrun.num_functions = ccrun.func_idx + 1;
+    }
+    else
+    {
+        ccrun.num_functions = ccrun.func_idx;
+    }
+    ccrun.pre_func_idx  = 0;
 
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccRunStartFunction(uint32_t func_idx, double func_start_time)
+static uint32_t ccRunStartFunction(double iter_time, float *ref)
 /*---------------------------------------------------------------------------------------------------------*\
   This function tests the ability to open and re-close the loop regulating current or field.  The user can
   specify the time and duration of a period of open-loop to be included with-in a run in closed loop.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    ccrun.func_duration = ccrun.fg_meta[func_idx].duration;
-    ccrun.fgen_func     = funcs[ccpars_global.function[func_idx]].fgen_func;
-    ccrun.fg_pars       = funcs[ccpars_global.function[func_idx]].fg_pars;
+    float           delay;
+    float           rate;
+    struct fg_meta  meta;
 
-    regConvSetModeRT(&conv, ccpars_global.reg_mode[func_idx]);
+    // If a pre-function RAMP segment should be started
 
-    ccrun.ref_advance    [func_idx] = conv.ref_advance;
-    ccrun.func_start_time[func_idx] = func_start_time;
+    if(ccrun.pre_func_idx < ccrun.num_prefunc_ramps)
+    {
+        // If first pre-function segment
 
-    ccSigsStoreCursor(CSR_FUNC,function_type[func_idx].string);
+        if(ccrun.pre_func_idx == 0)
+        {
+            // Log max abs error for previous function
+
+            switch(conv.reg_mode)
+            {
+            case REG_FIELD  : ccrun.func[ccrun.func_idx].max_abs_err = conv.b.err.max_abs_err; break;
+            case REG_CURRENT: ccrun.func[ccrun.func_idx].max_abs_err = conv.i.err.max_abs_err; break;
+            default:          ccrun.func[ccrun.func_idx].max_abs_err = 0.0;                    break;
+            }
+
+            // If functions are finished then program a final plateau of duration GLOBAL STOP_DELAY
+
+            if(++ccrun.func_idx >= ccrun.num_functions)
+            {
+                delay = ccpars_global.stop_delay;
+                rate  = 0.0;
+
+                ccrun.num_prefunc_ramps = 1;
+                ccrun.pre_func_final_ref[0] = *ref;
+            }
+            else // else start pre-function between two functions
+            {
+                float invert_limits = conv.reg_signal->lim_ref.invert_limits == REG_ENABLED ? -1.0 : 1.0;
+
+                // Set regulation mode for the next function
+
+                regConvSetModeRT(&conv, ccpars_global.reg_mode[ccrun.func_idx]);
+
+                // Set up pre-function segment references according to the pre-function policy
+
+                switch(ccpars_prefunc.policy)
+                {
+                    case PREFUNC_RAMP:
+
+                        ccrun.num_prefunc_ramps     = 1;
+                        ccrun.pre_func_final_ref[0] = ccrun.func[ccrun.func_idx].fg_meta.range.start;
+                        break;
+
+                    case PREFUNC_STOPSTART:
+
+                        ccrun.num_prefunc_ramps     = 2;
+                        ccrun.pre_func_final_ref[0] = 0.0;
+                        ccrun.pre_func_final_ref[1] = ccrun.func[ccrun.func_idx].fg_meta.range.start;
+                        break;
+
+                    case PREFUNC_MIN:
+
+                        ccrun.num_prefunc_ramps     = 2;
+                        ccrun.pre_func_final_ref[0] = conv.lim_ref->min * invert_limits;
+                        ccrun.pre_func_final_ref[1] = ccrun.func[ccrun.func_idx].fg_meta.range.start;
+                        break;
+
+                    case PREFUNC_MINMAX:
+
+                        ccrun.num_prefunc_ramps     = 3;
+                        ccrun.pre_func_final_ref[0] = conv.lim_ref->min * invert_limits;
+                        ccrun.pre_func_final_ref[1] = conv.lim_ref->pos * invert_limits;
+                        ccrun.pre_func_final_ref[2] = ccrun.func[ccrun.func_idx].fg_meta.range.start;
+                        break;
+                }
+
+                delay = 0;
+
+                if(conv.reg_mode == REG_VOLTAGE)
+                {
+                    *ref = regRstPrevActRT (&conv.reg_signal->rst_vars);
+                    rate = regRstAverageDeltaActRT(&conv.reg_signal->rst_vars) / conv.reg_period;
+                }
+                else
+                {
+                    *ref = regRstPrevRefRT (&conv.reg_signal->rst_vars);
+                    rate = conv.reg_signal->rate.estimate;
+                }
+           }
+
+            // Prepare to generate the first pre-function RAMP segment
+
+
+            ccrun.fgen_func = fgRampGen;
+            ccrun.fg_pars   = &ccpars_prefunc.pars;
+        }
+        else // Prepare to generate the second or third pre-function RAMP segment
+        {
+            delay = ccpars_prefunc.plateau_duration;
+            rate  = 0.0;
+        }
+
+        // Arm a RAMP for the next pre-function segment - flip reference sign when limits are inverted
+
+        ccpars_prefunc.config.final = ccrun.pre_func_final_ref[ccrun.pre_func_idx];
+
+        fgRampCalc(&ccpars_prefunc.config,
+                   delay,
+                   *ref,
+                   rate,
+                   &ccpars_prefunc.pars,
+                   &meta);
+
+        ccrun.func_start_time = iter_time + conv.ref_advance;
+
+        if(conv.reg_mode != REG_VOLTAGE)
+        {
+            ccrun.func_start_time -= conv.reg_signal->iteration_counter * conv.iter_period;
+        }
+        ccrun.pre_func_idx++;
+    }
+    else // Pre-function sequence complete - start the next function
+    {
+        // If all functions completed
+
+        if(ccrun.func_idx >= ccrun.num_functions)
+        {
+            return(0);      // Return 0 to end simulation
+        }
+
+        // Set regulation mode (which won't change) to reset max abs error values
+
+        regConvSetModeRT(&conv, ccpars_global.reg_mode[ccrun.func_idx]);
+
+        // Prepare to generate new function
+
+        ccrun.fgen_func = funcs[ccpars_global.function[ccrun.func_idx]].fgen_func;
+        ccrun.fg_pars   = funcs[ccpars_global.function[ccrun.func_idx]].fg_pars;
+
+        ccrun.func_start_time = iter_time;
+
+        ccrun.func[ccrun.func_idx].ref_advance     = conv.ref_advance;
+        ccrun.func[ccrun.func_idx].func_start_time = iter_time;
+
+        ccSigsStoreCursor(CSR_FUNC,function_type[ccrun.func_idx].string);
+
+        // Reset pre-function index for when this new function ends
+
+        ccrun.pre_func_idx      = 0;
+        ccrun.num_prefunc_ramps = 1;
+
+        // Reset table segment index in case function is DIRECT
+
+        ccpars_table.pars.seg_idx = 0;
+    }
+
+    return(1); // Return 1 to continue the simulation
 }
 /*---------------------------------------------------------------------------------------------------------*/
 void ccRunSimulation(void)
@@ -111,27 +269,29 @@ void ccRunSimulation(void)
   or enabled (FIELD or CURRENT). Multiple reference functions can be played in a sequence.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t    iteration_idx   = 0;        // Iteration index
-    uint32_t    reg_iteration_counter;      // Regulation iteration counter
-    uint32_t    func_run_f      = 1;        // Function running flag
-    uint32_t    abort_f         = 0;        // Abort function flag
-    uint32_t    good_meas_f;                // Good measurement flag
-    float       ref;                        // Function generator reference value
-    float       perturb_volts   = 0.0;      // Voltage perturbation to apply to circuit
-    double      iter_time       = 0.0;      // Iteration time (since start of run)
-    double      ref_time        = 0.0;      // Reference time (since start of function)
-    double      func_start_time = 0.0;      // Function start time (relative to start of run)
+    uint32_t        iteration_idx     = 0;        // Iteration index
+    bool            abort             = false;    // Abort function flag
+    bool            func_running      = true;     // Function running flag
+    float           ref;                          // Function generator reference value
+    float           perturb_volts     = 0.0;      // Voltage perturbation to apply to circuit
+    double          iter_time         = 0.0;      // Iteration time (since start of run)
+    double          ref_time          = 0.0;      // Reference time (since start of function)
+    double          trip_time         = 0.0;
 
-    // Prepare to generation the first function
+    // Prepare to generation the first function with no pre-function
 
-    ccrun.func_idx        = 0;
-    ccrun.vs_tripped_flag = 0;
+    ccrun.pre_func_idx      = 0;
+    ccrun.num_prefunc_ramps = 0;
+    ccrun.func_idx          = 0;
+    ccrun.vs_tripped_flag   = 0;
 
     // Call once with conv.reg_mode equal REG_NONE to set iteration counters
 
     regConvSetMeasRT(&conv, REG_OPERATIONAL_RST_PARS, 0, 0, 1);
 
-    ccRunStartFunction(0,0);
+    ref = ccrun.func[0].fg_meta.range.start;
+
+    ccRunStartFunction(iter_time, &ref);
 
     ref_time = conv.ref_advance;
 
@@ -139,40 +299,73 @@ void ccRunSimulation(void)
 
     for(;;)
     {
+        uint32_t        good_meas_flag;             // Good measurement flag
+        uint32_t        reg_iteration_counter;      // Regulation iteration counter from libreg (0=start of reg period)
+
+        // Calculate reference time taking into account the ref advance for the active regulation mode
+
+        ref_time = iter_time - ccrun.func_start_time + conv.ref_advance;
+
         // Set measurements to simulated values but support bad values at a given period
         // The "real" measurements are invalid while the simulated measurements are good
 
-        good_meas_f = ccpars_meas.invalid_meas_period_iters == 0 ||
+        good_meas_flag = ccpars_meas.invalid_meas_period_iters == 0 ||
                      (iteration_idx % ccpars_meas.invalid_meas_period_iters) >= ccpars_meas.invalid_meas_repeat_iters;
 
-        reg_iteration_counter = regConvSetMeasRT(&conv, REG_OPERATIONAL_RST_PARS, 0, 0, good_meas_f);
+        // Start new iteration by processing the measurements
+
+        reg_iteration_counter = regConvSetMeasRT(&conv, REG_OPERATIONAL_RST_PARS, 0, 0, good_meas_flag);
 
         // If converter has not tripped
 
         if(ccrun.vs_tripped_flag == 0)
         {
-            // if first iteration of regulation period then calculate new reference value
+            // If this is the first iteration of the regulation period then calculate a new reference value
 
             if(reg_iteration_counter == 0)
             {
-                func_run_f = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &ref);
+                func_running = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &ref);
+            }
 
-                regConvRegulateRT(&conv, &ref);
+            // Call ConvRegulate every iteration to keep RST histories up to date
 
-               // Check for function abort based on the abort time
+            regConvRegulateRT(&conv, &ref);
 
-                if(abort_f == 0 && ccpars_global.abort_time > 0.0 && iter_time >= ccpars_global.abort_time)
+            // If this is the first iteration of the regulation period then check for function abort or function end
+
+            if(reg_iteration_counter == 0)
+            {
+                // If function should be aborted
+
+                if(abort == false && ccpars_global.abort_time > 0.0 && iter_time >= ccpars_global.abort_time)
                 {
-                    // If attempt to abort fails then stop simulation
+                    abort = true;
 
-                    if(ccRunAbort(ref_time) == EXIT_FAILURE)
+                    if(ccRunAbort(iter_time) == EXIT_FAILURE)
                     {
                         break;
                     }
+                }
 
-                    abort_f = 1;
+                // else if function has finished
+
+                else if(func_running == false)
+                {
+                    // Starting a new function can change conv.reg_mode, but not our local copy of reg_mode
+
+                    if(ccRunStartFunction(iter_time, &ref) == 0)
+                    {
+                        break;
+                    }
                 }
             }
+        }
+
+        // Apply voltage reference quantization if specified
+
+        if(ccpars_vs.quantization > 0.0)
+        {
+            conv.v.ref_limited = ccpars_vs.quantization * nearbyintf(conv.v.ref_limited / ccpars_vs.quantization);
         }
 
         // Apply voltage perturbation from the specified time
@@ -186,72 +379,107 @@ void ccRunSimulation(void)
 
         regConvSimulateRT(&conv, perturb_volts);
 
+        // Check if simulated converter should be trip
+
+        if(ccrun.vs_tripped_flag == 0)
+        {
+            if(conv.b.lim_meas.flags.trip      == 1 ||
+               conv.i.lim_meas.flags.trip      == 1 ||
+               conv.lim_i_rms.flags.fault      == 1 ||
+               conv.lim_i_rms_load.flags.fault == 1 ||
+               conv.b.err.fault.flag           == 1 ||
+               conv.i.err.fault.flag           == 1 ||
+               conv.v.err.fault.flag           == 1)
+            {
+                // Simulate converter trip by switching to regulation mode to NONE
+
+                trip_time = iter_time;
+                ccrun.vs_tripped_flag = 1;
+
+                regConvSetModeRT(&conv, REG_NONE);
+
+                ccSigsStoreCursor(CSR_FUNC,"TRIP!");
+
+                puts("Trip");
+
+                // Cancel any subsequent functions
+
+                if(ccrun.pre_func_idx == 0)
+                {
+                    ccrun.num_functions = ccrun.func_idx + 1;
+                }
+                else
+                {
+                    ccrun.num_functions = ccrun.func_idx;
+                }
+            }
+        }
+        else if((iter_time - trip_time) > ccpars_global.stop_delay)
+        {
+            // After a trip, stop after STOP_DELAY
+
+            break;
+        }
+
         // Store and print to CSV file the enabled signals
 
         ccSigsStore(iter_time);
 
-        // Check if any condition requires the converter to trip
-
-        if(ccrun.vs_tripped_flag           == 0 &&
-          (conv.b.lim_meas.flags.trip      == 1 ||
-           conv.i.lim_meas.flags.trip      == 1 ||
-           conv.lim_i_rms.flags.fault      == 1 ||
-           conv.lim_i_rms_load.flags.fault == 1 ||
-           conv.b.err.fault.flag           == 1 ||
-           conv.i.err.fault.flag           == 1 ||
-           conv.v.err.fault.flag           == 1))
-        {
-            // Simulate converter trip - switch regulation mode to NONE
-
-            ccrun.vs_tripped_flag = 1;
-
-            regConvSetModeRT(&conv, REG_NONE);
-
-            ccSigsStoreCursor(CSR_FUNC,"TRIP!");
-
-            puts("Trip");
-
-            // Run for the stop delay following the trip
-
-            func_run_f          = 0;
-            ccrun.func_idx      = ccrun.num_functions;
-            ccrun.func_duration = ref_time + ccpars_global.stop_delay;
-        }
-
         // Calculate next iteration time
 
         iter_time = conv.iter_period * ++iteration_idx;
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void ccRunFuncGen(void)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will test the function generator with one or more functions, with increasing time only.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    uint32_t    iteration_idx   = 0;        // Iteration index
+    bool        func_running    = true;     // Function running flag
+    double      iter_time       = 0.0;      // Iteration time (since start of run)
+    double      ref_time;                   // Reference time (since start of function)
+    double      func_start_time;            // Function start time (relative to start of run)
 
-        ref_time = iter_time - func_start_time + conv.ref_advance;
+    // Prepare to generation the first function
+
+    ccrun.func_idx      = 0;
+    ccrun.func_duration = ccpars_global.run_delay + ccrun.func[0].fg_meta.duration;
+    ccrun.fgen_func     = funcs[ccpars_global.function[0]].fgen_func;
+    ccrun.fg_pars       = funcs[ccpars_global.function[0]].fg_pars;
+
+    ccrun.func[0].func_start_time = func_start_time = 0.0;
+
+    // Loop until all functions have completed
+
+    for(;;)
+    {
+        ref_time = iter_time - func_start_time;
+
+        // Generate reference value using libfg function
+
+        func_running = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &conv.v.ref);
 
         // If reference function has finished
 
-        if(ref_time >= ccrun.func_duration && func_run_f == 0)
+        if(ref_time > ccrun.func_duration && func_running == 0)
         {
             // If not yet into the stop delay period, advance to next function
 
             if(ccrun.func_idx < ccrun.num_functions)
             {
-                // Record max absolute regulation error for debugging output
-
-                switch(conv.reg_mode)
-                {
-                case REG_FIELD  : ccrun.max_abs_err[ccrun.func_idx] = conv.b.err.max_abs_err; break;
-                case REG_CURRENT: ccrun.max_abs_err[ccrun.func_idx] = conv.i.err.max_abs_err; break;
-                default:          ccrun.max_abs_err[ccrun.func_idx] = 0.0;                    break;
-                }
-
                 // If another function is in the list
 
                 if(++ccrun.func_idx < ccrun.num_functions)
                 {
                     // Prepare to generate the new function
 
-                    func_start_time += ccrun.func_duration + ccpars_global.pre_func_delay;
+                    ccrun.func_duration = ccpars_global.run_delay + ccrun.func[ccrun.func_idx].fg_meta.duration;
+                    ccrun.fgen_func     = funcs[ccpars_global.function[ccrun.func_idx]].fgen_func;
+                    ccrun.fg_pars       = funcs[ccpars_global.function[ccrun.func_idx]].fg_pars;
 
-                    ccRunStartFunction(ccrun.func_idx, func_start_time);
-
-                    ref_time = iter_time - func_start_time + conv.ref_advance;
+                    ccrun.func[ccrun.func_idx].func_start_time = func_start_time = iter_time + ccpars_prefunc.plateau_duration;
                 }
                 else // else last function completed
                 {
@@ -265,34 +493,6 @@ void ccRunSimulation(void)
                 break;
             }
         }
-    }
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void ccRunFuncGen(void)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will test the function generator with one or more functions, with increasing time only.
-\*---------------------------------------------------------------------------------------------------------*/
-{
-    uint32_t    iteration_idx   = 0;        // Iteration index
-    uint32_t    func_run_f      = 1;        // Function running flag
-    double      iter_time       = 0.0;      // Iteration time (since start of run)
-    double      ref_time        = 0.0;      // Reference time (since start of function)
-    double      func_start_time = 0.0;      // Function start time (relative to start of run)
-
-    // Prepare to generation the first function
-
-    ccrun.func_idx      = 0;
-    ccrun.func_duration = ccrun.fg_meta[0].duration;
-    ccrun.fgen_func     = funcs[ccpars_global.function[0]].fgen_func;
-    ccrun.fg_pars       = funcs[ccpars_global.function[0]].fg_pars;
-
-    // Loop until all functions have completed
-
-    for(;;)
-    {
-        // Generate reference value using libfg function
-
-        func_run_f = ccrun.fgen_func(ccrun.fg_pars, &ref_time, &conv.v.ref);
 
         // Store and print to CSV file the enabled signals
 
@@ -301,41 +501,6 @@ void ccRunFuncGen(void)
         // Calculate next iteration time
 
         iter_time = conv.iter_period * ++iteration_idx;
-
-        ref_time = iter_time - func_start_time;
-
-        // If reference function has finished
-
-        if(ref_time >= ccrun.func_duration && func_run_f == 0)
-        {
-            // If not yet into the stop delay period, advance to next function
-
-            if(ccrun.func_idx < ccrun.num_functions)
-            {
-                // If another function is in the list
-
-                if(++ccrun.func_idx < ccrun.num_functions)
-                {
-                    // Prepare to generate the new function
-
-                    func_start_time    += ccrun.func_duration + ccpars_global.pre_func_delay;
-                    ccrun.func_duration = ccrun.fg_meta[ccrun.func_idx].duration;
-                    ccrun.fgen_func     = funcs[ccpars_global.function[ccrun.func_idx]].fgen_func;
-                    ccrun.fg_pars       = funcs[ccpars_global.function[ccrun.func_idx]].fg_pars;
-                    ref_time            = iter_time - func_start_time;
-                }
-                else // else last function completed
-                {
-                    // Set duration to the stop delay and continue to use the last function
-
-                    ccrun.func_duration += ccpars_global.stop_delay;
-                }
-            }
-            else // else stop delay is complete so break out of loop
-            {
-                break;
-            }
-        }
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
@@ -349,7 +514,7 @@ void ccRunFuncGenReverseTime(void)
 
     // Reverse time can only be used with a single function
 
-    ccrun.func_duration = ccrun.fg_meta[0].duration + ccpars_global.stop_delay;
+    ccrun.func_duration = ccpars_global.run_delay + ccrun.func[0].fg_meta.duration + ccpars_global.stop_delay;
 
     ccrun.num_iterations = (uint32_t)(1.4999 + ccrun.func_duration / conv.iter_period);
 

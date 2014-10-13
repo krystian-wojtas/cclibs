@@ -635,7 +635,6 @@ uint32_t ccCmdsPar(uint32_t cmd_idx, char **remaining_line)
         {
             ccParsPrint(stdout, cmds[cmd_idx].name, par_matched);
             printf("Number of elements defined: %u\n",par_matched->num_elements);
-            printf("Minimum number of elements: %u\n",par_matched->min_num_elements);
             printf("Maximum number of elements: %u\n",par_matched->max_num_elements);
 
             if(par_matched->type == PAR_ENUM)

@@ -66,7 +66,7 @@ struct fg_table_pars
     uint32_t    seg_idx;            //!< Segment index
     uint32_t    prev_seg_idx;       //!< Previous segment index for which gradient was calculated
     uintptr_t   n_elements;         //!< Number of elements in table
-    float       delay;              //!< Time before start of function
+    double      delay;              //!< Time before start of function
     float       *ref;               //!< Table reference values
     float       *time;              //!< Table time values
     float       seg_grad;           //!< Gradient of reference for segment fg_table_pars::prev_seg_idx
@@ -97,7 +97,7 @@ extern "C" {
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
 enum fg_error fgTableInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                          struct fg_table_config *config, float delay, float min_time_step,
+                          struct fg_table_config *config, double delay, float min_time_step,
                           struct fg_table_pars *pars, struct fg_meta *meta);
 
 /*!
@@ -113,10 +113,10 @@ enum fg_error fgTableInit(struct fg_limits *limits, enum fg_limits_polarity limi
  *                              correct initialisation.
  * @param[out] ref              Derived reference value
  *
- * @retval 0 if time is beyond the end of the function
- * @retval 1 if time is within a segment (or before the start of the first segment)
+ * @retval false    if time is beyond the end of the function
+ * @retval true     if time is within a segment (or before the start of the first segment)
  */
-uint32_t fgTableGen(struct fg_table_pars *pars, const double *time, float *ref);
+bool fgTableGen(struct fg_table_pars *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }

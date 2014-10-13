@@ -31,12 +31,12 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
                          struct fg_trim_config     *config,
                          float                      delay,
-                         float                      ref,
+                         float                      init_ref,
                          struct fg_trim_pars       *pars,
                          struct fg_meta            *meta)
 {
     enum fg_error  fg_error;       // Status from limits checking
-    uint32_t       invert_flag;    // Inverted trim flag
+    bool           inverted_trim;  // Inverted trim flag
     float          acceleration;   // Acceleration
     float          duration;       // Trim duration
     float          duration2;      // Trim duration based on acceleration limit
@@ -44,27 +44,27 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
     float          rate_lim;       // Limiting
     struct fg_meta local_meta;     // Local meta data in case user meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
+    meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Save parameters
 
     pars->delay       = delay;
-    pars->ref_initial = ref;
+    pars->ref_initial = init_ref;
     pars->ref_final   = config->final;
 
     // Assess if ramp is rising or falling
 
-    delta_ref = pars->ref_final - ref;
+    delta_ref = pars->ref_final - init_ref;
 
     if(delta_ref < 0.0)
     {
-        invert_flag = 1;
+        inverted_trim = true;
         meta->range.min = pars->ref_final;
         meta->range.max = pars->ref_initial;
     }
     else
     {
-        invert_flag = 0;
+        inverted_trim = false;
         meta->range.min = pars->ref_initial;
         meta->range.max = pars->ref_final;
     }
@@ -110,7 +110,7 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
         rate_lim = limits->rate;
 
-        if(invert_flag)
+        if(inverted_trim == true)
         {
             rate_lim = -rate_lim;
         }
@@ -147,7 +147,6 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
     // Calculate offsets
 
-    pars->end_time    = pars->delay + duration;
     pars->time_offset = 0.5 * duration;
     pars->ref_offset  = 0.5 * (pars->ref_initial + pars->ref_final);
 
@@ -169,29 +168,36 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
     // Complete meta data
 
-    meta->duration  = pars->end_time;
+    meta->duration  = pars->duration = duration;
     meta->range.end = pars->ref_final;
 
     return(FG_OK);
 }
 
-uint32_t fgTrimGen(struct fg_trim_pars *pars, const double *time, float *ref)
+
+
+bool fgTrimGen(struct fg_trim_pars *pars, const double *time, float *ref)
 {
-    double ref_time;
+    double   func_time;                     // Time within function
+    float    seg_time;                      // Time within segment
+
+    // Both *time and delay must be 64-bit doubles if time is UNIX time
+
+    func_time = *time - pars->delay;
 
     // Pre-trim coast
 
-    if(*time <= pars->delay)
+    if(func_time <= 0.0)
     {
         *ref = pars->ref_initial;
     }
 
     // Trim
 
-    else if(*time <= pars->end_time)
+    else if(func_time <= pars->duration)
     {
-        ref_time = *time - pars->delay - pars->time_offset;
-        *ref   = pars->ref_offset + ref_time * (pars->a * ref_time * ref_time + pars->c);
+        seg_time = func_time - pars->time_offset;
+        *ref   = pars->ref_offset + seg_time * (pars->a * seg_time * seg_time + pars->c);
     }
 
     // Post-trim coast
@@ -199,10 +205,11 @@ uint32_t fgTrimGen(struct fg_trim_pars *pars, const double *time, float *ref)
     else
     {
         *ref = pars->ref_final;
-        return(0);
+
+        return(false);
     }
 
-    return(1);
+    return(true);
 }
 
 // EOF

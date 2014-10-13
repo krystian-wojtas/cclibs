@@ -114,7 +114,7 @@ struct reg_conv_voltage
 struct reg_conv
 {
     uint32_t                    iter_period_us;         //!< Iteration (measurement) period in microseconds
-    float                       iter_period;            //!< Iteration (measurement) period in seconds
+    double                      iter_period;            //!< Iteration (measurement) period in seconds
 
     // Libreg initialization parameter structures
 
@@ -126,7 +126,7 @@ struct reg_conv
     enum   reg_mode             reg_mode;               //!< Regulation mode. Can be #REG_NONE, #REG_VOLTAGE, #REG_CURRENT or #REG_FIELD.
     enum   reg_rst_source       reg_rst_source;         //!< RST parameter source. Can be #REG_OPERATIONAL_RST_PARS or #REG_TEST_RST_PARS.
     struct reg_conv_signal     *reg_signal;             //!< Pointer to currently regulated signal structure. Can be reg_conv::b or reg_conv::i.
-
+    struct reg_lim_ref         *lim_ref;                //!< Pointer to the currently active reference limit (b, i or v)
     double                      reg_period;             //!< Regulation period
     float                       ref_advance;            //!< Time to advance reference function
 
@@ -214,9 +214,9 @@ void regConvPars(struct reg_conv *conv, uint32_t pars_mask);
  *
  * @param[in,out] conv                 Pointer to converter regulation structure.
  * @param[in]     reg_mode             Initial regulation mode.
- * @param[in]     meas                 Initial measurement value for signal identified by reg_mode.
+ * @param[in]     start                Initial value for signal identified by reg_mode.
  */
-void regConvInitSim(struct reg_conv *conv, enum reg_mode reg_mode, float meas);
+void regConvInitSim(struct reg_conv *conv, enum reg_mode reg_mode, float start);
 
 /*!
  * Initialise a converter structure with voltage, current and field measurement signal structures.

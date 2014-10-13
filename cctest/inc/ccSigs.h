@@ -56,6 +56,7 @@ enum ccsig_idx
     ANA_B_REF,                  // Field reference
     ANA_B_REF_LIMITED,          // Field reference after limits applied
     ANA_B_REF_RST,              // Field reference stored in RST history (limited and after back-calculation)
+    ANA_B_REF_DELAYED,          // Field reference delayed
 
     ANA_B_MAGNET,               // Field in the magnet
     ANA_B_MEAS,                 // Unfiltered field measurement
@@ -148,6 +149,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "B_REF",                  ANALOG,         "TRAIL_STEP" },
     { "B_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "B_REF_RST",              ANALOG,         "TRAIL_STEP" },
+    { "B_REF_DELAYED",          ANALOG,         "TRAIL_STEP" },
 
     { "B_MAGNET",               ANALOG,         "TRAIL_STEP" },
     { "B_MEAS",                 ANALOG,         ""           },

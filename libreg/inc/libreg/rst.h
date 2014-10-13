@@ -183,6 +183,8 @@ struct reg_rst_vars
 #define regRstIncHistoryIndexRT(rst_vars_p) (rst_vars_p)->history_index = ((rst_vars_p)->history_index + 1) & REG_RST_HISTORY_MASK
 #define regRstPrevRefRT(rst_vars_p) (rst_vars_p)->ref[(rst_vars_p)->history_index]
 #define regRstDeltaRefRT(rst_vars_p) (regRstPrevRefRT(rst_vars_p) - (rst_vars_p)->ref[((rst_vars_p)->history_index - 1) & REG_RST_HISTORY_MASK])
+#define regRstPrevActRT(rst_vars_p) (rst_vars_p)->act[(rst_vars_p)->history_index]
+#define regRstAverageDeltaActRT(rst_vars_p) ((regRstPrevActRT(rst_vars_p) - (rst_vars_p)->act[((rst_vars_p)->history_index + 1) & REG_RST_HISTORY_MASK])/REG_RST_HISTORY_MASK)
 
 // RST regulation functions
 
@@ -246,6 +248,42 @@ enum reg_status regRstInit(struct reg_rst_pars *pars, uint32_t reg_period_iters,
                            float auxpoles2_z, float auxpole4_hz, float auxpole5_hz,
                            float pure_delay_periods, float track_delay_periods,
                            enum reg_mode reg_mode, struct reg_rst *manual);
+
+/*!
+ * Complete the initialisation of the RST history in vars.
+ *
+ * The actuation (act) and measurement (meas) histories must be kept up to date. This function will initalise
+ * the reference (ref) history based on the measurement history and the supplied rate of change. It will
+ * modify meas[0] to balance the RST history so as to reduce the perturbation following the change of regulation
+ * mode.
+ *
+ * This is a Real-Time function.
+ *
+ * @param[out]    vars    Pointer to history of actuation, measurement and reference values.
+ * @param[in]     ref     Initial reference/measurement value
+ * @param[in]     act     Estimated measurement rate
+ *
+ * @returns       New actuation value
+ */
+void regRstInitHistory(struct reg_rst_vars *vars, float ref, float act);
+
+/*!
+ * Complete the initialisation of the RST history in vars.
+ *
+ * The actuation (act) and measurement (meas) histories must be kept up to date. This function will initalise
+ * the reference (ref) history based on the measurement history and the supplied rate of change. It will
+ * modify meas[0] to balance the RST history so as to reduce the perturbation following the change of regulation
+ * mode.
+ *
+ * This is a Real-Time function.
+ *
+ * @param[in]     pars    Pointer to RST parameters structure
+ * @param[in,out] vars    Pointer to history of actuation, measurement and reference values.
+ * @param[in]     rate    Estimated measurement rate
+ *
+ * @returns       New actuation value
+ */
+void regRstInitRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float rate);
 
 /*!
  * Use the supplied RST parameters to calculate the actuation based on the supplied reference and measurement values.

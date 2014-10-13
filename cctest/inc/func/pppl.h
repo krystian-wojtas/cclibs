@@ -69,15 +69,15 @@ CCPARS_PPPL_EXT struct ccpars_pppl ccpars_pppl
 
 CCPARS_PPPL_EXT struct ccpars   pppl_pars[]
 #ifdef GLOBALS
-= {// "Signal name"    type,         max_n_els, min_n_els,*enum,        *value,                        num_defaults
-    { "INITIAL_REF",   PAR_FLOAT,            1,         1, NULL, { .f = &ccpars_pppl.initial_ref          }, 1 },
-    { "ACCELERATION1", PAR_FLOAT, FG_MAX_PPPLS,         1, NULL, { .f =  ccpars_pppl.config.acceleration1 }, 1 },
-    { "ACCELERATION2", PAR_FLOAT, FG_MAX_PPPLS,         1, NULL, { .f =  ccpars_pppl.config.acceleration2 }, 1 },
-    { "ACCELERATION3", PAR_FLOAT, FG_MAX_PPPLS,         1, NULL, { .f =  ccpars_pppl.config.acceleration3 }, 1 },
-    { "RATE2",         PAR_FLOAT, FG_MAX_PPPLS,         1, NULL, { .f =  ccpars_pppl.config.rate2         }, 1 },
-    { "RATE4",         PAR_FLOAT, FG_MAX_PPPLS,         1, NULL, { .f =  ccpars_pppl.config.rate4         }, 1 },
-    { "REF4",          PAR_FLOAT, FG_MAX_PPPLS,         1, NULL, { .f =  ccpars_pppl.config.ref4          }, 1 },
-    { "DURATION4",     PAR_FLOAT, FG_MAX_PPPLS,         1, NULL, { .f =  ccpars_pppl.config.duration4     }, 1 },
+= {// "Signal name"    type,         max_n_els, *enum,        *value,                        num_defaults
+    { "INITIAL_REF",   PAR_FLOAT,            1,  NULL, { .f = &ccpars_pppl.initial_ref          }, 1 },
+    { "ACCELERATION1", PAR_FLOAT, FG_MAX_PPPLS,  NULL, { .f =  ccpars_pppl.config.acceleration1 }, 1 },
+    { "ACCELERATION2", PAR_FLOAT, FG_MAX_PPPLS,  NULL, { .f =  ccpars_pppl.config.acceleration2 }, 1 },
+    { "ACCELERATION3", PAR_FLOAT, FG_MAX_PPPLS,  NULL, { .f =  ccpars_pppl.config.acceleration3 }, 1 },
+    { "RATE2",         PAR_FLOAT, FG_MAX_PPPLS,  NULL, { .f =  ccpars_pppl.config.rate2         }, 1 },
+    { "RATE4",         PAR_FLOAT, FG_MAX_PPPLS,  NULL, { .f =  ccpars_pppl.config.rate4         }, 1 },
+    { "REF4",          PAR_FLOAT, FG_MAX_PPPLS,  NULL, { .f =  ccpars_pppl.config.ref4          }, 1 },
+    { "DURATION4",     PAR_FLOAT, FG_MAX_PPPLS,  NULL, { .f =  ccpars_pppl.config.duration4     }, 1 },
     { NULL }
 }
 #endif

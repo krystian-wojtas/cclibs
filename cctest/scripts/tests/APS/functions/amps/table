@@ -1,6 +1,0 @@
-# CCTEST TABLE file
-
-TABLE.TIME     0.0,     0.005,    0.1,   0.105
-TABLE.REF     -2000.0, 2000.0, 2000.0, -2000.0
-
-# EOF

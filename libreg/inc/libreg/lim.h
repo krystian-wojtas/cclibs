@@ -89,6 +89,9 @@ struct reg_lim_ref
 {
     enum reg_enabled_disabled   invert_limits;                  //!< Flag to invert limits before use.
                                                                 //!< (<em>e.g.</em>, polarity switch is negative)
+    float                       pos;                            //!< User's positive limit
+    float                       min;                            //!< User's min limit
+
     float                       max_clip;                       //!< Maximum reference clip limit from reg_lim_ref::max_clip_user or Q41 limit
     float                       min_clip;                       //!< Minimum reference clip limit from reg_lim_ref::min_clip_user or Q41 limit
     float                       rate_clip;                      //!< Absolute reference rate clip limit
@@ -161,7 +164,7 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
  *                                 value for reg_lim_meas::meas2_filter_factor.
  * @param[in]     iter_period      Iteration period, used to calculate the value for reg_lim_meas::meas2_filter_factor.
  */
-void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fault, float rms_tc, float iter_period);
+void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fault, float rms_tc, double iter_period);
 
 /*!
  * Initialise field/current reference limits. Field/current limits use the same
@@ -170,12 +173,13 @@ void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fau
  * This is a non-Real-Time function: do not call from the real-time thread or interrupt
  *
  * @param[out]    lim_ref          Reference limits object to initialise
- * @param[in]     pos_lim          Maximum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP)
- * @param[in]     neg_lim          Minimum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP)
- * @param[in]     rate_lim         Absolute reference rate clip limit. Will be scaled by (1+#REG_LIM_CLIP)
- * @param[in]     closeloop        Closeloop threshold
+ * @param[in]     pos_lim          Maximum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP).
+ * @param[in]     min_lim          Standby reference limit.
+ * @param[in]     neg_lim          Minimum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP).
+ * @param[in]     rate_lim         Absolute reference rate clip limit. Will be scaled by (1+#REG_LIM_CLIP).
+ * @param[in]     closeloop        Closeloop threshold.
  */
-void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float neg_lim, float rate_lim, float closeloop);
+void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, float neg_lim, float rate_lim, float closeloop);
 
 /*!
  * Initialise voltage reference limits. Voltage reference limits use the same

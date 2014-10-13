@@ -1,0 +1,34 @@
+# Test default parameters
+
+GLOBAL RUN_DELAY            0.1
+GLOBAL STOP_DELAY           0.1
+GLOBAL REG_MODE             CURRENT
+GLOBAL FUNCTION             TABLE DIRECT
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL FG_LIMITS            DISABLED
+GLOBAL GROUP                sandbox
+GLOBAL PROJECT              DIRECT
+
+VS V_REF_DELAY              1
+
+LIMITS B_ACCELERATION       1.000000E+003
+LIMITS V_ACCELERATION       1.000000E+003
+
+IREG PERIOD_ITERS           7
+
+LIMITS I_POS                4
+LIMITS I_RATE               1000
+LIMITS V_POS                20
+LIMITS V_NEG               -20
+LIMITS V_RATE               1E4
+
+TABLE TIME                  0.0  0.5  1.0  1.8  2.0  2.3  3.0
+TABLE REF                   2.0  5.0 -2.0 -1.0  2.5 -2.0  1.0
+
+PREFUNC ACCELERATION        100
+PREFUNC DECELERATION        100
+
+GLOBAL FILE                 direct
+RUN
+
+# EOF

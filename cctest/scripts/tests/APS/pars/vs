@@ -1,7 +1,0 @@
-# CCTEST voltage source model file : ACAPULCO with FGC3 in PSB
-
-VS.SIM_NUM       0.3504, 0.7008, 0.3504
-VS.SIM_DEN       1.0, 0.3646, 0.0370
-
-# EOF
-

@@ -7,8 +7,9 @@ Please let us know if you use cclibs in your projects: cclibs-devs@cern.ch
 
 If you would like to be notified about new releases then write to this address and ask to be added to the cclibs-users mailing list.
 
-Libreg is nearly finished. V5 is a major upgrade that adds a new interface for libreg parameters which massively simplifies
-the use of libreg. A number of smaller issues are on their way, but they will not significantly change the API.
+Libreg is nearly finished. V5 is a major upgrade that adds a new interface for libreg parameters which massively simplifies the use of libreg. 
+
+A number of smaller features are on their way, but they will not significantly change the API.
 
 Work will soon focus on libcc and the associated test program ccrt. Both should be ready by early 2015.
 

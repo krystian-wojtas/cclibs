@@ -1,9 +1,0 @@
-# CCTEST global control file for random time tests
-
-GLOBAL.RUN_DELAY       1.0
-GLOBAL.STOP_DELAY      1.0
-GLOBAL.ITER_PERIOD     1.0E-3
-GLOBAL.REVERSE_TIME    ENABLED
-GLOBAL.UNITS           VOLTS
-
-# EOF

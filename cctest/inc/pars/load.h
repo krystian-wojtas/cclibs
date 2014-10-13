@@ -83,19 +83,19 @@ CCPARS_LOAD_EXT struct ccpars_load ccpars_load
 
 CCPARS_LOAD_EXT struct ccpars load_pars[]
 #ifdef GLOBALS
-= {// "Signal name"      type,max_n_els,min_n_els,*enum,              *value,                    num_defaults
-    { "OHMS_SER",        PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.ohms_ser        }, 1 },
-    { "OHMS_PAR",        PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.ohms_par        }, 1 },
-    { "OHMS_MAG",        PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.ohms_mag        }, 1 },
-    { "HENRYS",          PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.henrys          }, 1 },
-    { "HENRYS_SAT",      PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.henrys_sat      }, 1 },
-    { "I_SAT_START",     PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.i_sat_start     }, 1 },
-    { "I_SAT_END",       PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.i_sat_end       }, 1 },
-    { "GAUSS_PER_AMP",   PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.gauss_per_amp   }, 1 },
-    { "PERTURB_VOLTS",   PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.perturb_volts   }, 1 },
-    { "PERTURB_TIME",    PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.perturb_time    }, 1 },
-    { "SIM_TC_ERROR",    PAR_FLOAT,  1, 1, NULL,             { .f = &ccpars_load.sim_tc_error    }, 1 },
-    { "POL_SWI_AUTO",    PAR_ENUM,   1, 1, enabled_disabled, { .i = &ccpars_load.pol_swi_auto    }, 1 },
+= {// "Signal name"      type,    max_n_els,*enum,                    *value,                    num_defaults
+    { "OHMS_SER",        PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.ohms_ser        }, 1 },
+    { "OHMS_PAR",        PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.ohms_par        }, 1 },
+    { "OHMS_MAG",        PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.ohms_mag        }, 1 },
+    { "HENRYS",          PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.henrys          }, 1 },
+    { "HENRYS_SAT",      PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.henrys_sat      }, 1 },
+    { "I_SAT_START",     PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.i_sat_start     }, 1 },
+    { "I_SAT_END",       PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.i_sat_end       }, 1 },
+    { "GAUSS_PER_AMP",   PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.gauss_per_amp   }, 1 },
+    { "PERTURB_VOLTS",   PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.perturb_volts   }, 1 },
+    { "PERTURB_TIME",    PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.perturb_time    }, 1 },
+    { "SIM_TC_ERROR",    PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.sim_tc_error    }, 1 },
+    { "POL_SWI_AUTO",    PAR_ENUM,    1,     enabled_disabled, { .i = &ccpars_load.pol_swi_auto    }, 1 },
     { NULL }
 }
 #endif

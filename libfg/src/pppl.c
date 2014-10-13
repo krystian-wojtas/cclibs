@@ -30,8 +30,8 @@
 enum fg_error fgPpplInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
                          struct fg_pppl_config     *config,
-                         float                      delay,
-                         float                      ref,
+                         double                     delay,
+                         float                      init_ref,
                          struct fg_pppl_pars       *pars,
                          struct fg_meta            *meta)
 {
@@ -52,7 +52,7 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
     float *        segs_a2;                      // Pointer to pars->a2
     struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
+    meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Check that number of PPPLs is the same for all seven parameters
 
@@ -72,13 +72,13 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
     // Prepare to process all PPPLs
 
     pars->seg_idx     = 0;
-    pars->ref_initial = ref;
+    pars->ref_initial = init_ref;
     pars->delay       = delay;
 
     seg_idx = 0;
-    r[0]    = ref;
+    r[0]    = init_ref;
     rate[0] = 0.0;
-    time    = delay;
+    time    = 0.0;
 
     segs_t  = &pars->time[0];
     segs_a0 = &pars->a0[0];
@@ -274,45 +274,57 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
     return(FG_OK);
 }
 
-uint32_t fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
+
+
+bool fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
 {
-    double seg_time;                                    // Time within segment
+    double func_time;               // Time within function
+    float  seg_time;                // Time within segment
+
+    // Both *time and delay must be 64-bit doubles if time is UNIX time
+
+    func_time = *time - pars->delay;
 
     // Coast during run delay
 
-    if(*time <= pars->delay)                            // if time is before start of first parabola
+    if(func_time <= 0.0)
     {
-        pars->seg_idx = 0;                                      // Reset seg index
-        *ref = pars->ref_initial;                               // Set ref to initial reference value
-        return(1);
+        pars->seg_idx = 0;
+        *ref = pars->ref_initial;
+
+        return(true);
     }
 
     // Scan through the PPPL segments to find segment containing the current time
 
-    while(*time > pars->time[pars->seg_idx])            // while time exceeds end of segment
+    while(func_time > pars->time[pars->seg_idx])
     {
-        if(++pars->seg_idx >= pars->num_segs)                  // if function complete
+        // If function complete the coast from last reference and return false
+
+        if(++pars->seg_idx >= pars->num_segs)
         {
-            pars->seg_idx = pars->num_segs - 1;                         // Force segment index to last seg
-            *ref          = pars->a0[pars->seg_idx];                    // Enter coast
-            return(0);                                                  // Return 0 to say function ended
+            pars->seg_idx = pars->num_segs - 1;
+            *ref          = pars->a0[pars->seg_idx];
+
+            return(false);
         }
     }
 
-    while(pars->seg_idx > 0 &&                          // while time before start of segment
-          *time < pars->time[pars->seg_idx - 1])
+    // While time before start of segment - backtrack to the previous segment
+
+    while(pars->seg_idx > 0 && func_time < pars->time[pars->seg_idx - 1])
     {
-        pars->seg_idx--;                                        // backtrack to previous segment
+        pars->seg_idx--;
     }
 
-    // Calculate reference
+    // seg_time is time within the segment
 
-    seg_time = *time - pars->time[pars->seg_idx];       // seg_time is time within the segment
+    seg_time = func_time - pars->time[pars->seg_idx];
 
     *ref = pars->a0[pars->seg_idx] +
           (pars->a1[pars->seg_idx] + pars->a2[pars->seg_idx] * seg_time) * seg_time;
 
-    return(1);
+    return(true);
 }
 
 // EOF

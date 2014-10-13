@@ -1,0 +1,57 @@
+# Test default parameters
+
+GLOBAL REG_MODE             F C V F V C F
+GLOBAL FUNCTION             SINE CTRIM PPPL PLEP RAMP TABLE PLEP
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL GROUP                sandbox
+GLOBAL PROJECT              RegMode
+
+VS V_REF_DELAY              1
+
+LIMITS B_ACCELERATION       1.000000E+003
+LIMITS V_ACCELERATION       1.000000E+003
+
+IREG PERIOD_ITERS           7
+BREG PERIOD_ITERS           11
+
+# Mixed functions
+
+TEST INITIAL_REF            1
+
+PLEP INITIAL_REF            2
+PLEP FINAL_REF              3
+
+PPPL INITIAL_REF            2
+PPPL REF4                   3
+
+TRIM INITIAL_REF            2
+TRIM FINAL_REF              3
+
+RAMP INITIAL_REF            2
+RAMP FINAL_REF              3
+RAMP LINEAR_RATE            0
+
+TABLE REF                   2 2.5 2.5 3.0
+
+MEAS I_SIM_NOISE_PP         1E-3
+MEAS B_SIM_NOISE_PP         1E-3
+
+PREFUNC ACCELERATION        10
+PREFUNC DECELERATION        10
+
+GLOBAL FILE                 mixed
+RUN
+
+# Tables 
+
+GLOBAL REG_MODE             F C F C F C
+GLOBAL FUNCTION             TABLE TABLE TABLE TABLE TABLE TABLE
+
+PREFUNC ACCELERATION        2
+PREFUNC DECELERATION        10
+
+GLOBAL FILE                 tables
+RUN
+
+# EOF

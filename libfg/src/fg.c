@@ -31,7 +31,7 @@ struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, f
 {
     uint32_t idx;
 
-    // If user supplied meta is NULL then local_meta
+    // If user supplied meta pointer is NULL then use local_meta from libreg Init function
 
     if(meta == NULL)
     {
@@ -77,11 +77,10 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
     float    max;
     float    min;
     float    limit;
-    uint32_t invert_limits;
 
     // Do nothing if limits are NULL
 
-    if(!limits)
+    if(limits == NULL)
     {
         return(FG_OK);
     }
@@ -96,7 +95,7 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
         max = -(1.0 - FG_CLIP_LIMIT_FACTOR) * limits->min;
         min = -(1.0 + FG_CLIP_LIMIT_FACTOR) * limits->pos;
 
-        invert_limits = 1;
+        meta->invert_limits = true;
     }
     else // Limits do not need to be inverted
     {
@@ -104,21 +103,21 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
         min = (limits->neg < 0.0 ? (1.0 + FG_CLIP_LIMIT_FACTOR) * limits->neg :
                                    (1.0 - FG_CLIP_LIMIT_FACTOR) * limits->min);
 
-        invert_limits = 0;
+        meta->invert_limits = false;
     }
 
     // Check reference level
 
     if(ref > max || ref < min)
     {
-        meta->error.data[0] = max;
-        meta->error.data[1] = ref;
-        meta->error.data[2] = min;
+        meta->error.data[0] = ref;
+        meta->error.data[1] = min;
+        meta->error.data[2] = max;
 
         return(FG_OUT_OF_LIMITS);
     }
 
-    // Check rate of change
+    // Check rate of change if limit is positive
 
     if(limits->rate >  0.0 &&
        fabs(rate)   > (limit =((1.0 + FG_CLIP_LIMIT_FACTOR) * limits->rate)))

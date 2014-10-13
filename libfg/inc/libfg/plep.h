@@ -75,17 +75,17 @@ struct fg_plep_config
  */
 struct fg_plep_pars
 {
-    float       normalisation;              //!< 1.0 for descending ramps, -1.0 for ascending ramps
-    float       delay;                      //!< Time before start of function (s)
-    float       acceleration;               //!< Parabolic acceleration/deceleration
-    float       final_acc;                  //!< Normalised final parabolic acceleration
-    float       linear_rate;                //!< Linear rate of change (always negative)
-    float       final_rate;                 //!< Normalised final linear rate of change
-    float       ref_exp;                    //!< Initial reference for exponential segment
-    float       inv_exp_tc;                 //!< Time constant for exponential segment
-    float       exp_final;                  //!< End reference of exponential segment
-    float       ref[FG_PLEP_N_SEGS+1];      //!< End of segment normalised references. See also #FG_PLEP_N_SEGS
-    float       time[FG_PLEP_N_SEGS+1];     //!< End of segment times. See also #FG_PLEP_N_SEGS
+    double      delay;                      //!< Time before start of function (s).
+    float       normalisation;              //!< 1.0 for descending ramps, -1.0 for ascending ramps.
+    float       acceleration;               //!< Parabolic acceleration/deceleration.
+    float       final_acc;                  //!< Normalised final parabolic acceleration.
+    float       linear_rate;                //!< Linear rate of change (always negative).
+    float       final_rate;                 //!< Normalised final linear rate of change.
+    float       ref_exp;                    //!< Initial reference for exponential segment.
+    float       inv_exp_tc;                 //!< Time constant for exponential segment.
+    float       exp_final;                  //!< End reference of exponential segment.
+    float       ref [FG_PLEP_N_SEGS+1];     //!< End of segment normalised references. See also #FG_PLEP_N_SEGS.
+    float       time[FG_PLEP_N_SEGS+1];     //!< End of segment times. See also #FG_PLEP_N_SEGS.
 };
 
 #ifdef __cplusplus
@@ -97,12 +97,12 @@ extern "C" {
 /*!
  * Check PLEP function configuration and initialise parameters.
  *
- * @param[in]  limits           Limits to check each segment against
- * @param[in]  limits_polarity  Polarity limits to check each segment against
- * @param[in]  config           PLEP configuration parameters
- * @param[in]  delay            RUN_DELAY, delay before the start of the function
- * @param[in]  ref              Initial reference value
- * @param[out] pars             PLEP function parameters
+ * @param[in]  limits           Pointer to fgc_limits structure (or NULL).
+ * @param[in]  limits_polarity  Control of limits inversion.
+ * @param[in]  config           Pointer to fg_plep_config structure.
+ * @param[in]  delay            Delay before the start of the function.
+ * @param[in]  init_ref         Initial reference value.
+ * @param[out] pars             Pointer to fg_plep_pars structure.
  * @param[out] meta             Diagnostic information. Set to NULL if not required.
  *
  * @retval FG_OK on success
@@ -112,7 +112,7 @@ extern "C" {
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
 enum fg_error fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                         struct fg_plep_config *config, float delay, float ref,
+                         struct fg_plep_config *config, double delay, float init_ref,
                          struct fg_plep_pars *pars, struct fg_meta *meta);
 
 /*!
@@ -123,13 +123,11 @@ enum fg_error fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity limit
  * The reference is adjusted (de-normalised) if the PLEP is ascending, by simply
  * flipping the sign.
  *
- * @param[in]  pars             PLEP function parameters, containing the
+ * @param[in]  pars             Pointer to fg_plep_pars structure containing the
  *                              coordinates of the transition points between the
- *                              segments of the PLEP function, except for the
- *                              point at index 0 which is used slightly
- *                              differently:
+ *                              segments of the PLEP function:
  *                              <ul>
- *                              <li>pars->time[0], pars->ref[0]: TOP of the first parabola (NOT the beginning of the first parabola)</li>
+ *                              <li>pars->time[0], pars->ref[0]: Start of the first parabola</li>
  *                              <li>pars->time[1], pars->ref[1]: End of the first parabola</li>
  *                              <li>pars->time[2], pars->ref[2]: End of the linear segment</li>
  *                              <li>pars->time[3], pars->ref[3]: End of the exponential segments</li>
@@ -147,41 +145,10 @@ enum fg_error fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity limit
  *                              iteration. This may have been clipped if any
  *                              limits were reached.
  *
- * @retval 0 if time is beyond the end of the function.
- * @retval 1 if time is within the function.
+ * @retval false    if time is beyond the end of the function.
+ * @retval true     if time is before the end of the function.
  */
-uint32_t fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref);
-
-/*!
- * Calculate PLEP function parameters.
- *
- * This function must be re-entrant because it can be called to calculate the
- * PLEP coefficients for an already moving reference. The reference scale is
- * normalised if the PLEP is ascending. This reflects the function about the
- * zero to make the calculated PLEP always descending.
- *
- * @param[in]     config        PLEP configuration parameters
- * @param[in,out] pars          PLEP function parameters. The parameters from the
- *                              previous iteration are used to calculate the
- *                              parameters for the current iteration.
- *                              <em>pars</em> is updated with the new parameters.
- *                              The coordinates of the transition points between
- *                              the segments of the PLEP function are:
- *                              <ul>
- *                              <li>pars->time[0], pars->ref[0]: TOP of the first parabola (NOT the beginning of the first parabola)</li>
- *                              <li>pars->time[1], pars->ref[1]: End of the first parabola</li>
- *                              <li>pars->time[2], pars->ref[2]: End of the linear segment</li>
- *                              <li>pars->time[3], pars->ref[3]: End of the exponential segments</li>
- *                              <li>pars->time[4], pars->ref[4]: End of the second (decelerating) parabola</li>
- *                              <li>pars->time[5], pars->ref[5]: End of the third (accelerating) parabola and end of the PLEP function</li>
- *                              </ul>
- * @param[in]     delay         RUN_DELAY, delay before the start of the function
- * @param[in]     init_ref      Initial reference value
- * @param[in]     init_rate     Initial linear rate of change. If <em>delay</em> is non-zero, then <em>init_rate</em> should be zero.
- * @param[out]    meta          Diagnostic information. Set to NULL if not required.
- */
-void fgPlepCalc(struct fg_plep_config *config, struct fg_plep_pars *pars, float delay,
-                float init_ref, float init_rate, struct fg_meta *meta);
+bool fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }

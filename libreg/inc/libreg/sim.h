@@ -163,7 +163,7 @@ void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_va
  * @param[in]     num                  VS model numerator coefficients (used if bandwidth is zero)
  * @param[in]     den                  VS model denominator coefficients (used if bandwidth is zero)
  */
-void regSimVsInit(struct reg_sim_vs_pars *pars, float iter_period, float v_ref_delay_iters,
+void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_delay_iters,
                   float bandwidth, float z, float tau_zero,
                   float num[REG_N_VS_SIM_COEFFS], float den[REG_N_VS_SIM_COEFFS]);
 

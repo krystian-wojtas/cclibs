@@ -50,6 +50,8 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
   a command parameter.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    uint32_t             num_elements;
+    uint32_t             int_value;
     double               double_value;
     char                *remaining_arg;
     char                *arg;
@@ -57,17 +59,18 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
     struct ccpars_enum  *par_enum;
     struct ccpars_enum  *par_enum_matched;
 
+
     // Reset errno because strtod does not set it to zero on success
 
     errno = 0;
 
     // Try to parse the arguments to set the parameter values
 
-    par->num_elements = 0;
+    num_elements = 0;
 
     while((arg = ccTestGetArgument(remaining_line)) != NULL)
     {
-        if(par->num_elements >= par->max_num_elements)
+        if(num_elements >= par->max_num_elements)
         {
             ccTestPrintError("too many values for %s %s (%u max)",
                     cmd_name,par->name,par->max_num_elements);
@@ -80,14 +83,16 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
         {
         case PAR_UNSIGNED:
 
-            par->value_p.i[par->num_elements] = strtoul(arg, &remaining_arg, 10);
+            int_value = strtoul(arg, &remaining_arg, 10);
 
             if(*remaining_arg != '\0' || errno != 0)
             {
-                ccTestPrintError("invalid integer for %s %s[%u]: '%s' : %s (%d)",
-                        cmd_name, par->name, par->num_elements, arg, strerror(errno), errno);
+                ccTestPrintError("invalid integer for %s %s[%u]: '%s'",
+                        cmd_name, par->name, num_elements, arg);
                 return(EXIT_FAILURE);
             }
+
+            par->value_p.i[num_elements] = int_value;
             break;
 
         case PAR_FLOAT:
@@ -103,24 +108,26 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
             if(*remaining_arg != '\0' || errno != 0)
             {
-                ccTestPrintError("invalid float for %s %s[%u]: '%s' : %s (%d)",
-                        cmd_name, par->name, par->num_elements, arg, strerror(errno), errno);
+                ccTestPrintError("invalid float for %s %s[%u]: '%s'",
+                        cmd_name, par->name, num_elements, arg);
                 return(EXIT_FAILURE);
             }
 
-            par->value_p.f[par->num_elements] = (float)double_value;
+            par->value_p.f[num_elements] = (float)double_value;
             break;
 
         case PAR_DOUBLE:
 
-            par->value_p.d[par->num_elements] = strtod(arg, &remaining_arg);
+            double_value = strtod(arg, &remaining_arg);
 
             if(*remaining_arg != '\0' || errno != 0)
             {
-                ccTestPrintError("invalid double for %s %s[%u]: '%s' : %s (%d)",
-                        cmd_name, par->name, par->num_elements, arg, strerror(errno), errno);
+                ccTestPrintError("invalid double for %s %s[%u]: '%s'",
+                        cmd_name, par->name, num_elements, arg);
                 return(EXIT_FAILURE);
             }
+
+            par->value_p.d[num_elements] = double_value;
             break;
 
         case PAR_STRING:   // STRING parameters must be scalar (max_num_element = 1)
@@ -163,11 +170,18 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
                     if(par_enum_matched == NULL)
                     {
                         par_enum_matched = par_enum;
+
+                        // If match is exact then break out of search
+
+                        if(strcasecmp(par_enum->string, arg) == 0)
+                        {
+                            break;
+                        }
                     }
                     else // else second match so report error
                     {
                         ccTestPrintError("ambiguous enum for %s %s[%u]: '%s'",
-                                         cmd_name, par->name, par->num_elements, arg);
+                                         cmd_name, par->name, num_elements, arg);
                         return(EXIT_FAILURE);
                     }
                 }
@@ -176,22 +190,15 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
             if(par_enum_matched == NULL)
             {
                 ccTestPrintError("unknown enum for %s %s[%u]: '%s'",
-                                 cmd_name, par->name, par->num_elements, ccTestAbbreviatedArg(arg));
+                                 cmd_name, par->name, num_elements, ccTestAbbreviatedArg(arg));
                 return(EXIT_FAILURE);
             }
 
-            par->value_p.i[par->num_elements] = par_enum_matched->value;
+            par->value_p.i[num_elements] = par_enum_matched->value;
             break;
         }
 
-        par->num_elements++;
-    }
-
-    if(par->num_elements < par->min_num_elements)
-    {
-        ccTestPrintError("too few values for %s %s[%u]: %u of %u",
-                         cmd_name, par->name, par->num_elements, par->num_elements, par->min_num_elements);
-        return(EXIT_FAILURE);
+        par->num_elements = ++num_elements;
     }
 
     return(EXIT_SUCCESS);
@@ -228,10 +235,10 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par)
 {
     uint32_t            idx;
 
+    fprintf(f,"%-*s %-*s",CC_MAX_CMD_NAME_LEN,cmd_name,CC_MAX_PAR_NAME_LEN,par->name);
+
     if(par->num_elements > 0)
     {
-        fprintf(f,"%-*s %-*s",CC_MAX_CMD_NAME_LEN,cmd_name,CC_MAX_PAR_NAME_LEN,par->name);
-
         for( idx = 0 ; idx < par->num_elements ; idx++)
         {
             if(idx > 0)
@@ -267,9 +274,8 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par)
                 break;
             }
         }
-
-        fputc('\n',f);
     }
+    fputc('\n',f);
 }
 /*---------------------------------------------------------------------------------------------------------*/
 static char * ccParsDebugLabel(char *prefix, char *variable)
@@ -411,14 +417,14 @@ void ccParsPrintDebug(FILE *f)
 
         // Report internally calculated field regulation parameters
 
-        if(ccrun.breg_flag == 1)
+        if(conv.b.reg_period == REG_ENABLED)
         {
             ccParsPrintDebugReg(f, "BREG", &conv.b);
         }
 
         // Report internally calculated current regulation parameters
 
-        if(ccrun.ireg_flag == 1)
+        if(conv.i.regulation == REG_ENABLED)
         {
             ccParsPrintDebugReg(f, "IREG", &conv.i);
         }
@@ -432,13 +438,13 @@ void ccParsPrintDebug(FILE *f)
                             ccParsEnumString(function_type, ccpars_global.function[i]));
         fprintf(f,"%-*s %s\n",   PARS_INDENT, "REF reg_mode",
                             ccParsEnumString(reg_mode,      ccpars_global.reg_mode[i]));
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG ref_advance",     ccrun.ref_advance[i]);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG max_abs_err",     ccrun.max_abs_err[i]);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META duration",    ccrun.fg_meta[i].duration);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.start", ccrun.fg_meta[i].range.start);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.end",   ccrun.fg_meta[i].range.end);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.min",   ccrun.fg_meta[i].range.min);
-        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.max",   ccrun.fg_meta[i].range.max);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG ref_advance",     ccrun.func[i].ref_advance);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "REG max_abs_err",     ccrun.func[i].max_abs_err);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META duration",    ccrun.func[i].fg_meta.duration);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.start", ccrun.func[i].fg_meta.range.start);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.end",   ccrun.func[i].fg_meta.range.end);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.min",   ccrun.func[i].fg_meta.range.min);
+        fprintf(f,"%-*s" FLOAT_FORMAT "\n", PARS_INDENT, "FG_META range.max",   ccrun.func[i].fg_meta.range.max);
     }
 }
 // EOF

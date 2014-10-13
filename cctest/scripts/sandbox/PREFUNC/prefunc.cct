@@ -1,0 +1,115 @@
+# CCTEST - START tests script
+
+GLOBAL ITER_PERIOD_US       1000
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL GROUP                sandbox
+GLOBAL PROJECT              PREFUNC
+
+# Voltage source parameters
+
+VS V_REF_DELAY_ITERS        1.0
+VS BANDWIDTH                2000
+VS TAU_ZERO                 0.0
+VS Z                        0.9
+
+# Load parameters
+
+LOAD OHMS_SER               0.2
+LOAD OHMS_PAR               50.0
+LOAD OHMS_MAG               0.2
+LOAD HENRYS                 0.5
+LOAD HENRYS_SAT             0.2
+LOAD I_SAT_START            5.0
+LOAD I_SAT_END              9.0
+LOAD SIM_TC_ERROR           0.1
+
+# Measurement parameters
+
+MEAS I_REG_SELECT           UNFILTERED
+MEAS I_DELAY_ITERS          1.3
+MEAS V_DELAY_ITERS          1.3
+MEAS I_FIR_LENGTHS          1,1
+MEAS I_SIM_NOISE_PP         0.0
+MEAS V_SIM_NOISE_PP         0.0
+MEAS TONE_HALF_PERIOD_ITERS 10
+MEAS I_SIM_TONE_AMP         0.0
+
+# IREG parameters
+
+IREG PERIOD_ITERS           10
+IREG AUXPOLE1_HZ            10
+IREG AUXPOLES2_HZ           10
+IREG AUXPOLES2_Z            0.5
+
+# LIMITS parameters
+
+LIMITS I_POS                10
+LIMITS I_MIN                1
+LIMITS I_NEG                0
+LIMITS I_RATE               100
+LIMITS I_ACCELERATION       30
+LIMITS I_CLOSELOOP          0.5
+LIMITS V_POS                5
+LIMITS V_NEG                -5
+LIMITS INVERT               DISABLED
+
+# - Current START - RAMP UP - ABORT DOWN -
+
+GLOBAL RUN_DELAY            0.2
+GLOBAL STOP_DELAY           0.2
+GLOBAL FUNCTION             SINE TABLE
+GLOBAL REG_MODE             CURRENT
+
+PREFUNC ACCELERATION        100
+PREFUNC DECELERATION        200
+PREFUNC PLATEAU_DURATION    0.1
+
+# Normal limits tests
+
+TEST INITIAL_REF            3.0
+TEST NUM_CYCLES             2
+TEST PERIOD                 1
+
+TABLE REF                   2 1 1.4 2.5
+
+PREFUNC POLICY              RAMP
+GLOBAL FILE                 prefunc-ramp
+RUN
+
+PREFUNC POLICY              STOPSTART
+GLOBAL FILE                 prefunc-stopstart
+RUN
+
+PREFUNC POLICY              MIN
+GLOBAL FILE                 prefunc-min
+RUN
+
+PREFUNC POLICY              MINMAX
+GLOBAL FILE                 prefunc-minmax
+RUN
+
+# Inverted limits tests
+
+LIMITS INVERT               ENABLED
+
+TEST INITIAL_REF            -3.0
+TABLE REF                   -2 -1 -1.4 -2.5
+
+PREFUNC POLICY              RAMP
+GLOBAL FILE                 prefunc-ramp-invert
+RUN
+
+PREFUNC POLICY              STOPSTART
+GLOBAL FILE                 prefunc-stopstart-invert
+RUN
+
+PREFUNC POLICY              MIN
+GLOBAL FILE                 prefunc-min-invert
+RUN
+
+PREFUNC POLICY              MINMAX
+GLOBAL FILE                 prefunc-minmax-invert
+RUN
+
+# EOF

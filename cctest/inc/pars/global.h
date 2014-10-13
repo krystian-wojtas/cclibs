@@ -45,6 +45,7 @@
 enum fg_types
 {
     FG_START,
+    FG_DIRECT,
     FG_PLEP,
     FG_RAMP,
     FG_PPPL,
@@ -61,6 +62,7 @@ CCPARS_GLOBAL_EXT struct ccpars_enum function_type[]
 #ifdef GLOBALS
 = {
     { FG_START,       "START"  },
+    { FG_DIRECT,      "DIRECT" },
     { FG_PLEP,        "PLEP"   },
     { FG_RAMP,        "RAMP"   },
     { FG_PPPL,        "PPPL"   },
@@ -138,7 +140,6 @@ CCPARS_GLOBAL_EXT struct ccpars_enum csv_format[]
 
 struct ccpars_global
 {
-    float                       pre_func_delay;     // Pre-function time delay (time added between functions).
     float                       run_delay;          // Delay given to libfg for each function
     float                       stop_delay;         // Time after end of last ref function
     uint32_t                    iter_period_us;     // Global iteration period (us)
@@ -163,7 +164,6 @@ struct ccpars_global
 CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
 #ifdef GLOBALS
 = {//   Default value                  Parameter
-        0.1,                        // GLOBAL PRE_FUNC_DELAY
         1.0,                        // GLOBAL RUN_DELAY
         1.0,                        // GLOBAL STOP_DELAY
         1000,                       // GLOBAL ITER_PERIOD_US
@@ -188,7 +188,6 @@ CCPARS_GLOBAL_EXT struct ccpars_global ccpars_global
 
 enum global_pars_index_enum
 {
-    GLOBAL_PRE_FUNC_DELAY    ,
     GLOBAL_RUN_DELAY         ,
     GLOBAL_STOP_DELAY        ,
     GLOBAL_ITER_PERIOD_US    ,
@@ -212,27 +211,26 @@ enum global_pars_index_enum
 
 CCPARS_GLOBAL_EXT struct ccpars global_pars[]
 #ifdef GLOBALS
-= {// "Signal name"        type,      max_n_els, min_n_els,*enum,             *value,                        num_defaults
-    { "PRE_FUNC_DELAY",    PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.pre_func_delay     }, 1 },
-    { "RUN_DELAY",         PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.run_delay          }, 1 },
-    { "STOP_DELAY",        PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.stop_delay         }, 1 },
-    { "ITER_PERIOD_US",    PAR_UNSIGNED,     1, 1, NULL,             { .i = &ccpars_global.iter_period_us     }, 1 },
-    { "ABORT_TIME",        PAR_FLOAT,        1, 1, NULL,             { .f = &ccpars_global.abort_time         }, 1 },
-    { "FLOT_POINTS_MAX",   PAR_UNSIGNED,     1, 1, NULL,             { .i = &ccpars_global.flot_points_max    }, 1 },
-    { "ACTUATION",         PAR_ENUM,         1, 1, reg_actuation,    { .i = &ccpars_global.actuation          }, 1 },
-    { "REVERSE_TIME",      PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.reverse_time       }, 1 },
-    { "REG_MODE",          PAR_ENUM, MAX_FUNCS, 1, reg_mode,         { .i =  ccpars_global.reg_mode           }, 1 },
-    { "FUNCTION",          PAR_ENUM, MAX_FUNCS, 1, function_type,    { .i =  ccpars_global.function           }, 1 },
-    { "REG_ERR_RATE",      PAR_ENUM,         1, 1, reg_err_rate,     { .i = &ccpars_global.reg_err_rate       }, 1 },
-    { "FG_LIMITS",         PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.fg_limits          }, 1 },
-    { "SIM_LOAD",          PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.sim_load           }, 1 },
-    { "STOP_ON_ERROR",     PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.stop_on_error      }, 1 },
-    { "CSV_FORMAT",        PAR_ENUM,         1, 1, csv_format,       { .i = &ccpars_global.csv_format         }, 1 },
-    { "FLOT_OUTPUT",       PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.flot_output        }, 1 },
-    { "DEBUG_OUTPUT",      PAR_ENUM,         1, 1, enabled_disabled, { .i = &ccpars_global.debug_output       }, 1 },
-    { "GROUP",             PAR_STRING,       1, 1, NULL,             { .s = &ccpars_global.group              }, 1 },
-    { "PROJECT",           PAR_STRING,       1, 1, NULL,             { .s = &ccpars_global.project            }, 1 },
-    { "FILE",              PAR_STRING,       1, 1, NULL,             { .s = &ccpars_global.file               }, 1 },
+= {// "Signal name"        type,     max_n_els,    *enum,                    *value,                        num_defaults
+    { "RUN_DELAY",         PAR_FLOAT,    1,         NULL,             { .f = &ccpars_global.run_delay          }, 1 },
+    { "STOP_DELAY",        PAR_FLOAT,    1,         NULL,             { .f = &ccpars_global.stop_delay         }, 1 },
+    { "ITER_PERIOD_US",    PAR_UNSIGNED, 1,         NULL,             { .i = &ccpars_global.iter_period_us     }, 1 },
+    { "ABORT_TIME",        PAR_FLOAT,    1,         NULL,             { .f = &ccpars_global.abort_time         }, 1 },
+    { "FLOT_POINTS_MAX",   PAR_UNSIGNED, 1,         NULL,             { .i = &ccpars_global.flot_points_max    }, 1 },
+    { "ACTUATION",         PAR_ENUM,     1,         reg_actuation,    { .i = &ccpars_global.actuation          }, 1 },
+    { "REVERSE_TIME",      PAR_ENUM,     1,         enabled_disabled, { .i = &ccpars_global.reverse_time       }, 1 },
+    { "REG_MODE",          PAR_ENUM,     MAX_FUNCS, reg_mode,         { .i =  ccpars_global.reg_mode           }, 1 },
+    { "FUNCTION",          PAR_ENUM,     MAX_FUNCS, function_type,    { .i =  ccpars_global.function           }, 1 },
+    { "REG_ERR_RATE",      PAR_ENUM,     1,         reg_err_rate,     { .i = &ccpars_global.reg_err_rate       }, 1 },
+    { "FG_LIMITS",         PAR_ENUM,     1,         enabled_disabled, { .i = &ccpars_global.fg_limits          }, 1 },
+    { "SIM_LOAD",          PAR_ENUM,     1,         enabled_disabled, { .i = &ccpars_global.sim_load           }, 1 },
+    { "STOP_ON_ERROR",     PAR_ENUM,     1,         enabled_disabled, { .i = &ccpars_global.stop_on_error      }, 1 },
+    { "CSV_FORMAT",        PAR_ENUM,     1,         csv_format,       { .i = &ccpars_global.csv_format         }, 1 },
+    { "FLOT_OUTPUT",       PAR_ENUM,     1,         enabled_disabled, { .i = &ccpars_global.flot_output        }, 1 },
+    { "DEBUG_OUTPUT",      PAR_ENUM,     1,         enabled_disabled, { .i = &ccpars_global.debug_output       }, 1 },
+    { "GROUP",             PAR_STRING,   1,         NULL,             { .s = &ccpars_global.group              }, 1 },
+    { "PROJECT",           PAR_STRING,   1,         NULL,             { .s = &ccpars_global.project            }, 1 },
+    { "FILE",              PAR_STRING,   1,         NULL,             { .s = &ccpars_global.file               }, 1 },
     { NULL }
 }
 #endif

@@ -30,15 +30,15 @@
 enum fg_error fgRampInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
                          struct fg_ramp_config     *config,
-                         float                      delay,
-                         float                      ref,
+                         double                     delay,
+                         float                      init_ref,
                          struct fg_ramp_pars       *pars,
                          struct fg_meta            *meta)
 {
     enum fg_error  fg_error;                     // Reference limits status
     struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, ref);  // Reset meta structure - uses local_meta if meta is NULL
+    meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Check that parameters are valid
 
@@ -49,7 +49,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     // Calculate ramp parameters always with zero initial ramp rate
 
-    fgRampCalc(config, delay, ref, 0.0, pars, meta);
+    fgRampCalc(config, delay, init_ref, 0.0, pars, meta);
 
     // Check limits if supplied
 
@@ -57,7 +57,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
     {
         // Check limits at the start of the parabolic acceleration (segment 1)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, ref, 0.0, pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, init_ref, 0.0, pars->acceleration, meta)))
         {
             meta->error.index = 1;
             return(fg_error);
@@ -77,9 +77,9 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
 
 
-uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
+bool fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 {
-    uint32_t    func_running_flag = 1;      // Returned value
+    bool        func_running = true;        // Returned value
     uint32_t    time_shift_alg    = 0;      // Time shift adjustment algorithm index
     float       r;
     float       ref_rate_limit;             // Limit on ref due to rate limit
@@ -193,7 +193,7 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 
             // End of function
  
-            func_running_flag = 0;
+            func_running = false;
         }
 
         // Keep ramp reference for next iteration (before rate limiter)
@@ -252,13 +252,13 @@ uint32_t fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 
     *ref = r;
 
-    return(func_running_flag);
+    return(func_running);
 }
 
 
 
 void fgRampCalc(struct fg_ramp_config *config,
-                float                  delay,
+                double                 delay,
                 float                  init_ref,
                 float                  init_rate,
                 struct fg_ramp_pars   *pars,

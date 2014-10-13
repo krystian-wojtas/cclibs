@@ -41,6 +41,7 @@ struct ccpars_vs
     // Voltage source file parameter
 
     float                       v_ref_delay_iters;  // Voltage source control delay in iterations
+    float                       quantization;       // Voltage ref quantization (V)
     float                       bandwidth;          // Voltage source bandwidth
     float                       z;                  // Damping factor
     float                       tau_zero;           // Time constant of zero
@@ -51,6 +52,7 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 #ifdef GLOBALS
 = {//   Default value               Parameter
         1.0,                     // VS V_REF_DELAY_ITERS
+        0.0,                     // VS QUANTIZATION
         200.0,                   // VS BANDWIDTH
         0.9,                     // VS Z
         0.0,                     // VS TAU_ZERO
@@ -64,13 +66,14 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 
 CCPARS_VS_EXT struct ccpars vs_pars[]
 #ifdef GLOBALS
-= {// "Signal name"       type,   max_n_els,        min_n_els,*enum,         *value,                     num_defaults
-    { "V_REF_DELAY_ITERS",PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.v_ref_delay_iters }, 1 },
-    { "BANDWIDTH",        PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.bandwidth         }, 1 },
-    { "Z",                PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.z                 }, 1 },
-    { "TAU_ZERO",         PAR_FLOAT, 1,                   1, NULL,  { .f = &ccpars_vs.tau_zero          }, 1 },
-    { "SIM_NUM",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, 1, NULL,  { .f =  ccpars_vs.sim_vs_pars.num   }, 1 },
-    { "SIM_DEN",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, 1, NULL,  { .f =  ccpars_vs.sim_vs_pars.den   }, 1 },
+= {// "Signal name"       type,     max_n_els,           *enum,         *value,                     num_defaults
+    { "V_REF_DELAY_ITERS",PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.v_ref_delay_iters }, 1 },
+    { "QUANTIZATION",     PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.quantization      }, 1 },
+    { "BANDWIDTH",        PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.bandwidth         }, 1 },
+    { "Z",                PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.z                 }, 1 },
+    { "TAU_ZERO",         PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.tau_zero          }, 1 },
+    { "SIM_NUM",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, NULL,  { .f =  ccpars_vs.sim_vs_pars.num   }, 1 },
+    { "SIM_DEN",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, NULL,  { .f =  ccpars_vs.sim_vs_pars.den   }, 1 },
     { NULL }
 }
 #endif

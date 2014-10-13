@@ -1,8 +1,0 @@
-# CCTEST limits file
-
-LIMITS.V_POS           1000.0
-LIMITS.V_NEG           -1000.0
-LIMITS.V_RATE          1.0
-LIMITS.V_ACCELERATION  4.0
-
-# EOF
