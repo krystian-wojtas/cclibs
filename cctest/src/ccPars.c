@@ -365,6 +365,14 @@ static void ccParsPrintDebugReg(FILE *f, char *prefix, struct reg_conv_signal *r
     fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "ref_delay_periods"),   reg_signal->rst_pars->ref_delay_periods);
     fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "t0_correction"),       reg_signal->rst_pars->t0_correction);
 
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "openloop_fwd_ref[0]"), reg_signal->rst_pars->openloop_forward.ref[0]);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "openloop_fwd_ref[1]"), reg_signal->rst_pars->openloop_forward.ref[1]);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "openloop_fwd_act[1]"), reg_signal->rst_pars->openloop_forward.act[1]);
+
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "openloop_rev_ref[1]"), reg_signal->rst_pars->openloop_reverse.ref[1]);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "openloop_rev_act[0]"), reg_signal->rst_pars->openloop_reverse.act[0]);
+    fprintf(f,"%s" DOUBLE_FORMAT "\n", ccParsDebugLabel(prefix, "openloop_rev_act[1]"), reg_signal->rst_pars->openloop_reverse.act[1]);
+
     for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
     {
         fprintf(f,"%s" DOUBLE_FORMAT " " DOUBLE_FORMAT " " DOUBLE_FORMAT " "

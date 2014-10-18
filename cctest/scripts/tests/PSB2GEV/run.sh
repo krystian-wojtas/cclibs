@@ -8,4 +8,6 @@ source ../../run_header.sh
 
 $cctest "global csv_format $csv_format" "read psb.cct"
 
+>&2 echo $0 complete
+
 # EOF

@@ -76,6 +76,16 @@ READ *
 CD   ../../..
 #EXIT
 
+# Dynamic economy test with RB
+
+PLEP ACCELERATION           30000
+PLEP LINEAR_RATE            1900
+
+GLOBAL FILE                 RB_CNGS_2009_AFTER_FT-dyneco
+GLOBAL DYN_ECO_TIME         1.0 5.5
+
+READ functions/amps/RB/RB_CNGS_2009_AFTER_FT
+
 # Main focusing quadrupole functions
 
 LOAD OHMS_MAG               1.6
@@ -83,7 +93,9 @@ LOAD HENRYS                 1.93
 LOAD HENRYS_SAT             1.0
 LOAD I_SAT_START            1250.0
 LOAD I_SAT_END              2500.0
+GLOBAL DYN_ECO_TIME         0.0 0.0
 
+GLOBAL FILE                 *
 CD   functions/amps/QF
 READ *
 CD   ../../..

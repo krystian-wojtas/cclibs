@@ -67,9 +67,9 @@ MEAS I_DELAY_ITERS          1.3
 MEAS V_DELAY_ITERS          1.3
 MEAS B_FIR_LENGTHS          10, 1
 MEAS I_FIR_LENGTHS          10, 1
-MEAS B_SIM_NOISE_PP         0.05
-MEAS I_SIM_NOISE_PP         0.05
-MEAS V_SIM_NOISE_PP         0.05
+MEAS B_SIM_NOISE_PP         0.0
+MEAS I_SIM_NOISE_PP         0.0
+MEAS V_SIM_NOISE_PP         0.0
 MEAS TONE_HALF_PERIOD_ITERS 100
 MEAS B_SIM_TONE_AMP         0.0
 MEAS I_SIM_TONE_AMP         0.0
@@ -84,6 +84,194 @@ PPPL RATE2                    400,     -400,      -400
 PPPL RATE4                      0,        0,         0
 PPPL REF4                     100,       50,         0
 PPPL DURATION4                0.1,      0.2,      0.01
+
+# Without noise
+
+# Test 1 - unfiltered
+
+GLOBAL REG_MODE             CURRENT
+MEAS I_REG_SELECT           UNFILTERED
+
+IREG PERIOD_ITERS           10
+IREG AUXPOLE1_HZ            20
+IREG AUXPOLES2_HZ           20
+IREG AUXPOLE4_HZ            20
+IREG AUXPOLE5_HZ            20
+IREG AUXPOLES2_Z            0.5
+
+VS V_REF_DELAY_ITERS        0.2
+GLOBAL FILE                 nn-amps-pppl-unf-0.26
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        5.5
+GLOBAL FILE                 nn-amps-pppl-unf-0.79
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        8.5
+GLOBAL FILE                 nn-amps-pppl-unf-1.09
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        14.5
+GLOBAL FILE                 nn-amps-pppl-unf-1.69
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        18.5
+GLOBAL FILE                 nn-amps-pppl-unf-2.09
+GLOBAL FUNCTION             PPPL
+RUN
+
+# Test 2 - filtered
+
+MEAS I_REG_SELECT           FILTERED
+
+VS V_REF_DELAY_ITERS        1.5
+GLOBAL FILE                 nn-amps-pppl-fil-0.84
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        4.5
+GLOBAL FILE                 nn-amps-pppl-fil-1.14
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        11.5
+GLOBAL FILE                 nn-amps-pppl-fil-1.84
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        14.5
+GLOBAL FILE                 nn-amps-pppl-fil-2.14
+GLOBAL FUNCTION             PPPL
+RUN
+
+# Test 3 - extrapolated
+
+MEAS I_REG_SELECT           EXTRAPOLATED
+
+VS V_REF_DELAY_ITERS        1.5
+GLOBAL FILE                 nn-amps-pppl-ext-0.26
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        7.5
+GLOBAL FILE                 nn-amps-pppl-ext-0.86
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        10.5
+GLOBAL FILE                 nn-amps-pppl-ext-1.16
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        16.5
+GLOBAL FILE                 nn-amps-pppl-ext-1.76
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        20.5
+GLOBAL FILE                 nn-amps-pppl-ext-2.16
+GLOBAL FUNCTION             PPPL
+RUN
+
+# Test 4 - unfiltered - Field regulation
+
+GLOBAL REG_MODE             FIELD
+MEAS B_REG_SELECT           UNFILTERED
+
+BREG PERIOD_ITERS           10
+BREG AUXPOLE1_HZ            20
+BREG AUXPOLES2_HZ           20
+BREG AUXPOLE4_HZ            20
+BREG AUXPOLE5_HZ            20
+BREG AUXPOLES2_Z            0.5
+
+VS V_REF_DELAY_ITERS        0.5
+GLOBAL FILE                 nn-gauss-pppl-unf-0.29
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        5.5
+GLOBAL FILE                 nn-gauss-pppl-unf-0.79
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        8.5
+GLOBAL FILE                 nn-gauss-pppl-unf-1.09
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        14.5
+GLOBAL FILE                 nn-gauss-pppl-unf-1.69
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        18.5
+GLOBAL FILE                 nn-gauss-pppl-unf-2.09
+GLOBAL FUNCTION             PPPL
+RUN
+
+# Test 5 - filtered - Field regulation
+
+MEAS B_REG_SELECT           FILTERED
+
+VS V_REF_DELAY_ITERS        1.5
+GLOBAL FILE                 nn-gauss-pppl-fil-0.84
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        4.5
+GLOBAL FILE                 nn-gauss-pppl-fil-1.14
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        11.5
+GLOBAL FILE                 nn-gauss-pppl-fil-1.84
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        14.5
+GLOBAL FILE                 nn-gauss-pppl-fil-2.14
+GLOBAL FUNCTION             PPPL
+RUN
+
+# Test 6 - extrapolated - Field regulation
+
+MEAS B_REG_SELECT           EXTRAPOLATED
+
+VS V_REF_DELAY_ITERS        1.5
+GLOBAL FILE                 nn-gauss-pppl-ext-0.26
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        7.5
+GLOBAL FILE                 nn-gauss-pppl-ext-0.86
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        10.5
+GLOBAL FILE                 nn-gauss-pppl-ext-1.16
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        16.5
+GLOBAL FILE                 nn-gauss-pppl-ext-1.76
+GLOBAL FUNCTION             PPPL
+RUN
+
+VS V_REF_DELAY_ITERS        20.5
+GLOBAL FILE                 nn-gauss-pppl-ext-2.16
+GLOBAL FUNCTION             PPPL
+RUN
+
+# With Noise
+
+MEAS B_SIM_NOISE_PP         0.05
+MEAS I_SIM_NOISE_PP         0.05
+MEAS V_SIM_NOISE_PP         0.05
 
 # Test 1 - unfiltered
 

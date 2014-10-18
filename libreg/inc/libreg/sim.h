@@ -112,6 +112,7 @@ extern "C" {
  *                                     distorted load_pars so that the simulated load time
  *                                     constant will mismatch the load_pars time constants by
  *                                     the required factor (i.e. 0.1 = 10% error in Tc).
+ * @param[in]     sim_period           Simulation period
  */
 void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars, float sim_load_tc_error, float sim_period);
 

@@ -22,13 +22,28 @@ LIMITS V_POS                20
 LIMITS V_NEG               -20
 LIMITS V_RATE               1E4
 
+LOAD OHMS_PAR               1e3
+LOAD SIM_TC_ERROR           0.0
+
 TABLE TIME                  0.0  0.5  1.0  1.8  2.0  2.3  3.0
 TABLE REF                   2.0  5.0 -2.0 -1.0  2.5 -2.0  1.0
 
 PREFUNC ACCELERATION        100
 PREFUNC DECELERATION        100
 
-GLOBAL FILE                 direct
+GLOBAL FILE                 direct-currrent
+# RUN
+
+# Field regulation
+
+GLOBAL REG_MODE             FIELD
+
+BREG PERIOD_ITERS           7
+LOAD OHMS_PAR               1e9
+LIMITS I_POS                10
+LIMITS B_RATE               1000
+
+GLOBAL FILE                 direct-field
 RUN
 
 # EOF

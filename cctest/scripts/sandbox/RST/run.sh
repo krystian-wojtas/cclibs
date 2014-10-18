@@ -7,6 +7,7 @@ source ../../run_header.sh
 # RST tests
 
 $cctest "global csv_format $csv_format" "read rst.cct"
-$cctest "global csv_format $csv_format" "read rst-no-noise.cct"
+
+>&2 echo $0 complete
 
 # EOF

@@ -193,8 +193,8 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_
     {
         // Use voltage source model provided in num and den arrays
 
-        memcpy(pars->num, num, sizeof(num));
-        memcpy(pars->den, den, sizeof(den));
+        memcpy(pars->num, num, sizeof(pars->num));
+        memcpy(pars->den, den, sizeof(pars->den));
 
         pars->vs_undersampled_flag  = 0;
 

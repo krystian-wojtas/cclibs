@@ -31,6 +31,9 @@
 
 // Constants
 
+#define DISCRETIZE_FORWARD_EULER_QK
+//#define DISCRETIZE_FORWARD_EULER
+//#define DISCRETIZE_BACKWARD_EULER
 #define M_TWO_PI                   (2.0*M_PI)
 #define FLOAT_THRESHOLD            1.0E-10                      //!< Lower bound for s[0]. To allow for floating point rounding errors.
 #define REG_AVE_V_REF_LEN          4                            //!< Number of iterations over which to average V_REF
@@ -645,6 +648,97 @@ static void regRstInitI(struct reg_rst_pars  *pars,
 
 
 
+/*
+ * Calculate coefficients for open loop reference difference equation.
+ *
+ * There are three ways to discretize the Z-transform to obtain the open loop
+ * reference difference equation: Forward Euler, Backward Euler or Tustin
+ * (trapezoidal) discretization. We are not sure which method will give the
+ * best results, so we have implemeted all three for evaluation. The final
+ * choice can be decided at compile time.
+ */
+static inline void regRstInitOpenLoop(struct reg_rst_pars *pars, struct reg_load_pars *load)
+{
+   // resistances as documented at struct reg_openloop
+   const double R1 = load->ohms_par + load->ohms_mag;
+   const double R2 = (load->ohms_ser * R1) + (load->ohms_par * load->ohms_mag);
+   const double R3 = load->ohms_par + load->ohms_ser;
+
+   const double Lm = load->henrys;        // magnet inductance
+   const double T  = pars->reg_period;    // period
+
+#if defined(DISCRETIZE_FORWARD_EULER_QK)
+
+    const double s1 = -Lm / (T*load->ohms_par);
+    const double s0 = 1.0 - s1 + load->ohms_mag / load->ohms_par;
+    const double t1 = -Lm/T * (1 + load->ohms_ser / load->ohms_par);
+    const double t0 = load->ohms_mag + load->ohms_ser * (1 + load->ohms_mag/load->ohms_par) - t1;
+
+    pars->openloop_forward.ref[0] =  t0/s0;
+    pars->openloop_forward.ref[1] =  t1/s0;
+    pars->openloop_forward.act[1] = -s1/s0;
+
+    pars->openloop_reverse.ref[1] = -t1/t0;
+    pars->openloop_reverse.act[0] =  s0/t0;
+    pars->openloop_reverse.act[1] =  s1/t0;
+
+#elif defined(DISCRETIZE_FORWARD_EULER)
+
+    const double k1 = (T*R1) - Lm;
+    const double k2 = (T*R2) - R3;
+
+    pars->openloop_forward.ref[0] =  R3/Lm;
+    pars->openloop_forward.ref[1] =  k2/Lm;
+    pars->openloop_forward.act[1] = -k1/Lm;
+
+    pars->openloop_reverse.ref[1] = -k2/R3;
+    pars->openloop_reverse.act[0] =  Lm/R3;
+    pars->openloop_reverse.act[1] =  k1/R3;
+
+#elif defined(DISCRETIZE_BACKWARD_EULER)
+
+    const double k1 = (T*R1) + Lm;
+    const double k2 = (T*R2) + R3;
+
+    pars->openloop_forward.ref[0] =  k2/k1;
+    pars->openloop_forward.ref[1] = -R3/k1;
+    pars->openloop_forward.act[1] =  Lm/k1;
+
+    pars->openloop_reverse.ref[1] =  R3/k2;
+    pars->openloop_reverse.act[0] =  k1/k2;
+    pars->openloop_reverse.act[1] = -Lm/k2;
+
+#else // DISCRETIZE_TUSTIN
+
+    const double k1 = R1 - (2/T) * Lm;
+    const double k2 = R2 - (2/T) * R3;
+    const double k3 = R1 + (2/T) * Lm;
+    const double k4 = R2 + (2/T) * R3;
+
+    pars->openloop_forward.ref[0] =  k4/k3;
+    pars->openloop_forward.ref[1] =  k2/k3;
+    pars->openloop_forward.act[1] = -k1/k3;
+
+    pars->openloop_reverse.ref[1] = -k2/k4;
+    pars->openloop_reverse.act[0] =  k3/k4;
+    pars->openloop_reverse.act[1] =  k1/k4;
+
+#endif
+   // If the regulation mode is CURRENT, we can use the reference current value as provided.
+   // If it is FIELD, the current is calculated as I = B/G where G is the field-to-current
+   // ratio for the magnet.
+
+   if(pars->reg_mode == REG_FIELD)
+   {
+      pars->openloop_forward.act[0] /= load->gauss_per_amp;
+      pars->openloop_forward.act[1] /= load->gauss_per_amp;
+      pars->openloop_reverse.act[0] *= load->gauss_per_amp;
+      pars->openloop_reverse.act[1] *= load->gauss_per_amp;
+   }
+}
+
+
+
 enum reg_status regRstInit(struct reg_rst_pars  *pars,
                            uint32_t              reg_period_iters,
                            double                reg_period,
@@ -760,6 +854,10 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
         }
     }
 
+    // Calculate coefficients for open loop difference equation.
+
+    regRstInitOpenLoop(pars, load);
+
     // Return the status
 
     return(pars->status);
@@ -767,15 +865,16 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
 
 
 
-void regRstInitHistory(struct reg_rst_vars *vars, float ref, float act)
+void regRstInitHistory(struct reg_rst_vars *vars, float ref, float openloop_ref, float act)
 {
     uint32_t    var_idx;
 
     for(var_idx = 0 ; var_idx <= REG_RST_HISTORY_MASK ; var_idx++)
     {
-        vars->ref [var_idx] = ref;
-        vars->meas[var_idx] = ref;
-        vars->act [var_idx] = act;
+        vars->openloop_ref[var_idx] = openloop_ref;
+        vars->ref         [var_idx] = ref;
+        vars->meas        [var_idx] = ref;
+        vars->act         [var_idx] = act;
     }
 
     vars->history_index = 0;
@@ -827,7 +926,7 @@ void regRstInitRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float
 
 
 
-float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref)
+float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, bool is_openloop)
 /*!
  * <h3>Implementation Notes</h3>
  *
@@ -849,36 +948,56 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
         return(0.0);
     }
 
-    // Use RST coefficients to calculate new actuation from reference
+    // Calculate actuation based on openloop flag from regRstCalcRefRT() on previous iteration
 
-    var_idx = vars->history_index;
-    act     = pars->rst.t[0]      * (double)ref -
-              pars->rst.r[0]      * (double)vars->meas[var_idx] +
-              pars->t0_correction * (double)ref;
-
-    for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+    if(is_openloop)
     {
-        var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
+        // Store the reference in openloop history
 
-        act += pars->rst.t[par_idx] * (double)vars->ref [var_idx] -
-               pars->rst.r[par_idx] * (double)vars->meas[var_idx] -
-               pars->rst.s[par_idx] * (double)vars->act [var_idx];
+        vars->openloop_ref[vars->history_index] = ref;
+
+        // Use openloop coefficients to calculate new openloop actuation from reference
+
+        var_idx = (vars->history_index - 1) & REG_RST_HISTORY_MASK;
+
+        // Calculate open loop actuation
+
+        act = pars->openloop_forward.ref[0] * (double)ref +
+              pars->openloop_forward.ref[1] * (double)vars->openloop_ref[var_idx] +
+              pars->openloop_forward.act[1] * (double)vars->act[var_idx];
     }
-    
-    act *= pars->inv_s0;
+    else
+    {
+        var_idx = vars->history_index;
 
-    // ****** THESE LINES CAN BE DELETED ONCE CalcRefRT() is called every time
-    var_idx = vars->history_index;
-    vars->act [var_idx] = act;
-    vars->ref [var_idx] = ref;
-    // ****** THESE LINES CAN BE DELETED ONCE CalcRefRT() is called every time
+        // Store the reference in RST history
+
+        vars->ref[var_idx] = ref;
+
+        // Use RST coefficients to calculate new actuation from reference
+
+        act     = pars->rst.t[0]      * (double)ref -
+                  pars->rst.r[0]      * (double)vars->meas[var_idx] +
+                  pars->t0_correction * (double)ref;
+
+        for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+        {
+            var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
+
+            act += pars->rst.t[par_idx] * (double)vars->ref [var_idx] -
+                   pars->rst.r[par_idx] * (double)vars->meas[var_idx] -
+                   pars->rst.s[par_idx] * (double)vars->act [var_idx];
+        }
+    
+        act *= pars->inv_s0;
+    }
 
     return(act);
 }
 
 
 
-float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act)
+void regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, bool is_limited, bool is_openloop)
 /*!
  * <h3>Implementation Notes</h3>
  *
@@ -891,39 +1010,61 @@ float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
 {
     double      ref;
     uint32_t    var_idx;
+    uint32_t    var_idx0;
     uint32_t    par_idx;
 
     // Return zero immediately if parameters are invalid
 
     if(pars->status == REG_FAULT)
     {
-        return(0.0);
+        return;
     }
 
-    // Use RST coefficients to calculate new actuation from reference
+    // If we are limited, we need to calculate both the closed-loop and open-loop reference values for the
+    // history. If we are not limited, we only need to calculate the one we are not.
 
-    var_idx = vars->history_index;
-    ref     = pars->rst.s[0] * (double)act + pars->rst.r[0] * (double)vars->meas[var_idx];
+    var_idx0 = vars->history_index;
 
-    for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+    if(is_limited || !is_openloop)
     {
-        var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
+        // Use openloop coefficients to calculate new openloop reference from actuation
 
-        ref += pars->rst.s[par_idx] * (double)vars->act [var_idx] +
-               pars->rst.r[par_idx] * (double)vars->meas[var_idx] -
-               pars->rst.t[par_idx] * (double)vars->ref [var_idx];
+        var_idx = (var_idx0 - 1) & REG_RST_HISTORY_MASK;
+
+        // Calculate and save openloop_ref in history
+
+        vars->openloop_ref[var_idx0] = pars->openloop_reverse.act[0] * (double)act +
+                                       pars->openloop_reverse.act[1] * (double)vars->act[var_idx] +
+                                       pars->openloop_reverse.ref[1] * (double)vars->openloop_ref[var_idx];
     }
-    
-    ref *= pars->inv_corrected_t0;
 
-    // Save latest act, meas and ref in history
+    if(is_limited || is_openloop)
+    {
+        // Use RST coefficients to back-calculate reference from actuation
 
-    var_idx = vars->history_index;
+        var_idx = var_idx0;
 
-    vars->act [var_idx] = act;
-    vars->ref [var_idx] = ref;
+        ref = pars->rst.s[0] * (double)act + pars->rst.r[0] * (double)vars->meas[var_idx];
 
-    return(ref);
+        for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+        {
+            var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
+
+            ref += pars->rst.s[par_idx] * (double)vars->act [var_idx] +
+                   pars->rst.r[par_idx] * (double)vars->meas[var_idx] -
+                   pars->rst.t[par_idx] * (double)vars->ref [var_idx];
+        }
+
+        ref *= pars->inv_corrected_t0;
+
+        // Save closed loop ref in history
+
+        vars->ref[var_idx0] = ref;
+    }
+
+    // Save act in history
+
+    vars->act[var_idx0] = act;
 }
 
 

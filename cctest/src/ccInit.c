@@ -50,9 +50,10 @@ uint32_t ccInitFunctions(void)
     struct fgfunc   *func;
     struct cccmds   *cmd;
 
+    memset(&ccrun,0,sizeof(ccrun));
+
     // Check that GLOBAL FUNCTION and REG_MODE parameters have the same number of elements
 
-    ccrun.func_idx      = 0;
     ccrun.num_functions = global_pars[GLOBAL_FUNCTION].num_elements;
     num_reg_modes       = global_pars[GLOBAL_REG_MODE].num_elements;
 
@@ -265,28 +266,28 @@ uint32_t ccInitSimLoad(void)
     regConvParInitPointer(&conv,global_reg_err_rate           ,&ccpars_global.reg_err_rate);
 
     regConvParInitPointer(&conv,breg_period_iters             ,&ccpars_breg.period_iters);
-    regConvParInitPointer(&conv,breg_op_pure_delay_periods    ,&ccpars_breg.pure_delay_periods);
-    regConvParInitPointer(&conv,breg_op_track_delay_periods   ,&ccpars_breg.track_delay_periods);
-    regConvParInitPointer(&conv,breg_op_auxpole1_hz           ,&ccpars_breg.auxpole1_hz);
-    regConvParInitPointer(&conv,breg_op_auxpoles2_hz          ,&ccpars_breg.auxpoles2_hz);
-    regConvParInitPointer(&conv,breg_op_auxpoles2_z           ,&ccpars_breg.auxpoles2_z);
-    regConvParInitPointer(&conv,breg_op_auxpole4_hz           ,&ccpars_breg.auxpole4_hz);
-    regConvParInitPointer(&conv,breg_op_auxpole5_hz           ,&ccpars_breg.auxpole5_hz);
-    regConvParInitPointer(&conv,breg_op_r                     ,&ccpars_breg.rst.r);
-    regConvParInitPointer(&conv,breg_op_s                     ,&ccpars_breg.rst.s);
-    regConvParInitPointer(&conv,breg_op_t                     ,&ccpars_breg.rst.t);
+    regConvParInitPointer(&conv,breg_pure_delay_periods       ,&ccpars_breg.pure_delay_periods);
+    regConvParInitPointer(&conv,breg_track_delay_periods      ,&ccpars_breg.track_delay_periods);
+    regConvParInitPointer(&conv,breg_auxpole1_hz              ,&ccpars_breg.auxpole1_hz);
+    regConvParInitPointer(&conv,breg_auxpoles2_hz             ,&ccpars_breg.auxpoles2_hz);
+    regConvParInitPointer(&conv,breg_auxpoles2_z              ,&ccpars_breg.auxpoles2_z);
+    regConvParInitPointer(&conv,breg_auxpole4_hz              ,&ccpars_breg.auxpole4_hz);
+    regConvParInitPointer(&conv,breg_auxpole5_hz              ,&ccpars_breg.auxpole5_hz);
+    regConvParInitPointer(&conv,breg_r                        ,&ccpars_breg.rst.r);
+    regConvParInitPointer(&conv,breg_s                        ,&ccpars_breg.rst.s);
+    regConvParInitPointer(&conv,breg_t                        ,&ccpars_breg.rst.t);
 
     regConvParInitPointer(&conv,ireg_period_iters             ,&ccpars_ireg.period_iters);
-    regConvParInitPointer(&conv,ireg_op_pure_delay_periods    ,&ccpars_ireg.pure_delay_periods);
-    regConvParInitPointer(&conv,ireg_op_track_delay_periods   ,&ccpars_ireg.track_delay_periods);
-    regConvParInitPointer(&conv,ireg_op_auxpole1_hz           ,&ccpars_ireg.auxpole1_hz);
-    regConvParInitPointer(&conv,ireg_op_auxpoles2_hz          ,&ccpars_ireg.auxpoles2_hz);
-    regConvParInitPointer(&conv,ireg_op_auxpoles2_z           ,&ccpars_ireg.auxpoles2_z);
-    regConvParInitPointer(&conv,ireg_op_auxpole4_hz           ,&ccpars_ireg.auxpole4_hz);
-    regConvParInitPointer(&conv,ireg_op_auxpole5_hz           ,&ccpars_ireg.auxpole5_hz);
-    regConvParInitPointer(&conv,ireg_op_r                     ,&ccpars_ireg.rst.r);
-    regConvParInitPointer(&conv,ireg_op_s                     ,&ccpars_ireg.rst.s);
-    regConvParInitPointer(&conv,ireg_op_t                     ,&ccpars_ireg.rst.t);
+    regConvParInitPointer(&conv,ireg_pure_delay_periods       ,&ccpars_ireg.pure_delay_periods);
+    regConvParInitPointer(&conv,ireg_track_delay_periods      ,&ccpars_ireg.track_delay_periods);
+    regConvParInitPointer(&conv,ireg_auxpole1_hz              ,&ccpars_ireg.auxpole1_hz);
+    regConvParInitPointer(&conv,ireg_auxpoles2_hz             ,&ccpars_ireg.auxpoles2_hz);
+    regConvParInitPointer(&conv,ireg_auxpoles2_z              ,&ccpars_ireg.auxpoles2_z);
+    regConvParInitPointer(&conv,ireg_auxpole4_hz              ,&ccpars_ireg.auxpole4_hz);
+    regConvParInitPointer(&conv,ireg_auxpole5_hz              ,&ccpars_ireg.auxpole5_hz);
+    regConvParInitPointer(&conv,ireg_r                        ,&ccpars_ireg.rst.r);
+    regConvParInitPointer(&conv,ireg_s                        ,&ccpars_ireg.rst.s);
+    regConvParInitPointer(&conv,ireg_t                        ,&ccpars_ireg.rst.t);
 
     regConvParInitPointer(&conv,limits_b_pos                  ,&ccpars_limits.b.pos);
     regConvParInitPointer(&conv,limits_b_min                  ,&ccpars_limits.b.min);

@@ -49,16 +49,31 @@ struct ccrun_vars
     double                  func_start_time;                    // Start time (iter_time) for current function
     double                  func_duration;                      // Function duration including run delay
     bool                  (*fgen_func)();                       // Function to generate the active reference
-    void                   *fg_pars;                            // Parameter structure for active reference
+    void                   *fgen_pars;                          // Parameter structure for active reference
     struct fg_limits       *fg_limits;                          // Pointer to fg_limits (b/i/v)
     struct reg_lim_ref      fg_lim_v_ref;                       // Libreg voltage measurement limits structure for fg converter limits
 
+    struct ccrun_dyn_eco
+    {
+        struct fg_plep_config       config;                     // Dynamic economy plep configuration
+        struct fg_plep_pars         pars;                       // Dynamic economy plep parameters
+        bool                      (*fgen_func)();               // Storage of pointer to function that was active (NULL when dyn_eco not active)
+        void                       *fgen_pars;                  // Storage of pointer to parameters for function that was active
+
+        struct ccrun_dyn_eco_log
+        {
+            int32_t                 length;                     // Number of points logged in dyn_eco.log
+            float                   time[2 * MAX_PREFUNCS];     // Start/end time of dynamic economy window
+            float                   ref [2 * MAX_PREFUNCS];     // Start/end reference of dynamic economy
+        } log;
+    } dyn_eco;
+
     struct ccrun_func_log
     {
-        double              func_start_time;                    // Time in iteration of the start of the function
-        struct fg_meta      fg_meta;                            // Reference function meta data for all functions
-        float               ref_advance;                        // Ref advance used with each function (for debugging)
-        float               max_abs_err;                        // Max absolute regulation for each function (when regulation is active)
+        double                      func_start_time;            // Time in iteration of the start of the function
+        struct fg_meta              fg_meta;                    // Reference function meta data for all functions
+        float                       ref_advance;                // Ref advance used with each function (for debugging)
+        float                       max_abs_err;                // Max absolute regulation for each function (when regulation is active)
     } func[MAX_FUNCS];
 };
 

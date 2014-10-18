@@ -2,7 +2,7 @@
  * @file  rst.h
  * @brief Converter Control Regulation library RST regulation algorithm functions
  *
- * <h2>The RST Algorithm</h2>
+ * <h2>The RST Algorithm for Closed Loop Regulation</h2>
  *
  * The RST algorithm satisfies:
  *
@@ -56,6 +56,43 @@
  * change of the reference. Note that the regulation bandwidth defines the bandwidth for the rejection of perturbations, not
  * the bandwidth for tracking.
  *
+ * <h2>The Open Loop Regulation Algorithm</h2>
+ *
+ * For the load model described in load.h, the following differential equation must hold true:
+ * \f[
+ * (R_p + R_m)V(t) + L_m\frac{dV}{dt}(t) = \left ( R_c(R_p + R_m) + R_p\cdot R_m \right ) I_{cir}(t) + (R_p + R_c)L_m\frac{dI_{cir}}{dt}(t)
+ * \f]
+ * We simplify this by combining the constant terms:
+ * \f[
+ * R_1 = R_p + R_m
+ * \f]
+ * \f[
+ * R_2 = (R_c\cdot R_1 + R_p\cdot R_m)
+ * \f]
+ * \f[
+ * R_3 = R_p + R_c
+ * \f]
+ * so that:
+ * \f[
+ * R_1\cdot V(t) + L_m\frac{dV}{dt}(t) = R_2\cdot I_{cir}(t) + R_3\cdot L_m\frac{dI_{cir}}{dt}(t)
+ * \f]
+ *
+ *
+ * This differential equation is converted into a difference equation by taking the Z transform, using a discretization
+ * technique (Forward Euler, Backwards Euler or Tustin) to approximate the Laplace transform. The difference equation
+ * can be manipulated algebraically and can be reduced to three coefficients, which are calculated in regRstInit() and
+ * stored in reg_openloop. 
+ *
+ * The difference equation then becomes:
+ *
+ * \f$V(t) = act[1]_{forward}\cdot V(t-1) + ref[0]_{forward}\cdot I(t) + ref[1]_{forward}\cdot I(t-1)\f$
+ *
+ * in the forward direction (to calculate the actuation), and:
+ *
+ * \f$I(t) = act[0]_{reverse}\cdot V(t) + ref[0]_{reverse}\cdot I(t) + ref[1]_{reverse}\cdot I(t-1)\f$
+ *
+ * in the reverse direction (to back-calculate the reference).
+ *
  * <h2>Floating-point Precision</h2>
  * 
  * rst.c uses 32-bit floating point for most of the floating point variables.
@@ -94,6 +131,7 @@
 #define LIBREG_RST_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <libreg/load.h>
 
 // Constants
@@ -136,6 +174,27 @@ struct reg_rst
 };
 
 /*!
+ * Openloop coefficients. The difference equation for open loop regulation is:
+ *
+ * \f$V(t) = act[1]_{forward}\cdot V(t-1) + ref[0]_{forward}\cdot I(t) + ref[1]_{forward}\cdot I(t-1)\f$
+ *
+ * in the forward direction (to calculate the actuation), and:
+ *
+ * \f$I(t) = act[0]_{reverse}\cdot V(t) + ref[0]_{reverse}\cdot I(t) + ref[1]_{reverse}\cdot I(t-1)\f$
+ *
+ * in the reverse direction (to back-calculate the reference).
+ *
+ * These coefficients are calculated in regRstInit()
+ */
+struct reg_openloop
+{
+    double                      ref[2];                         //!< Difference equation coefficients for I(t) and I(t-1) terms
+    double                      act[2];                         //!< Difference equation coefficients for V(t) term (used only
+                                                                //!< in the reverse direction) and V(t-1) terms (used only in
+                                                                //!< the forward direction)
+};
+
+/*!
  * RST algorithm parameters
  */
 struct reg_rst_pars
@@ -159,6 +218,8 @@ struct reg_rst_pars
     double                      as  [REG_N_RST_COEFFS];         //!< \f$A \cdot S\f$. See also #REG_N_RST_COEFFS.
     double                      asbr[REG_N_RST_COEFFS];         //!< \f$A \cdot S + B \cdot R\f$. See also #REG_N_RST_COEFFS.
     int32_t                     jurys_result;                   //!< Jury's test result index (0 = OK)
+    struct reg_openloop         openloop_forward;               //!< Coefficients for openloop difference equation in forward direction.
+    struct reg_openloop         openloop_reverse;               //!< Coefficients for openloop difference equation in reverse direction.
     float                       min_auxpole_hz;                 //!< Minimum of RST auxpole*_hz parameters. Used to limit the scan frequency range.
     float                       modulus_margin;                 //!< Modulus margin. Equal to the minimum value of the sensitivity function (abs_S_p_y)
     float                       modulus_margin_freq;            //!< Frequency for modulus margin.
@@ -170,9 +231,10 @@ struct reg_rst_pars
 struct reg_rst_vars
 {
     uint32_t                    history_index;                  //!< Index to latest entry in the history
-    float                       prev_ref_rate;                  //!< Ref rate from previous iteration
+    float                       prev_ref_rate;                  //!< Reference rate from previous iteration
 
-    float                       openloop_ref[REG_RST_HISTORY_MASK+1]; //!< Openloop calculated reference history. See also #REG_RST_HISTORY_MASK.
+    float                       openloop_ref[REG_RST_HISTORY_MASK+1]; //!< Openloop calculated reference history. Only the two most
+                                                                      //!< recent values are used. See also #REG_RST_HISTORY_MASK.
     float                       ref         [REG_RST_HISTORY_MASK+1]; //!< RST calculated reference history. See also #REG_RST_HISTORY_MASK.
     float                       meas        [REG_RST_HISTORY_MASK+1]; //!< RST measurement history. See also #REG_RST_HISTORY_MASK.
     float                       act         [REG_RST_HISTORY_MASK+1]; //!< RST actuation history. See also #REG_RST_HISTORY_MASK.
@@ -194,6 +256,7 @@ extern "C" {
 
 /*!
  * Prepare coefficients for the RST regulation algorithm, to allow a pure loop delay to be accommodated.
+ * This function also prepares coefficients for open loop regulation. See reg_openloop for details.
  *
  * <h3>Notes</h3>
  * 
@@ -214,7 +277,8 @@ extern "C" {
  * This is a non-Real-Time function: do not call from the real-time thread or interrupt
  *
  * @param[out] pars                   RST parameters object to update with the new coefficients.
- * @param[in]  reg_period_iters       Regulation period in iterations.
+ * @param[in]  reg_period_iters       Regulation period. Specified as an integer number of iteration periods,
+ *                                    as regulation can only run on iteration boundaries.
  * @param[in]  reg_period             Regulation period in seconds.
  * @param[in]  load                   Load parameters struct. Used to calculate RST coefficients.
  * @param[in]  auxpole1_hz            Frequency of (real) auxillary pole 1. Used to calculate RST coefficients.
@@ -259,13 +323,12 @@ enum reg_status regRstInit(struct reg_rst_pars *pars, uint32_t reg_period_iters,
  *
  * This is a Real-Time function.
  *
- * @param[out]    vars    Pointer to history of actuation, measurement and reference values.
- * @param[in]     ref     Initial reference/measurement value
- * @param[in]     act     Estimated measurement rate
- *
- * @returns       New actuation value
+ * @param[out]    vars          Pointer to history of actuation, measurement and reference values.
+ * @param[in]     ref           Initial reference/measurement value
+ * @param[in]     openloop_ref  Initial openloop reference value
+ * @param[in]     act           Estimated measurement rate
  */
-void regRstInitHistory(struct reg_rst_vars *vars, float ref, float act);
+void regRstInitHistory(struct reg_rst_vars *vars, float ref, float openloop_ref, float act);
 
 /*!
  * Complete the initialisation of the RST history in vars.
@@ -280,43 +343,48 @@ void regRstInitHistory(struct reg_rst_vars *vars, float ref, float act);
  * @param[in]     pars    Pointer to RST parameters structure
  * @param[in,out] vars    Pointer to history of actuation, measurement and reference values.
  * @param[in]     rate    Estimated measurement rate
- *
- * @returns       New actuation value
  */
 void regRstInitRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float rate);
 
 /*!
- * Use the supplied RST parameters to calculate the actuation based on the supplied reference and measurement values.
- * If the actuation is clipped then regRstCalcRefRT() must be called to re-calculate the reference to put in the history.
+ * Use the supplied RST or open loop coefficients to calculate the actuation based on the supplied reference value
+ * and the measurement. If <em>is_openloop</em> is true, then the open loop regulation algorithm is used. Otherwise,
+ * we are in closed loop mode and the RST algorithm is used.
  *
  * This is a Real-Time function.
  *
- * @param[in]     pars    RST coefficients and parameters
- * @param[in,out] vars    History of actuation, measurement and reference values. Updated with new values by this function.
- * @param[in]     ref     Latest reference value
+ * @param[in]     pars           RST coefficients and parameters
+ * @param[in,out] vars           History of actuation, measurement and reference values. Updated with new values by this function.
+ * @param[in]     ref            Latest reference value
+ * @param[in]     is_openloop    Set to true if the function should return the actuation calculated by the open loop algorithm.
+ *                               This is required for 1- and 2-quadrant converters while the measurement is less than the
+ *                               minimum current for closed loop regulation.
  *
  * @returns       New actuation value
  */
-float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref);
+float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float ref, bool is_openloop);
 
 /*!
- * Use the supplied RST parameters to back-calculate the reference based on the supplied actuation and measurement values.
- * This function must be called in two situations:
- * <ol>
- * <li>After calling regRstCalcActRT(), if the actuation has been clipped due to limits in the actuator.</li>
- * <li>If the system is running with open-loop actuation.</li>
- * </ol>
- * The function saves the new actuation in the RST history and back-calculates the reference, which is returned.
+ * Use the supplied RST and open loop coefficients to back-calculate the reference based on the supplied actuation
+ * value and the measurement. This function is always called after regRstCalcActRT(). It back-calculates the RST and
+ * open loop references and saves them in the respective histories. If <em>is_limited</em> is true, both RST and open
+ * loop references are calculated, otherwise we calculate the one we are not, based on the value of <em>is_openloop</em>.
+ * The function returns the reference for the active mode (open or closed loop).
  *
  * This is a Real-Time function.
  *
- * @param[in]     pars    RST coefficients and parameters
- * @param[in,out] vars    History of actuation, measurement and reference values. Updated with new values by this function.
- * @param[in]     act     Latest actuation value
+ * @param[in]     pars           RST coefficients and parameters
+ * @param[in,out] vars           History of actuation, measurement and reference values. Updated with new values by this function.
+ * @param[in]     act            Latest actuation value
+ * @param[in]     is_limited     Set to true if <em>act</em> has been limited. In this case, both closed-loop and open-loop reference
+ *                               values will be calculated for the history. If set to false, we only calculate one or the other
+ *                               (determined by <em>is_openloop</em>).
+ * @param[in]     is_openloop    Set to true if the function should return the reference back-calculated by the open loop algorithm.
+ *                               This is required for 1- and 2-quadrant converters while the measurement is less than I_CLOSELOOP.
  *
  * @returns       Back-calculated reference value
  */
-float regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act);
+void regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float act, bool is_limited, bool is_openloop);
 
 /*!
  * Measure the tracking delay if the reference is changing.

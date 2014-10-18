@@ -156,7 +156,7 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
  *
  * This is a non-Real-Time function: do not call from the real-time thread or interrupt
  *
- * @param[out]    lim_meas         Measurement limits object to initialise
+ * @param[out]    lim_rms          RMS limits object to initialise
  * @param[in]     rms_warning      RMS warning threshold
  * @param[in]     rms_fault        RMS fault threshold
  * @param[in]     rms_tc           Used to determine whether reg_lim_meas::rms2_trip, reg_lim_meas::rms2_warning
@@ -177,7 +177,7 @@ void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fau
  * @param[in]     min_lim          Standby reference limit.
  * @param[in]     neg_lim          Minimum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP).
  * @param[in]     rate_lim         Absolute reference rate clip limit. Will be scaled by (1+#REG_LIM_CLIP).
- * @param[in]     closeloop        Closeloop threshold.
+ * @param[in]     closeloop        Closeloop threshold. Must be positive (zero in the case of 4-quadrant converters).
  */
 void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, float neg_lim, float rate_lim, float closeloop);
 
@@ -215,7 +215,7 @@ void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas);
  * This is a Real-Time function (thread safe).
  *
  * @param[in,out] lim_rms          Pointer to RMS current limits structure
- * @param[in]     i_meas           Measured current
+ * @param[in]     meas             Measurement value
  */
 void regLimMeasRmsRT(struct reg_lim_rms *lim_rms, float meas);
 

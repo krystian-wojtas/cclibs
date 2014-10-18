@@ -82,6 +82,7 @@ enum reg_err_rate
 // Include all libreg header files
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <libreg/delay.h>
 #include <libreg/err.h>
 #include <libreg/lim.h>

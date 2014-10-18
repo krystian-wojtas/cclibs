@@ -6,6 +6,8 @@ source ../../run_header.sh
 
 # PLEP tests
 
-$cctest "g csv $csv_format" "read pleps.cct"
+$cctest "global csv_format $csv_format" "read pleps.cct"
+
+>&2 echo $0 complete
 
 # EOF

@@ -40,17 +40,20 @@ struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, f
 
     // Reset all field in meta structure
 
-    for(idx = 0 ; idx < FG_ERR_DATA_LEN ; idx++)
+    if(meta != NULL)
     {
-        meta->error.data[idx] = 0.0;
-    }
+        for(idx = 0 ; idx < FG_ERR_DATA_LEN ; idx++)
+        {
+            meta->error.data[idx] = 0.0;
+        }
 
-    meta->error.index = 0;
-    meta->duration    = 0.0;
-    meta->range.end   = 0.0;
-    meta->range.start = init_ref;
-    meta->range.min   = init_ref;
-    meta->range.max   = init_ref;
+        meta->error.index = 0;
+        meta->duration    = 0.0;
+        meta->range.end   = 0.0;
+        meta->range.start = init_ref;
+        meta->range.min   = init_ref;
+        meta->range.max   = init_ref;
+    }
 
     return(meta);
 }

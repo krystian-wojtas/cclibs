@@ -56,6 +56,7 @@ enum ccsig_idx
     ANA_B_REF,                  // Field reference
     ANA_B_REF_LIMITED,          // Field reference after limits applied
     ANA_B_REF_RST,              // Field reference stored in RST history (limited and after back-calculation)
+    ANA_B_REF_OPENLOOP,         // Field reference stored in open loop history (after back-calculation)
     ANA_B_REF_DELAYED,          // Field reference delayed
 
     ANA_B_MAGNET,               // Field in the magnet
@@ -66,6 +67,7 @@ enum ccsig_idx
     ANA_I_REF,                  // Current reference
     ANA_I_REF_LIMITED,          // Current reference after limits applied
     ANA_I_REF_RST,              // Current reference stored in RST history (limited and after back-calculation)
+    ANA_I_REF_OPENLOOP,         // Current reference stored in open loop history (after back-calculation)
     ANA_I_REF_DELAYED,          // Current reference delayed
 
     ANA_I_MAGNET,               // Current in the magnet
@@ -149,6 +151,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "B_REF",                  ANALOG,         "TRAIL_STEP" },
     { "B_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "B_REF_RST",              ANALOG,         "TRAIL_STEP" },
+    { "B_REF_OPENLOOP",         ANALOG,         "TRAIL_STEP" },
     { "B_REF_DELAYED",          ANALOG,         "TRAIL_STEP" },
 
     { "B_MAGNET",               ANALOG,         "TRAIL_STEP" },
@@ -159,6 +162,7 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "I_REF",                  ANALOG,         "TRAIL_STEP" },
     { "I_REF_LIMITED",          ANALOG,         "TRAIL_STEP" },
     { "I_REF_RST",              ANALOG,         "TRAIL_STEP" },
+    { "I_REF_OPENLOOP",         ANALOG,         "TRAIL_STEP" },
     { "I_REF_DELAYED",          ANALOG,         "TRAIL_STEP" },
 
     { "I_MAGNET",               ANALOG,         "TRAIL_STEP" },

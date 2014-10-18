@@ -6,7 +6,8 @@ cd `dirname $0`
 
 for script in */run.sh
 do
-    "$script" $1 || exit 1
+    "$script" $1 > $script.log &
 done
+
 
 # EOF

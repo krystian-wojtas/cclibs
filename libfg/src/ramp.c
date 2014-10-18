@@ -38,12 +38,15 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
     enum fg_error  fg_error;                     // Reference limits status
     struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Check that parameters are valid
 
     if(config->acceleration == 0.0 || config->deceleration == 0.0)
     {
+        // Reset meta structure if provided
+
+        meta = fgResetMeta(meta, &local_meta, init_ref);
+
         return(FG_BAD_PARAMETER);
     }
 
@@ -264,10 +267,15 @@ void fgRampCalc(struct fg_ramp_config *config,
                 struct fg_ramp_pars   *pars,
                 struct fg_meta        *meta)
 {
-    float       delta_ref;              // Initial ref minus final ref
-    float       ref0;                   // Ref at t=0 for first parabola
-    float       overshoot_rate_limit;   // Limiting initial rate of change before overshoot occurs
-    float       seg_ratio;              // Ratio between the two segments
+    float           delta_ref;              // Initial ref minus final ref
+    float           ref0;                   // Ref at t=0 for first parabola
+    float           overshoot_rate_limit;   // Limiting initial rate of change before overshoot occurs
+    float           seg_ratio;              // Ratio between the two segments
+    struct fg_meta  local_meta;             // Local meta data in case user meta is NULL
+
+    // Prepare meta structure
+
+    meta = fgResetMeta(meta, &local_meta, init_ref);
 
     // Prepare variables assuming ascending (positive) ramp
 

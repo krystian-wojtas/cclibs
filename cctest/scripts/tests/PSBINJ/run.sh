@@ -4,9 +4,9 @@ cd `dirname $0`
 
 source ../../run_header.sh
 
-# Direct tests
+# RB tests
 
-$cctest "global csv_format $csv_format" "read direct.cct"
+$cctest "global csv_format $csv_format" "read psb.cct"
 
 >&2 echo $0 complete
 

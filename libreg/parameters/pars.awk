@@ -35,7 +35,7 @@
 #
 # Notes
 #
-# All libreg variables are address by pointers, so initialization of values 
+# All libreg variables are address by pointers, so initialization of values
 # cannot be done by using the linker. Instead, this script creates a static
 # function in the generated header file, regConvParsInit(), which initializes
 # the conv->pars and conv->pars_values structures. This is called by regConvInit().
@@ -49,14 +49,16 @@ BEGIN {
 
     FS = ","
 
-# Identify the columns in the csv file
+# Identify the leading columns in the csv file
 
-    par_group_column  = 1
-    par_name_column   = 2
-    par_type_column   = 3
-    par_length_column = 4
-    par_init_column   = 5
-    par_flags_column  = 6
+    par_group_column     = 1
+    par_name_column      = 2
+    par_type_column      = 3
+    par_length_column    = 4
+    par_init_column      = 5
+    par_flags_column     = 6
+    par_test_column      = 6
+    par_mode_none_column = 7
 
 # Read heading line from stdin
 
@@ -64,17 +66,23 @@ BEGIN {
 
     n_columns = NF
     n_pars    = 0
-    
+
 # Create REG_LOAD_SELECT as the first flag
 
-    n_flags = 1    
+    n_flags = 1
     flag[0] = "REG_LOAD_SELECT"
-    
+
 # Create the rest of the flags from the column headings
 
     for(i=par_flags_column ; i <= n_columns ; i++)
     {
         flag[n_flags++] = $i
+    }
+
+    if(n_flags > 32)
+    {
+        printf "ERROR: Number of flags (%d) exceeds limit (32)\n", n_flags
+        exit -1
     }
 
 # Read parameter definitions from stdin
@@ -94,16 +102,23 @@ BEGIN {
         }
 
         # Detect if parameter is an array based on LOAD SELECT
-        
+
         if($par_length_column == "REG_N_LOADS")
         {
             # Set REG_LOAD_SELECT flag to inform regConvParsCheck() that this parameter is based on LOAD SELECT
-                        
-            par_flags[n_pars] = flag[0]
-            
-            # libreg will only keep the scalar value corresponding to LOAD SELECT so change length to 1
 
-            $par_length_column = "1"
+            par_flags[n_pars] = flag[0]
+
+            # For test load select parameters, libreg will keep two values, one for LOAD SELECT and one for LOAD TEST_SELECT
+
+            if($par_test_column == "YES" && $par_mode_none_column == "NO")
+            {
+                $par_length_column = "2"
+            }
+            else
+            {
+                $par_length_column = "1"
+            }
         }
         else
         {
@@ -113,10 +128,10 @@ BEGIN {
         # Save contents
 
         par_variable[n_pars] = tolower($par_group_column) "_" tolower($par_name_column)
-        par_type[n_pars]     = $par_type_column
-        par_length[n_pars]   = $par_length_column
-        par_init[n_pars]     = $par_init_column
-        
+        par_type    [n_pars] = $par_type_column
+        par_length  [n_pars] = $par_length_column
+        par_init    [n_pars] = $par_init_column
+
         # Interpret flag specifiers (YES or NO)
         # Note: flag 0 (REG_LOAD_SELECT) is created internally by pars.awk so flags from pars.csv start from index 1
 
@@ -138,7 +153,7 @@ BEGIN {
         n_pars++
     }
 
-# Generate parameter header file inc/pars.h 
+# Generate parameter header file inc/pars.h
 
     of = "inc/pars.h"   # Set output file (of) to pars.h
 
@@ -206,12 +221,12 @@ BEGIN {
     print "#define LIBREG_PARS_H\n"                                                              > of
     print "#define REG_N_PARS                    ", n_pars                                       > of
     print "#define REG_PAR_NOT_USED              (void*)0\n"                                     > of
-                                           
+
     print "#define regConvParInitPointer(conv,par_name,value_p)        (conv)->pars.par_name.value=value_p"             > of
     print "#define regConvParInitValue(conv,par_name,index,init_value) (conv)->par_values.par_name[index]=init_value\n" > of
 
     for(i=0 ; i < n_flags ; i++)
-    {                                                                             
+    {
         printf "#define %-40s(1<<%d)\n", flag[i], i                                              > of
     }
 
@@ -243,13 +258,13 @@ BEGIN {
     print "};\n"                                                                                 > of
     print "#endif // LIBREG_PARS_H\n"                                                            > of
     print "// EOF"                                                                               > of
-  
+
     close(of)
-      
+
 # Generate parameter initialisation function in inc/init_pars.h
-    
+
     of = "inc/init_pars.h"    # Set output file (of) to init_pars.h
-    
+
     print "/*!"                                                                                  > of
     print " * @file  init_pars.h"                                                                > of
     print " * @brief Libreg generated parameter initialisation header file"                      > of
@@ -287,7 +302,7 @@ BEGIN {
     print " */\n"                                                                                > of
     print "#ifndef LIBREG_INIT_PARS_H"                                                           > of
     print "#define LIBREG_INIT_PARS_H\n"                                                         > of
-    
+
     print "static void regConvParsInit(struct reg_conv *conv)"                                   > of
     print "{"                                                                                    > of
     print "    uint32_t i;"                                                                      > of
@@ -299,7 +314,7 @@ BEGIN {
         printf   "    conv->pars.%s.size_in_bytes = sizeof(conv->par_values.%s);\n", par_variable[i], par_variable[i]    > of
         printf   "    conv->pars.%s.sizeof_type   = sizeof(%s);\n", par_variable[i], par_type[i]                         > of
         printf   "    conv->pars.%s.flags         = %s;\n", par_variable[i], par_flags[i]                                > of
-        
+
         if(par_length[i] == 1)
         {
             printf "    conv->par_values.%s[0]      = %s;\n", par_variable[i], par_init[i]                             > of
@@ -314,7 +329,7 @@ BEGIN {
     print "#endif // LIBREG_INIT_PARS_H\n"                                                       > of
     print "// EOF"                                                                               > of
     close(of)
-    
+
     exit 0
 }
 # EOF

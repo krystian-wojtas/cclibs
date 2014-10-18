@@ -241,6 +241,7 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(ANA_B_REF);
                 ccSigsEnableSignal(ANA_B_REF_LIMITED);
                 ccSigsEnableSignal(ANA_B_REF_RST);
+                ccSigsEnableSignal(ANA_B_REF_OPENLOOP);
                 ccSigsEnableSignal(ANA_B_REF_DELAYED);
                 ccSigsEnableSignal(ANA_B_MAGNET);
                 ccSigsEnableSignal(ANA_B_MEAS);
@@ -274,6 +275,7 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(ANA_I_REF);
                 ccSigsEnableSignal(ANA_I_REF_LIMITED);
                 ccSigsEnableSignal(ANA_I_REF_RST);
+                ccSigsEnableSignal(ANA_I_REF_OPENLOOP);
                 ccSigsEnableSignal(ANA_I_REF_DELAYED);
                 ccSigsEnableSignal(ANA_I_ERR);
                 ccSigsEnableSignal(ANA_MAX_ABS_I_ERR);
@@ -428,11 +430,13 @@ void ccSigsStore(double time)
                 ccSigsStoreAnalog (ANA_B_REF,          conv.ref);
                 ccSigsStoreAnalog (ANA_B_REF_LIMITED,  conv.ref_limited);
                 ccSigsStoreAnalog (ANA_B_REF_RST,      conv.ref_rst);
+                ccSigsStoreAnalog (ANA_B_REF_OPENLOOP, conv.ref_openloop);
                 ccSigsStoreAnalog (ANA_B_REF_DELAYED,  conv.ref_delayed);
 
                 ccSigsStoreAnalog (ANA_I_REF,          0.0);
                 ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
                 ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_I_REF_OPENLOOP, 0.0);
                 ccSigsStoreAnalog (ANA_I_REF_DELAYED,  0.0);
                 break;
 
@@ -442,11 +446,13 @@ void ccSigsStore(double time)
                 ccSigsStoreAnalog (ANA_B_REF,          0.0);
                 ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
                 ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_B_REF_OPENLOOP, 0.0);
                 ccSigsStoreAnalog (ANA_B_REF_DELAYED,  0.0);
 
                 ccSigsStoreAnalog (ANA_I_REF,          conv.ref);
                 ccSigsStoreAnalog (ANA_I_REF_LIMITED,  conv.ref_limited);
                 ccSigsStoreAnalog (ANA_I_REF_RST,      conv.ref_rst);
+                ccSigsStoreAnalog (ANA_I_REF_OPENLOOP, conv.ref_openloop);
                 ccSigsStoreAnalog (ANA_I_REF_DELAYED,  conv.ref_delayed);
                 break;
 
@@ -455,11 +461,13 @@ void ccSigsStore(double time)
                 ccSigsStoreAnalog (ANA_B_REF,          0.0);
                 ccSigsStoreAnalog (ANA_B_REF_LIMITED,  0.0);
                 ccSigsStoreAnalog (ANA_B_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_B_REF_OPENLOOP, 0.0);
                 ccSigsStoreAnalog (ANA_B_REF_DELAYED,  0.0);
 
                 ccSigsStoreAnalog (ANA_I_REF,          0.0);
                 ccSigsStoreAnalog (ANA_I_REF_LIMITED,  0.0);
                 ccSigsStoreAnalog (ANA_I_REF_RST,      0.0);
+                ccSigsStoreAnalog (ANA_I_REF_OPENLOOP, 0.0);
                 ccSigsStoreAnalog (ANA_I_REF_DELAYED,  0.0);
                 break;
 
@@ -711,8 +719,21 @@ void ccSigsFlot(FILE *f, char *filename)
             fprintf(f,"[%.6f,%.7E]", time, ccrun.func[func_idx].fg_meta.range.end);
         }
 
-        fputs("]\n },",f);
+        fputs("]\n }\n,",f);
     }
+
+    // Mark dynamic economy if in use
+
+    if(ccrun.dyn_eco.log.length > 0 && ccrun.dyn_eco.log.time[0] < end_time)
+    {
+        fputs("\"DYN_ECO\": { lines: { show:false }, points: { show:true },\ndata:[",f);
+
+        for(sig_idx = 0 ; sig_idx < ccrun.dyn_eco.log.length && ccrun.dyn_eco.log.time[sig_idx] < end_time ; sig_idx++, n_points++)
+        {
+            fprintf(f,"[%.6f,%.7E],", ccrun.dyn_eco.log.time[sig_idx], ccrun.dyn_eco.log.ref[sig_idx]);
+        }
+        fputs("]\n },\n",f);
+     }
 
     // Highlight invalid points if enabled
 

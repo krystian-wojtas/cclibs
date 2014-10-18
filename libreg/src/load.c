@@ -31,6 +31,8 @@
 #include <math.h>
 #include "libreg/load.h"
 
+
+
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
 void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag, float henrys,
@@ -75,7 +77,7 @@ void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, flo
 
     // Clip inv_henrys to avoid infinity
 
-    if(henrys > 1.0E-20)
+    if(load->henrys > 1.0E-20)
     {
         load->inv_henrys  = 1.0 / load->henrys;
     }
@@ -89,6 +91,8 @@ void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, flo
     load->sat.i_start = 1.0E30;
     load->sat.i_end   = 0.0;
 }
+
+
 
 void regLoadInitSat(struct reg_load_pars *load, float henrys_sat, float i_sat_start, float i_sat_end)
 {
@@ -111,6 +115,8 @@ void regLoadInitSat(struct reg_load_pars *load, float henrys_sat, float i_sat_st
         load->sat.i_end   = 0.0;
     }
 }
+
+
 
 // Real-Time Functions
 
@@ -148,6 +154,8 @@ float regLoadCurrentToFieldRT(struct reg_load_pars *load, float i_meas)
 
     return(i_meas < 0.0 ? -b_meas : b_meas);
 }
+
+
 
 float regLoadFieldToCurrentRT(struct reg_load_pars *load, float b_meas)
 {
@@ -194,6 +202,8 @@ float regLoadFieldToCurrentRT(struct reg_load_pars *load, float b_meas)
     return(b_meas < 0.0 ? -i_meas : i_meas);
 }
 
+
+
 float regLoadVrefSatRT(struct reg_load_pars *load, float i_meas, float v_ref)
 {
     float f = regLoadSatFactorRT(load, i_meas);
@@ -201,12 +211,16 @@ float regLoadVrefSatRT(struct reg_load_pars *load, float i_meas, float v_ref)
     return(f * v_ref + (1.0 - f) * i_meas * load->ohms);
 }
 
+
+
 float regLoadInverseVrefSatRT(struct reg_load_pars *load, float i_meas, float v_ref_sat)
 {
     float f = regLoadSatFactorRT(load, i_meas);
 
     return((v_ref_sat - (1.0 - f) * i_meas * load->ohms) / f);
 }
+
+
 
 float regLoadSatFactorRT(struct reg_load_pars *load, float i_meas)
 {

@@ -16,7 +16,7 @@
 
         $.each(analog_signals, function(sig_name, signal)
         {
-            signal.color     = 2 + i + 2 * ((i > 7) + (i > 15) + (i > 23));  // Skip colours that are too pale
+            signal.color     = 2 + i % 8;  // Skip colours that are too pale
             signal.index     = i++;
             signal.visible   = 1;
             signal.exp       = 0;
@@ -28,7 +28,7 @@
 
         $.each(digital_signals, function(sig_name, signal)
         {
-            signal.color = 2 + i + 2 * ((i > 7) + (i > 15));  // Skip colours that are too pale
+            signal.color = 2 + i % 8;  // Skip colours that are too pale
             dig_legend.push([-(++i),sig_name]);
             signal.label = sig_name;
             visible_digital_signals.push(digital_signals[sig_name]);
@@ -41,7 +41,7 @@
             series:         { shadowSize: 0, lines: { lineWidth: 1}, points: { radius: 2}, downsample: { threshold: 2000} },
             grid:           { color: "#444", borderWidth: 1, backgroundColor: "#FFF" },
             yaxis:          { labelWidth:220 },
-            legend:         { container: analog_legend_div, position: "nw", 
+            legend:         { container: analog_legend_div, position: "nw",
             labelFormatter: function (label, series) { return '<a href="javascript:ToggleVisibility(' + series.index + ');">' + label + '</a>'; }},
             selection:      { mode: "xy", touch: Modernizr.touch, tapCallback: ZoomOut }
         };
@@ -256,13 +256,13 @@
 
             escale_flag = 1 - escale_flag;
             break;
-            
+
         case 1: // ----- mode 1 : Toggle Derivative flag -----
 
             derivative_flag = 1 - derivative_flag;
             break;
         }
-        
+
         // ----- Zoom out to full scale -----
 
         FullScale();
@@ -272,14 +272,14 @@
     function ToggleThickLines()
     {
         // Toggle lines thickness from between 1 and 2
-        
+
         analog_options.series.lines.lineWidth       = 3 - analog_options.series.lines.lineWidth;
         analog_options_zoom.series.lines.lineWidth  = analog_options.series.lines.lineWidth;
         digital_options.series.lines.lineWidth      = analog_options.series.lines.lineWidth;
         digital_options_zoom.series.lines.lineWidth = analog_options.series.lines.lineWidth;
 
         // Toggle points radius between 2 and 4
-    
+
         analog_options.series.points.radius         = 6 - analog_options.series.points.radius;
         analog_options_zoom.series.points.radius    = analog_options.series.points.radius;
 
@@ -338,7 +338,7 @@
                                            yaxis: { min: ranges.yaxis.from, max: ranges.yaxis.to } });
 
             analog_options_zoom.series.downsample.threshold = Math.floor(analog_xaxis.range / (ranges.xaxis.to - ranges.xaxis.from));
-            
+
             analog_plot = $.plot(analog_chart_div, visible_analog_signals, analog_options_zoom);
 
             if (visible_digital_signals.length > 0)
@@ -438,7 +438,7 @@
                 on the signal's name in the legend.  To control the visiblity of all the analog signals, click
                 on the "Show All" or "Hide All" links.
                 The visibility of digital signals cannot be controlled.</li><br/>
-            <li><strong>Zooming in</strong><br/><br/>Select the zoom area using the left pointer button or your 
+            <li><strong>Zooming in</strong><br/><br/>Select the zoom area using the left pointer button or your
                 finger on a touch device.</li><br/>
             <li><strong>Zooming out</strong><br/><br/>Press the right pointer button or tap anywhere on the chart
                 on a touch device to zoom out to the previous zoom level. Select "Full Scale" to zoom
@@ -450,7 +450,7 @@
             <li><strong>Derivative</strong><br/><br/>Click on the "Derivative" link to toggle between normal
                 mode and derivative mode.  In Derivative mode, the first derivatives of all the signals are displayed.</li><br/>
             <li><strong>Thick lines</strong><br/><br/>Click on the "Thick lines" link to toggle between normal
-                and thick lines (and points). This is useful when taking a screenshot that you want to paste 
+                and thick lines (and points). This is useful when taking a screenshot that you want to paste
                 into a presentation.</li><br/>
             <li><strong>Digital signals</strong><br/><br/>If the data includes digital signals they will be
                 displayed in the lower chart.  Zooming the analog signals will zoom the time-axis
@@ -458,7 +458,7 @@
         </ul>
         </p>
     </div>
-    
+
     <!-- Simulation parameters pop-up -->
 
     <div id='inline_pars' style='padding:10px; background:#fff;font-size:14px;'>
