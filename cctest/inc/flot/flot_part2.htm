@@ -16,7 +16,7 @@
 
         $.each(analog_signals, function(sig_name, signal)
         {
-            signal.color     = 2 + i % 8;  // Skip colours that are too pale
+            signal.color     = 2 + i %% 8;  // Skip colours that are too pale
             signal.index     = i++;
             signal.visible   = 1;
             signal.exp       = 0;
@@ -28,7 +28,7 @@
 
         $.each(digital_signals, function(sig_name, signal)
         {
-            signal.color = 2 + i % 8;  // Skip colours that are too pale
+            signal.color = 2 + i %% 8;  // Skip colours that are too pale
             dig_legend.push([-(++i),sig_name]);
             signal.label = sig_name;
             visible_digital_signals.push(digital_signals[sig_name]);
