@@ -35,13 +35,6 @@ MEAS V_SIM_NOISE_PP         0.0
 MEAS TONE_HALF_PERIOD_ITERS 10
 MEAS I_SIM_TONE_AMP         0.0
 
-# IREG parameters
-
-IREG PERIOD_ITERS           10
-IREG AUXPOLE1_HZ            10
-IREG AUXPOLES2_HZ           10
-IREG AUXPOLES2_Z            0.5
-
 # LIMITS parameters
 
 LIMITS I_POS                10
@@ -54,6 +47,7 @@ LIMITS INVERT               DISABLED
 
 # - Current START - RAMP UP - ABORT DOWN -
 
+GLOBAL ABORT_TIME           2.2
 GLOBAL RUN_DELAY            0.2
 GLOBAL STOP_DELAY           0.2
 GLOBAL REG_MODE             CURRENT
@@ -69,13 +63,10 @@ RAMP ACCELERATION           10.0
 RAMP DECELERATION           20.0
 RAMP LINEAR_RATE            0.0
 
-GLOBAL ABORT_TIME      		2.2
-GLOBAL ACTUATION            VOLTAGE
-
-GLOBAL FILE                 start-ramp-abort-vref
-RUN
+# CURRENT Actuation
 
 GLOBAL ACTUATION            CURRENT
+
 IREG PERIOD_ITERS           1
 GLOBAL FILE                 start-ramp-abort-iref
 RUN
@@ -84,6 +75,46 @@ LIMITS INVERT               ENABLED
 RAMP INITIAL_REF            -2
 RAMP FINAL_REF              -3.0
 GLOBAL FILE                 start-ramp-abort-iref-invert
+RUN
+
+# VOLTAGE Actuation
+
+GLOBAL ACTUATION            VOLTAGE
+LIMITS INVERT               DISABLED
+RAMP INITIAL_REF            2
+RAMP FINAL_REF              3.0
+
+IREG PERIOD_ITERS           10
+IREG AUXPOLE1_HZ            10
+IREG AUXPOLES2_HZ           10
+IREG AUXPOLES2_Z            0.5
+
+GLOBAL FILE                 start-ramp-abort-vref
+RUN
+
+# Small Ohms_par load
+
+LOAD OHMS_SER               0.0
+LOAD OHMS_PAR               0.5
+LOAD OHMS_MAG               0.1
+LOAD SIM_TC_ERROR           -0.0
+
+GLOBAL FILE                 start-ramp-abort-vref-par
+RUN
+
+# Resistive load
+
+LOAD OHMS_SER               1.0
+LOAD OHMS_PAR               1E8
+LOAD OHMS_MAG               0.0
+LOAD HENRYS                 1.0E-6
+LOAD SIM_TC_ERROR           -0.3
+
+IREG AUXPOLE1_HZ            1E5
+IREG AUXPOLES2_HZ           10
+IREG AUXPOLES2_Z            0.8
+
+GLOBAL FILE                 start-ramp-abort-vref-resistive
 RUN
 
 # EOF

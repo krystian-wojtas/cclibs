@@ -723,6 +723,8 @@ void regConvInitSim(struct reg_conv *conv, enum reg_mode reg_mode, float start)
         }
 
         conv->meas = conv->ref = conv->ref_limited = conv->ref_rst = start;
+
+        conv->is_openloop = fabs(conv->meas) < conv->reg_signal->lim_ref.closeloop;
     }
     else // Actuation is CURRENT_REF
     {

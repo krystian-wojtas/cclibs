@@ -324,7 +324,7 @@ void fgRampCalc(struct fg_ramp_config *config,
 
     // Set duration if rate limit is never reached
 
-    meta->duration = pars->time[2] + delay + pars->time_shift;
+    meta->duration = pars->time[2] + pars->time_shift;
 
     // Set min/max
 

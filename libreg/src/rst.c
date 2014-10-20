@@ -31,7 +31,7 @@
 
 // Constants
 
-#define DISCRETIZE_FORWARD_EULER_QK
+//#define DISCRETIZE_FORWARD_EULER_QK
 //#define DISCRETIZE_FORWARD_EULER
 //#define DISCRETIZE_BACKWARD_EULER
 #define M_TWO_PI                   (2.0*M_PI)
@@ -685,43 +685,45 @@ static inline void regRstInitOpenLoop(struct reg_rst_pars *pars, struct reg_load
 #elif defined(DISCRETIZE_FORWARD_EULER)
 
     const double k1 = (T*R1) - Lm;
-    const double k2 = (T*R2) - R3;
+    const double k2 = (T*R2) - (R3*Lm);
+    const double k3 = R3*Lm;
 
-    pars->openloop_forward.ref[0] =  R3/Lm;
+    pars->openloop_forward.ref[0] =  k3/Lm;
     pars->openloop_forward.ref[1] =  k2/Lm;
     pars->openloop_forward.act[1] = -k1/Lm;
 
-    pars->openloop_reverse.ref[1] = -k2/R3;
-    pars->openloop_reverse.act[0] =  Lm/R3;
-    pars->openloop_reverse.act[1] =  k1/R3;
+    pars->openloop_reverse.ref[1] = -k2/k3;
+    pars->openloop_reverse.act[0] =  Lm/k3;
+    pars->openloop_reverse.act[1] =  k1/k3;
 
 #elif defined(DISCRETIZE_BACKWARD_EULER)
 
     const double k1 = (T*R1) + Lm;
-    const double k2 = (T*R2) + R3;
+    const double k2 = (T*R2) + (R3*Lm);
+    const double k3 = (R3*Lm);
 
     pars->openloop_forward.ref[0] =  k2/k1;
-    pars->openloop_forward.ref[1] = -R3/k1;
+    pars->openloop_forward.ref[1] = -k3/k1;
     pars->openloop_forward.act[1] =  Lm/k1;
 
-    pars->openloop_reverse.ref[1] =  R3/k2;
+    pars->openloop_reverse.ref[1] =  k3/k2;
     pars->openloop_reverse.act[0] =  k1/k2;
     pars->openloop_reverse.act[1] = -Lm/k2;
 
 #else // DISCRETIZE_TUSTIN
 
-    const double k1 = R1 - (2/T) * Lm;
-    const double k2 = R2 - (2/T) * R3;
-    const double k3 = R1 + (2/T) * Lm;
-    const double k4 = R2 + (2/T) * R3;
+    const double k1 = R1 + (2/T) * Lm;
+    const double k2 = R1 - (2/T) * Lm;
+    const double k3 = R2 + R3 * (2/T) * Lm;
+    const double k4 = R2 - R3 * (2/T) * Lm;
 
-    pars->openloop_forward.ref[0] =  k4/k3;
-    pars->openloop_forward.ref[1] =  k2/k3;
-    pars->openloop_forward.act[1] = -k1/k3;
+    pars->openloop_forward.ref[0] =  k3/k1;
+    pars->openloop_forward.ref[1] =  k4/k1;
+    pars->openloop_forward.act[1] = -k2/k1;
 
-    pars->openloop_reverse.ref[1] = -k2/k4;
-    pars->openloop_reverse.act[0] =  k3/k4;
-    pars->openloop_reverse.act[1] =  k1/k4;
+    pars->openloop_reverse.ref[1] = -k4/k3;
+    pars->openloop_reverse.act[0] =  k1/k3;
+    pars->openloop_reverse.act[1] =  k2/k3;
 
 #endif
    // If the regulation mode is CURRENT, we can use the reference current value as provided.
