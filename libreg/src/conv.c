@@ -1226,7 +1226,7 @@ static void regConvRegulateSignalRT(struct reg_conv *conv, enum reg_mode reg_mod
 
                         // Mark current reference as rate limited
 
-                        reg_signal->lim_ref.flags.rate = 1;
+                        reg_signal->lim_ref.flags.rate = REG_ENABLED;
                     }
                     else
                     {

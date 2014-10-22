@@ -101,6 +101,8 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, fl
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
                     float i_quadrants41[2], float v_quadrants41[2])
 {
+    float delta_i_quadrants41;
+
     // Keep pos limit as it is used by libcc for pre-function ramps
 
     lim_v_ref->min = 0.0;
@@ -130,7 +132,7 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
 
     // Quadrants 41 exclusion zone: At least a 1A spread is needed to activate Q41 limiter
 
-    float delta_i_quadrants41 = i_quadrants41[1] - i_quadrants41[0];
+    delta_i_quadrants41 = i_quadrants41[1] - i_quadrants41[0];
 
     if(delta_i_quadrants41 >= 1.0)
     {
@@ -329,9 +331,9 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
  * but it will prevent the false positive in the rare cases mentioned above.
  */
 {
-    float       delta_ref;
-    float       rate_lim_ref;
-    uint32_t    rate_lim_flag = 0;
+    float                       delta_ref;
+    float                       rate_lim_ref;
+    enum reg_enabled_disabled   rate_lim_flag = REG_DISABLED;
 
     // Clip reference to absolute limits taking into account the invert flag
 

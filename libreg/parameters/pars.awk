@@ -227,7 +227,7 @@ BEGIN {
 
     for(i=0 ; i < n_flags ; i++)
     {
-        printf "#define %-40s(1<<%d)\n", flag[i], i                                              > of
+        printf "#define %-40s(1u<<%d)\n", flag[i], i                                             > of
     }
 
     print "\nstruct reg_par"                                                                     > of

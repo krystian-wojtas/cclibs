@@ -63,6 +63,7 @@ $(libreg_inc)/pars.h: $(libreg_path)/parameters/pars.csv $(libreg_path)/paramete
 
 clean:
 	rm -f $(exec) $(dep_path)/*.d $(obj_path)/*.o $(inc_path)/flot.h
+	rm -r $(libreg_inc)/pars.h $(libreg_inc)/init_pars.h 
 	rm -rf results/debug results/csv results/webplots/tests/* results/webplots/sandbox/*
 
 $(exec): $(objects) $(libfg) $(libreg)

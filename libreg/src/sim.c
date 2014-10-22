@@ -34,6 +34,12 @@
 #include <math.h>
 #include "libreg/sim.h"
 
+// Define PI for older compilers which do not have PI in math.h
+
+#define PI 3.14159265358979323846264338327950288
+
+
+
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
 void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars, float sim_load_tc_error, float sim_period)
@@ -137,7 +143,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_
 
         // Calculate the delay for a steady ramp (see doc/pdf/model/FirstSecondOrder.pdf page 36)
 
-        pars->vs_delay_iters = 2.0 * z / (2.0 * M_PI * natural_freq * iter_period);
+        pars->vs_delay_iters = 2.0 * z / (2.0 * PI * natural_freq * iter_period);
 
         // If voltage source model is too under-sampled then do not attempt Tustin algorithm
 
@@ -155,7 +161,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_
             if(z < 0.7)      // If lightly damped, there is a resonance peak: f_pw = frequency of peak
             {
                 f_pw = natural_freq * sqrt(1.0 - 2.0 * z2);
-                w  = M_PI * iter_period * f_pw;
+                w  = PI * iter_period * f_pw;
                 b  = tan(w) / w;
             }
             else              // else heavily damped, there is no resonance peak: f_pw = 0 (minimizes approximation error)
@@ -167,7 +173,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_
             // Calculate intermediate variables
 
             d  = 2.0 * tau_zero / (iter_period * b);
-            y  = M_PI * iter_period * b * natural_freq;
+            y  = PI * iter_period * b * natural_freq;
             de = 1.0 / (y * y + 2.0 * z * y + 1.0);
 
             // Numerator (b0, b1, b2, b3) coefficients

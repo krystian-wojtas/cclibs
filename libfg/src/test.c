@@ -27,6 +27,8 @@
 
 #include "libfg/test.h"
 
+
+
 enum fg_error fgTestInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
                          struct fg_test_config     *config,
@@ -204,13 +206,13 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 
             case FG_TEST_SINE:
 
-                radians   = (2.0 * M_PI) * pars->frequency * func_time;
+                radians   = (2.0 * 3.1415926535897932) * pars->frequency * func_time;
                 delta_ref = pars->ref_amp * sin(radians);
                 break;
 
             case FG_TEST_COSINE:
 
-                radians   = (2.0 * M_PI) * pars->frequency * func_time;
+                radians   = (2.0 * 3.1415926535897932) * pars->frequency * func_time;
                 cos_rads  = cos(radians);
                 delta_ref = pars->ref_amp * cos_rads;
                 break;

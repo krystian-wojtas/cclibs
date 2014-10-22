@@ -34,7 +34,7 @@
 //#define DISCRETIZE_FORWARD_EULER_QK
 //#define DISCRETIZE_FORWARD_EULER
 //#define DISCRETIZE_BACKWARD_EULER
-#define M_TWO_PI                   (2.0*M_PI)
+#define M_TWO_PI                   (2.0*3.14159265358979323)
 #define FLOAT_THRESHOLD            1.0E-10                      //!< Lower bound for s[0]. To allow for floating point rounding errors.
 #define REG_AVE_V_REF_LEN          4                            //!< Number of iterations over which to average V_REF
 #define REG_TRACK_DELAY_FLTR_TC    100                          //!< Track delay measurement filter time constant (periods)
