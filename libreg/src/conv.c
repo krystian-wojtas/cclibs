@@ -931,7 +931,7 @@ static void regConvSetModeFieldOrCurrentRT(struct reg_conv *conv, enum reg_mode 
 
         regRstInitRefRT(rst_pars, rst_vars, reg_signal->rate.estimate);
 
-        conv->ref = regRstPrevRefRT(&reg_signal->rst_vars);
+        conv->ref = conv->ref_openloop = regRstPrevRefRT(&reg_signal->rst_vars);
 
         conv->ref_delayed = regRstDelayedRefRT(rst_pars, rst_vars, reg_signal->iteration_counter);
 

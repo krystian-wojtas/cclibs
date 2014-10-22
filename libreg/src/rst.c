@@ -923,6 +923,8 @@ void regRstInitRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float
                 pars->rst.r[par_idx] * (double)vars->meas[var_idx];
     }
 
+    vars->openloop_ref[vars->history_index] = vars->ref[vars->history_index];
+
     vars->meas[vars->history_index] = meas / pars->rst.r[0];
 }
 
