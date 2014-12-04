@@ -188,41 +188,43 @@ struct reg_rst
  */
 struct reg_openloop
 {
-    double                      ref[2];                         //!< Difference equation coefficients for I(t) and I(t-1) terms
-    double                      act[2];                         //!< Difference equation coefficients for V(t) term (used only
-                                                                //!< in the reverse direction) and V(t-1) terms (used only in
-                                                                //!< the forward direction)
-};
+    double                      ref[2];                         //!< Difference equation coefficients for I(t) and I(t-1) terms.
+    double                      act[2];                         //!< Difference equation coefficients for V(t) term (used only in the reverse
+};                                                              //!< direction) and V(t-1) terms (used only in the forward direction).
 
 /*!
  * RST algorithm parameters
  */
 struct reg_rst_pars
 {
-    enum reg_status             status;                         //!< Regulation parameters status
     enum reg_mode               reg_mode;                       //!< Regulation mode (#REG_CURRENT | #REG_FIELD)
-    uint32_t                    alg_index;                      //!< Algorithm index (1-5). Based on pure delay
-    uint32_t                    dead_beat;                      //!< 0 = not dead-beat, 1-3 = dead-beat (1-3)
     double                      reg_period;                     //!< Regulation period
     float                       inv_reg_period_iters;           //!< \f$\frac{1}{reg\_period\_iters}\f$
+    float                       min_auxpole_hz;                 //!< Minimum of RST auxpole*_hz parameters. Used to limit the scan frequency range.
+
+    struct reg_openloop         openloop_forward;               //!< Coefficients for openloop difference equation in forward direction.
+    struct reg_openloop         openloop_reverse;               //!< Coefficients for openloop difference equation in reverse direction.
+    struct reg_rst              rst;                            //!< RST polynomials
+    uint32_t                    rst_order;                      //!< Highest order of RST polynomials
+    double                      inv_s0;                         //!< \f$\frac{1}{S[0]}\f$
+    double                      t0_correction;                  //!< Correction to t[0] for rounding errors
+    double                      inv_corrected_t0;               //!< \f$\frac{1}{T[0]+ t0\_correction}\f$
+
+    enum reg_status             status;                         //!< Regulation parameters status
+    int32_t                     jurys_result;                   //!< Jury's test result index (0 = OK)
+    uint32_t                    alg_index;                      //!< Algorithm index (1-5). Based on pure delay
+    uint32_t                    dead_beat;                      //!< 0 = not dead-beat, 1-3 = dead-beat (1-3)
     float                       ref_advance;                    //!< Reference advance time
     float                       pure_delay_periods;             //!< Pure delay in regulation periods
     float                       track_delay_periods;            //!< Track delay in regulation periods
     float                       ref_delay_periods;              //!< Reference delay in regulation periods
-    double                      inv_s0;                         //!< \f$\frac{1}{S[0]}\f$
-    double                      t0_correction;                  //!< Correction to t[0] for rounding errors
-    double                      inv_corrected_t0;               //!< \f$\frac{1}{T[0]+ t0\_correction}\f$
-    struct reg_rst              rst;                            //!< RST polynomials
+
+    float                       modulus_margin;                 //!< Modulus margin. Equal to the minimum value of the sensitivity function (abs_S_p_y)
+    float                       modulus_margin_freq;            //!< Frequency for modulus margin.
     double                      a   [REG_N_RST_COEFFS];         //!< Plant numerator A. See also #REG_N_RST_COEFFS.
     double                      b   [REG_N_RST_COEFFS];         //!< Plant denominator B. See also #REG_N_RST_COEFFS.
     double                      as  [REG_N_RST_COEFFS];         //!< \f$A \cdot S\f$. See also #REG_N_RST_COEFFS.
     double                      asbr[REG_N_RST_COEFFS];         //!< \f$A \cdot S + B \cdot R\f$. See also #REG_N_RST_COEFFS.
-    int32_t                     jurys_result;                   //!< Jury's test result index (0 = OK)
-    struct reg_openloop         openloop_forward;               //!< Coefficients for openloop difference equation in forward direction.
-    struct reg_openloop         openloop_reverse;               //!< Coefficients for openloop difference equation in reverse direction.
-    float                       min_auxpole_hz;                 //!< Minimum of RST auxpole*_hz parameters. Used to limit the scan frequency range.
-    float                       modulus_margin;                 //!< Modulus margin. Equal to the minimum value of the sensitivity function (abs_S_p_y)
-    float                       modulus_margin_freq;            //!< Frequency for modulus margin.
 };
 
 /*!
@@ -243,9 +245,9 @@ struct reg_rst_vars
 // RST macro "functions"
 
 #define regRstIncHistoryIndexRT(rst_vars_p) (rst_vars_p)->history_index = ((rst_vars_p)->history_index + 1) & REG_RST_HISTORY_MASK
-#define regRstPrevRefRT(rst_vars_p) (rst_vars_p)->ref[(rst_vars_p)->history_index]
-#define regRstDeltaRefRT(rst_vars_p) (regRstPrevRefRT(rst_vars_p) - (rst_vars_p)->ref[((rst_vars_p)->history_index - 1) & REG_RST_HISTORY_MASK])
-#define regRstPrevActRT(rst_vars_p) (rst_vars_p)->act[(rst_vars_p)->history_index]
+#define regRstPrevRefRT(rst_vars_p)         (rst_vars_p)->ref[(rst_vars_p)->history_index]
+#define regRstDeltaRefRT(rst_vars_p)        (regRstPrevRefRT(rst_vars_p) - (rst_vars_p)->ref[((rst_vars_p)->history_index - 1) & REG_RST_HISTORY_MASK])
+#define regRstPrevActRT(rst_vars_p)         (rst_vars_p)->act[(rst_vars_p)->history_index]
 #define regRstAverageDeltaActRT(rst_vars_p) ((regRstPrevActRT(rst_vars_p) - (rst_vars_p)->act[((rst_vars_p)->history_index + 1) & REG_RST_HISTORY_MASK])/REG_RST_HISTORY_MASK)
 
 // RST regulation functions

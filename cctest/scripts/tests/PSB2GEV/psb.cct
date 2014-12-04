@@ -3,9 +3,7 @@
 GLOBAL RUN_DELAY            0.1
 GLOBAL STOP_DELAY           0.1
 GLOBAL ITER_PERIOD_US       100
-GLOBAL FUNCTION             TABLE
 GLOBAL STOP_ON_ERROR        ENABLED
-GLOBAL REG_MODE             CURRENT
 GLOBAL FG_LIMITS            ENABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL GROUP                tests
@@ -54,6 +52,11 @@ LIMITS V_ACCELERATION       0.0
 LIMITS V_ERR_WARNING        0.0
 LIMITS V_ERR_FAULT          0.0
 LIMITS V_QUADRANTS41        0.0,0.0
+
+# Ref
+
+REF FUNCTION                TABLE
+REF REG_MODE                CURRENT
 
 # CCTEST load file: PSB main defocussing quads
 

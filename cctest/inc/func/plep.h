@@ -24,6 +24,8 @@
 #ifndef CCPARS_PLEP_H
 #define CCPARS_PLEP_H
 
+#include "ccTest.h"
+#include "ccPars.h"
 #include "libfg/plep.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -40,26 +42,29 @@ struct ccpars_plep
 {
     // cctest PLEP parameters
 
-    float                       initial_ref;
-    struct fg_plep_config       config;                 // Libfg config struct for PLEP
+    float                       initial_ref [CC_NUM_CYC_SELS][1];     // Initial reference
+    float                       final       [CC_NUM_CYC_SELS][1];     // Final reference
+    float                       acceleration[CC_NUM_CYC_SELS][1];     // Acceleration of the parabolic segments (absolute value is used)
+    float                       linear_rate [CC_NUM_CYC_SELS][1];     // Maximum linear rate (absolute value is used)
+    float                       final_rate  [CC_NUM_CYC_SELS][1];     // Final rate of change
+    float                       exp_tc      [CC_NUM_CYC_SELS][1];     // Exponential time constant
+    float                       exp_final   [CC_NUM_CYC_SELS][1];     // End reference of exponential segment (can be zero)
 
     // Libfg PLEP variables
 
-    struct fg_plep_pars         pars;                   // Libfg parameters for PLEP
+    struct fg_plep_pars         pars[CC_NUM_CYC_SELS];                // Libfg parameters for PLEP
 };
 
 CCPARS_PLEP_EXT struct ccpars_plep ccpars_plep
 #ifdef GLOBALS
-= {//   Default value           Parameter
-        0.0,                 // PLEP INITIAL_REF
-        {
-            1.0,             // PLEP FINAL_REF
-            1.0,             // PLEP ACCELERATION
-            1.0,             // PLEP LINEAR_RATE
-            0.0,             // PLEP FINAL_RATE
-            0.0,             // PLEP EXP_TC
-            0.0,             // PLEP EXP_FINAL
-        }
+= {// Default value           Parameter
+    { { 0.0 } },           // PLEP INITIAL_REF
+    { { 1.0 } },           // PLEP FINAL_REF
+    { { 1.0 } },           // PLEP ACCELERATION
+    { { 1.0 } },           // PLEP LINEAR_RATE
+    { { 0.0 } },           // PLEP FINAL_RATE
+    { { 0.0 } },           // PLEP EXP_TC
+    { { 0.0 } },           // PLEP EXP_FINAL
 }
 #endif
 ;
@@ -68,14 +73,14 @@ CCPARS_PLEP_EXT struct ccpars_plep ccpars_plep
 
 CCPARS_PLEP_EXT struct ccpars   plep_pars[]
 #ifdef GLOBALS
-= {// "Signal name"   type,     max_n_els,*enum,        *value,                       num_defaults
-    { "INITIAL_REF",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.initial_ref         }, 1 },
-    { "FINAL_REF",    PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.config.final        }, 1 },
-    { "ACCELERATION", PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.config.acceleration }, 1 },
-    { "LINEAR_RATE",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.config.linear_rate  }, 1 },
-    { "FINAL_RATE",   PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.config.final_rate   }, 1 },
-    { "EXP_TC",       PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.config.exp_tc       }, 1 },
-    { "EXP_FINAL",    PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.config.exp_final    }, 1 },
+= {// "Signal name"   type,     max_n_els,*enum,        *value,                      num_defaults  flags
+    { "INITIAL_REF",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.initial_ref [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "FINAL_REF",    PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.final       [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "ACCELERATION", PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.acceleration[0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "LINEAR_RATE",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.linear_rate [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "FINAL_RATE",   PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.final_rate  [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "EXP_TC",       PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.exp_tc      [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "EXP_FINAL",    PAR_FLOAT,    1,     NULL, { .f = &ccpars_plep.exp_final   [0][0] }, 1, PARS_CYCLE_SELECTOR },
     { NULL }
 }
 #endif

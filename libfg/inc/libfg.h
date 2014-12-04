@@ -71,8 +71,9 @@ enum fg_limits_polarity
  */
 struct fg_meta
 {
-
+    enum fg_error   fg_error;               //!< Function error number
     bool            invert_limits;          //!< Limits inverted flag
+
     struct
     {
         uint32_t    index;                  //!< Error index from Init function

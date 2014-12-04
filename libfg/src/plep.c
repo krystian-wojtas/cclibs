@@ -60,7 +60,8 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
     if(config->acceleration == 0.0 || config->linear_rate == 0.0 || (config->exp_tc > 0.0 &&
        (config->final == 0.0 || config->final_rate != 0.0 || fabs(config->exp_final) >= fabs(config->final))))
     {
-        return(FG_BAD_PARAMETER);
+        fg_error = FG_BAD_PARAMETER;
+        goto error;
     }
 
     // Calculate PLEP parameters with zero initial rate of change
@@ -262,7 +263,7 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
                                   pars->acceleration, meta)))
         {
             meta->error.index = 1;
-            return(fg_error);
+            goto error;
         }
 
         // Check limits at the end of the linear segment (segment 2)
@@ -273,7 +274,7 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
                                   pars->acceleration, meta)))
         {
             meta->error.index = 2;
-            return(fg_error);
+            goto error;
         }
 
         // Check limits at the end of the exponential decay (segment 3)
@@ -283,7 +284,7 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
                                   pars->acceleration, meta)))
         {
             meta->error.index = 3;
-            return(fg_error);
+            goto error;
         }
 
         // Check limits at the end of the parabolic deceleration (segment 4)
@@ -292,7 +293,7 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
                                   0.0, pars->acceleration, meta)))
         {
             meta->error.index = 4;
-            return(fg_error);
+            goto error;
         }
 
         // Check limits at the end of the parabolic acceleration (segment 5)
@@ -301,11 +302,18 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
                                  config->final_rate, pars->acceleration, meta)))
         {
             meta->error.index = 5;
-            return(fg_error);
+            goto error;
         }
     }
 
     return(FG_OK);
+
+    // Error - store error code in meta and return to caller
+
+    error:
+
+        meta->fg_error = fg_error;
+        return(fg_error);
 }
 
 

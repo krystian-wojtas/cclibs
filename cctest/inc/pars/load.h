@@ -24,7 +24,7 @@
 #ifndef CCPARS_LOAD_H
 #define CCPARS_LOAD_H
 
-#include "ccCmds.h"
+#include "ccPars.h"
 
 // GLOBALS should be defined in the source file where global variables should be defined
 
@@ -40,41 +40,42 @@ struct ccpars_load
 {
     // Load file parameters
 
-    float                       ohms_ser;         // Series resistance
-    float                       ohms_par;         // Parallel resistance
-    float                       ohms_mag;         // Magnet resistance
+    float       ohms_ser      [REG_N_LOADS];        // Series resistance
+    float       ohms_par      [REG_N_LOADS];        // Parallel resistance
+    float       ohms_mag      [REG_N_LOADS];        // Magnet resistance
+    float       henrys        [REG_N_LOADS];        // Unsaturated magnet inductance
+    float       henrys_sat    [REG_N_LOADS];        // Saturated magnet inductance
+    float       i_sat_start   [REG_N_LOADS];        // Current at start of saturation
+    float       i_sat_end     [REG_N_LOADS];        // Current at end of saturation
+    float       gauss_per_amp [REG_N_LOADS];        // Field to current ratio (G/A)
 
-    float                       henrys;           // Unsaturated magnet inductance
-    float                       henrys_sat;       // Saturated magnet inductance
+    uint32_t    select;                             // Operational load selector
+    uint32_t    test_select;                        // Test load selector
+    float       sim_tc_error;                       // Error factor for simulation
 
-    float                       i_sat_start;      // Current at start of saturation
-    float                       i_sat_end;        // Current at end of saturation
+    float       perturb_volts;                      // Open loop voltage perturbation
+    float       perturb_time;                       // Time for open loop voltage perturbation
 
-    float                       gauss_per_amp;    // Field to current ratio (G/A)
-
-    float                       perturb_volts;    // Open loop voltage perturbation
-    float                       perturb_time;     // Time for open loop voltage perturbation
-
-    float                       sim_tc_error;     // Error factor for simulation
-
-    enum reg_enabled_disabled   pol_swi_auto;     // Auto polarity switch will follow function
+    enum reg_enabled_disabled pol_swi_auto;         // Auto polarity switch will follow function
 };
 
 CCPARS_LOAD_EXT struct ccpars_load ccpars_load
 #ifdef GLOBALS
-= {//   Default value           Parameter
-        0.5,                 // LOAD OHMS_SER
-        1.0E9,               // LOAD OHMS_PAR
-        1.0,                 // LOAD OHMS_MAG
-        1.0,                 // LOAD HENRYS
-        1.0,                 // LOAD HENRYS_SAT
-        0.0,                 // LOAD I_SAT_START
-        0.0,                 // LOAD I_SAT_END
-        1.2,                 // LOAD GAUSS_PER_AMP
-        0.0,                 // LOAD PERTURB_VOLTS
-        0.0,                 // LOAD PERTURB_TIME
-        0.0,                 // LOAD SIM_TC_ERROR
-        REG_DISABLED,        // LOAD POL_SWI_AUTO
+= {//   Default values                        Parameter
+    {   0.5,   0.5,   0.5,   0.5, },       // LOAD OHMS_SER
+    { 1.0E9, 1.0E9, 1.0E9, 1.0E9, },       // LOAD OHMS_PAR
+    {   1.0,   1.0,   1.0,   1.0, },       // LOAD OHMS_MAG
+    {   1.0,   1.0,   1.0,   1.0, },       // LOAD HENRYS
+    {   1.0,   1.0,   1.0,   1.0, },       // LOAD HENRYS_SAT
+    {   0.0,   0.0,   0.0,   0.0, },       // LOAD I_SAT_START
+    {   0.0,   0.0,   0.0,   0.0, },       // LOAD I_SAT_END
+    {   1.2,   1.2,   1.2,   1.2, },       // LOAD GAUSS_PER_AMP
+          0,                               // LOAD SELECT
+          0,                               // LOAD TEST_SELECT
+        0.0,                               // LOAD SIM_TC_ERROR
+        0.0,                               // LOAD PERTURB_VOLTS
+        0.0,                               // LOAD PERTURB_TIME
+        REG_DISABLED,                      // LOAD POL_SWI_AUTO
 }
 #endif
 ;
@@ -83,19 +84,21 @@ CCPARS_LOAD_EXT struct ccpars_load ccpars_load
 
 CCPARS_LOAD_EXT struct ccpars load_pars[]
 #ifdef GLOBALS
-= {// "Signal name"      type,    max_n_els,*enum,                    *value,                    num_defaults
-    { "OHMS_SER",        PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.ohms_ser        }, 1 },
-    { "OHMS_PAR",        PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.ohms_par        }, 1 },
-    { "OHMS_MAG",        PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.ohms_mag        }, 1 },
-    { "HENRYS",          PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.henrys          }, 1 },
-    { "HENRYS_SAT",      PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.henrys_sat      }, 1 },
-    { "I_SAT_START",     PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.i_sat_start     }, 1 },
-    { "I_SAT_END",       PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.i_sat_end       }, 1 },
-    { "GAUSS_PER_AMP",   PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.gauss_per_amp   }, 1 },
-    { "PERTURB_VOLTS",   PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.perturb_volts   }, 1 },
-    { "PERTURB_TIME",    PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.perturb_time    }, 1 },
-    { "SIM_TC_ERROR",    PAR_FLOAT,   1,     NULL,             { .f = &ccpars_load.sim_tc_error    }, 1 },
-    { "POL_SWI_AUTO",    PAR_ENUM,    1,     enabled_disabled, { .i = &ccpars_load.pol_swi_auto    }, 1 },
+= {// "Signal name"    type,         max_n_els,  *enum,               *value,                      num_defaults, flags
+    { "OHMS_SER",      PAR_FLOAT,    REG_N_LOADS, NULL,        { .f =  ccpars_load.ohms_ser      }, REG_N_LOADS, PARS_FIXED_LENGTH },
+    { "OHMS_PAR",      PAR_FLOAT,    REG_N_LOADS, NULL,        { .f =  ccpars_load.ohms_par      }, REG_N_LOADS, PARS_FIXED_LENGTH },
+    { "OHMS_MAG",      PAR_FLOAT,    REG_N_LOADS, NULL,        { .f =  ccpars_load.ohms_mag      }, REG_N_LOADS, PARS_FIXED_LENGTH },
+    { "HENRYS",        PAR_FLOAT,    REG_N_LOADS, NULL,        { .f =  ccpars_load.henrys        }, REG_N_LOADS, PARS_FIXED_LENGTH },
+    { "HENRYS_SAT",    PAR_FLOAT,    REG_N_LOADS, NULL,        { .f =  ccpars_load.henrys_sat    }, REG_N_LOADS, PARS_FIXED_LENGTH },
+    { "I_SAT_START",   PAR_FLOAT,    REG_N_LOADS, NULL,        { .f =  ccpars_load.i_sat_start   }, REG_N_LOADS, PARS_FIXED_LENGTH },
+    { "I_SAT_END",     PAR_FLOAT,    REG_N_LOADS, NULL,        { .f =  ccpars_load.i_sat_end     }, REG_N_LOADS, PARS_FIXED_LENGTH },
+    { "GAUSS_PER_AMP", PAR_FLOAT,    REG_N_LOADS, NULL,        { .f =  ccpars_load.gauss_per_amp }, REG_N_LOADS, PARS_FIXED_LENGTH },
+    { "SELECT",        PAR_UNSIGNED, 1,           NULL,        { .u = &ccpars_load.select        }, 1,           0                 },
+    { "TEST_SELECT",   PAR_UNSIGNED, 1,           NULL,        { .u = &ccpars_load.test_select   }, 1,           0                 },
+    { "SIM_TC_ERROR",  PAR_FLOAT,    1,           NULL,        { .f = &ccpars_load.sim_tc_error  }, 1,           0                 },
+    { "PERTURB_VOLTS", PAR_FLOAT,    1,           NULL,        { .f = &ccpars_load.perturb_volts }, 1,           0                 },
+    { "PERTURB_TIME",  PAR_FLOAT,    1,           NULL,        { .f = &ccpars_load.perturb_time  }, 1,           0                 },
+    { "POL_SWI_AUTO",  PAR_ENUM,     1, enum_enabled_disabled, { .u = &ccpars_load.pol_swi_auto  }, 1,           0                 },
     { NULL }
 }
 #endif

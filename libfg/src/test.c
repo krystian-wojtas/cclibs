@@ -44,7 +44,9 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     float          range[2];       // Range of reference value
     struct fg_meta local_meta;     // Local meta data in case user meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
+    // Reset meta structure - uses local_meta if meta is NULL
+
+    meta = fgResetMeta(meta, &local_meta, init_ref);
 
     // Prepare parameter structure
 
@@ -57,16 +59,17 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     pars->frequency   = 1.0 / config->period;
     pars->ref_amp     = config->amplitude_pp;
     pars->type        = config->type;
-    pars->use_window  = config->use_window;             // Control window for sine and cosine
+    pars->use_window  = config->use_window;
 
-    // Check parameters
+    // Check if total duration is too long
 
-    if(pars->duration > 1.0E6)                          // If total time is too long
+    if(pars->duration > 1.0E6)
     {
         meta->error.data[0] = pars->duration;
         meta->error.data[1] = 1.0E6;
 
-        return(FG_INVALID_TIME);                                // Report INVALID TIME
+        fg_error = FG_INVALID_TIME;
+        goto error;
     }
 
     // Calculate amplitude related parameters
@@ -79,8 +82,8 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     {
         case FG_TEST_STEPS:
 
-            pars->ref_final += pars->ref_amp;                   // Calculate final ref value
-            pars->ref_amp   *= inv_n_cyc;                       // Calculate step size
+            pars->ref_final += pars->ref_amp;
+            pars->ref_amp   *= inv_n_cyc;
 
             end      = pars->ref_final;
             range[0] = pars->ref_initial;
@@ -88,11 +91,13 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
             fgSetMinMax(meta, range[1]);
 
-            if(limits != NULL)  // Check clip limits only if supplied
+            // Check clip limits only if supplied
+
+            if(limits != NULL)
             {
                 if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_final, 0.0, 0.0, meta)))
                 {
-                    return(fg_error);
+                    goto error;
                 }
             }
 
@@ -105,11 +110,13 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
             fgSetMinMax(meta, range[1]);
 
-            if(limits != NULL)  // Check clip limits only if supplied
+            // Check clip limits only if supplied
+
+            if(limits != NULL)
             {
                 if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial + pars->ref_amp, 0.0, 0.0, meta)))
                 {
-                    return(fg_error);
+                    goto error;
                 }
             }
 
@@ -118,7 +125,7 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
         case FG_TEST_SINE:
         case FG_TEST_COSINE:
 
-            pars->ref_amp *= 0.5;                      // Convert amplitude to 1/2 peak-peak
+            pars->ref_amp *= 0.5;
             range[0]       = pars->ref_initial - pars->ref_amp;
             range[1]       = pars->ref_initial + pars->ref_amp;
 
@@ -129,17 +136,18 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
                 if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial + pars->ref_amp, 0.0, 0.0, meta)) ||
                    (fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial - pars->ref_amp, 0.0, 0.0, meta)))
                 {
-                    return(fg_error);
+                    goto error;
                 }
             }
 
             break;
 
-        default:                                            // Invalid function type requested
+        default: // Invalid function type requested
 
             meta->error.data[0] = config->type;
 
-            return(FG_BAD_PARAMETER);
+            fg_error = FG_BAD_PARAMETER;
+            goto error;
     }
 
     // Complete meta data
@@ -148,6 +156,13 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     meta->range.end = end;
 
     return(FG_OK);
+
+    // Error - store error code in meta and return to caller
+
+    error:
+
+        meta->fg_error = fg_error;
+        return(fg_error);
 }
 
 
@@ -185,7 +200,7 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
                 period_idx = 1 + (uint32_t)(func_time * pars->frequency);
                 new_ref    = pars->ref_initial + pars->ref_amp * (float)period_idx;
 
-                if(*ref != new_ref) // This is an edge
+                if(*ref != new_ref)
                 {
                     *ref = new_ref;
                 }
@@ -197,7 +212,7 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
                 period_idx = 1 - ((uint32_t)(2.0 * func_time * pars->frequency) & 0x1);
                 new_ref    = pars->ref_initial + (period_idx ? pars->ref_amp : 0.0);
 
-                if(*ref != new_ref) // This is an edge
+                if(*ref != new_ref)
                 {
                     *ref = new_ref;
                 }
@@ -224,9 +239,9 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 
         // For SINE and COSINE: Apply cosine window if enabled
 
-        if(pars->use_window &&                               // If window enabled, and
-          (func_time < pars->half_period ||                  // first or
-           pars->duration - func_time < pars->half_period))  // last half period
+        if(pars->use_window &&
+          (func_time < pars->half_period ||
+           pars->duration - func_time < pars->half_period))
         {
             // Calc Cosine window
 

@@ -44,7 +44,8 @@ MEAS V_SIM_NOISE_PP          0.01
 
 # Test 1 - Open loop cosine
 
-GLOBAL REG_MODE              VOLTAGE
+REF FUNCTION                 COSINE
+REF REG_MODE                 VOLTAGE
 
 TEST INITIAL_REF             0.0
 TEST AMPLITUDE_PP            1.0
@@ -52,27 +53,28 @@ TEST NUM_CYCLES              4
 TEST PERIOD                  5.0
 TEST WINDOW                  ENABLED
 
-GLOBAL FUNCTION              COSINE
 GLOBAL FILE                  volts-cosine
 RUN
 
 # Test 2 - Close loop TABLE
 
-GLOBAL REG_MODE              CURRENT
+REF FUNCTION                 TABLE
+REF REG_MODE                 CURRENT
+
 TABLE TIME                   0.0, 1.0, 10.0, 14.0, 20.0
 TABLE REF                    0.0, 0.0,  2.0,  2.0, -1.0
-GLOBAL FUNCTION              TABLE
 GLOBAL FILE                  amps-table
 RUN
 
 # Test 3 - Close loop PLEP
 
-GLOBAL REG_MODE              CURRENT
+REF FUNCTION                 PLEP
+REF REG_MODE                 CURRENT
+
 PLEP INITIAL_REF             1.0
 PLEP FINAL_REF               10.0
 PLEP ACCELERATION            0.2
 PLEP LINEAR_RATE             0.8
-GLOBAL FUNCTION              PLEP
 GLOBAL FILE                  amps-plep
 RUN
 

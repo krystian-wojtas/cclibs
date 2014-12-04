@@ -35,8 +35,7 @@
 
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
-void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag, float henrys,
-                 float gauss_per_amp)
+void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag, float henrys, float gauss_per_amp)
 {
    // Save the load parameters
 
@@ -63,7 +62,8 @@ void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, flo
     }
     else                       // Rp is effectively zero (i.e. no magnet in the circuit)
     {
-        load->ohms2  = 1.0E30;
+        load->ohms1  = 1.0E30;
+        load->ohms2  = 0.0;
         load->ohms   = ohms_ser;
 
         load->gain0  = 1.0 / ohms_ser;
@@ -188,7 +188,7 @@ float regLoadFieldToCurrentRT(struct reg_load_pars *load, float b_meas)
         quad_b = -(2.0 * load->sat.b_factor * load->sat.i_start + 1.0);
         quad_c = load->sat.b_factor * load->sat.i_start * load->sat.i_start + abs_b_meas / load->gauss_per_amp;
 
-        i_meas = (-quad_b - sqrt(quad_b * quad_b - 4.0 * quad_a * quad_c)) / (2.0 * quad_a);
+        i_meas = (-quad_b - sqrtf(quad_b * quad_b - 4.0 * quad_a * quad_c)) / (2.0 * quad_a);
     }
     else
     {

@@ -33,6 +33,7 @@
 #define LIBREG_SIM_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <libreg/load.h>
 
 // Constants
@@ -49,7 +50,7 @@ struct reg_sim_load_pars
 {
     float                       tc_error;                       //!< Simulated load time constant error
     float                       period_tc_ratio;                //!< Simulation period / load time constant
-    uint32_t                    load_undersampled_flag;         //!< Simulated load is under-sampled flag
+    bool                        is_load_undersampled;           //!< Simulated load is under-sampled flag
     struct reg_load_pars        load_pars;                      //!< Simulated load parameters
 };
 
@@ -81,7 +82,7 @@ struct reg_sim_vs_pars
     float                       v_ref_delay_iters;              //!< Delay before the voltage reference is applied to the voltage source
     float                       vs_delay_iters;                 //!< Voltage source delay for steady ramp in iterations
     float                       gain;                           //!< \f[gain = \frac{\sum den}{\sum num}\f]
-    uint32_t                    vs_undersampled_flag;           //!< Simulated voltage source is under-sampled flag
+    bool                        is_vs_undersampled;             //!< Simulated voltage source is under-sampled flag
 };
 
 /*!
@@ -208,14 +209,14 @@ float regSimVsRT(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, flo
  *
  * @param[in]     pars                 Load simulation parameters
  * @param[in,out] vars                 Load simulation values object to update
- * @param[in]     vs_undersampled_flag Voltage Source undersampled flag. If zero, use first-order interpolation
- *                                     of voltage. If non-zero, voltage source is undersampled: use initial
+ * @param[in]     is_vs_undersampled   Voltage Source undersampled flag. If false, use first-order interpolation
+ *                                     of voltage. If true, voltage source is undersampled: use final
  *                                     voltage for complete sample.
  * @param[in]     v_circuit            Load voltage, stored in reg_sim_load_vars::circuit_voltage for the next
  *                                     iteration.
  * @returns Circuit current
  */
-float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, uint32_t vs_undersampled_flag, float v_circuit);
+float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, bool is_vs_undersampled, float v_circuit);
 
 #ifdef __cplusplus
 }

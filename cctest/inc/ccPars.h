@@ -38,9 +38,17 @@
 
 // Constants
 
-#define PARS_INDENT             34
-#define PARS_MAX_PRINT_LINE_LEN (CC_MAX_FILE_LINE_LEN*8)      // Allow for longest print line for table
-#define PARS_MAX_REPORT_LINES   1000
+#define PARS_INDENT                 34
+#define PARS_MAX_PRINT_LINE_LEN     (CC_MAX_FILE_LINE_LEN*8)      // Allow for longest print line for table
+#define PARS_MAX_REPORT_LINES       1000
+#define PARS_INT_FORMAT             "% d"
+#define PARS_FLOAT_FORMAT           "% .6E"
+#define PARS_DOUBLE_FORMAT          "% 20.16E"
+
+// struct ccpars flags
+
+#define PARS_FIXED_LENGTH           0x01
+#define PARS_CYCLE_SELECTOR         0x02
 
 // Enums
 
@@ -53,6 +61,19 @@ enum ccpars_type
     PAR_ENUM
 };
 
+// Size of type array
+
+CCPARS_EXT uint32_t ccpars_sizeof_type[]
+#ifdef GLOBALS
+= {
+    sizeof(uint32_t),
+    sizeof(float),
+    sizeof(double),
+    sizeof(char *),
+    sizeof(uint32_t)
+}
+#endif
+;
 // Structures
 
 struct ccpars
@@ -65,12 +86,14 @@ struct ccpars
     {
         double         *d;
         float          *f;
-        uint32_t       *i;
-        bool           *b;
+        uint32_t       *u;
+        char           *c;
         char          **s;
     } value_p;
 
-    uint32_t            num_elements;
+    uint32_t            num_default_elements;
+    uint32_t            flags;
+    uint32_t           *num_elements;           // Initialised by ccInitParNumElements()
 };
 
 struct ccpars_enum
@@ -89,7 +112,7 @@ CCPARS_EXT struct ccpars_report ccpars_report;
 
 // ENABLED/DISABLED enum
 
-CCPARS_EXT struct ccpars_enum enabled_disabled[]
+CCPARS_EXT struct ccpars_enum enum_enabled_disabled[]
 #ifdef GLOBALS
 = {
     { REG_DISABLED,     "DISABLED"      },
@@ -103,12 +126,8 @@ CCPARS_EXT struct ccpars_enum enabled_disabled[]
 
 uint32_t ccParsGet                  (char *cmd_name, struct ccpars *par, char **remaining_line);
 char    *ccParsEnumString           (struct ccpars_enum *par_enum, uint32_t value);
-void     ccParsGenerateFlotReport   (FILE *f);
-uint32_t ccParsCheckMissingPars     (uint32_t cmd_idx);
-void     ccParsPrintAll             (FILE *f, char *cmd_name, struct ccpars *par);
-void     ccParsPrint                (FILE *f, char *cmd_name, struct ccpars *par);
-void     ccParsPrintFlotFooter      (FILE *f);
-void     ccParsPrintDebug           (FILE *f);
+void     ccParsPrint                (FILE *f, char *cmd_name, struct ccpars *par, uint32_t cyc_sel, uint32_t array_idx);
+void     ccParsPrintAll             (FILE *f, char *cmd_name, struct ccpars *par, uint32_t cyc_sel, uint32_t array_idx);
 
 #endif
 // EOF

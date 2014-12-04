@@ -24,6 +24,8 @@
 #ifndef CCPARS_TABLE_H
 #define CCPARS_TABLE_H
 
+#include "ccTest.h"
+#include "ccPars.h"
 #include "libfg/table.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -42,20 +44,19 @@ struct ccpars_table
 {
     // cctest TABLE parameters
 
-    float                       ref [TABLE_LEN];        // Reference array
-    float                       time[TABLE_LEN];        // Time array
+    float                       ref [CC_NUM_CYC_SELS][TABLE_LEN];     // Reference array
+    float                       time[CC_NUM_CYC_SELS][TABLE_LEN];     // Time array
 
     // Libfg TABLE variables
 
-    struct fg_table_config      config;                 // Libfg config struct for TABLE
-    struct fg_table_pars        pars;                   // Libfg parameters for TABLE
+    struct fg_table_pars        pars[CC_NUM_CYC_SELS];                // Libfg parameters for TABLE
 };
 
 CCPARS_TABLE_EXT struct ccpars_table ccpars_table
 #ifdef GLOBALS
 = {//     Default value                Parameter
-        { 0.0, 1.0, 1.0, 0.0 },     // TABLE REF
-        { 0.0, 1.0, 2.0, 3.0 }      // TABLE TIME
+    { { 0.0, 1.0, 1.0, 0.0 } },     // TABLE REF
+    { { 0.0, 1.0, 2.0, 3.0 } },     // TABLE TIME
 }
 #endif
 ;
@@ -63,9 +64,9 @@ CCPARS_TABLE_EXT struct ccpars_table ccpars_table
 
 CCPARS_TABLE_EXT struct ccpars   table_pars[]
 #ifdef GLOBALS
-= {// "Signal name", type,      max_n_els, *enum,       *value,         num_defaults
-    { "REF",         PAR_FLOAT, TABLE_LEN,  NULL, { .f = ccpars_table.ref  }, 4 },
-    { "TIME",        PAR_FLOAT, TABLE_LEN,  NULL, { .f = ccpars_table.time }, 4 },
+= {// "Signal name", type,      max_n_els, *enum,        *value,               num_defaults  flags
+    { "REF",         PAR_FLOAT, TABLE_LEN,  NULL, { .f = &ccpars_table.ref [0][0] }, 4, PARS_CYCLE_SELECTOR },
+    { "TIME",        PAR_FLOAT, TABLE_LEN,  NULL, { .f = &ccpars_table.time[0][0] }, 4, PARS_CYCLE_SELECTOR },
     { NULL }
 }
 #endif

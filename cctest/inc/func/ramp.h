@@ -24,6 +24,8 @@
 #ifndef CCPARS_RAMP_H
 #define CCPARS_RAMP_H
 
+#include "ccTest.h"
+#include "ccPars.h"
 #include "libfg/ramp.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -40,26 +42,25 @@ struct ccpars_ramp
 {
     // cctest RAMP parameters
 
-    float                       initial_ref;
-    float                       initial_rate;
-    struct fg_ramp_config       config;                 // Libfg config struct for RAMP
+    float                       initial_ref [CC_NUM_CYC_SELS][1];     // Initial reference
+    float                       final       [CC_NUM_CYC_SELS][1];     // Final reference
+    float                       acceleration[CC_NUM_CYC_SELS][1];     // Acceleration of the 1st parabolic segment. Absolute value is used.
+    float                       linear_rate [CC_NUM_CYC_SELS][1];     // Maximum linear rate. Absolute value is used.
+    float                       deceleration[CC_NUM_CYC_SELS][1];     // Deceleration of the 2nd parabolic segment. Absolute value is used.
 
     // Libfg RAMP variables
 
-    struct fg_ramp_pars         pars;                   // Libfg parameters for RAMP
+    struct fg_ramp_pars         pars[CC_NUM_CYC_SELS];                // Libfg parameters for RAMP
 };
 
 CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp
 #ifdef GLOBALS
-= {//   Default value           Parameter
-        0.0,                 // RAMP INITIAL_REF
-        0.0,                 // RAMP INITIAL_RATE
-        {
-            1.0,             // RAMP FINAL_REF
-            4.0,             // RAMP ACCELERATION
-            1.0,             // RAMP LINEAR_RATE
-            6.0,             // RAMP DECELERTION
-        }
+= {// Default value             Parameter
+    { { 0.0 } },             // RAMP INITIAL_REF
+    { { 1.0 } },             // RAMP FINAL_REF
+    { { 4.0 } },             // RAMP ACCELERATION
+    { { 1.0 } },             // RAMP LINEAR_RATE
+    { { 6.0 } },             // RAMP DECELERTION
 }
 #endif
 ;
@@ -68,13 +69,12 @@ CCPARS_RAMP_EXT struct ccpars_ramp ccpars_ramp
 
 CCPARS_RAMP_EXT struct ccpars   ramp_pars[]
 #ifdef GLOBALS
-= {// "Signal name"   type,     max_n_els,*enum,        *value,                       num_defaults
-    { "INITIAL_REF",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.initial_ref         }, 1 },
-    { "INITIAL_RATE", PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.initial_rate        }, 1 },
-    { "FINAL_REF",    PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.config.final        }, 1 },
-    { "ACCELERATION", PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.config.acceleration }, 1 },
-    { "LINEAR_RATE",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.config.linear_rate  }, 1 },
-    { "DECELERATION", PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.config.deceleration }, 1 },
+= {// "Signal name"   type,     max_n_els,*enum,        *value,                      num_defaults  flags
+    { "INITIAL_REF",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.initial_ref [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "FINAL_REF",    PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.final       [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "ACCELERATION", PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.acceleration[0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "LINEAR_RATE",  PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.linear_rate [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "DECELERATION", PAR_FLOAT,    1,     NULL, { .f = &ccpars_ramp.deceleration[0][0] }, 1, PARS_CYCLE_SELECTOR },
     { NULL }
 }
 #endif

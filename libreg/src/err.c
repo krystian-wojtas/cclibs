@@ -43,13 +43,13 @@ void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_
 
     if(err->warning.threshold == 0.0)
     {
-        err->warning.flag   = 0;
+        err->warning.flag   = false;
         err->warning.filter = 0.0;
     }
 
     if(err->fault.threshold == 0.0)
     {
-        err->fault.flag   = 0;
+        err->fault.flag   = false;
         err->fault.filter = 0.0;
     }
 }
@@ -63,10 +63,10 @@ void regErrResetLimitsVarsRT(struct reg_err *err, uint32_t inhibit_max_abs_err_c
     err->err            = 0.0;
     err->max_abs_err    = 0.0;
 
-    err->warning.flag   = 0;
+    err->warning.flag   = false;
     err->warning.filter = 0.0;
 
-    err->fault.flag     = 0;
+    err->fault.flag     = false;
     err->fault.filter   = 0.0;
 
     err->inhibit_max_abs_err_counter = inhibit_max_abs_err_counter;

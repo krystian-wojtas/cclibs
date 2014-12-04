@@ -3,9 +3,7 @@
 GLOBAL RUN_DELAY            0.1
 GLOBAL STOP_DELAY           0.1
 GLOBAL ITER_PERIOD_US       1000
-GLOBAL FUNCTION             TABLE
 GLOBAL STOP_ON_ERROR        ENABLED
-GLOBAL REG_MODE             CURRENT
 GLOBAL FG_LIMITS            DISABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL GROUP                tests
@@ -62,6 +60,11 @@ IREG AUXPOLE1_HZ            20
 IREG AUXPOLES2_HZ           20
 IREG AUXPOLES2_Z            0.5
 
+# Reference function
+
+REF REG_MODE                CURRENT
+REF FUNCTION                TABLE
+
 # Main dipole functions
 
 LOAD OHMS_MAG               3.42
@@ -78,8 +81,8 @@ CD   ../../..
 
 # Dynamic economy test with RB
 
-PLEP ACCELERATION           30000
-PLEP LINEAR_RATE            1900
+DEFAULT I_ACCELERATION      30000
+DEFAULT I_LINEAR_RATE       1900
 
 GLOBAL FILE                 RB_CNGS_2009_AFTER_FT-dyneco
 GLOBAL DYN_ECO_TIME         1.0 5.5

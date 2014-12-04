@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------------------*\
-  File:     cctest/inc/ccInit.h                                                         Copyright CERN 2014
+  File:     cctest/inc/ccDebug.h                                                         Copyright CERN 2014
 
   License:  This file is part of cctest.
 
@@ -16,19 +16,17 @@
             You should have received a copy of the GNU Lesser General Public License
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  Purpose:  Header file for ccInit.c
+  Purpose:  Header file for ccDebug.c
 
   Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
 
-#ifndef CCINIT_H
-#define CCINIT_H
+#ifndef CCDEBUG_H
+#define CCDEBUG_H
 
 // Function declarations
 
-void     ccInitPars   (void);
-uint32_t ccInitFunctions        (void);
-uint32_t ccInitSimLoad          (void);
+void     ccDebugPrint           (FILE *f);
 
 #endif
 // EOF

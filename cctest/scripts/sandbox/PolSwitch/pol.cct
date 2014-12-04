@@ -1,10 +1,8 @@
 # CCTEST - Polarity Switch tests script
 
 GLOBAL RUN_DELAY            1.0
-GLOBAL STOP_DELAY           5.0
+GLOBAL STOP_DELAY           1.0
 GLOBAL ITER_PERIOD_US       1000
-GLOBAL FUNCTION             TABLE
-GLOBAL REG_MODE             CURRENT
 GLOBAL FG_LIMITS            ENABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL STOP_ON_ERROR        DISABLED
@@ -66,6 +64,11 @@ IREG PERIOD_ITERS           20
 IREG AUXPOLE1_HZ            5
 IREG AUXPOLES2_HZ           5
 IREG AUXPOLES2_Z            0.5
+
+# REF parameters
+
+REF FUNCTION                TABLE
+REF REG_MODE                CURRENT
 
 # Tests with POL_SWI_AUTO DISABLED
 

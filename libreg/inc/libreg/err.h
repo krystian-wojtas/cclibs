@@ -33,6 +33,7 @@
 #define LIBREG_ERR_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /*!
  * Regulation error limit structure
@@ -41,7 +42,7 @@ struct reg_err_limit
 {
     float                       threshold;                      //!< Limit threshold
     float                       filter;                         //!< Threshold exceeded flag filter (counter)
-    uint32_t                    flag;                           //!< Limit exceeded flag
+    bool                        flag;                           //!< Limit exceeded flag
 };
 
 /*!

@@ -3,7 +3,6 @@
 GLOBAL RUN_DELAY            1.0
 GLOBAL STOP_DELAY           5.0
 GLOBAL ITER_PERIOD_US       100
-GLOBAL REG_MODE             FIELD
 GLOBAL FG_LIMITS            ENABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL GROUP                tests
@@ -61,7 +60,6 @@ MEAS V_SIM_NOISE_PP         0.00
 MEAS TONE_HALF_PERIOD_ITERS 100
 MEAS I_SIM_TONE_AMP         0.000
 
-
 IREG PERIOD_ITERS           1000
 IREG AUXPOLE1_HZ            2
 IREG AUXPOLES2_HZ           2
@@ -79,7 +77,8 @@ PLEP FINAL_REF              11000.0
 PLEP ACCELERATION           50000.0
 PLEP LINEAR_RATE            10000.0
 
-GLOBAL FUNCTION             PLEP
+REF FUNCTION                PLEP
+REF REG_MODE                FIELD
 GLOBAL FILE                 field-rcs-plep
 RUN
 

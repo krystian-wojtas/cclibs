@@ -38,16 +38,16 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
     enum fg_error  fg_error;                     // Reference limits status
     struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
 
-
     // Check that parameters are valid
 
     if(config->acceleration == 0.0 || config->deceleration == 0.0)
     {
-        // Reset meta structure if provided
+        // Reset meta structure - uses local_meta if meta is NULL
 
         meta = fgResetMeta(meta, &local_meta, init_ref);
 
-        return(FG_BAD_PARAMETER);
+        fg_error = FG_BAD_PARAMETER;
+        goto error;
     }
 
     // Calculate ramp parameters always with zero initial ramp rate
@@ -63,7 +63,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
         if((fg_error = fgCheckRef(limits, limits_polarity, init_ref, 0.0, pars->acceleration, meta)))
         {
             meta->error.index = 1;
-            return(fg_error);
+            goto error;
         }
 
         // Check limits at the end of the parabolic deceleration (segment 2)
@@ -71,11 +71,18 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
         if((fg_error = fgCheckRef(limits, limits_polarity, config->final, 0.0, pars->deceleration, meta)))
         {
             meta->error.index = 2;
-            return(fg_error);
+            goto error;
         }
     }
 
     return(FG_OK);
+
+    // Error - store error code in meta and return to caller
+
+    error:
+
+        meta->fg_error = fg_error;
+        return(fg_error);
 }
 
 

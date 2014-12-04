@@ -44,7 +44,9 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
     float          rate_lim;       // Limiting
     struct fg_meta local_meta;     // Local meta data in case user meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
+    // Reset meta structure - uses local_meta if meta is NULL
+
+    meta = fgResetMeta(meta, &local_meta, init_ref);
 
     // Save parameters
 
@@ -58,13 +60,13 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
     if(delta_ref < 0.0)
     {
-        inverted_trim = true;
+        inverted_trim   = true;
         meta->range.min = pars->ref_final;
         meta->range.max = pars->ref_initial;
     }
     else
     {
-        inverted_trim = false;
+        inverted_trim   = false;
         meta->range.min = pars->ref_initial;
         meta->range.max = pars->ref_final;
     }
@@ -92,7 +94,9 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
                 meta->error.index     = 1;
                 meta->error.data[0] = config->type;
             }
-            return(FG_BAD_PARAMETER);
+
+            fg_error = FG_BAD_PARAMETER;
+            goto error;
     }
 
     // Calculate or check duration and complete cubic factors
@@ -103,7 +107,8 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
         {
             meta->error.index = 2;
 
-            return(FG_BAD_PARAMETER);
+            fg_error = FG_BAD_PARAMETER;
+            goto error;
         }
 
         // Calculate rate of change limit
@@ -124,7 +129,8 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
                 meta->error.index   = 3;
                 meta->error.data[0] = limits->acceleration;
 
-                return(FG_BAD_PARAMETER);
+                fg_error = FG_BAD_PARAMETER;
+                goto error;
             }
 
             duration2 = sqrt(fabs(6.0 * delta_ref / limits->acceleration));     // Calc duration based on
@@ -162,7 +168,7 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
            (fg_error = fgCheckRef(limits, limits_polarity,  pars->ref_offset, pars->c, 0.0, meta)) ||
            (fg_error = fgCheckRef(limits, limits_polarity,  pars->ref_final,      0.0, 0.0, meta)))
         {
-            return(fg_error);
+            goto error;
         }
     }
 
@@ -172,6 +178,13 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
     meta->range.end = pars->ref_final;
 
     return(FG_OK);
+
+    // Error - store error code in meta and return to caller
+
+    error:
+
+        meta->fg_error = fg_error;
+        return(fg_error);
 }
 
 

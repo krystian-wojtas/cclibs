@@ -37,68 +37,80 @@
 #include "ccRun.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
+void ccInitPars(void)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function is called after startup to allocate space to store the number of elements for each parameter.
+  For CYC_SEL parameters, this is an array while for non-CYC_SEL parameters is it scalar. For CYC_SEL
+  parameters it also copies the initialisation value from (0) to all the cycle selector slots.
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    struct ccpars *par;
+    struct cccmds *cmd;
+
+    for(cmd = cmds ; cmd->name != NULL ; cmd++)
+    {
+        par = cmd->pars;
+
+        if(par != NULL)
+        {
+            while(par->name != NULL)
+            {
+                bool is_cyc_sel_par = (par->flags & PARS_CYCLE_SELECTOR) != 0;
+
+                // Allocate the space for the number of elements and initialise just the first number of elements
+                // from default value
+
+                par->num_elements    = calloc((is_cyc_sel_par ? CC_NUM_CYC_SELS : 1), sizeof(uint32_t));
+                par->num_elements[0] = par->num_default_elements;
+
+                // For CYC_SEL parameters, initialise value for every CYC_SEL from the default value
+
+                if(is_cyc_sel_par)
+                {
+                    uint32_t cyc_sel;
+
+                    for(cyc_sel = 1 ; cyc_sel <= CC_MAX_CYC_SEL ; cyc_sel++)
+                    {
+                        par->num_elements[cyc_sel] = par->num_default_elements;
+
+                        memcpy(&par->value_p.c[ccpars_sizeof_type[par->type] * cyc_sel * par->max_num_elements],
+                               &par->value_p.c[0],
+                               ccpars_sizeof_type[par->type] * par->num_default_elements);
+                    }
+                }
+
+                par++;
+            }
+        }
+    }
+}
+/*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccInitFunctions(void)
 /*---------------------------------------------------------------------------------------------------------*\
   This function is called when the RUN command is executed to prepare for the new run.  It checks that
-  parameters are valid and initializes the functions.
+  parameters are valid and initialises the functions.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    uint32_t         i;
-    uint32_t         num_reg_modes;
-    uint32_t         func_idx;
+    uint32_t         idx;
+    uint32_t         cyc_sel;
     uint32_t         exit_status;
     struct fgfunc   *func;
     struct cccmds   *cmd;
 
-    memset(&ccrun,0,sizeof(ccrun));
+    // Initialise ccrun structure
 
-    // Check that GLOBAL FUNCTION and REG_MODE parameters have the same number of elements
+    memset(&ccrun, 0, sizeof(ccrun));
 
-    ccrun.num_functions = global_pars[GLOBAL_FUNCTION].num_elements;
-    num_reg_modes       = global_pars[GLOBAL_REG_MODE].num_elements;
+    ccrun.is_breg_enabled = false;
+    ccrun.is_ireg_enabled = false;
 
-    if(num_reg_modes > ccrun.num_functions)
+    ccrun.num_cycles = global_pars[GLOBAL_CYCLE_SELECTOR].num_elements[0];
+
+    // Reset is_enabled flags for all commands
+
+    for(cmd = cmds ; cmd->name != NULL ; cmd++)
     {
-        ccTestPrintError("GLOBAL REG_MODE must not have more elements than GLOBAL FUNCTION");
-        return(EXIT_FAILURE);
-    }
-
-    // Reset TEST and TRIM types since only one function of each can be armed
-
-    ccpars_test.config.type = FG_TEST_UNDEFINED;
-    ccpars_trim.config.type = FG_TRIM_UNDEFINED;
-
-    // Examine the reg_mode for all functions and set flags to indicate which modes are used
-
-    ccrun.breg_flag = 0;
-    ccrun.ireg_flag = 0;
-
-    for(i = 0 ; i < ccrun.num_functions ; i++)
-    {
-        // Extend REG_MODES array to use the last value for any additional functions
-
-        if(i > 0 && i >= num_reg_modes)
-        {
-            ccpars_global.reg_mode[i] = ccpars_global.reg_mode[i-1];
-        }
-
-        // Check that reg_mode is compatible with actuation
-
-        if(ccpars_global.actuation == REG_CURRENT_REF)
-        {
-            if(ccpars_global.reg_mode[i] != REG_CURRENT)
-            {
-                ccTestPrintError("GLOBAL REG_MODE must CURRENT when GLOBAL ACTUATION is CURRENT");
-                return(EXIT_FAILURE);
-            }
-        }
-
-        switch(ccpars_global.reg_mode[i])
-        {
-            case REG_FIELD:   ccrun.breg_flag = 1;       break;
-            case REG_CURRENT: ccrun.ireg_flag = 1;       break;
-            default:                                     break;
-        }
+        cmd->is_enabled = false;
     }
 
     // if GLOBAL REVERSE_TIME is ENALBED
@@ -106,6 +118,7 @@ uint32_t ccInitFunctions(void)
     if(ccpars_global.reverse_time == REG_ENABLED)
     {
         // SIM_LOAD must be DISABLED
+
         if(ccpars_global.sim_load == REG_ENABLED)
         {
             ccTestPrintError("GLOBAL SIM_LOAD must be DISABLED when REVERSE_TIME is ENABLED");
@@ -114,30 +127,21 @@ uint32_t ccInitFunctions(void)
 
         // Only one function can be specified
 
-        if(ccrun.num_functions > 1)
+        if(ccrun.num_cycles > 1)
         {
             ccTestPrintError("only one function can be specified when REVERSE_TIME is ENABLED");
             return(EXIT_FAILURE);
         }
     }
 
-    // Check that if REG_MODE is FIELD or CURRENT, SIM_LOAD is ENABLED
+    // if GLOBAL FG_LIMITS is ENABLED then link to function generation limits
 
-    if((ccrun.breg_flag == 1 || ccrun.ireg_flag == 1) && ccpars_global.sim_load != REG_ENABLED)
+    if(ccpars_global.fg_limits == REG_ENABLED)
     {
-        ccTestPrintError("GLOBAL SIM_LOAD must be ENABLED if REG_MODE is FIELD or CURRENT");
-        return(EXIT_FAILURE);
+        ccrun.fg_limits = &ccrun.fgen_limits;
     }
 
-    // Check if GLOBAL ABORT_TIME is specified that FG_LIMITS is ENABLED
-
-    if(ccpars_global.abort_time > 0.0 && ccpars_global.fg_limits == REG_DISABLED)
-    {
-        ccTestPrintError("GLOBAL FG_LIMITS must be ENABLED if ABORT_TIME is defined");
-        return(EXIT_FAILURE);
-    }
-
-    // If voltage perturbation is not required then set perturb_time to far beyond end of simulation
+    // If voltage perturbation is not required then set perturb_time to beyond end of simulation
 
     if(ccpars_load.perturb_time <= 0.0 || ccpars_load.perturb_volts == 0.0)
     {
@@ -145,72 +149,128 @@ uint32_t ccInitFunctions(void)
         ccpars_load.perturb_time  = 1.0E30;
     }
 
-    // Reset enabled flag for all commands (it is used in ccsigsFlot())
+    // Initialise the reference functions
 
-    for(cmd = cmds ; cmd->name != NULL ; cmd++)
+    exit_status = EXIT_SUCCESS;
+
+    for(idx = 0 ; idx < ccrun.num_cycles ; idx++)
     {
-        cmd->enabled = 0;
+        cyc_sel = ccpars_global.cycle_selector[idx];
+
+        // If function this cycle selector has not yet been initialised
+
+        if(ccrun.is_used[cyc_sel] == false)
+        {
+            // Check that FUNCTION is not NONE
+
+            if(ccpars_ref.function[cyc_sel][0] == FG_NONE)
+            {
+                ccTestPrintError("REF FUNCTION(%u) must not be NONE", cyc_sel);
+                return(EXIT_FAILURE);
+            }
+
+            // Check that reg_mode is compatible with actuation
+
+            if(ccpars_global.actuation == REG_CURRENT_REF)
+            {
+                if(ccpars_ref.reg_mode[cyc_sel][0] != REG_CURRENT)
+                {
+                    ccTestPrintError("REF REG_MODE(%u) must CURRENT when GLOBAL ACTUATION is CURRENT", cyc_sel);
+                    return(EXIT_FAILURE);
+                }
+            }
+
+            // Initialise pointer to function generation limits
+
+            switch(ccpars_ref.reg_mode[cyc_sel][0])
+            {
+                case REG_NONE: break;
+                case REG_FIELD:
+
+                    ccrun.is_breg_enabled          = true;
+                    ccrun.fgen_limits.pos          = ccpars_limits.b_pos         [ccpars_load.select];
+                    ccrun.fgen_limits.min          = ccpars_limits.b_min         [ccpars_load.select];
+                    ccrun.fgen_limits.neg          = ccpars_limits.b_neg         [ccpars_load.select];
+                    ccrun.fgen_limits.rate         = ccpars_limits.b_rate        [ccpars_load.select];
+                    ccrun.fgen_limits.acceleration = ccpars_limits.b_acceleration[ccpars_load.select];
+                    break;
+
+                case REG_CURRENT:
+
+                    ccrun.is_ireg_enabled          = true;
+                    ccrun.fgen_limits.pos          = ccpars_limits.i_pos         [ccpars_load.select];
+                    ccrun.fgen_limits.min          = ccpars_limits.i_min         [ccpars_load.select];
+                    ccrun.fgen_limits.neg          = ccpars_limits.i_neg         [ccpars_load.select];
+                    ccrun.fgen_limits.rate         = ccpars_limits.i_rate        [ccpars_load.select];
+                    ccrun.fgen_limits.acceleration = ccpars_limits.i_acceleration[ccpars_load.select];
+                    break;
+
+                case REG_VOLTAGE:
+
+                    ccrun.fgen_limits.pos          = ccpars_limits.v_pos         [ccpars_load.select];
+                    ccrun.fgen_limits.min          = 0.0;
+                    ccrun.fgen_limits.neg          = ccpars_limits.v_neg         [ccpars_load.select];
+                    ccrun.fgen_limits.rate         = ccpars_limits.v_rate;
+                    ccrun.fgen_limits.acceleration = ccpars_limits.v_acceleration;
+                    break;
+            }
+
+            // Try to arm the function for this cycle selector
+
+            func = &funcs[ccpars_ref.function[cyc_sel][0]];
+
+            if(func->init_func(&ccrun.fg_meta[cyc_sel], cyc_sel) == EXIT_FAILURE)
+            {
+                exit_status = EXIT_FAILURE;
+            }
+
+            // Mark command for this function as enabled to include parameters in FLOT colorbox pop-up
+
+            cmds[func->cmd_idx].is_enabled = true;
+            ccrun.is_used[cyc_sel] = true;
+        }
     }
 
-    // Reset function generation limits pointer by default
+    // Check that no errors occurred while arming functions
 
-    ccrun.fg_limits = NULL;
-
-    // Initialize the reference functions
-
-    for(func_idx = 0, exit_status = EXIT_SUCCESS ;
-        func_idx < ccrun.num_functions && exit_status == EXIT_SUCCESS;
-        func_idx++)
+    if(exit_status == EXIT_FAILURE)
     {
-        // Initialize pointer to function generation limits when FG_LIMITS is ENABLED
+        ccTestPrintError("unable to arm one or more functions");
+        return(EXIT_FAILURE);
+    }
 
-        if(ccpars_global.fg_limits == REG_ENABLED)
+    // Check if REG_MODE is FIELD or CURRENT that SIM_LOAD is ENABLED
+
+    if((ccrun.is_breg_enabled == true || ccrun.is_ireg_enabled == true) && ccpars_global.sim_load != REG_ENABLED)
+    {
+        ccTestPrintError("GLOBAL SIM_LOAD must be ENABLED if REG_MODE is FIELD or CURRENT");
+        return(EXIT_FAILURE);
+    }
+
+    // Check that all selected functions were armed
+
+    for(idx = 0 ; idx < ccrun.num_cycles ; idx++)
+    {
+        if(ccpars_ref.function[ccpars_global.cycle_selector[idx]] == FG_NONE)
         {
-            switch(ccpars_global.reg_mode[func_idx])
-            {
-                case REG_NONE:                                              break;
-                case REG_FIELD:   ccrun.fg_limits = &ccpars_limits.b;       break;
-                case REG_CURRENT: ccrun.fg_limits = &ccpars_limits.i;       break;
-                case REG_VOLTAGE: ccrun.fg_limits = &ccpars_limits.v;       break;
-            }
-        }
-
-        // Try to arm the next function
-
-        func = &funcs[ccpars_global.function[func_idx]];
-
-        exit_status = func->init_func(&ccrun.func[func_idx].fg_meta);
-
-        if(exit_status == EXIT_FAILURE)
-        {
+            ccTestPrintError("cycle %u of %u (selector %u) is not armed", idx, ccrun.num_cycles, ccpars_global.cycle_selector[idx]);
             return(EXIT_FAILURE);
         }
-
-        // Mark command for this function as enabled to include parameters in FLOT colorbox pop-up
-
-        cmds[func->cmd_idx].enabled = 1;
     }
 
-    // Only report PREFUNC parameters when there is more than one function
+    // Enable the commands whose parameters should be included in debug output
 
-    if(ccrun.num_functions > 1)
-    {
-        cmds[CMD_PREFUNC].enabled = 1;
-    }
+    cmds[CMD_GLOBAL].is_enabled = true;
+    cmds[CMD_LIMITS].is_enabled = (ccpars_global.fg_limits == REG_ENABLED);
 
-    // Enable the commands whose parameters should be included in FLOT colorbox pop-up
-
-    cmds[CMD_GLOBAL].enabled = 1;
-    cmds[CMD_LIMITS].enabled = 1;
-
-    // Initialize converter structure
+    // Initialise converter structure
 
     free(conv.b.meas.fir_buf[0]);
     free(conv.i.meas.fir_buf[0]);
 
     memset(&conv, 0, sizeof(conv));
 
-    regConvInit(&conv, ccpars_global.iter_period_us, ccrun.breg_flag, ccrun.ireg_flag);
+    regConvInit(&conv, ccpars_global.iter_period_us, ccrun.is_breg_enabled, ccrun.is_ireg_enabled);
 
     return(EXIT_SUCCESS);
 }
@@ -221,46 +281,34 @@ uint32_t ccInitSimLoad(void)
   parameters are valid and initialises the simulation.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    static struct reg_meas_signal invalid_meas = { 0.0, REG_MEAS_SIGNAL_INVALID };
+    static struct reg_meas_signal invalid_meas = { 0.0, false };
 
-    // Enabled of logging of simulation related parameters in FLOT colorbox pop-up
+    // Enabled of commands whose parameters should be included in debug output
 
-    cmds[CMD_GLOBAL].enabled = 1;
-    cmds[CMD_LOAD  ].enabled = 1;
-    cmds[CMD_MEAS  ].enabled = 1;
-    cmds[CMD_VS    ].enabled = 1;
-    cmds[CMD_BREG  ].enabled = ccrun.breg_flag;
-    cmds[CMD_IREG  ].enabled = ccrun.ireg_flag;
+    cmds[CMD_DEFAULT].is_enabled = true;
+    cmds[CMD_LOAD   ].is_enabled = true;
+    cmds[CMD_LIMITS ].is_enabled = true;
+    cmds[CMD_MEAS   ].is_enabled = true;
+    cmds[CMD_VS     ].is_enabled = true;
+    cmds[CMD_REF    ].is_enabled = true;
+    cmds[CMD_BREG   ].is_enabled = ccrun.is_breg_enabled;
+    cmds[CMD_IREG   ].is_enabled = ccrun.is_ireg_enabled;
 
     // Prepare an invalid signal to allow recovery from invalid signals to be tested
 
-    regConvInitMeas(&conv, &invalid_meas, &invalid_meas, &invalid_meas);
-
-    // Check measurement filter lengths
-
-    if(ccpars_meas.b_fir_lengths[0] == 0 || ccpars_meas.b_fir_lengths[1] == 0)
-    {
-        ccTestPrintError("B_FIR_LENGTHS must not be zero");
-        return(EXIT_FAILURE);
-    }
-
-    if(ccpars_meas.i_fir_lengths[0] == 0 || ccpars_meas.i_fir_lengths[1] == 0)
-    {
-        ccTestPrintError("I_FIR_LENGTHS must not be zero");
-        return(EXIT_FAILURE);
-    }
+    regConvMeasInit(&conv, &invalid_meas, &invalid_meas, &invalid_meas);
 
     // Prepare measurement FIR buffers
 
     regMeasFilterInitBuffer(&conv.b.meas, calloc((ccpars_meas.b_fir_lengths[0] + ccpars_meas.b_fir_lengths[1] +
-                                                  ccpars_breg.period_iters),sizeof(uint32_t)));
+                                                  ccpars_breg.period_iters[ccpars_load.select]),sizeof(int32_t)));
 
-    // Initialize current measurement filter
+    // Initialise current measurement filter
 
     regMeasFilterInitBuffer(&conv.i.meas, calloc((ccpars_meas.i_fir_lengths[0] + ccpars_meas.i_fir_lengths[1] +
-                                                  ccpars_ireg.period_iters),sizeof(uint32_t)));
+                                                  ccpars_ireg.period_iters[ccpars_load.select]),sizeof(int32_t)));
 
-    // Initialize libreg parameter pointers to cctest variables
+    // Initialise libreg parameter pointers to cctest variables
 
     regConvParInitPointer(&conv,global_actuation              ,&ccpars_global.actuation);
     regConvParInitPointer(&conv,global_reg_err_rate           ,&ccpars_global.reg_err_rate);
@@ -289,23 +337,25 @@ uint32_t ccInitSimLoad(void)
     regConvParInitPointer(&conv,ireg_s                        ,&ccpars_ireg.rst.s);
     regConvParInitPointer(&conv,ireg_t                        ,&ccpars_ireg.rst.t);
 
-    regConvParInitPointer(&conv,limits_b_pos                  ,&ccpars_limits.b.pos);
-    regConvParInitPointer(&conv,limits_b_min                  ,&ccpars_limits.b.min);
-    regConvParInitPointer(&conv,limits_b_neg                  ,&ccpars_limits.b.neg);
-    regConvParInitPointer(&conv,limits_b_rate                 ,&ccpars_limits.b.rate);
-    regConvParInitPointer(&conv,limits_b_acceleration         ,&ccpars_limits.b.acceleration);
+    regConvParInitPointer(&conv,limits_b_pos                  ,&ccpars_limits.b_pos);
+    regConvParInitPointer(&conv,limits_b_min                  ,&ccpars_limits.b_min);
+    regConvParInitPointer(&conv,limits_b_neg                  ,&ccpars_limits.b_neg);
+    regConvParInitPointer(&conv,limits_b_rate                 ,&ccpars_limits.b_rate);
+    regConvParInitPointer(&conv,limits_b_acceleration         ,&ccpars_limits.b_acceleration);
     regConvParInitPointer(&conv,limits_b_closeloop            ,&ccpars_limits.b_closeloop);
-    regConvParInitValue  (&conv,limits_b_zero_div_pos, 0      ,0.01);
+    regConvParInitPointer(&conv,limits_b_low                  ,&ccpars_limits.b_low);
+    regConvParInitPointer(&conv,limits_b_zero                 ,&ccpars_limits.b_zero);
     regConvParInitPointer(&conv,limits_b_err_warning          ,&ccpars_limits.b_err_warning);
     regConvParInitPointer(&conv,limits_b_err_fault            ,&ccpars_limits.b_err_fault);
 
-    regConvParInitPointer(&conv,limits_i_pos                  ,&ccpars_limits.i.pos);
-    regConvParInitPointer(&conv,limits_i_min                  ,&ccpars_limits.i.min);
-    regConvParInitPointer(&conv,limits_i_neg                  ,&ccpars_limits.i.neg);
-    regConvParInitPointer(&conv,limits_i_rate                 ,&ccpars_limits.i.rate);
-    regConvParInitPointer(&conv,limits_i_acceleration         ,&ccpars_limits.i.acceleration);
+    regConvParInitPointer(&conv,limits_i_pos                  ,&ccpars_limits.i_pos);
+    regConvParInitPointer(&conv,limits_i_min                  ,&ccpars_limits.i_min);
+    regConvParInitPointer(&conv,limits_i_neg                  ,&ccpars_limits.i_neg);
+    regConvParInitPointer(&conv,limits_i_rate                 ,&ccpars_limits.i_rate);
+    regConvParInitPointer(&conv,limits_i_acceleration         ,&ccpars_limits.i_acceleration);
     regConvParInitPointer(&conv,limits_i_closeloop            ,&ccpars_limits.i_closeloop);
-    regConvParInitValue  (&conv,limits_i_zero_div_pos, 0      ,0.01);
+    regConvParInitPointer(&conv,limits_i_low                  ,&ccpars_limits.i_low);
+    regConvParInitPointer(&conv,limits_i_zero                 ,&ccpars_limits.i_zero);
     regConvParInitPointer(&conv,limits_i_err_warning          ,&ccpars_limits.i_err_warning);
     regConvParInitPointer(&conv,limits_i_err_fault            ,&ccpars_limits.i_err_fault);
 
@@ -317,10 +367,10 @@ uint32_t ccInitSimLoad(void)
     regConvParInitPointer(&conv,limits_i_rms_load_fault       ,&ccpars_limits.i_rms_load_fault);
 
     regConvParInitPointer(&conv,limits_i_quadrants41          ,&ccpars_limits.i_quadrants41);
-    regConvParInitPointer(&conv,limits_v_pos                  ,&ccpars_limits.v.pos);
-    regConvParInitPointer(&conv,limits_v_neg                  ,&ccpars_limits.v.neg);
-    regConvParInitPointer(&conv,limits_v_rate                 ,&ccpars_limits.v.rate);
-    regConvParInitPointer(&conv,limits_v_acceleration         ,&ccpars_limits.v.acceleration);
+    regConvParInitPointer(&conv,limits_v_pos                  ,&ccpars_limits.v_pos);
+    regConvParInitPointer(&conv,limits_v_neg                  ,&ccpars_limits.v_neg);
+    regConvParInitPointer(&conv,limits_v_rate                 ,&ccpars_limits.v_rate);
+    regConvParInitPointer(&conv,limits_v_acceleration         ,&ccpars_limits.v_acceleration);
     regConvParInitPointer(&conv,limits_v_err_warning          ,&ccpars_limits.v_err_warning);
     regConvParInitPointer(&conv,limits_v_err_fault            ,&ccpars_limits.v_err_fault);
     regConvParInitPointer(&conv,limits_v_quadrants41          ,&ccpars_limits.v_quadrants41);
@@ -334,6 +384,8 @@ uint32_t ccInitSimLoad(void)
     regConvParInitPointer(&conv,load_i_sat_start              ,&ccpars_load.i_sat_start);
     regConvParInitPointer(&conv,load_i_sat_end                ,&ccpars_load.i_sat_end);
     regConvParInitPointer(&conv,load_gauss_per_amp            ,&ccpars_load.gauss_per_amp);
+    regConvParInitPointer(&conv,load_select                   ,&ccpars_load.select);
+    regConvParInitPointer(&conv,load_test_select              ,&ccpars_load.test_select);
     regConvParInitPointer(&conv,load_sim_tc_error             ,&ccpars_load.sim_tc_error);
 
     regConvParInitPointer(&conv,meas_b_reg_select             ,&ccpars_meas.b_reg_select);
@@ -357,10 +409,10 @@ uint32_t ccInitSimLoad(void)
     regConvParInitPointer(&conv,vs_sim_num                    ,&ccpars_vs.sim_vs_pars.num);
     regConvParInitPointer(&conv,vs_sim_den                    ,&ccpars_vs.sim_vs_pars.den);
 
-    // Initialize simulation
+    // Initialise simulation
 
-    regConvInitSim(&conv, ccpars_global.reg_mode[0], ccrun.func[0].fg_meta.range.start);
-
+    regConvSimInit(&conv, ccpars_ref.reg_mode[ccpars_global.cycle_selector[0]][0],
+                          ccrun.fg_meta[ccpars_global.cycle_selector[0]].range.start);
 
     // Check simulated voltage source gain
 
@@ -370,44 +422,44 @@ uint32_t ccInitSimLoad(void)
         return(EXIT_FAILURE);
     }
 
-    // Check initialization of field regulation
+    // Check initialisation of field regulation
 
-    if(ccrun.breg_flag == 1)
+    if(ccrun.is_breg_enabled == true)
     {
         if(conv.iter_period > (3.0 * conv.load_pars.tc))
         {
-            ccTestPrintError("REG_MODE of FIELD is not permitted for a resistive circuit "
+            ccTestPrintError("REG_MODE FIELD is not permitted for a resistive circuit "
                              "(circuit time constant is less than 1/3 x iteration period)");
             return(EXIT_FAILURE);
         }
 
-        if(conv.b.op_rst_pars.debug->status == REG_FAULT)
+        if(conv.b.last_op_rst_pars.status == REG_FAULT)
         {
-            ccTestPrintError("failed to initialize FIELD RST regulator: S has unstable poles - try reducing AUXPOLE frequencies");
+            ccTestPrintError("failed to initialise FIELD RST regulator: Jury's test index = %d", conv.b.last_op_rst_pars.jurys_result);
             return(EXIT_FAILURE);
         }
 
-        if(conv.b.op_rst_pars.debug->status == REG_WARNING)
+        if(conv.b.last_op_rst_pars.status == REG_WARNING)
         {
             ccTestPrintError("FIELD RST regulator warning: Modulus Margin (%.2f) is less than %.1f - try reducing AUXPOLE frequencies",
-                             conv.b.op_rst_pars.debug->modulus_margin, REG_MM_WARNING_THRESHOLD);
+                             conv.b.last_op_rst_pars.modulus_margin, REG_MM_WARNING_THRESHOLD);
         }
     }
 
-    // Check initialization of current regulation
+    // Check initialisation of current regulation
 
-    if(ccrun.ireg_flag == 1)
+    if(ccrun.is_ireg_enabled == true)
     {
-        if(conv.i.op_rst_pars.debug->status == REG_FAULT)
+        if(conv.i.last_op_rst_pars.status == REG_FAULT)
         {
-            ccTestPrintError("failed to initialize CURRENT RST regulator: S has unstable poles - try reducing AUXPOLE frequencies");
+            ccTestPrintError("failed to initialise CURRENT RST regulator: Jury's test index = %d", conv.i.last_op_rst_pars.jurys_result);
             return(EXIT_FAILURE);
         }
 
-        if(conv.i.op_rst_pars.debug->status == REG_WARNING)
+        if(conv.i.last_op_rst_pars.status == REG_WARNING)
         {
             ccTestPrintError("CURRENT RST regulator warning: Modulus Margin (%.2f) is less than %.1f - try reducing AUXPOLE frequencies",
-                             conv.i.op_rst_pars.debug->modulus_margin, REG_MM_WARNING_THRESHOLD);
+                             conv.i.last_op_rst_pars.modulus_margin, REG_MM_WARNING_THRESHOLD);
         }
     }
 

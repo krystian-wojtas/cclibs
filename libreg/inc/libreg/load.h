@@ -123,8 +123,7 @@ extern "C" {
  * @param[in]     henrys           Load inductance
  * @param[in]     gauss_per_amp    Field-to-current ratio for the magnet
  */
-void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag,
-                 float henrys, float gauss_per_amp);
+void regLoadInit(struct reg_load_pars *load, float ohms_ser, float ohms_par, float ohms_mag, float henrys, float gauss_per_amp);
 
 /*!
  * Process the magnet saturation parameters and calculate the linear model slope.

@@ -25,6 +25,7 @@
 #define CCCMDS_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // GLOBALS should be defined in the source file where global variables should be defined
 
@@ -38,7 +39,7 @@
 
 #define CC_MAX_FILE_LINE_LEN  65536
 #define CC_MAX_CMD_NAME_LEN   7             //  Current longest command name
-#define CC_MAX_PAR_NAME_LEN   27            //  Current longest parameter name
+#define CC_MAX_PAR_NAME_LEN   34            //  Current longest parameter name
 #define CC_PROMPT             ">"
 
 // Include ccPars.h
@@ -51,14 +52,13 @@
 
 // Include cctest function data header files
 
-#include "func/prefunc.h"
-#include "func/start.h"
 #include "func/plep.h"
-#include "func/ramp.h"
 #include "func/pppl.h"
+#include "func/pulse.h"
+#include "func/ramp.h"
 #include "func/table.h"
-#include "func/trim.h"
 #include "func/test.h"
+#include "func/trim.h"
 
 // Include cctest parameter header files - required by cccmds[]
 
@@ -68,6 +68,8 @@
 #include "pars/meas.h"
 #include "pars/reg.h"
 #include "pars/vs.h"
+#include "pars/ref.h"
+#include "pars/default.h"
 
 // Function declarations
 
@@ -88,11 +90,14 @@ uint32_t ccCmdsQuit  (uint32_t cmd_idx, char **remaining_line);
 enum cccmds_enum
 {
     /* Global parameters */
-    CMD_GLOBAL,    CMD_LIMITS,    CMD_LOAD,    CMD_MEAS,    CMD_BREG,    CMD_IREG,    CMD_VS,
+    CMD_GLOBAL,
+    CMD_DEFAULT,    CMD_LIMITS,    CMD_LOAD,    CMD_MEAS,    CMD_BREG,    CMD_IREG,    CMD_VS,
+    CMD_REF,
     /* Function parameters */
-    CMD_PREFUNC,
-    CMD_START,
-    CMD_PLEP,    CMD_RAMP,    CMD_PPPL,    CMD_TABLE,    CMD_TRIM,    CMD_TEST,
+    CMD_PLEP,    CMD_PPPL,    CMD_PULSE,
+    CMD_RAMP,
+    CMD_TABLE,    CMD_TEST,
+    CMD_TRIM,
     /* Commands */    CMD_HELP,    CMD_LS,    CMD_CD,
     CMD_PWD,
     CMD_READ,    CMD_SAVE,    CMD_DEBUG,    CMD_RUN,
@@ -107,38 +112,41 @@ struct cccmds
     uint32_t           (*cmd_func)(uint32_t cmd_idx, char **remaining_line);
     struct ccpars       *pars;
     char                *help_message;
-    uint32_t            n_pars_missing;
-    uint32_t            enabled;
+    bool                is_enabled;
 };
 
 CCCMDS_EXT struct cccmds cmds[] // The order must match enum cccmds_enum (above)
 #ifdef GLOBALS
 = {
-    { "GLOBAL",  ccCmdsPar  ,  global_pars , "[par [value][,value]...]  Print or set GLOBAL parameter(s)" },
-    { "LIMITS",  ccCmdsPar  ,  limits_pars , "[par [value][,value]...]  Print or set LIMITS parameter(s)" },
-    { "LOAD",    ccCmdsPar  ,  load_pars   , "[par [value][,value]...]  Print or set LOAD parameter(s)" },
-    { "MEAS",    ccCmdsPar  ,  meas_pars   , "[par [value][,value]...]  Print or set MEAS parameter(s)" },
-    { "BREG",    ccCmdsPar  ,  breg_pars   , "[par [value][,value]...]  Print or set BREG parameter(s)" },
-    { "IREG",    ccCmdsPar  ,  ireg_pars   , "[par [value][,value]...]  Print or set IREG parameter(s)" },
-    { "VS",      ccCmdsPar  ,  vs_pars     , "[par [value][,value]...]  Print or set VS parameter(s)" },
-    { "PREFUNC", ccCmdsPar  ,  prefunc_pars, "[par [value][,value]...]  Print or set PREFUNC function parameter(s)" },
-    { "START",   ccCmdsPar  ,  start_pars  , "[par [value][,value]...]  Print or set START function parameter(s)" },
-    { "PLEP",    ccCmdsPar  ,  plep_pars   , "[par [value][,value]...]  Print or set PLEP function parameter(s)" },
-    { "RAMP",    ccCmdsPar  ,  ramp_pars   , "[par [value][,value]...]  Print or set RAMP function parameter(s)" },
-    { "PPPL",    ccCmdsPar  ,  pppl_pars   , "[par [value][,value]...]  Print or set PPPL function parameter(s)" },
-    { "TABLE",   ccCmdsPar  ,  table_pars  , "[par [value][,value]...]  Print or set TABLE function parameter(s)" },
-    { "TRIM",    ccCmdsPar  ,  trim_pars   , "[par [value][,value]...]  Print or set TRIM function parameter(s)" },
-    { "TEST",    ccCmdsPar  ,  test_pars   , "[par [value][,value]...]  Print or set TEST function parameter(s)" },
-    { "HELP",    ccCmdsHelp ,  NULL        , "                          Print this help message" },
-    { "LS",      ccCmdsLs   ,  NULL        , "                          List contents of current directory" },
-    { "CD",      ccCmdsCd   ,  NULL        , "path                      Change current directory" },
-    { "PWD",     ccCmdsPwd  ,  NULL        , "                          Print current directory" },
-    { "READ",    ccCmdsRead ,  NULL        , "[filename]                Read parameters from named file or from stdin" },
-    { "SAVE",    ccCmdsSave ,  NULL        , "filename                  Save all parameters in named file" },
-    { "DEBUG",   ccCmdsDebug,  NULL        , "                          Print all debug variables" },
-    { "RUN",     ccCmdsRun  ,  NULL        , "                          Run function generation test or converter simulation" },
-    { "EXIT",    ccCmdsExit ,  NULL        , "                          Exit from current file or quit when from stdin" },
-    { "QUIT",    ccCmdsQuit ,  NULL        , "                          Quit program immediately" },
+	// Global parameters
+    { "GLOBAL",  ccCmdsPar  , global_pars , "           Print or set GLOBAL parameter(s)"                       },
+    { "DEFAULT", ccCmdsPar  , default_pars, "           Print or set DEFAULT parameter(s)"                      },
+    { "LIMITS",  ccCmdsPar  , limits_pars , "           Print or set LIMITS parameter(s)"                       },
+    { "LOAD",    ccCmdsPar  , load_pars   , "           Print or set LOAD parameter(s)"                         },
+    { "MEAS",    ccCmdsPar  , meas_pars   , "           Print or set MEAS parameter(s)"                         },
+    { "BREG",    ccCmdsPar  , breg_pars   , "           Print or set BREG parameter(s)"                         },
+    { "IREG",    ccCmdsPar  , ireg_pars   , "           Print or set IREG parameter(s)"                         },
+    { "VS",      ccCmdsPar  , vs_pars     , "           Print or set VS parameter(s)"                           },
+    { "REF",     ccCmdsPar  , ref_pars    , "           Print or set REF parameter(s)"                          },
+    // Function parameters
+    { "PLEP",    ccCmdsPar  , plep_pars   , "           Print or set PLEP function parameter(s)"                },
+    { "PPPL",    ccCmdsPar  , pppl_pars   , "           Print or set PPPL function parameter(s)"                },
+    { "PULSE",   ccCmdsPar  , pulse_pars  , "           Print or set PULSE function parameter(s)"               },
+    { "RAMP",    ccCmdsPar  , ramp_pars   , "           Print or set RAMP function parameter(s)"                },
+    { "TABLE",   ccCmdsPar  , table_pars  , "           Print or set TABLE function parameter(s)"               },
+    { "TEST",    ccCmdsPar  , test_pars   , "           Print or set TEST function parameter(s)"                },
+    { "TRIM",    ccCmdsPar  , trim_pars   , "           Print or set TRIM function parameter(s)"                },
+    // Commands
+    { "HELP",    ccCmdsHelp , NULL        , "           Print this help message"                                },
+    { "LS",      ccCmdsLs   , NULL        , "           List contents of current directory"                     },
+    { "CD",      ccCmdsCd   , NULL        , "path       Change current directory"                               },
+    { "PWD",     ccCmdsPwd  , NULL        , "           Print current directory"                                },
+    { "READ",    ccCmdsRead , NULL        , "[filename] Read parameters from named file or from stdin"          },
+    { "SAVE",    ccCmdsSave , NULL        , "filename   Save all parameters in named file"                      },
+    { "DEBUG",   ccCmdsDebug, NULL        , "           Print all debug variables"                              },
+    { "RUN",     ccCmdsRun  , NULL        , "           Run function generation test or converter simulation"   },
+    { "EXIT",    ccCmdsExit , NULL        , "           Exit from current file or quit when from stdin"         },
+    { "QUIT",    ccCmdsQuit , NULL        , "           Quit program immediately"                               },
     { NULL }
 }
 #endif

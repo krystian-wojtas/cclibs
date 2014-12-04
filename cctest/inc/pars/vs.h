@@ -66,14 +66,14 @@ CCPARS_VS_EXT struct ccpars_vs ccpars_vs
 
 CCPARS_VS_EXT struct ccpars vs_pars[]
 #ifdef GLOBALS
-= {// "Signal name"       type,     max_n_els,           *enum,         *value,                     num_defaults
-    { "V_REF_DELAY_ITERS",PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.v_ref_delay_iters }, 1 },
-    { "QUANTIZATION",     PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.quantization      }, 1 },
-    { "BANDWIDTH",        PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.bandwidth         }, 1 },
-    { "Z",                PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.z                 }, 1 },
-    { "TAU_ZERO",         PAR_FLOAT, 1,                   NULL,  { .f = &ccpars_vs.tau_zero          }, 1 },
-    { "SIM_NUM",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, NULL,  { .f =  ccpars_vs.sim_vs_pars.num   }, 1 },
-    { "SIM_DEN",          PAR_FLOAT, REG_N_VS_SIM_COEFFS, NULL,  { .f =  ccpars_vs.sim_vs_pars.den   }, 1 },
+= {// "Signal name"        type,      max_n_els,          *enum,        *value,                         num_defaults,        flags
+    { "V_REF_DELAY_ITERS", PAR_FLOAT, 1,                   NULL, { .f = &ccpars_vs.v_ref_delay_iters }, 1,                   0                 },
+    { "QUANTIZATION",      PAR_FLOAT, 1,                   NULL, { .f = &ccpars_vs.quantization      }, 1,                   0                 },
+    { "BANDWIDTH",         PAR_FLOAT, 1,                   NULL, { .f = &ccpars_vs.bandwidth         }, 1,                   0                 },
+    { "Z",                 PAR_FLOAT, 1,                   NULL, { .f = &ccpars_vs.z                 }, 1,                   0                 },
+    { "TAU_ZERO",          PAR_FLOAT, 1,                   NULL, { .f = &ccpars_vs.tau_zero          }, 1,                   0                 },
+    { "SIM_NUM",           PAR_FLOAT, REG_N_VS_SIM_COEFFS, NULL, { .f =  ccpars_vs.sim_vs_pars.num   }, REG_N_VS_SIM_COEFFS, PARS_FIXED_LENGTH },
+    { "SIM_DEN",           PAR_FLOAT, REG_N_VS_SIM_COEFFS, NULL, { .f =  ccpars_vs.sim_vs_pars.den   }, REG_N_VS_SIM_COEFFS, PARS_FIXED_LENGTH },
     { NULL }
 }
 #endif

@@ -41,9 +41,9 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
     lim_meas->low_hysteresis  = low_lim  * (1.0 - REG_LIM_HYSTERESIS);
     lim_meas->zero_hysteresis = zero_lim * (1.0 - REG_LIM_HYSTERESIS);
 
-    lim_meas->flags.trip = REG_DISABLED;
-    lim_meas->flags.low  = REG_DISABLED;
-    lim_meas->flags.zero = REG_DISABLED;
+    lim_meas->flags.trip = false;
+    lim_meas->flags.low  = false;
+    lim_meas->flags.zero = false;
 }
 
 
@@ -62,18 +62,22 @@ void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fau
         lim_rms->meas2_filter_factor = 0.0;
     }
 
-    lim_rms->flags.fault   = REG_DISABLED;
-    lim_rms->flags.warning = REG_DISABLED;
+    lim_rms->flags.fault   = false;
+    lim_rms->flags.warning = false;
 }
 
 
 
-void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, float neg_lim, float rate_lim, float closeloop)
+void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, float neg_lim,
+                  float rate_lim, float acceleration_lim, float closeloop)
 {
-    // Keep pos and min limits as they are used by libcc for pre-function ramps
+    // Keep raw limits as they are used by libcc
 
-    lim_ref->min = min_lim;
-    lim_ref->pos = pos_lim;
+    lim_ref->min          = min_lim;
+    lim_ref->pos          = pos_lim;
+    lim_ref->neg          = neg_lim;
+    lim_ref->rate         = rate_lim;
+    lim_ref->acceleration = acceleration_lim;
 
     // Set clip limits by expanding the user limits
 
@@ -84,13 +88,13 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, fl
 
     if(neg_lim < 0.0)
     {
-        lim_ref->flags.unipolar = REG_DISABLED;
+        lim_ref->flags.unipolar = false;
         lim_ref->min_clip       = neg_lim * (1.0 + REG_LIM_CLIP);
-        lim_ref->closeloop      = 0.0;
+        lim_ref->closeloop      = -1.0E30;
     }
     else
     {
-        lim_ref->flags.unipolar = REG_ENABLED;
+        lim_ref->flags.unipolar = true;
         lim_ref->min_clip       = 0.0;
         lim_ref->closeloop      = closeloop;
     }
@@ -99,14 +103,16 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, fl
 
 
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
-                    float i_quadrants41[2], float v_quadrants41[2])
+                    float acceleration_lim, float i_quadrants41[2], float v_quadrants41[2])
 {
     float delta_i_quadrants41;
 
     // Keep pos limit as it is used by libcc for pre-function ramps
 
-    lim_v_ref->min = 0.0;
-    lim_v_ref->pos = pos_lim;
+    lim_v_ref->min          = 0.0;
+    lim_v_ref->pos          = pos_lim;
+    lim_v_ref->rate         = rate_lim;
+    lim_v_ref->acceleration = acceleration_lim;
 
     // Expand user clip limits
 
@@ -117,12 +123,12 @@ void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim,
 
     if(neg_lim < 0.0)
     {
-        lim_v_ref->flags.unipolar = REG_DISABLED;
+        lim_v_ref->flags.unipolar = false;
         lim_v_ref->min_clip_user  = neg_lim * (1.0 + REG_LIM_CLIP);
     }
     else
     {
-        lim_v_ref->flags.unipolar = REG_ENABLED;
+        lim_v_ref->flags.unipolar = true;
         lim_v_ref->min_clip_user  = 0.0;
     }
 
@@ -168,11 +174,11 @@ void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
 
     if((meas > lim_meas->pos_trip) || (lim_meas->neg_trip < 0.0 && meas < lim_meas->neg_trip))
     {
-        lim_meas->flags.trip = REG_ENABLED;
+        lim_meas->flags.trip = true;
     }
     else
     {
-        lim_meas->flags.trip = REG_DISABLED;
+        lim_meas->flags.trip = false;
     }
 
     // Zero flag
@@ -183,14 +189,14 @@ void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
         {
             if(abs_meas > lim_meas->zero)
             {
-                lim_meas->flags.zero = REG_DISABLED;
+                lim_meas->flags.zero = false;
             }
         }
         else
         {
             if(abs_meas < lim_meas->zero_hysteresis)
             {
-                lim_meas->flags.zero = REG_ENABLED;
+                lim_meas->flags.zero = true;
             }
         }
     }
@@ -203,14 +209,14 @@ void regLimMeasRT(struct reg_lim_meas *lim_meas, float meas)
         {
             if(abs_meas > lim_meas->low)
             {
-                lim_meas->flags.low = REG_DISABLED;
+                lim_meas->flags.low = false;
             }
         }
         else
         {
             if(abs_meas < lim_meas->low_hysteresis)
             {
-                lim_meas->flags.low = REG_ENABLED;
+                lim_meas->flags.low = true;
             }
         }
     }
@@ -230,29 +236,29 @@ void regLimMeasRmsRT(struct reg_lim_rms *lim_rms, float meas)
 
         if(lim_rms->rms2_fault > 0.0 && lim_rms->meas2_filter > lim_rms->rms2_fault)
         {
-            lim_rms->flags.fault = REG_ENABLED;
+            lim_rms->flags.fault = true;
         }
         else
         {
-            lim_rms->flags.fault = REG_DISABLED;
+            lim_rms->flags.fault = false;
         }
 
         // Apply warning limit if defined (with hysteresis)
 
         if(lim_rms->rms2_warning > 0.0)
         {
-            if(lim_rms->flags.warning == REG_DISABLED)
+            if(lim_rms->flags.warning == false)
             {
                 if(lim_rms->meas2_filter > lim_rms->rms2_warning)
                 {
-                    lim_rms->flags.warning = REG_ENABLED;
+                    lim_rms->flags.warning = true;
                 }
             }
             else
             {
                 if(lim_rms->meas2_filter < lim_rms->rms2_warning_hysteresis)
                 {
-                    lim_rms->flags.warning = REG_DISABLED;
+                    lim_rms->flags.warning = false;
                 }
             }
         }
@@ -331,9 +337,9 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
  * but it will prevent the false positive in the rare cases mentioned above.
  */
 {
-    float                       delta_ref;
-    float                       rate_lim_ref;
-    enum reg_enabled_disabled   rate_lim_flag = REG_DISABLED;
+    float   delta_ref;
+    float   rate_lim_ref;
+    bool    rate_lim_flag = false;
 
     // Clip reference to absolute limits taking into account the invert flag
 
@@ -342,16 +348,16 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
         if(ref < lim_ref->min_clip)
         {
             ref = lim_ref->min_clip;
-            lim_ref->flags.clip = REG_ENABLED;
+            lim_ref->flags.clip = true;
         }
         else if(ref > lim_ref->max_clip)
         {
             ref = lim_ref->max_clip;
-            lim_ref->flags.clip = REG_ENABLED;
+            lim_ref->flags.clip = true;
         }
         else
         {
-            lim_ref->flags.clip = REG_DISABLED;
+            lim_ref->flags.clip = false;
         }
     }
     else
@@ -359,16 +365,16 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
         if(ref > -lim_ref->min_clip)
         {
             ref = -lim_ref->min_clip;
-            lim_ref->flags.clip = REG_ENABLED;
+            lim_ref->flags.clip = true;
         }
         else if(ref < -lim_ref->max_clip)
         {
             ref = -lim_ref->max_clip;
-            lim_ref->flags.clip = REG_ENABLED;
+            lim_ref->flags.clip = true;
         }
         else
         {
-            lim_ref->flags.clip = REG_DISABLED;
+            lim_ref->flags.clip = false;
         }
     }
 
@@ -385,7 +391,7 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
             if(ref > rate_lim_ref)
             {
                 ref = rate_lim_ref;
-                rate_lim_flag = REG_ENABLED;
+                rate_lim_flag = true;
             }
         }
         else if(delta_ref < 0.0)            // else if change is negative
@@ -395,7 +401,7 @@ float regLimRefRT(struct reg_lim_ref *lim_ref, float period, float ref, float pr
             if(ref < rate_lim_ref)
             {
                 ref = rate_lim_ref;
-                rate_lim_flag = REG_ENABLED;
+                rate_lim_flag = true;
             }
         }
     }

@@ -36,12 +36,19 @@
 
 // Constants
 
-#define CC_VERSION                  5.04
+#define CC_VERSION                  6.00
 #define CC_PATH_LEN                 256
 #define CC_ABBREVIATED_ARG_LEN      20
 #define CC_INPUT_FILE_NEST_LIMIT    4
 #define CC_ARG_DELIMITER            ", \t\n"
 #define CC_CWD_FILE                 ".cctest_cwd"
+#define CC_ALL_CYCLES               0xFFFFFFFE
+#define CC_NO_INDEX                 0xFFFFFFFF
+
+// ********** Move to libcc when ready ***********
+
+#define CC_MAX_CYC_SEL              10
+#define CC_NUM_CYC_SELS             (CC_MAX_CYC_SEL+1)
 
 // Global i/o structure
 
@@ -54,6 +61,8 @@ struct cctest_input
 struct cctest
 {
     uint32_t                input_idx;
+    uint32_t                cyc_sel;
+    uint32_t                array_idx;
     struct cctest_input     input        [CC_INPUT_FILE_NEST_LIMIT];
     char                    base_path    [CC_PATH_LEN];
     char                    cwd_file_path[CC_PATH_LEN];
@@ -65,6 +74,7 @@ CCTEST_EXT struct cctest cctest;
 // Function declarations
 
 uint32_t ccTestParseLine        (char *line);
+uint32_t ccTestGetParName       (uint32_t cmd_idx, char **remaining_line, struct ccpars **par_matched);
 char    *ccTestGetArgument      (char **remaining_line);
 void     ccTestPrintError       (const char * format, ...);
 char    *ccTestAbbreviatedArg   (char *arg);

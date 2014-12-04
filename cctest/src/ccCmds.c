@@ -36,6 +36,7 @@
 #include "ccSigs.h"
 #include "ccInit.h"
 #include "ccRun.h"
+#include "ccDebug.h"
 
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccCmdsHelp(uint32_t cmd_idx, char **remaining_line)
@@ -353,7 +354,7 @@ uint32_t ccCmdsSave(uint32_t cmd_idx, char **remaining_line)
         {
             fprintf(f, "\n# %s Parameters\n\n", cmd->name);
 
-            ccParsPrintAll(f, cmd->name, cmd->pars);
+            ccParsPrintAll(f, cmd->name, cmd->pars, CC_ALL_CYCLES, CC_NO_INDEX);
         }
     }
 
@@ -377,7 +378,7 @@ uint32_t ccCmdsDebug(uint32_t cmd_idx, char **remaining_line)
 
     // Print debug information from previous run to stdout
 
-    ccParsPrintDebug(stdout);
+    ccDebugPrint(stdout);
 
     return(EXIT_SUCCESS);
 }
@@ -406,7 +407,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
         if(ccpars_global.stop_on_error == REG_DISABLED)
         {
-            ccParsPrintDebug(stdout);
+            ccDebugPrint(stdout);
         }
 
         return(EXIT_FAILURE);
@@ -547,7 +548,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
 
         // Print debug data to debug file
 
-        ccParsPrintDebug(debug_file);
+        ccDebugPrint(debug_file);
 
         // Print parameters to debug file
 
@@ -555,9 +556,9 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
         {
             fputc('\n', debug_file);
 
-            if(cmd->enabled == 1)
+            if(cmd->is_enabled == true)
             {
-                ccParsPrintAll(debug_file, cmd->name, cmd->pars);
+                ccParsPrintAll(debug_file, cmd->name, cmd->pars, CC_ALL_CYCLES, CC_NO_INDEX);
             }
         }
 
@@ -574,87 +575,32 @@ uint32_t ccCmdsPar(uint32_t cmd_idx, char **remaining_line)
   This function will print or set parameters
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    char               *arg;
-    uint32_t            arg_len;
-    struct ccpars      *par_matched;
-    struct ccpars      *par;
-    struct ccpars_enum *par_enum;
+    // If no parameter name provided then print all parameter values
 
-    arg = ccTestGetArgument(remaining_line);
-
-    // If no arguments then print the names and value(s) for all the parameter for this command
-
-    if(arg == NULL)
+    if(*remaining_line == NULL)
     {
-        ccParsPrintAll(stdout, cmds[cmd_idx].name, cmds[cmd_idx].pars);
+        ccParsPrintAll(stdout, cmds[cmd_idx].name, cmds[cmd_idx].pars, cctest.cyc_sel, cctest.array_idx);
     }
-    else
+    else // else parameter name argument provided
     {
-        arg_len = strlen(arg);
+        struct ccpars *par_matched;
 
-        // Compare first argument against list of parameters to find unambiguous match
-
-        for(par = cmds[cmd_idx].pars, par_matched = NULL ; par->name != NULL ; par++)
+        if(ccTestGetParName(cmd_idx, remaining_line, &par_matched) == EXIT_FAILURE)
         {
-             // If command argument matches start or all of a command
-
-            if(strncasecmp(par->name, arg, arg_len) == 0)
-            {
-                // If argument exactly matches a parameter name then take use it
-
-                if(strlen(par->name) == arg_len)
-                {
-                    par_matched = par;
-                    break;
-                }
-
-                // If first partial match, remember command index
-
-                if(par_matched == NULL)
-                {
-                    par_matched = par;
-                }
-                else // else second partial match so report error
-                {
-                    ccTestPrintError("ambiguous %s parameter '%s'", cmds[cmd_idx].name, arg);
-                    return(EXIT_FAILURE);
-                }
-            }
-        }
-
-        if(par_matched == NULL)
-        {
-            ccTestPrintError("unknown parameter for %s: '%s'",
-                             cmds[cmd_idx].name, ccTestAbbreviatedArg(arg));
             return(EXIT_FAILURE);
         }
 
-        // If no arguments provided, report information about the parameter
+        // If arguments provided then use them to set the parameter
 
         if(*remaining_line == NULL)
         {
-            ccParsPrint(stdout, cmds[cmd_idx].name, par_matched);
-            printf("Number of elements defined: %u\n",par_matched->num_elements);
-            printf("Maximum number of elements: %u\n",par_matched->max_num_elements);
-
-            if(par_matched->type == PAR_ENUM)
-            {
-                printf("Range:");
-
-                for(par_enum = par_matched->ccpars_enum ; par_enum->string != NULL ; par_enum++)
-                {
-                    printf(" %s",par_enum->string);
-                }
-
-                putchar('\n');
-            }
+            ccParsPrint(stdout, cmds[cmd_idx].name, par_matched, cctest.cyc_sel, cctest.array_idx);
         }
-        else // else get parameter values from arguments
+        else
         {
             return(ccParsGet(cmds[cmd_idx].name, par_matched, remaining_line));
         }
     }
-
     return(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------------------------------------*/

@@ -1,7 +1,7 @@
 # CCTEST TABLE file
 
-TABLE TIME    0.0,5.0,20.0
-TABLE REF     100.0, 100.0, 700.0
+TABLE TIME    0.0,     5.0
+TABLE REF     100.0, 700.0
 RUN
 
 # EOF

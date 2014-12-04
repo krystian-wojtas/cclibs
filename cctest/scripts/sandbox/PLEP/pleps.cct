@@ -3,7 +3,8 @@
 GLOBAL ITER_PERIOD_US   10000
 GLOBAL GROUP            sandbox
 GLOBAL PROJECT          PLEP
-GLOBAL FUNCTION         PLEP
+
+REF FUNCTION            PLEP
 
 GLOBAL FILE             plep01
 

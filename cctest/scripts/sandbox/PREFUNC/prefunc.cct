@@ -58,34 +58,34 @@ LIMITS INVERT               DISABLED
 
 GLOBAL RUN_DELAY            0.2
 GLOBAL STOP_DELAY           0.2
-GLOBAL FUNCTION             SINE TABLE
-GLOBAL REG_MODE             CURRENT
+GLOBAL CYCLE_SELECTOR       1           2
 
-PREFUNC ACCELERATION        100
-PREFUNC DECELERATION        200
-PREFUNC PLATEAU_DURATION    0.1
+REF FUNCTION(1)             SINE        TABLE
+REF REG_MODE(1)             CURRENT     CURRENT
+
+DEFAULT I_ACCELERATION      100
+DEFAULT I_DECELERATION      200
+DEFAULT PLATEAU_DURATION    0.1
 
 # Normal limits tests
 
-TEST INITIAL_REF            3.0
-TEST NUM_CYCLES             2
-TEST PERIOD                 1
+TEST INITIAL_REF(1)         3.0
+TEST NUM_CYCLES(1)          2
+TEST PERIOD(1)              1
 
-TABLE REF                   2 1 1.4 2.5
+TABLE REF(2)                2 1 1.4 2.5
 
-PREFUNC POLICY              RAMP
+REF PREFUNC_MIN_REF(2)      0
+
+REF PREFUNC_POLICY(2)       RAMP
 GLOBAL FILE                 prefunc-ramp
 RUN
 
-PREFUNC POLICY              STOPSTART
-GLOBAL FILE                 prefunc-stopstart
-RUN
-
-PREFUNC POLICY              MIN
+REF PREFUNC_POLICY(2)       MIN
 GLOBAL FILE                 prefunc-min
 RUN
 
-PREFUNC POLICY              MINMAX
+REF PREFUNC_POLICY(2)       MINMAX
 GLOBAL FILE                 prefunc-minmax
 RUN
 
@@ -93,22 +93,18 @@ RUN
 
 LIMITS INVERT               ENABLED
 
-TEST INITIAL_REF            -3.0
-TABLE REF                   -2 -1 -1.4 -2.5
+TEST INITIAL_REF(1)         -3.0
+TABLE REF(2)                -2 -1 -1.4 -2.5
 
-PREFUNC POLICY              RAMP
+REF PREFUNC_POLICY(2)       RAMP
 GLOBAL FILE                 prefunc-ramp-invert
 RUN
 
-PREFUNC POLICY              STOPSTART
-GLOBAL FILE                 prefunc-stopstart-invert
-RUN
-
-PREFUNC POLICY              MIN
+REF PREFUNC_POLICY(2)       MIN
 GLOBAL FILE                 prefunc-min-invert
 RUN
 
-PREFUNC POLICY              MINMAX
+REF PREFUNC_POLICY(2)       MINMAX
 GLOBAL FILE                 prefunc-minmax-invert
 RUN
 

@@ -1,7 +1,6 @@
 # CCTEST - RAMP tests script
 
 GLOBAL ITER_PERIOD_US       100
-GLOBAL FUNCTION             RAMP
 GLOBAL FG_LIMITS            ENABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL GROUP                sandbox
@@ -47,7 +46,9 @@ IREG AUXPOLES2_Z            0.5
 
 GLOBAL RUN_DELAY            0.01
 GLOBAL STOP_DELAY           0.01
-GLOBAL REG_MODE             VOLTAGE
+
+REF FUNCTION                RAMP
+REF REG_MODE                VOLTAGE
 
 RAMP INITIAL_REF            -1.0
 RAMP FINAL_REF              1.0
@@ -82,7 +83,8 @@ RUN
 
 GLOBAL RUN_DELAY            0.1
 GLOBAL STOP_DELAY           0.1
-GLOBAL REG_MODE             CURRENT
+
+REF REG_MODE                CURRENT
 
 RAMP INITIAL_REF            -5.0
 RAMP FINAL_REF              10.0

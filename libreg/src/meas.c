@@ -50,61 +50,105 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
                        uint32_t extrapolation_len_iters, float pos, float neg, float meas_delay_iters)
 {
     uint32_t    total_fir_len;
-    uint32_t    longest_fir_len;
-    float       max_meas_value;
+    float       filter_delay;
     float      *extrapolation_buf;
 
     // Stop the filter
     
-    filter->enable = 0;
+    filter->is_running = false;
 
-    // Calculate important filter variables
+    // Disable filter stages that are not used, or both stages if the buffer has not been specified
 
-    total_fir_len   = fir_length[0] + fir_length[1];
-    longest_fir_len = fir_length[0] > fir_length[1] ? fir_length[0] : fir_length[1];
-    max_meas_value  = 1.1 * (pos > -neg ? pos : -neg);
+    if(fir_length[0] == 1 || filter->fir_buf[0] == NULL)
+    {
+        filter->fir_length[0] = 0;
+    }
+    else
+    {
+        filter->fir_length[0] = fir_length[0];
+    }
 
-    // Save filter parameters
+    if(fir_length[1] == 1 || filter->fir_buf[0] == NULL)
+    {
+        filter->fir_length[1] = 0;
+    }
+    else
+    {
+        filter->fir_length[1] = fir_length[1];
+    }
+
+    // Sort filter stages to have the longest first
+
+    if(filter->fir_length[0] < filter->fir_length[1])
+    {
+        uint32_t temp_fir_length = filter->fir_length[0];
+
+        filter->fir_length[0] = filter->fir_length[1];
+        filter->fir_length[1] = temp_fir_length;
+    }
     
-    filter->fir_length[0]           = fir_length[0];
-    filter->fir_length[1]           = fir_length[1];
-    filter->extrapolation_len_iters = extrapolation_len_iters;
-    filter->max_meas_value          = max_meas_value;
-
     // Set the pointers to the second stage FIR buffer and extrapolation buffer
+
+    filter->fir_buf[1]              = filter->fir_buf[0] + filter->fir_length[0];
+    filter->extrapolation_buf       = extrapolation_buf = (float*)(filter->fir_buf[1] + filter->fir_length[1]);
+    filter->extrapolation_len_iters = extrapolation_len_iters;
+
+    // If at least one stage is in use, calculate important filter variables
+
+    if(filter->fir_length[0] != 0)
+    {
+        total_fir_len = filter->fir_length[0] + filter->fir_length[1];
+        filter->max_meas_value  = 1.1 * (pos > -neg ? pos : -neg);
+
+        // Set filter delay
+
+        filter_delay = 0.5 * (float)(total_fir_len - (filter->fir_length[1] > 0 ? 2 : 1));
+
+        // Calculate float/integer scalings for FIR filter stages
     
-    filter->fir_buf[1]        = filter->fir_buf[0] + fir_length[0];
-    filter->extrapolation_buf = extrapolation_buf = (float*)(filter->fir_buf[1] + fir_length[1]);
+        filter->float_to_integer = INT32_MAX / (filter->fir_length[0] * filter->max_meas_value);
+        filter->integer_to_float = 1.0 / filter->float_to_integer;
+
+        if(filter->fir_length[1] == 0)
+        {
+            filter->integer_to_float /= (float)filter->fir_length[0];
+        }
+        else
+        {
+            filter->integer_to_float /= (float)filter->fir_length[1];
+        }
+
+        // Initialise the FIR filter stages
+
+        filter->fir_accumulator[0] = filter->fir_accumulator[1] = 0;
+    
+        memset(filter->fir_buf[0], 0, total_fir_len * sizeof(int32_t));
+    
+        // Initialise FIR filter stages to the value in filter->signal[REG_MEAS_UNFILTERED]
+    
+        while(total_fir_len--)
+        {
+            filter->signal[REG_MEAS_FILTERED] = regMeasFirFilterRT(filter);
+        }
+    }
+    else
+    {
+        filter->signal[REG_MEAS_FILTERED] = filter->signal[REG_MEAS_UNFILTERED];
+        filter_delay = 0.0;
+    }
 
     // Set measurement delays
-    
+
+
     filter->delay_iters[REG_MEAS_UNFILTERED]   = meas_delay_iters;
-    filter->delay_iters[REG_MEAS_FILTERED]     = meas_delay_iters + 0.5 * (float)(total_fir_len - 2);
+    filter->delay_iters[REG_MEAS_FILTERED]     = meas_delay_iters + filter_delay;
     filter->delay_iters[REG_MEAS_EXTRAPOLATED] = 0.0;
 
     // Calculate extrapolation factor so that it cancels the filtered measurement delay
 
     filter->extrapolation_factor = filter->delay_iters[REG_MEAS_FILTERED] / (float)extrapolation_len_iters;
-    
-    // Calculate float/integer scalings for FIR filter stages
 
-    filter->float_to_integer = INT32_MAX / (longest_fir_len * max_meas_value);
-    filter->integer_to_float = 1.0 / (filter->float_to_integer * (float)(filter->fir_length[1]));
-    
-    // Initialize the FIR filter stages
-    
-    filter->fir_accumulator[0] = filter->fir_accumulator[1] = 0;
-
-    memset(filter->fir_buf[0], 0, total_fir_len * sizeof(int32_t));
-
-    // Initialize FIR filter stages to the value in filter->signal[REG_MEAS_UNFILTERED]
-
-    while(total_fir_len--)
-    {
-        filter->signal[REG_MEAS_FILTERED] = regMeasFirFilterRT(filter);
-    }
-
-    // Initialize extrapolation buffer
+    // Initialise extrapolation buffer
 
     while(extrapolation_len_iters--)
     {
@@ -115,7 +159,7 @@ void regMeasFilterInit(struct reg_meas_filter *filter, uint32_t fir_length[2],
 
     // Restart the filter
 
-    filter->enable = 1;
+    filter->is_running = true;
 }
 
 
@@ -163,6 +207,13 @@ static float regMeasFirFilterRT(struct reg_meas_filter *filter)
         filter->fir_index[0] = 0;
     }
 
+    // Return immediately if second filter stage is not in use
+
+    if(filter->fir_length[1] == 0)
+    {
+        return(filter->integer_to_float * (float)filter->fir_accumulator[0]);
+    }
+
     // Filter stage 2
 
     input_integer = filter->fir_accumulator[0] / (int32_t)filter->fir_length[0];
@@ -191,7 +242,7 @@ void regMeasFilterRT(struct reg_meas_filter *filter)
 
     // If filter is stopped
 
-    if(filter->enable == 0)
+    if(filter->is_running == false)
     {
         // Bypass the filter - simply set the output values to the input value
 
@@ -199,7 +250,14 @@ void regMeasFilterRT(struct reg_meas_filter *filter)
     }
     else // Filter is running
     {
-        filter->signal[REG_MEAS_FILTERED] = regMeasFirFilterRT(filter);
+        if(filter->fir_length[0] > 0)
+        {
+            filter->signal[REG_MEAS_FILTERED] = regMeasFirFilterRT(filter);
+        }
+        else
+        {
+            filter->signal[REG_MEAS_FILTERED] = filter->signal[REG_MEAS_UNFILTERED];
+        }
 
         // Prepare to extrapolate to estimate the measurement without a delay
 

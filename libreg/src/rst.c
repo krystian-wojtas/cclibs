@@ -31,14 +31,20 @@
 
 // Constants
 
-//#define DISCRETIZE_FORWARD_EULER_QK
-//#define DISCRETIZE_FORWARD_EULER
-//#define DISCRETIZE_BACKWARD_EULER
 #define M_TWO_PI                   (2.0*3.14159265358979323)
 #define FLOAT_THRESHOLD            1.0E-10                      //!< Lower bound for s[0]. To allow for floating point rounding errors.
 #define REG_AVE_V_REF_LEN          4                            //!< Number of iterations over which to average V_REF
 #define REG_TRACK_DELAY_FLTR_TC    100                          //!< Track delay measurement filter time constant (periods)
 #define REG_MM_STEPS               20                           //!< Number of steps to cover modulus margin scan
+
+#define REG_JT_OK                                0              //!< Jury's Test Status: Okay
+#define REG_JT_S0_IS_ZERO                       -1              //!< Jury's Test Status: S[0] is zero (or negative)
+#define REG_JT_SUM_S_IS_NEGATIVE                -2              //!< Jury's Test Status: Sum(S) is negative
+#define REG_JT_SUM_EVEN_S_LESS_THAN_SUM_ODD_S   -3              //!< Jury's Test Status: Sum(Even S) < Sum(Odd S)
+#define REG_JT_OHMS_PAR_TOO_SMALL               -10             //!< Jury's Test Status: Parallel resistance is too small
+#define REG_JT_PURE_DELAY_TOO_LARGE             -11             //!< Jury's Test Status: Pure delay is too large (max is 2.4 periods)
+
+// Macros
 
 #define MINIMUM(A,B)               (A<B?A:B)
 #define REG_MM_FREQ(index)         (0.1 + (9.9 / (REG_MM_STEPS*REG_MM_STEPS*REG_MM_STEPS)) * (float)(index*index*index))
@@ -60,7 +66,7 @@ static float  regAbsComplexRatio(double *num, double *den, double k);
 
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt
 
-static int32_t regJuryTest(struct reg_rst_pars *pars)
+static int32_t regJurysTest(struct reg_rst_pars *pars)
 {
     int32_t     i;
     int32_t     n;
@@ -75,14 +81,14 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
 
     if(pars->rst.s[0] < FLOAT_THRESHOLD)
     {
-        return(-1);
+        return(REG_JT_S0_IS_ZERO);
     }
 
-    // Skip trailing zero coefficients - note that s[0] cannot be zero because of Jury test above
+    // Skip trailing zero s[] coefficients - note that s[0] cannot be zero because of Jury test above
 
-    n = REG_N_RST_COEFFS;
+    n = pars->rst_order + 1;
 
-    while(--n >= 0 && pars->rst.s[n] == 0.0);
+    while(--n > 0 && pars->rst.s[n] == 0.0);
 
     // Transfer s[] to b[] and sum even and odd coefficients of s[] separately
 
@@ -104,14 +110,14 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
 
     if((sum_even_s + sum_odd_s) < -FLOAT_THRESHOLD)
     {
-        return(-2);
+        return(REG_JT_SUM_S_IS_NEGATIVE);
     }
 
     // Jury's test -3 : (-1)^n . s(-1) > 0 for stability
 
     if(sum_even_s < sum_odd_s)
     {
-        return(-3);
+        return(REG_JT_SUM_EVEN_S_LESS_THAN_SUM_ODD_S);
     }
 
     // Run Jury Stability Test
@@ -132,6 +138,8 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
 
         // Jury's tests 1 - (n-2) : First element of every row of Jury's array > 0 for stability
 
+        jury_idx++;
+
         if(b[0] <= 0.0)
         {
             return(jury_idx);
@@ -141,7 +149,7 @@ static int32_t regJuryTest(struct reg_rst_pars *pars)
 
     // All roots lie in the unit circle
 
-    return(0);
+    return(REG_JT_OK);
 }
 
 
@@ -253,14 +261,15 @@ static float regAbsComplexRatio(double *num, double *den, double k)
 
 /*
  * This function prepares coefficients for the RST regulation algorithm. It chooses the algorithm to use
- * based on pars->pure_delay_iters. It is divided into 5 ranges, two result in dead-beat PII
- * controllers and two non-dead-beat PII controllers. To work the bandwidth of the voltage source and
- * FIR filter notches must be at least ten times the bandwidth because they not included in the load model.
+ * based on pars->pure_delay_iters. It is divided into 5 ranges, three result in dead-beat PII
+ * controllers and two in non-dead-beat PII controllers. To work the bandwidth of the voltage source and
+ * FIR filter notches must be at least ten times the frequency of the auxiliary poles because they
+ * not included in the load model.
  * 
  * It can be used with slow inductive circuits as well as fast or even resistive loads. For fast loads,
  * auxpole1_hz is set to 1.0E+5 and z to 0.8. Normally auxpole1_hz should equal auxpoles2_hz and z should be 0.5.
  * 
- * The pure_delay_iters parameter informs the algorithm of the pure delay around the loop. This can be
+ * The pars->pure_delay_periods parameter informs the algorithm of the pure delay around the loop. This can be
  * a dynamic behaviour (i.e. of the voltage source or filters) crudely modelled as a pure delay for low
  * frequencies, or it can be real pure delay due to computation or communications delays.
  * 
@@ -270,13 +279,13 @@ static float regAbsComplexRatio(double *num, double *den, double k)
  * The calculation of the RST coefficients requires double precision floating point, even though the
  * coefficients themselves are stored as single precision.
  */
-static void regRstInitPII(struct reg_rst_pars  *pars,
-                          struct reg_load_pars *load,
-                          float                 auxpole1_hz,
-                          float                 auxpoles2_hz,
-                          float                 auxpoles2_z,
-                          float                 auxpole4_hz,
-                          float                 auxpole5_hz)
+static int32_t regRstInitPII(struct reg_rst_pars  *pars,
+                             struct reg_load_pars *load,
+                             float                 auxpole1_hz,
+                             float                 auxpoles2_hz,
+                             float                 auxpoles2_z,
+                             float                 auxpole4_hz,
+                             float                 auxpole5_hz)
 {
     uint32_t    idx;
     int32_t     s_idx = 0;
@@ -329,7 +338,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     {
         // If pure delay > 0.401 and parallel resistance is significant, then no solution is possible
 
-        return;
+        return(REG_JT_OHMS_PAR_TOO_SMALL);
     }
     else if(pars->pure_delay_periods < 1.0)
     {
@@ -368,7 +377,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
     {
         // If pure delay > 2.401 then no solution is possible
 
-        return;
+        return(REG_JT_PURE_DELAY_TOO_LARGE);
     }
 
     // Apply gain to b0 and b1 if regulating field
@@ -379,7 +388,7 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
 
         if(load->ohms_par < 1.0E6)
         {
-            return;
+            return(REG_JT_OHMS_PAR_TOO_SMALL);
         }
 
         b0_b1 *= load->gauss_per_amp;
@@ -572,6 +581,8 @@ static void regRstInitPII(struct reg_rst_pars  *pars,
         pars->as  [idx] = regVectorMultiply(pars->a, pars->rst.s, 1, s_idx);
         pars->asbr[idx] = regVectorMultiply(pars->b, pars->rst.r, 1, r_idx) + pars->as[idx];
     }
+
+    return(REG_JT_OK);
 }
 
 static double regVectorMultiply(double *p, double *m, int32_t p_order, int32_t m_idx)
@@ -650,29 +661,15 @@ static void regRstInitI(struct reg_rst_pars  *pars,
 
 /*
  * Calculate coefficients for open loop reference difference equation.
- *
- * There are three ways to discretize the Z-transform to obtain the open loop
- * reference difference equation: Forward Euler, Backward Euler or Tustin
- * (trapezoidal) discretization. We are not sure which method will give the
- * best results, so we have implemeted all three for evaluation. The final
- * choice can be decided at compile time.
  */
 static inline void regRstInitOpenLoop(struct reg_rst_pars *pars, struct reg_load_pars *load)
 {
-   // resistances as documented at struct reg_openloop
-   const double R1 = load->ohms_par + load->ohms_mag;
-   const double R2 = (load->ohms_ser * R1) + (load->ohms_par * load->ohms_mag);
-   const double R3 = load->ohms_par + load->ohms_ser;
+    // Backwards EULER
 
-   const double Lm = load->henrys;        // magnet inductance
-   const double T  = pars->reg_period;    // period
-
-#if defined(DISCRETIZE_FORWARD_EULER_QK)
-
-    const double s1 = -Lm / (T*load->ohms_par);
-    const double s0 = 1.0 - s1 + load->ohms_mag / load->ohms_par;
-    const double t1 = -Lm/T * (1 + load->ohms_ser / load->ohms_par);
-    const double t0 = load->ohms_mag + load->ohms_ser * (1 + load->ohms_mag/load->ohms_par) - t1;
+    const double s1 = -load->henrys / (pars->reg_period * load->ohms_par);
+    const double t1 = -load->henrys / pars->reg_period * (1.0 + load->ohms_ser / load->ohms_par);
+    const double s0 =  load->ohms_mag / load->ohms_par +  1.0 - s1;
+    const double t0 =  load->ohms_mag + load->ohms_ser * (1.0 + load->ohms_mag/load->ohms_par) - t1;
 
     pars->openloop_forward.ref[0] =  t0/s0;
     pars->openloop_forward.ref[1] =  t1/s0;
@@ -682,61 +679,17 @@ static inline void regRstInitOpenLoop(struct reg_rst_pars *pars, struct reg_load
     pars->openloop_reverse.act[0] =  s0/t0;
     pars->openloop_reverse.act[1] =  s1/t0;
 
-#elif defined(DISCRETIZE_FORWARD_EULER)
-
-    const double k1 = (T*R1) - Lm;
-    const double k2 = (T*R2) - (R3*Lm);
-    const double k3 = R3*Lm;
-
-    pars->openloop_forward.ref[0] =  k3/Lm;
-    pars->openloop_forward.ref[1] =  k2/Lm;
-    pars->openloop_forward.act[1] = -k1/Lm;
-
-    pars->openloop_reverse.ref[1] = -k2/k3;
-    pars->openloop_reverse.act[0] =  Lm/k3;
-    pars->openloop_reverse.act[1] =  k1/k3;
-
-#elif defined(DISCRETIZE_BACKWARD_EULER)
-
-    const double k1 = (T*R1) + Lm;
-    const double k2 = (T*R2) + (R3*Lm);
-    const double k3 = (R3*Lm);
-
-    pars->openloop_forward.ref[0] =  k2/k1;
-    pars->openloop_forward.ref[1] = -k3/k1;
-    pars->openloop_forward.act[1] =  Lm/k1;
-
-    pars->openloop_reverse.ref[1] =  k3/k2;
-    pars->openloop_reverse.act[0] =  k1/k2;
-    pars->openloop_reverse.act[1] = -Lm/k2;
-
-#else // DISCRETIZE_TUSTIN
-
-    const double k1 = R1 + (2/T) * Lm;
-    const double k2 = R1 - (2/T) * Lm;
-    const double k3 = R2 + R3 * (2/T) * Lm;
-    const double k4 = R2 - R3 * (2/T) * Lm;
-
-    pars->openloop_forward.ref[0] =  k3/k1;
-    pars->openloop_forward.ref[1] =  k4/k1;
-    pars->openloop_forward.act[1] = -k2/k1;
-
-    pars->openloop_reverse.ref[1] = -k4/k3;
-    pars->openloop_reverse.act[0] =  k1/k3;
-    pars->openloop_reverse.act[1] =  k2/k3;
-
-#endif
    // If the regulation mode is CURRENT, we can use the reference current value as provided.
    // If it is FIELD, the current is calculated as I = B/G where G is the field-to-current
    // ratio for the magnet.
 
-   if(pars->reg_mode == REG_FIELD)
-   {
-      pars->openloop_forward.act[0] /= load->gauss_per_amp;
-      pars->openloop_forward.act[1] /= load->gauss_per_amp;
-      pars->openloop_reverse.act[0] *= load->gauss_per_amp;
-      pars->openloop_reverse.act[1] *= load->gauss_per_amp;
-   }
+    if(pars->reg_mode == REG_FIELD)
+    {
+        pars->openloop_forward.act[0] /= load->gauss_per_amp;
+        pars->openloop_forward.act[1] /= load->gauss_per_amp;
+        pars->openloop_reverse.act[0] *= load->gauss_per_amp;
+        pars->openloop_reverse.act[1] *= load->gauss_per_amp;
+    }
 }
 
 
@@ -765,6 +718,7 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
     pars->dead_beat            = 0;
     pars->pure_delay_periods   = pure_delay_periods;
     pars->modulus_margin       = 0.0;
+    pars->jurys_result         = REG_JT_OK;
 
     // if AUXPOLE1 = 0.0 -> MANUAL RST coefficients
 
@@ -785,7 +739,7 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
 
         if(auxpoles2_hz > 0.0)                         // If AUXPOLES2_HZ > 0               -> PII regulator (slow inductive load)
         {
-            regRstInitPII(pars, load, auxpole1_hz, auxpoles2_hz, auxpoles2_z, auxpole4_hz, auxpole5_hz);
+            pars->jurys_result = regRstInitPII(pars, load, auxpole1_hz, auxpoles2_hz, auxpoles2_z, auxpole4_hz, auxpole5_hz);
         }
         else if(load->henrys >= 1.0E-10)               // If AUXPOLES2_HZ <= 0, HENRYS > 0  ->  PI regulator (fast inductive load)
         {
@@ -797,11 +751,22 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
         }
     }
 
+    // Determine the highest order of the RST polynomials
+
+    i = REG_N_RST_COEFFS;
+
+    while(--i > 0 && pars->rst.r[i] == 0.0 && pars->rst.s[i] == 0.0 && pars->rst.t[i] == 0.0);
+
+    pars->rst_order = i;
+
     //Check that s polynomial is stable using Jury test
 
-    pars->jurys_result = regJuryTest(pars);
+    if(pars->jurys_result == REG_JT_OK)
+    {
+        pars->jurys_result = regJurysTest(pars);
+    }
 
-    if(pars->jurys_result != 0)
+    if(pars->jurys_result != REG_JT_OK)
     {
         // RST coefficients are invalid and cannot be used
 
@@ -810,6 +775,7 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
         pars->inv_s0           = 0.0;
         pars->t0_correction    = 0.0;
         pars->inv_corrected_t0 = 0.0;
+        pars->rst_order        = 0;
     }
     else
     {
@@ -817,7 +783,7 @@ enum reg_status regRstInit(struct reg_rst_pars  *pars,
 
         t0_correction = 0.0;
 
-        for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+        for(i = 0 ; i <= pars->rst_order ; i++)
         {
             t0_correction += (double)pars->rst.r[i] - (double)pars->rst.t[i];
         }
@@ -892,6 +858,7 @@ void regRstInitRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float
     double      ref_offset;
     uint32_t    var_idx;
     uint32_t    par_idx;
+    uint32_t    rst_order = pars->rst_order;
 
     // Return zero immediately if parameters are invalid
 
@@ -912,7 +879,7 @@ void regRstInitRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float
            pars->rst.s[0]      * (double)vars->act [var_idx] +
            pars->t0_correction * (double)vars->ref [var_idx];
 
-    for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+    for(par_idx = 1 ; par_idx <= rst_order ; par_idx++)
     {
         var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
 
@@ -972,6 +939,8 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
     }
     else
     {
+        uint32_t rst_order = pars->rst_order;
+
         var_idx = vars->history_index;
 
         // Store the reference in RST history
@@ -984,7 +953,7 @@ float regRstCalcActRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, floa
                   pars->rst.r[0]      * (double)vars->meas[var_idx] +
                   pars->t0_correction * (double)ref;
 
-        for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+        for(par_idx = 1 ; par_idx <= rst_order ; par_idx++)
         {
             var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
 
@@ -1044,13 +1013,15 @@ void regRstCalcRefRT(struct reg_rst_pars *pars, struct reg_rst_vars *vars, float
 
     if(is_limited || is_openloop)
     {
+        uint32_t rst_order = pars->rst_order;
+
         // Use RST coefficients to back-calculate reference from actuation
 
         var_idx = var_idx0;
 
         ref = pars->rst.s[0] * (double)act + pars->rst.r[0] * (double)vars->meas[var_idx];
 
-        for(par_idx = 1 ; par_idx < REG_N_RST_COEFFS ; par_idx++)
+        for(par_idx = 1 ; par_idx <= rst_order ; par_idx++)
         {
             var_idx = (var_idx - 1) & REG_RST_HISTORY_MASK;
 

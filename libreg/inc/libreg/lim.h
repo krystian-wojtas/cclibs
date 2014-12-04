@@ -50,6 +50,7 @@
 #define LIBREG_LIM_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // Constants
 
@@ -76,9 +77,9 @@ struct reg_lim_meas
 
     struct
     {
-        enum reg_enabled_disabled   trip;                       //!< Set if measurement exceeds reg_lim_meas::pos_trip or reg_lim_meas::neg_trip limits
-        enum reg_enabled_disabled   low;                        //!< Set if absolute measurement is below reg_lim_meas::low
-        enum reg_enabled_disabled   zero;                       //!< Set if absolute measurement is below reg_lim_meas::zero
+        bool                    trip;                           //!< Set if measurement exceeds reg_lim_meas::pos_trip or reg_lim_meas::neg_trip limits
+        bool                    low;                            //!< Set if absolute measurement is below reg_lim_meas::low
+        bool                    zero;                           //!< Set if absolute measurement is below reg_lim_meas::zero
     } flags;                                                    //!< Measurement limit flags
 };
 
@@ -91,6 +92,9 @@ struct reg_lim_ref
                                                                 //!< (<em>e.g.</em>, polarity switch is negative)
     float                       pos;                            //!< User's positive limit
     float                       min;                            //!< User's min limit
+    float                       neg;                            //!< User's negative limit
+    float                       rate;                           //!< User's rate limit
+    float                       acceleration;                   //!< User's acceleration limit
 
     float                       max_clip;                       //!< Maximum reference clip limit from reg_lim_ref::max_clip_user or Q41 limit
     float                       min_clip;                       //!< Minimum reference clip limit from reg_lim_ref::min_clip_user or Q41 limit
@@ -108,10 +112,10 @@ struct reg_lim_ref
 
     struct
     {
-        enum reg_enabled_disabled   unipolar;                   //!< Unipolar flag
-        enum reg_enabled_disabled   clip;                       //!< Set if reference has been clipped to range
+        bool                    unipolar;                       //!< Unipolar flag
+        bool                    clip;                           //!< Set if reference has been clipped to range
                                                                 //!< [reg_lim_ref::min_clip,reg_lim_ref::max_clip]
-        enum reg_enabled_disabled   rate;                       //!< Set if reference rate has been clipped to range
+        bool                    rate;                           //!< Set if reference rate has been clipped to range
                                                                 //!< [- reg_lim_ref::rate_clip,reg_lim_ref::rate_clip]
     } flags;                                                    //!< Reference limit flags
 };
@@ -129,8 +133,8 @@ struct reg_lim_rms
 
     struct
     {
-        enum reg_enabled_disabled   fault;                      //!< Set if filtered square of the measurement exceeds reg_lim_rms::rms2_fault
-        enum reg_enabled_disabled   warning;                    //!< Set if filtered square of the measurement exceeds reg_lim_rms::rms2_warning
+        bool                   fault;                           //!< Set if filtered square of the measurement exceeds reg_lim_rms::rms2_fault
+        bool                   warning;                         //!< Set if filtered square of the measurement exceeds reg_lim_rms::rms2_warning
     } flags;                                                    //!< RMS limits flags
 };
 
@@ -177,9 +181,11 @@ void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fau
  * @param[in]     min_lim          Standby reference limit.
  * @param[in]     neg_lim          Minimum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP).
  * @param[in]     rate_lim         Absolute reference rate clip limit. Will be scaled by (1+#REG_LIM_CLIP).
+ * @param[in]     acceleration_lim Stored in structure for use by application
  * @param[in]     closeloop        Closeloop threshold. Must be positive (zero in the case of 4-quadrant converters).
  */
-void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, float neg_lim, float rate_lim, float closeloop);
+void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, float neg_lim,
+                   float rate_lim, float acceleration_lim, float closeloop);
 
 /*!
  * Initialise voltage reference limits. Voltage reference limits use the same
@@ -188,14 +194,15 @@ void regLimRefInit(struct reg_lim_ref *lim_ref, float pos_lim, float min_lim, fl
  * This is a non-Real-Time function: do not call from the real-time thread or interrupt
  *
  * @param[out]    lim_v_ref        Voltage reference limits object to initialise
- * @param[in]     pos_lim          Maximum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP)
- * @param[in]     neg_lim          Minimum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP)
- * @param[in]     rate_lim         Absolute reference rate clip limit. Will be scaled by (1+#REG_LIM_CLIP)
- * @param[in]     i_quadrants41    Define exclusion zone in quadrants 4 and 1 (I dimension)
- * @param[in]     v_quadrants41    Define exclusion zone in quadrants 4 and 1 (V dimension)
+ * @param[in]     pos_lim          Maximum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP).
+ * @param[in]     neg_lim          Minimum reference clip limit. Will be scaled by (1+#REG_LIM_CLIP).
+ * @param[in]     rate_lim         Absolute reference rate clip limit. Will be scaled by (1+#REG_LIM_CLIP).
+ * @param[in]     acceleration_lim Stored in structure for use by application.
+ * @param[in]     i_quadrants41    Define exclusion zone in quadrants 4 and 1 (I dimension).
+ * @param[in]     v_quadrants41    Define exclusion zone in quadrants 4 and 1 (V dimension).
  */
 void regLimVrefInit(struct reg_lim_ref *lim_v_ref, float pos_lim, float neg_lim, float rate_lim,
-                    float i_quadrants41[2], float v_quadrants41[2]);
+                    float acceleration_lim, float i_quadrants41[2], float v_quadrants41[2]);
 
 /*!
  * Check the measurement against the trip levels and the absolute measurement against

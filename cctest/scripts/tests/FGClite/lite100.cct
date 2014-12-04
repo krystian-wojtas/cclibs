@@ -3,9 +3,7 @@
 GLOBAL RUN_DELAY                1.0
 GLOBAL STOP_DELAY               1.0
 GLOBAL ITER_PERIOD_US           10000
-GLOBAL FUNCTION                 PLEP
 GLOBAL STOP_ON_ERROR            ENABLED
-GLOBAL REG_MODE                 CURRENT
 GLOBAL FG_LIMITS                ENABLED
 GLOBAL SIM_LOAD                 ENABLED
 GLOBAL GROUP                    tests
@@ -70,6 +68,9 @@ PLEP INITIAL_REF                -2
 PLEP FINAL_REF                  2
 PLEP ACCELERATION               0.2
 PLEP LINEAR_RATE                1
+
+REF FUNCTION                    PLEP
+REF REG_MODE                    CURRENT
 
 # PLEP test
 

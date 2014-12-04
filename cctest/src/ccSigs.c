@@ -29,6 +29,7 @@
 #include "ccTest.h"
 #include "ccRun.h"
 #include "ccSigs.h"
+#include "ccDebug.h"
 #include "flot.h"
 
 #define DIG_STEP        0.5      // Digital signal step size
@@ -200,7 +201,7 @@ void ccSigsInit(void)
         signals[ANA_I_MAGNET ].time_offset =
         signals[ANA_I_CIRCUIT].time_offset =
         signals[ANA_V_CIRCUIT].time_offset = conv.iter_period * (ccpars_vs.v_ref_delay_iters +
-                                            (conv.sim_vs_pars.vs_undersampled_flag == 0 ? 0.0 : conv.sim_vs_pars.vs_delay_iters));
+                                            (conv.sim_vs_pars.is_vs_undersampled == 0 ? 0.0 : conv.sim_vs_pars.vs_delay_iters));
 
         // Enable cursor signals only if CSV output is for the Labview Dataviewer (LVDV)
 
@@ -234,7 +235,7 @@ void ccSigsInit(void)
 
             // Field regulation signals
 
-            if(ccrun.breg_flag == 1)
+            if(ccrun.is_breg_enabled == true)
             {
                 ccSigsEnableSignal(ANA_REG_MEAS);
                 ccSigsEnableSignal(ANA_TRACK_DLY);
@@ -250,17 +251,25 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(ANA_B_ERR);
                 ccSigsEnableSignal(ANA_MAX_ABS_B_ERR);
                 ccSigsEnableSignal(DIG_B_MEAS_TRIP);
-                ccSigsEnableSignal(DIG_B_MEAS_LOW);
-                ccSigsEnableSignal(DIG_B_MEAS_ZERO);
                 ccSigsEnableSignal(DIG_B_REF_CLIP);
                 ccSigsEnableSignal(DIG_B_REF_RATE_CLIP);
 
-                if(ccpars_limits.b_err_warning > 0.0)
+                if(ccpars_limits.b_low[ccpars_load.select] > 0.0)
+                {
+                    ccSigsEnableSignal(DIG_B_MEAS_LOW);
+                }
+
+                if(ccpars_limits.b_zero[ccpars_load.select] > 0.0)
+                {
+                    ccSigsEnableSignal(DIG_B_MEAS_ZERO);
+                }
+
+                if(ccpars_limits.b_err_warning[ccpars_load.select] > 0.0)
                 {
                     ccSigsEnableSignal(DIG_B_REG_ERR_WARN);
                 }
 
-                if(ccpars_limits.b_err_fault > 0.0)
+                if(ccpars_limits.b_err_fault[ccpars_load.select] > 0.0)
                 {
                     ccSigsEnableSignal(DIG_B_REG_ERR_FLT);
                 }
@@ -268,7 +277,7 @@ void ccSigsInit(void)
 
             // Current regulation signals
 
-            if(ccrun.ireg_flag == 1)
+            if(ccrun.is_ireg_enabled == true)
             {
                 ccSigsEnableSignal(ANA_REG_MEAS);
                 ccSigsEnableSignal(ANA_TRACK_DLY);
@@ -283,12 +292,12 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(DIG_I_REF_CLIP);
                 ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
 
-                if(ccpars_limits.i_err_warning > 0.0)
+                if(ccpars_limits.i_err_warning[ccpars_load.select] > 0.0)
                 {
                     ccSigsEnableSignal(DIG_I_REG_ERR_WARN);
                 }
 
-                if(ccpars_limits.i_err_fault > 0.0)
+                if(ccpars_limits.i_err_fault[ccpars_load.select] > 0.0)
                 {
                     ccSigsEnableSignal(DIG_I_REG_ERR_FLT);
                 }
@@ -296,7 +305,7 @@ void ccSigsInit(void)
 
             // Current simulation signals
 
-            if(conv.sim_load_pars.load_undersampled_flag == 0)
+            if(conv.sim_load_pars.is_load_undersampled == false)
             {
                 ccSigsEnableSignal(ANA_I_MAGNET);
             }
@@ -311,7 +320,7 @@ void ccSigsInit(void)
             ccSigsEnableSignal(ANA_I_REF_DELAYED);
             ccSigsEnableSignal(DIG_I_REF_CLIP);
 
-            if(conv.i.lim_ref.rate_clip > 0.0)
+            if(ccpars_limits.i_rate[ccpars_load.select] > 0.0)
             {
                 ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
             }
@@ -326,8 +335,16 @@ void ccSigsInit(void)
         ccSigsEnableSignal(ANA_I_MEAS_FLTR);
         ccSigsEnableSignal(ANA_I_MEAS_EXTR);
         ccSigsEnableSignal(DIG_I_MEAS_TRIP);
-        ccSigsEnableSignal(DIG_I_MEAS_LOW);
-        ccSigsEnableSignal(DIG_I_MEAS_ZERO);
+
+        if(ccpars_limits.i_low[ccpars_load.select] > 0.0)
+        {
+            ccSigsEnableSignal(DIG_I_MEAS_LOW);
+        }
+
+        if(ccpars_limits.i_zero[ccpars_load.select] > 0.0)
+        {
+            ccSigsEnableSignal(DIG_I_MEAS_ZERO);
+        }
 
         // RMS current signals
 
@@ -348,16 +365,16 @@ void ccSigsInit(void)
 
         // RMS_LOAD current signals
 
-        if(ccpars_limits.i_rms_load_tc > 0.0)
+        if(ccpars_limits.i_rms_load_tc[ccpars_load.select] > 0.0)
         {
             ccSigsEnableSignal(ANA_I_RMS_LOAD);
 
-            if(ccpars_limits.i_rms_load_warning > 0.0)
+            if(ccpars_limits.i_rms_load_warning[ccpars_load.select] > 0.0)
             {
                 ccSigsEnableSignal(DIG_I_RMS_LOAD_WARN);
             }
 
-            if(ccpars_limits.i_rms_load_fault > 0.0)
+            if(ccpars_limits.i_rms_load_fault[ccpars_load.select] > 0.0)
             {
                 ccSigsEnableSignal(DIG_I_RMS_LOAD_FLT);
             }
@@ -589,10 +606,11 @@ void ccSigsStore(double time)
     }
 }
 /*---------------------------------------------------------------------------------------------------------*/
-static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n_points, char label)
+static uint32_t ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, char label)
 {
     double         time;
     uint32_t       iteration_idx;
+    uint32_t       n_points = 0;
 
     if(signals[sig_idx].control == REG_ENABLED)
     {
@@ -607,149 +625,144 @@ static void ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, uint32_t *n
                 time = conv.iter_period * iteration_idx;
 
                 fprintf(f,"[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
-                (*n_points)++;
+                n_points++;
             }
         }
+
         fputs("]\n },\n",f);
     }
+
+    return(n_points);
 }
 /*---------------------------------------------------------------------------------------------------------*/
-void ccSigsFlot(FILE *f, char *filename)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will print the flot data and footer
-\*---------------------------------------------------------------------------------------------------------*/
+static uint32_t ccSigsFlotRefs(FILE *f, double end_time)
 {
-    uint32_t       func_idx;
-    uint32_t       iteration_idx;
+    uint32_t       cyc_sel;
+    uint32_t       n_points;
+
+    // For each cycle selector
+
+    for(cyc_sel = n_points = 0 ; cyc_sel < CC_NUM_CYC_SELS ; cyc_sel++)
+    {
+        if(ccrun.is_used[cyc_sel])
+        {
+            uint32_t cycle_idx;
+
+            fprintf(f,"\"(%u) %s\": { lines: { show:false }, points: { show:true },\ndata:[",
+                      cyc_sel, ccParsEnumString(enum_function_type, ccpars_ref.function[cyc_sel][0]));
+
+            for(cycle_idx = 0 ; cycle_idx < ccrun.num_cycles ; cycle_idx++)
+            {
+                if(cyc_sel == ccpars_global.cycle_selector[cycle_idx])
+                {
+                    uint32_t    n;
+                    uint32_t    iteration_idx;
+                    double      time = 0.0;;
+                    double      end_func_time;
+
+                    fprintf(f,"[%.6f,%.7E],[%.6f,%.7E],[%.6f,%.7E],",
+                              ccrun.func[cycle_idx].func_start_time,
+                              ccrun.fg_meta[cyc_sel].range.start,
+                              ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay,
+                              ccrun.fg_meta[cyc_sel].range.start,
+                              ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccrun.fg_meta[cyc_sel].duration,
+                              ccrun.fg_meta[cyc_sel].range.end);
+
+                    n_points += 3;
+
+                    switch(ccpars_ref.function[cyc_sel][0])
+                    {
+                    default: break;     // Suppress compiler warning
+
+                    case FG_TABLE:
+                    case FG_DIRECT:
+
+                        n = table_pars[0].num_elements[cyc_sel] - 1;
+
+                        for(iteration_idx = 1 ; iteration_idx < n ; iteration_idx++)
+                        {
+                            time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccpars_table.time[cyc_sel][iteration_idx];
+
+                            if(time < end_time)
+                            {
+                                fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[cyc_sel][iteration_idx]);
+                                n_points++;
+                            }
+                        }
+                        break;
+
+                    case FG_PPPL:
+
+                        time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay;
+
+                        fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref[cyc_sel][0]);
+                        n_points++;
+
+                        n = ccpars_pppl.pars[cyc_sel].num_segs - 1;
+
+                        for(iteration_idx = 1 ; iteration_idx < n ; iteration_idx++)
+                        {
+                            time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccpars_pppl.pars[cyc_sel].time[iteration_idx];
+
+                            if(time < end_time)
+                            {
+                                fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pars[cyc_sel].a0[iteration_idx]);
+                                n_points++;
+                            }
+                        }
+                        break;
+
+                    case FG_PLEP:
+
+                        time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay;
+
+                        fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref[cyc_sel][0]);
+                        n_points++;
+
+                        for(iteration_idx = 1 ; iteration_idx <  FG_PLEP_N_SEGS ; iteration_idx++)
+                        {
+                            time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccpars_plep.pars[cyc_sel].time[iteration_idx];
+
+                            if(time < end_time)
+                            {
+                                fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.pars[cyc_sel].normalisation * ccpars_plep.pars[cyc_sel].ref[iteration_idx]);
+                                n_points++;
+                            }
+                        }
+                        break;
+                    }
+
+                    // End of function point
+
+                    end_func_time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccrun.fg_meta[cyc_sel].duration;
+
+                    if(end_func_time > time && end_func_time < end_time)
+                    {
+                        fprintf(f,"[%.6f,%.7E]", end_func_time, ccrun.fg_meta[cyc_sel].range.end);
+                    }
+                }
+            }
+            fputs("]\n }\n,",f);
+        }
+    }
+
+    return(n_points);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static uint32_t ccSigsFlotAnalog(FILE *f)
+{
     uint32_t       sig_idx;
-    uint32_t       n_points = 0;
-    double         time;
-    double         end_time;
-    float          time_offset;
-    struct cccmds *cmd;
-
-    // Warn user if FLOT data was truncated
-
-    if(flot_index >= ccpars_global.flot_points_max)
-    {
-        printf("Warning - FLOT data truncated to %u points\n",ccpars_global.flot_points_max);
-    }
-
-    // Print start of FLOT html page including flot path to all the javascript libraries
-
-    fprintf(f,flot[0],filename,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
-
-    // For each function
-
-    end_time = (double)flot_index * 1.0E-6 * (double)ccpars_global.iter_period_us;
-
-    for(func_idx = 0 ; func_idx < ccrun.num_functions ; func_idx++, n_points+=2)
-    {
-        fprintf(f,"\"%u.%s\": { lines: { show:false }, points: { show:true },\ndata:[[%.6f,%.7E],[%.6f,%.7E],",
-                  func_idx+1, ccParsEnumString(function_type, ccpars_global.function[func_idx]),
-                  ccrun.func[func_idx].func_start_time,
-                  ccrun.func[func_idx].fg_meta.range.start,
-                  ccrun.func[func_idx].func_start_time + ccpars_global.run_delay,
-                  ccrun.func[func_idx].fg_meta.range.start);
-
-        switch(ccpars_global.function[func_idx])
-        {
-        default: break;     // Suppress compiler warning
-
-        case FG_TABLE:
-        case FG_DIRECT:
-
-            for(iteration_idx = 1 ; iteration_idx < (table_pars[0].num_elements-1) ; iteration_idx++)
-            {
-                time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay + ccpars_table.time[iteration_idx];
-
-                if(time < end_time)
-                {
-                    fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[iteration_idx]);
-                    n_points++;
-                }
-            }
-            break;
-
-        case FG_PPPL:
-
-            time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay;
-
-            fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref);
-            n_points++;
-
-            for(iteration_idx = 1 ; iteration_idx < (ccpars_pppl.pars.num_segs-1) ; iteration_idx++)
-            {
-                time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay + ccpars_pppl.pars.time[iteration_idx];
-
-                if(time < end_time)
-                {
-                    fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pars.a0[iteration_idx]);
-                    n_points++;
-                }
-            }
-            break;
-
-        case FG_PLEP:
-
-            time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay;
-
-            fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref);
-            n_points++;
-
-            for(iteration_idx = 1 ; iteration_idx <  FG_PLEP_N_SEGS ; iteration_idx++)
-            {
-                time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay + ccpars_plep.pars.time[iteration_idx];
-
-                if(time < end_time)
-                {
-                    fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.pars.normalisation * ccpars_plep.pars.ref[iteration_idx]);
-                    n_points++;
-                }
-            }
-            break;
-        }
-
-        // End of function point
-
-        time = ccrun.func[func_idx].func_start_time + ccpars_global.run_delay + ccrun.func[func_idx].fg_meta.duration;
-
-        if(time < end_time)
-        {
-            fprintf(f,"[%.6f,%.7E]", time, ccrun.func[func_idx].fg_meta.range.end);
-        }
-
-        fputs("]\n }\n,",f);
-    }
-
-    // Mark dynamic economy if in use
-
-    if(ccrun.dyn_eco.log.length > 0 && ccrun.dyn_eco.log.time[0] < end_time)
-    {
-        fputs("\"DYN_ECO\": { lines: { show:false }, points: { show:true },\ndata:[",f);
-
-        for(sig_idx = 0 ; sig_idx < ccrun.dyn_eco.log.length && ccrun.dyn_eco.log.time[sig_idx] < end_time ; sig_idx++, n_points++)
-        {
-            fprintf(f,"[%.6f,%.7E],", ccrun.dyn_eco.log.time[sig_idx], ccrun.dyn_eco.log.ref[sig_idx]);
-        }
-        fputs("]\n },\n",f);
-     }
-
-    // Highlight invalid points if enabled
-
-    if(ccpars_meas.invalid_meas_period_iters > 0 && ccpars_meas.invalid_meas_repeat_iters > 0)
-    {
-        ccSigsFlotInvalidSignal(f, ANA_B_MEAS, &n_points, 'B');
-        ccSigsFlotInvalidSignal(f, ANA_I_MEAS, &n_points, 'I');
-        ccSigsFlotInvalidSignal(f, ANA_V_MEAS, &n_points, 'V');
-    }
+    uint32_t       n_points;
 
     // Print enabled analog signal values
 
-    for(sig_idx = 0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
+    for(sig_idx = n_points = 0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
     {
         if(signals[sig_idx].control == REG_ENABLED && signals[sig_idx].type == ANALOG)
         {
+            uint32_t       iteration_idx;
+            float          time_offset;
+
             time_offset = signals[sig_idx].time_offset;
 
             fprintf(f,"\"%s\": { lines: { steps:%s }, points: { show:false },\ndata:[",
@@ -765,6 +778,8 @@ void ccSigsFlot(FILE *f, char *filename)
                    signals[sig_idx].meta_data[0] != 'T' ||
                    signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
                 {
+                    double  time;
+
                     if(ccpars_global.reverse_time == REG_DISABLED)
                     {
                         time = conv.iter_period * iteration_idx + time_offset;
@@ -782,16 +797,20 @@ void ccSigsFlot(FILE *f, char *filename)
         }
     }
 
-    // Print start of digital signals
+    return(n_points);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static uint32_t ccSigsFlotDigital(FILE *f)
+{
+    uint32_t       sig_idx;
+    uint32_t       n_points;
 
-    fputs(flot[1],f);
-
-    // Print enabled digital signal values
-
-    for(sig_idx = 0, dig_offset = -DIG_STEP/2.0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
+    for(sig_idx = n_points = 0, dig_offset = -DIG_STEP/2.0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
     {
         if(signals[sig_idx].control == REG_ENABLED && signals[sig_idx].type == DIGITAL)
         {
+            uint32_t  iteration_idx;
+
             dig_offset -= 1.0;
 
             fprintf(f,"\"%s\": {\n lines: { steps:%s },\n data:[",
@@ -800,6 +819,8 @@ void ccSigsFlot(FILE *f, char *filename)
 
             for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
             {
+                double time;
+
                 // Only print changed values when meta_data is TRAIL_STEP
 
                 if(iteration_idx == 0 ||
@@ -824,16 +845,76 @@ void ccSigsFlot(FILE *f, char *filename)
         }
     }
 
+    return(n_points);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+void ccSigsFlot(FILE *f, char *filename)
+{;
+    uint32_t       n_points;
+    struct cccmds *cmd;
+    double         end_time = (double)flot_index * 1.0E-6 * (double)ccpars_global.iter_period_us;
+
+    // Warn user if FLOT data was truncated
+
+    if(flot_index >= ccpars_global.flot_points_max)
+    {
+        printf("Warning - FLOT data truncated to %u points\n",ccpars_global.flot_points_max);
+    }
+
+    // Print start of FLOT html page including flot path to all the javascript libraries
+
+    fprintf(f,flot[0],filename,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
+
+    // Create Flot signals using points to represent the reference data
+
+    n_points = ccSigsFlotRefs(f, end_time);
+
+    // Mark dynamic economy if in use
+
+    if(ccrun.dyn_eco.log.length > 0 && ccrun.dyn_eco.log.time[0] < end_time)
+    {
+        uint32_t       sig_idx;
+
+        fputs("\"DYN_ECO\": { lines: { show:false }, points: { show:true },\ndata:[",f);
+
+        for(sig_idx = 0 ; sig_idx < ccrun.dyn_eco.log.length && ccrun.dyn_eco.log.time[sig_idx] < end_time ; sig_idx++, n_points++)
+        {
+            fprintf(f,"[%.6f,%.7E],", ccrun.dyn_eco.log.time[sig_idx], ccrun.dyn_eco.log.ref[sig_idx]);
+        }
+        fputs("]\n },\n",f);
+     }
+
+    // Highlight invalid points if enabled
+
+    if(ccpars_meas.invalid_meas_period_iters > 0 && ccpars_meas.invalid_meas_repeat_iters > 0)
+    {
+        n_points += ccSigsFlotInvalidSignal(f, ANA_B_MEAS, 'B');
+        n_points += ccSigsFlotInvalidSignal(f, ANA_I_MEAS, 'I');
+        n_points += ccSigsFlotInvalidSignal(f, ANA_V_MEAS, 'V');
+    }
+
+    // Print enabled analog signal values
+
+    n_points += ccSigsFlotAnalog(f);
+
+    // Print start of digital signals
+
+    fputs(flot[1],f);
+
+    // Print enabled digital signal values
+
+    n_points += ccSigsFlotDigital(f);
+
     // Print command parameter values to become a colorbox pop-up
 
     fprintf(f, flot[2], CC_VERSION);    // Version is embedded in the About pop-up title: "About cctest vx.xx"
 
     for(cmd = cmds ; cmd->name != NULL ; cmd++)
     {
-        if(cmd->enabled == 1)
+        if(cmd->is_enabled == true)
         {
             fputc('\n',f);
-            ccParsPrintAll(f, cmd->name, cmd->pars);
+            ccParsPrintAll(f, cmd->name, cmd->pars, CC_ALL_CYCLES, CC_NO_INDEX);
         }
     }
 
@@ -841,9 +922,9 @@ void ccSigsFlot(FILE *f, char *filename)
 
     fputs(flot[3],f);
 
-    fprintf(f,"%-*s %u\n\n", PARS_INDENT, "FLOT:n_points", n_points);
+    fprintf(f,"%-*s %u\n\n", PARS_INDENT, "FLOT n_points", n_points);
 
-    ccParsPrintDebug(f);
+    ccDebugPrint(f);
 
     // Write HTML file footer
 
@@ -851,9 +932,6 @@ void ccSigsFlot(FILE *f, char *filename)
 }
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccSigsReportBadValues(void)
-/*---------------------------------------------------------------------------------------------------------*\
-  This function will report the number of bad values submitted for all signals
-\*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t    idx;
     uint32_t    exit_status = EXIT_SUCCESS;

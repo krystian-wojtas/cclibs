@@ -41,14 +41,18 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
     float          grad;           // Segment gradient
     struct fg_meta local_meta;     // Local meta data in case user meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, config->ref[0]);  // Reset meta structure - uses local_meta if meta is NULL
+    // Reset meta structure - uses local_meta if meta is NULL
+
+    meta = fgResetMeta(meta, &local_meta, config->ref[0]);
 
     // Initial checks of data integrity
 
     if(config->ref_n_elements < 2 ||                        // If less than 2 points or
        config->ref_n_elements != config->time_n_elements)   // time and ref arrays are not the same length
     {
-        return(FG_BAD_ARRAY_LEN);                               // Report bad array len
+        fg_error = FG_BAD_ARRAY_LEN;                            // Report bad array len
+        goto error;
+
     }
 
     if(config->time[0] != 0.0)                              // If first time value is not zero
@@ -57,7 +61,8 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
         {
             meta->error.data[0] = config->time[0];
         }
-        return(FG_INVALID_TIME);                                // Report invalid time
+        fg_error = FG_INVALID_TIME;                             // Report invalid time
+        goto error;
     }
 
     // Prepare table parameters
@@ -90,7 +95,8 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
             meta->error.data[1] = pars->time[i - 1] + min_time_step;
             meta->error.data[2] = min_time_step;
 
-            return(FG_INVALID_TIME);                                // Report INVALID TIME
+            fg_error = FG_INVALID_TIME;                             // Report invalid time
+            goto error;
         }
 
         fgSetMinMax(meta, pars->ref[i]);
@@ -108,7 +114,7 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
                (fg_error = fgCheckRef(limits, limits_polarity, pars->ref[i - 1], grad, 0.0, meta)))
             {
                 meta->error.index = i;
-                return(fg_error);
+                goto error;
             }
         }
     }
@@ -131,6 +137,13 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
     meta->range.end = pars->ref [i - 1];
 
     return(FG_OK);
+
+    // Error - store error code in meta and return to caller
+
+    error:
+
+        meta->fg_error = fg_error;
+        return(fg_error);
 }
 
 

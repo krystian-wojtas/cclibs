@@ -66,7 +66,8 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
         n_pppls != config->numels_rate4         ||
         n_pppls != config->numels_ref4)
     {
-        return(FG_BAD_ARRAY_LEN);
+        fg_error = FG_BAD_ARRAY_LEN;
+        goto error;
     }
 
     // Prepare to process all PPPLs
@@ -109,7 +110,8 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
             meta->error.data[2] = acceleration[0];
             meta->error.data[3] = acceleration[2];
 
-            return(FG_BAD_PARAMETER);
+            fg_error = FG_BAD_PARAMETER;
+            goto error;
         }
 
         delta_time[3] = config->duration4[pppl_idx];
@@ -132,7 +134,8 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
             meta->error.data[2] = r[3];
             meta->error.data[3] = delta_time[0];
 
-            return(FG_BAD_PARAMETER);
+            fg_error = FG_BAD_PARAMETER;
+            goto error;
         }
 
         rate[2] = sqrt(acc_pow2) * (acceleration[2] > 0.0 ? -1.0 : 1.0);
@@ -147,7 +150,8 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
             meta->error.data[2] = rate[1] + rate[2];
             meta->error.data[3] = acc_pow2;
 
-            return(FG_BAD_PARAMETER);
+            fg_error = FG_BAD_PARAMETER;
+            goto error;
         }
 
         delta_time[2] = (rate[3] - rate[2]) / acceleration[2];
@@ -174,7 +178,8 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
                 meta->error.data[2] = r[3];
                 meta->error.data[3] = delta_time[1];
 
-                return(FG_BAD_PARAMETER);
+                fg_error = FG_BAD_PARAMETER;
+                goto error;
             }
 
             rate[2] = sqrt(acc_pow2) * (acceleration[2] > 0.0 ? -1.0 : 1.0);
@@ -189,7 +194,8 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
                 meta->error.data[2] = rate[0] + rate[2];
                 meta->error.data[3] = acc_pow2;
 
-                return(FG_BAD_PARAMETER);
+                fg_error = FG_BAD_PARAMETER;
+                goto error;
             }
 
             delta_time[2] = (rate[3] - rate[2]) / acceleration[2];
@@ -209,7 +215,8 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
             meta->error.data[1] = delta_time[1];
             meta->error.data[2] = delta_time[2];
 
-            return(FG_INVALID_TIME);
+            fg_error = FG_INVALID_TIME;
+            goto error;
         }
 
         time += delta_time[0];
@@ -259,7 +266,7 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
                                            segs_a0[seg_idx], segs_a1[seg_idx], segs_a2[seg_idx], meta)))
         {
             meta->error.index = seg_idx + 1;
-            return(fg_error);
+            goto error;
         }
     }
 
@@ -272,6 +279,13 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
     meta->range.end = segs_a0[num_segs-1];
 
     return(FG_OK);
+
+    // Error - store error code in meta and return to caller
+
+    error:
+
+        meta->fg_error = fg_error;
+        return(fg_error);
 }
 
 

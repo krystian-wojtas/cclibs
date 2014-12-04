@@ -38,6 +38,7 @@
 // Include header files
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // Constants
 
@@ -56,18 +57,12 @@ enum reg_meas_select
     REG_MEAS_NUM_SIGNALS                                         //!< Number of options in reg_meas_select
 };
 
-enum reg_meas_status
-{
-    REG_MEAS_SIGNAL_OK,
-    REG_MEAS_SIGNAL_INVALID
-};
-
 // Measurement structures
 
 struct reg_meas_signal
 {
     float                 signal;                                //!< Measurement signal
-    enum reg_meas_status  status;                                //!< Measurement signal status
+    bool                  is_valid;                              //!< Measurement signal is valid flag
 };
 
 /*!
@@ -75,7 +70,7 @@ struct reg_meas_signal
  */
 struct reg_meas_filter
 {
-    uint32_t              enable;                                //!< Enable filter control
+    bool                  is_running;                            //!< Filter is running control flag
 
     uint32_t              extrapolation_len_iters;               //!< Extrapolation length (normally regulation period)
     uint32_t              extrapolation_index;                   //!< Index to oldest sample in extrapolation buffer

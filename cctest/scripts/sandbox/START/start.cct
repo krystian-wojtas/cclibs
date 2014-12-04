@@ -1,7 +1,7 @@
 # CCTEST - START tests script
 
 GLOBAL ITER_PERIOD_US       1000
-GLOBAL FG_LIMITS            ENABLED
+GLOBAL FG_LIMITS            DISABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL GROUP                sandbox
 GLOBAL PROJECT              START
@@ -12,17 +12,6 @@ VS V_REF_DELAY_ITERS        1.0
 VS BANDWIDTH                2000
 VS TAU_ZERO                 0.0
 VS Z                        0.9
-
-# Load parameters
-
-LOAD OHMS_SER               0.2
-LOAD OHMS_PAR               50.0
-LOAD OHMS_MAG               0.2
-LOAD HENRYS                 0.5
-LOAD HENRYS_SAT             0.2
-LOAD I_SAT_START            5.0
-LOAD I_SAT_END              9.0
-LOAD SIM_TC_ERROR           0.1
 
 # Measurement parameters
 
@@ -37,43 +26,72 @@ MEAS I_SIM_TONE_AMP         0.0
 
 # LIMITS parameters
 
-LIMITS I_POS                10
-LIMITS I_MIN                1
-LIMITS I_NEG                0
-LIMITS I_RATE               10
-LIMITS I_ACCELERATION       30
-LIMITS I_CLOSELOOP          0.5
+LIMITS I_POS                 10      10      10      10
+LIMITS I_MIN                  1       1       1       1
+LIMITS I_NEG                  0       0       0       0
+LIMITS I_RATE                10      10      10      10
+LIMITS I_ACCELERATION        30      30      30      30
+LIMITS I_CLOSELOOP          0.5     0.5     0.5     0.5
 LIMITS INVERT               DISABLED
+
+# Load parameters
+
+LOAD OHMS_SER               0.4     0.3     0.0     0.2
+LOAD OHMS_PAR              50.0    50.0     0.5     1E8
+LOAD OHMS_MAG               0.1     0.2     0.1     0.0
+LOAD HENRYS                 0.5     0.5     0.5     1E-6
+LOAD HENRYS_SAT             0.2     0.2     0.2     0.2
+LOAD I_SAT_START            5.0     5.0     5.0     5.0
+LOAD I_SAT_END              9.0     9.0     9.0     9.0
+
+# Current regulation
+
+IREG PERIOD_ITERS           1       10      10      10
+IREG AUXPOLE1_HZ            10      10      10      1E5
+IREG AUXPOLES2_HZ           10      10      10      10
+IREG AUXPOLES2_Z            0.5     0.5     0.5     0.8
+
+# Defaults for PREFUNC
+
+DEFAULT I_ACCELERATION         1.000000E+01
+DEFAULT I_DECELERATION         1.000000E+01
+DEFAULT I_LINEAR_RATE          0.000000E+00
 
 # - Current START - RAMP UP - ABORT DOWN -
 
 GLOBAL ABORT_TIME           2.2
 GLOBAL RUN_DELAY            0.2
 GLOBAL STOP_DELAY           0.2
-GLOBAL REG_MODE             CURRENT
-GLOBAL FUNCTION             START RAMP
 
-START ACCELERATION          5.0
-START LINEAR_RATE           3.0
-START DECELERATION          10.0
+GLOBAL CYCLE_SELECTOR       0 1
 
-RAMP INITIAL_REF            2
-RAMP FINAL_REF              3.0
-RAMP ACCELERATION           10.0
-RAMP DECELERATION           20.0
-RAMP LINEAR_RATE            0.0
+REF REG_MODE(0)             CURRENT CURRENT
+REF FUNCTION(0)             RAMP RAMP
+
+RAMP INITIAL_REF            0
+RAMP FINAL_REF              1.0
+RAMP ACCELERATION           5.0
+RAMP DECELERATION           10.0
+RAMP LINEAR_RATE            3.0
+
+RAMP INITIAL_REF(1)         2.0
+RAMP FINAL_REF(1)           3.0
+RAMP ACCELERATION(1)        10.0
+RAMP DECELERATION(1)        20.0
+RAMP LINEAR_RATE(1)         0.0
 
 # CURRENT Actuation
 
 GLOBAL ACTUATION            CURRENT
 
-IREG PERIOD_ITERS           1
+LOAD SELECT                 0
 GLOBAL FILE                 start-ramp-abort-iref
 RUN
 
 LIMITS INVERT               ENABLED
-RAMP INITIAL_REF            -2
-RAMP FINAL_REF              -3.0
+RAMP FINAL_REF              -1.0
+RAMP INITIAL_REF(1)         -2
+RAMP FINAL_REF(1)           -3.0
 GLOBAL FILE                 start-ramp-abort-iref-invert
 RUN
 
@@ -81,39 +99,28 @@ RUN
 
 GLOBAL ACTUATION            VOLTAGE
 LIMITS INVERT               DISABLED
-RAMP INITIAL_REF            2
-RAMP FINAL_REF              3.0
+RAMP FINAL_REF              1.0
+RAMP INITIAL_REF(1)         2
+RAMP FINAL_REF(1)           3.0
 
-IREG PERIOD_ITERS           10
-IREG AUXPOLE1_HZ            10
-IREG AUXPOLES2_HZ           10
-IREG AUXPOLES2_Z            0.5
+# Inductive load
 
+LOAD SELECT                 1
+LOAD SIM_TC_ERROR           -0.3
 GLOBAL FILE                 start-ramp-abort-vref
 RUN
 
 # Small Ohms_par load
 
-LOAD OHMS_SER               0.0
-LOAD OHMS_PAR               0.5
-LOAD OHMS_MAG               0.1
-LOAD SIM_TC_ERROR           -0.0
-
+LOAD SELECT                 2
+LOAD SIM_TC_ERROR           0.2
 GLOBAL FILE                 start-ramp-abort-vref-par
 RUN
 
 # Resistive load
 
-LOAD OHMS_SER               1.0
-LOAD OHMS_PAR               1E8
-LOAD OHMS_MAG               0.0
-LOAD HENRYS                 1.0E-6
-LOAD SIM_TC_ERROR           -0.3
-
-IREG AUXPOLE1_HZ            1E5
-IREG AUXPOLES2_HZ           10
-IREG AUXPOLES2_Z            0.8
-
+LOAD SELECT                 3
+LOAD SIM_TC_ERROR           0.3
 GLOBAL FILE                 start-ramp-abort-vref-resistive
 RUN
 

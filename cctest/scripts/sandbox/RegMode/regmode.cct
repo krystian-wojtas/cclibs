@@ -1,7 +1,5 @@
 # Test default parameters
 
-GLOBAL REG_MODE             F C V F V C F
-GLOBAL FUNCTION             SINE CTRIM PPPL PLEP RAMP TABLE PLEP
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL FG_LIMITS            ENABLED
 GLOBAL GROUP                sandbox
@@ -17,39 +15,58 @@ BREG PERIOD_ITERS           11
 
 # Mixed functions
 
-TEST INITIAL_REF            1
+REF FUNCTION(1)             SINE CTRIM PPPL PLEP RAMP TABLE PULSE
+REF REG_MODE(1)             F    C     V    F    V    C     F
 
-PLEP INITIAL_REF            2
-PLEP FINAL_REF              3
+GLOBAL CYCLE_SELECTOR       1    2     3    4    5    6     7
 
-PPPL INITIAL_REF            2
-PPPL REF4                   3
+TEST INITIAL_REF(1)         1
 
-TRIM INITIAL_REF            2
-TRIM FINAL_REF              3
+PLEP INITIAL_REF()         2
+PLEP FINAL_REF()           3
 
-RAMP INITIAL_REF            2
-RAMP FINAL_REF              3
-RAMP LINEAR_RATE            0
+PPPL INITIAL_REF(3)         2
+PPPL REF4(3)                3
 
-TABLE REF                   2 2.5 2.5 3.0
+TRIM INITIAL_REF(2)         2
+TRIM FINAL_REF(2)           3
+
+RAMP INITIAL_REF(5)         2
+RAMP FINAL_REF(5)           3
+RAMP LINEAR_RATE(5)         0
+
+TABLE REF()                 2 2.5 2.5 3.0
+
+PULSE TIME(7)               0
+PULSE DURATION(7)           1
+PULSE REF(7)                4
 
 MEAS I_SIM_NOISE_PP         1E-3
 MEAS B_SIM_NOISE_PP         1E-3
 
-PREFUNC ACCELERATION        10
-PREFUNC DECELERATION        10
+DEFAULT V_ACCELERATION      10
+DEFAULT V_DECELERATION      10
+DEFAULT I_ACCELERATION      10
+DEFAULT I_DECELERATION      10
+DEFAULT B_ACCELERATION      10
+DEFAULT B_DECELERATION      10
 
 GLOBAL FILE                 mixed
 RUN
 
-# Tables 
+# Tables
 
-GLOBAL REG_MODE             F C F C F C
-GLOBAL FUNCTION             TABLE TABLE TABLE TABLE TABLE TABLE
+REF FUNCTION(1)             TABLE TABLE
+REF REG_MODE(1)             F     C
 
-PREFUNC ACCELERATION        2
-PREFUNC DECELERATION        10
+GLOBAL CYCLE_SELECTOR       1    2    1
+
+DEFAULT V_ACCELERATION      2
+DEFAULT V_DECELERATION      10
+DEFAULT I_ACCELERATION      2
+DEFAULT I_DECELERATION      10
+DEFAULT B_ACCELERATION      2
+DEFAULT B_DECELERATION      10
 
 GLOBAL FILE                 tables
 RUN

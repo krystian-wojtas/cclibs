@@ -3,7 +3,6 @@
 GLOBAL RUN_DELAY            1.0
 GLOBAL STOP_DELAY           5.0
 GLOBAL ITER_PERIOD_US       100
-GLOBAL REG_MODE             CURRENT
 GLOBAL FG_LIMITS            DISABLED
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL GROUP                tests
@@ -71,7 +70,9 @@ PLEP FINAL_REF              30.0
 PLEP ACCELERATION           3.0
 PLEP LINEAR_RATE            4
 
-GLOBAL FUNCTION             PLEP
+REF FUNCTION                PLEP
+REF REG_MODE                CURRENT
+
 GLOBAL FILE                 CMS
 RUN
 
@@ -136,7 +137,6 @@ PLEP FINAL_REF              30.0
 PLEP ACCELERATION           7.0
 PLEP LINEAR_RATE            6
 
-GLOBAL FUNCTION             PLEP
 GLOBAL FILE                 ATLAS
 RUN
 

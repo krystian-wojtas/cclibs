@@ -70,9 +70,9 @@ void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, struct reg_load_par
                        load_pars->sat.i_end);
     }
 
-    sim_load_pars->tc_error               = sim_load_tc_error;
-    sim_load_pars->period_tc_ratio        = sim_period / sim_load_pars->load_pars.tc;
-    sim_load_pars->load_undersampled_flag = (sim_load_pars->period_tc_ratio > 3.0);
+    sim_load_pars->tc_error             = sim_load_tc_error;
+    sim_load_pars->period_tc_ratio      = sim_period / sim_load_pars->load_pars.tc;
+    sim_load_pars->is_load_undersampled = (sim_load_pars->period_tc_ratio > 3.0);
 }
 
 
@@ -88,7 +88,7 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
 {
     vars->circuit_voltage = i_init / pars->load_pars.gain2;
 
-    if(pars->load_undersampled_flag == 0)
+    if(pars->is_load_undersampled == false)
     {
         vars->integrator   = vars->circuit_voltage * pars->load_pars.gain1;
         vars->compensation = 0.0;
@@ -101,7 +101,7 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
 
 void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init)
 {
-    if(pars->load_undersampled_flag == 0)
+    if(pars->is_load_undersampled == false)
     {
         vars->integrator      = v_init * pars->load_pars.gain1;
         vars->circuit_voltage = v_init;
@@ -149,12 +149,12 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_
 
         if(pars->vs_delay_iters < REG_VS_SIM_UNDERSAMPLED_THRESHOLD)
         {
-            pars->vs_undersampled_flag = 1;
+            pars->is_vs_undersampled = true;
             pars->gain = 1.0;
         }
         else
         {
-            pars->vs_undersampled_flag = 0;
+            pars->is_vs_undersampled = false;
 
             // Tustin will match z-transform and s-transform at frequency f_pw
 
@@ -202,7 +202,7 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_
         memcpy(pars->num, num, sizeof(pars->num));
         memcpy(pars->den, den, sizeof(pars->den));
 
-        pars->vs_undersampled_flag  = 0;
+        pars->is_vs_undersampled = false;
 
         // Calculate gain of voltage source model and delay for a steady ramp
         // Steady ramp delay = Sum(i.(num[i] - den[i])) / Sum(num[i])
@@ -234,13 +234,13 @@ void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_
 
         if(pars->vs_delay_iters < REG_VS_SIM_UNDERSAMPLED_THRESHOLD)
         {
-            pars->vs_undersampled_flag = 1;
+            pars->is_vs_undersampled = true;
         }
     }
 
     // If model is under sampled, set model to be transparent
 
-    if(pars->vs_undersampled_flag == 1)
+    if(pars->is_vs_undersampled)
     {
         pars->den[0] = pars->num[0] = 1.0;
         pars->den[1] = pars->den[2] = pars->den[3] = pars->num[1] = pars->num[2] = pars->num[3] = 0.0;
@@ -302,8 +302,7 @@ float regSimVsRT(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, flo
     return(v_circuit);
 }
 
-float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars,
-                   uint32_t vs_undersampled_flag, float v_circuit)
+float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, bool is_vs_undersampled, float v_circuit)
 {
     float int_gain;
     float increment;
@@ -331,13 +330,13 @@ float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *var
 
     // When load is not under sampled the inductive transients are modelled with an integrator
 
-    if(pars->load_undersampled_flag == 0)
+    if(pars->is_load_undersampled == false)
     {
         int_gain = pars->period_tc_ratio / regLoadSatFactorRT(&pars->load_pars,vars->magnet_current);
 
         // If voltage source simulation is not under sampled use first-order interpolation of voltage
 
-        if(vs_undersampled_flag == 0)
+        if(is_vs_undersampled == false)
         {
             increment = int_gain * (pars->load_pars.gain1 * 0.5 * (v_circuit + vars->circuit_voltage) - vars->integrator);
         }

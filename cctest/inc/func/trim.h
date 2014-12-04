@@ -24,6 +24,8 @@
 #ifndef CCPARS_TRIM_H
 #define CCPARS_TRIM_H
 
+#include "ccTest.h"
+#include "ccPars.h"
 #include "libfg/trim.h"
 
 // GLOBALS is defined in source file where global variables should be defined
@@ -40,23 +42,23 @@ struct ccpars_trim
 {
     // cctest TRIM parameters
 
-    float                       initial_ref;            // Initial reference
-    struct fg_trim_config       config;                 // Libfg config struct for TRIM
+    float                       initial_ref[CC_NUM_CYC_SELS][1];      // Initial reference
+    enum fg_trim_type           type       [CC_NUM_CYC_SELS][1];      // Type of trim
+    float                       duration   [CC_NUM_CYC_SELS][1];      // Time duration
+    float                       final      [CC_NUM_CYC_SELS][1];      // Final reference
 
     // Libfg TRIM variables
 
-    struct fg_trim_pars         pars;                   // Libfg parameters for TRIM
+    struct fg_trim_pars         pars[CC_NUM_CYC_SELS];                // Libfg parameters for TRIM
 };
 
 CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim
 #ifdef GLOBALS
-= {//   Default value           Parameter
-        0.0,                 // TRIM INITIAL_REF
-        {
-            FG_TRIM_LINEAR,  // Overwritten by init function (LTRIM or CTRIM)
-            1.0,             // TRIM DURATION
-            1.0,             // TRIM FINAL
-        }
+= {// Default value                Parameter
+    { { 0.0            } },     // TRIM INITIAL_REF
+    { { FG_TRIM_LINEAR } },     // Overwritten by init function (LTRIM or CTRIM)
+    { { 1.0            } },     // TRIM DURATION
+    { { 1.0            } },     // TRIM FINAL
 }
 #endif
 ;
@@ -65,10 +67,10 @@ CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim
 
 CCPARS_TRIM_EXT struct ccpars   trim_pars[]
 #ifdef GLOBALS
-= {// "Signal name"  type,    max_n_els,*enum,        *value,                   num_defaults
-    { "INITIAL_REF", PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.initial_ref     }, 1 },
-    { "FINAL_REF",   PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.config.final    }, 1 },
-    { "DURATION",    PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.config.duration }, 1 },
+= {// "Signal name"  type,    max_n_els,*enum,        *value,                     num_defaults  flags
+    { "INITIAL_REF", PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.initial_ref[0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "FINAL_REF",   PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.final      [0][0] }, 1, PARS_CYCLE_SELECTOR },
+    { "DURATION",    PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.duration   [0][0] }, 1, PARS_CYCLE_SELECTOR },
     { NULL }
 }
 #endif

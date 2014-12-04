@@ -42,6 +42,7 @@
 
 #include "ccCmds.h"
 #include "ccTest.h"
+#include "ccInit.h"
 #include "ccRun.h"
 #include "ccRef.h"
 #include "ccSigs.h"
@@ -82,6 +83,10 @@ int main(int argc, char **argv)
 
     ccTestGetBasePath(argv[0]);
 
+    // Initialise parameter num_elements arrays
+
+    ccInitPars();
+
     // Set default group, project and filename
 
     for(cmd = default_commands ; *cmd != NULL ; cmd++)
@@ -117,44 +122,160 @@ int main(int argc, char **argv)
     exit(exit_status);
 }
 /*---------------------------------------------------------------------------------------------------------*/
+static uint32_t ccTestParseIndex(char **line, char delimiter, uint32_t *index)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function will try to translate a cycle selector in () or an array index in [].
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    long int value;
+    char    *index_string;
+    char    *remaining_string;
+
+    // Skip leading white space before index
+
+    index_string = *line + strspn(*line, " \t");
+
+    // Report failure if end of line reached
+
+    if(*index_string == '\0')
+    {
+        return(EXIT_FAILURE);
+    }
+
+    // If delimiters contain no value
+
+    if(*index_string == delimiter)
+    {
+        if(delimiter == ')')
+        {
+            // Empty cycle selector "()" means "all cycles"
+
+            *index = CC_ALL_CYCLES;
+            *line = index_string + 1;
+
+            return(EXIT_SUCCESS);
+        }
+
+        // Empty array index "[]" is not allowed
+
+        return(EXIT_FAILURE);
+    }
+
+    // Try to translate next characters into an integer
+
+    errno = 0;
+
+    value = strtol(index_string, &remaining_string, 10);
+
+    // Skip any trailing white space
+
+    index_string = remaining_string + strspn(remaining_string, " \t");
+
+    // Check trailing delimiter is valid and that integer was successfully converted,
+    // and if it is a cycle selector, that it is not out of range
+
+     if(*index_string != delimiter                      ||
+         errno != 0                                     ||
+         value  < 0                                     ||
+        ((delimiter == ')' && value >  CC_MAX_CYC_SEL)) ||
+        ((delimiter == ']' && value >= TABLE_LEN     )))
+     {
+         return(EXIT_FAILURE);
+     }
+
+     *index = (uint32_t)value;
+     *line  = index_string + 1;
+     return(EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+static uint32_t ccTestParseArg(char **line, size_t *arg_len)
+/*---------------------------------------------------------------------------------------------------------*/
+{
+    char     delimiter;
+    char    *remaining_string = *line;
+
+    *arg_len = strcspn(remaining_string, CC_ARG_DELIMITER "([");
+
+    remaining_string += *arg_len;
+
+    delimiter = *remaining_string;
+
+    if(delimiter != '\0')
+    {
+        // Nul terminate command string
+
+        *(remaining_string++) = '\0';
+
+        // If cycle selector is provided then parse the value
+
+        if(delimiter == '(')
+        {
+            if(ccTestParseIndex(&remaining_string, ')', &cctest.cyc_sel) == EXIT_FAILURE)
+            {
+                ccTestPrintError("invalid command cycle selector");
+                return(EXIT_FAILURE);
+            }
+
+            delimiter = *(remaining_string++);
+        }
+
+        // If array index is provided then parse the value
+
+        if(delimiter == '[')
+        {
+            if(ccTestParseIndex(&remaining_string, ']', &cctest.array_idx) == EXIT_FAILURE)
+            {
+                ccTestPrintError("invalid command array index");
+                return(EXIT_FAILURE);
+            }
+        }
+
+        remaining_string += strspn(remaining_string, CC_ARG_DELIMITER);
+    }
+
+    // If no more arguments then set line to NULL
+
+    if(*remaining_string == '\0')
+    {
+        remaining_string = NULL;
+    }
+
+    *line = remaining_string;
+
+    return(EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccTestParseLine(char *line)
 /*---------------------------------------------------------------------------------------------------------*\
   This function will try to set the current directory using the supplied parameter
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    int32_t      idx;
-    int32_t      cmd_idx;
-    char        *command;
-    size_t       command_len;
+    int32_t        idx;
+    int32_t        cmd_idx;
+    char          *command;
+    char          *remaining_string;
+    size_t         command_len;
     struct cccmds *cmd;
 
     // Skip leading white space and ignore empty lines or comment (#) lines
 
-    command = line + strspn(line, " \t");
+    remaining_string = command = line + strspn(line, " \t");
 
     if(*command == '\n' || *command == '\0' || *command == '#')
     {
         return(EXIT_SUCCESS);
     }
 
-    // Get first argument from line
+    // Initialise cycle selectors and array indexes
 
-    command_len = strcspn(command, CC_ARG_DELIMITER);
+    cctest.cyc_sel   = CC_NO_INDEX;
+    cctest.array_idx = CC_NO_INDEX;
 
-    line = command + command_len;
+    // Get first argument from line (command name) and optional cycle selector and array index
 
-    if(*line != '\0')
+    if(ccTestParseArg(&remaining_string, &command_len) == EXIT_FAILURE)
     {
-        *(line++) = '\0';
-
-        line += strspn(line, CC_ARG_DELIMITER);
-    }
-
-    // If no more arguments then set line to NULL
-
-    if(*line == '\0')
-    {
-        line = NULL;
+        return(EXIT_FAILURE);
     }
 
     // Compare first argument against list of commands
@@ -183,12 +304,81 @@ uint32_t ccTestParseLine(char *line)
 
     if(cmd_idx >= 0)
     {
-        return(cmds[cmd_idx].cmd_func(cmd_idx, &line));
+        return(cmds[cmd_idx].cmd_func(cmd_idx, &remaining_string));
     }
     else
     {
          ccTestPrintError("unknown command '%s'", ccTestAbbreviatedArg(command));
          return(EXIT_FAILURE);
+    }
+
+    return(EXIT_SUCCESS);
+}
+/*---------------------------------------------------------------------------------------------------------*/
+uint32_t ccTestGetParName(uint32_t cmd_idx, char **remaining_line, struct ccpars **par_matched)
+/*---------------------------------------------------------------------------------------------------------*\
+  This function analyse the next argument on the line which must be empty or a valid parameter name
+\*---------------------------------------------------------------------------------------------------------*/
+{
+    size_t              par_string_len;
+    char               *par_string = *remaining_line;
+    struct ccpars      *par;
+
+    // When a parameter name is provided, the command may not have a cycle selector or array index
+
+    if(cctest.cyc_sel != CC_NO_INDEX)
+    {
+        ccTestPrintError("unexpected command cycle selector");
+        return(EXIT_FAILURE);
+    }
+
+    if(cctest.array_idx != CC_NO_INDEX)
+    {
+        ccTestPrintError("unexpected command array index");
+        return(EXIT_FAILURE);
+    }
+
+    // Get next argument which is the parameter name and allow cycle selector and array index to be specified
+
+    if(ccTestParseArg(remaining_line, &par_string_len) == EXIT_FAILURE)
+    {
+        return(EXIT_FAILURE);
+    }
+
+    // Analyse argument to see if it is a known parameter name for the command.
+
+    for(par = cmds[cmd_idx].pars, *par_matched = NULL ; par->name != NULL ; par++)
+    {
+         // If command argument matches start or all of a command
+
+        if(strncasecmp(par->name, par_string, par_string_len) == 0)
+        {
+            // If argument exactly matches a parameter name then take use it
+
+            if(strlen(par->name) == par_string_len)
+            {
+                *par_matched = par;
+                break;
+            }
+
+            // If first partial match, remember command index
+
+            if(*par_matched == NULL)
+            {
+                *par_matched = par;
+            }
+            else // else second partial match so report error
+            {
+                ccTestPrintError("ambiguous %s parameter '%s'", cmds[cmd_idx].name, par_string);
+                return(EXIT_FAILURE);
+            }
+        }
+    }
+
+    if(*par_matched == NULL)
+    {
+        ccTestPrintError("unknown parameter for %s: '%s'", cmds[cmd_idx].name, ccTestAbbreviatedArg(par_string));
+        return(EXIT_FAILURE);
     }
 
     return(EXIT_SUCCESS);
@@ -202,32 +392,32 @@ char * ccTestGetArgument(char **remaining_line)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     char *arg = *remaining_line;
-    char *remains;
+    char *remaining_string;
 
     // if more arguments remain on the line
 
     if(arg != NULL)
     {
-        remains = arg + strcspn(arg, CC_ARG_DELIMITER);
+        remaining_string = arg + strcspn(arg, CC_ARG_DELIMITER);
 
         // Nul terminate the new argument and skip trailing delimiter characters
 
-        if(*remains != '\0')
+        if(*remaining_string != '\0')
         {
-            *(remains++) = '\0';
+            *(remaining_string++) = '\0';
 
-            remains += strspn(remains, CC_ARG_DELIMITER);
+            remaining_string += strspn(remaining_string, CC_ARG_DELIMITER);
         }
 
         // If no more arguments on the line then set *remaining_line to NULL
 
-        if(*remains == '\0')
+        if(*remaining_string == '\0')
         {
             *remaining_line = NULL;
         }
         else
         {
-            *remaining_line = remains;
+            *remaining_line = remaining_string;
         }
     }
 

@@ -1,0 +1,100 @@
+# CCTEST - HRS tests script
+
+GLOBAL RUN_DELAY            0.0
+GLOBAL STOP_DELAY           0.1
+GLOBAL ITER_PERIOD_US       1000
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL GROUP                tests
+GLOBAL PROJECT              HRS
+
+# Voltage source parameters
+
+VS V_REF_DELAY_ITERS        0.1
+VS BANDWIDTH                1000
+VS TAU_ZERO                 0.0
+VS Z                        0.9
+
+# Measurement parameters
+
+MEAS I_REG_SELECT           UNFILTERED
+MEAS I_DELAY_ITERS          0.13
+MEAS V_DELAY_ITERS          0.13
+MEAS I_FIR_LENGTHS          1,0
+MEAS I_SIM_NOISE_PP         0.0
+MEAS V_SIM_NOISE_PP         0.0
+MEAS TONE_HALF_PERIOD_ITERS 100
+MEAS I_SIM_TONE_AMP         0.0
+
+# Current regulation        ---- BRUKER ----        ---- COMMET ----            
+#                           HRS90       HRS60       HRS90       HRS60
+IREG PERIOD_ITERS           1           1           1           1             
+IREG AUXPOLE1_HZ            10          10          10          10
+IREG AUXPOLES2_HZ           10          10          10          10
+IREG AUXPOLES2_Z            0.5         0.5         0.5         0.5
+
+# Limits
+
+LIMITS I_POS                480.0       480.0       480.0       480.0            
+LIMITS I_MIN                0.0         0.0         0.0         0.0
+LIMITS I_NEG               -480.0      -480.0      -480.0      -480.0
+LIMITS I_RATE               50000.0     50000.0     50000.0     50000.0
+LIMITS I_ACCELERATION       5.0E6       5.0E6       5.0E6       5.0E6
+LIMITS I_ERR_WARNING        5.0         5.0         5.0         5.0
+LIMITS I_ERR_FAULT          0.0         0.0         0.0         0.0
+
+LIMITS V_POS                70.0        50.0        120.0       120.0           
+LIMITS V_NEG               -70.0       -50.0       -120.0      -120.0
+LIMITS V_RATE               0.0      
+LIMITS V_ACCELERATION       0.0       
+LIMITS V_ERR_WARNING        0.0       
+LIMITS V_ERR_FAULT          0.0       
+
+# CCTEST load : HRS 90, HRS 60
+
+LOAD OHMS_SER               0.125       0.095       0.125       0.095         
+LOAD OHMS_PAR               1.0E8       1.0E8       1.0E8       1.0E8
+LOAD OHMS_MAG               0.0         0.0         0.0         0.0
+LOAD HENRYS                 0.015       0.011       0.015       0.011
+
+LOAD SIM_TC_ERROR           0.05
+
+# Reference
+
+PULSE TIME()                0.0
+PULSE DURATION()            1.0
+PULSE REF(1)                200         30          480         220
+
+REF REG_MODE()              CURRENT
+REF FUNCTION()              PULSE
+REF PREFUNC_POLICY()        RAMP
+
+DEFAULT I_ACCELERATION      1.000000E+05
+DEFAULT I_DECELERATION      1.000000E+02
+DEFAULT I_LINEAR_RATE       0.000000E+00
+
+GLOBAL CYCLE_SELECTOR       1 2 3 4 
+
+# Simulations with Bruker
+
+GLOBAL FILE                 hrs90-bruker
+LOAD SELECT                 1
+RUN
+
+GLOBAL FILE                 hrs60-bruker
+LOAD SELECT                 1
+RUN
+
+# Simulations with APOLLO
+
+PULSE REF(1)                200         -480          480         220
+
+GLOBAL FILE                 hrs90-comet
+LOAD SELECT                 2
+RUN
+
+GLOBAL FILE                 hrs60-comet
+LOAD SELECT                 3
+RUN
+
+# EOF

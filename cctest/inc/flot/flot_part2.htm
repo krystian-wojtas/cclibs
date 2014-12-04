@@ -400,8 +400,8 @@
   <!-- Divs for analog and digital plots -->
 
   <div id='analog_chart_div'  style='width:95%%;height:65%%;'></div>
-  <div id='analog_legend_div' style='position:absolute;left:5px;top:50px;width:200px;height:65%%;'></div>
   <div id='digital_chart_div' style='width:95%%;height:35%%;'></div>
+  <div id='analog_legend_div' style='position:absolute;left:5px;top:50px;width:200px;'></div>
 
   <!-- Pop-up texts -->
 
@@ -411,7 +411,7 @@
 
     <div id='inline_about' style='padding:20px;background:#fff;font-size:17px;text-align:justify;'>
         <p style='font-size:22px;font-weight:bold;'>About cctest v%.2f:</p>
-        <p style=>cctest is program that simulates the control of current or magnetic field in a magnet circuit
+        <p>cctest is program that simulates the control of current or magnetic field in a magnet circuit
         driven by a power converter.  It is written in standard C and uses the function generation library (libfg) and regulation
         library (libreg).  These libraries are also written in C and are part of the
         Converter Control libraries (cclibs) provided under the Lesser General Public License
@@ -432,7 +432,6 @@
 
     <div id='inline_help' style='padding:20px; background:#fff;font-size:17px;text-align:justify;'>
         <p style='font-size:22px;font-weight:bold;'>Controlling this chart:</p>
-        <p>
         <ul>
             <li><strong>Signal Visibility</strong><br/><br/>To toggle the visibility of an analog signal, click
                 on the signal's name in the legend.  To control the visiblity of all the analog signals, click
@@ -456,7 +455,6 @@
                 displayed in the lower chart.  Zooming the analog signals will zoom the time-axis
                 for the digital signals automatically.</li>
         </ul>
-        </p>
     </div>
 
     <!-- Simulation parameters pop-up -->
@@ -464,4 +462,4 @@
     <div id='inline_pars' style='padding:10px; background:#fff;font-size:14px;'>
 
         <p style='font-size:22px;font-weight:bold;'>cctest Simulation Parameters:</p>
-        <p><pre>
+        <pre>
