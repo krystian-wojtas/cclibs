@@ -1,7 +1,7 @@
 
 Welcome to CCLIBS
 
-For more information consult http://cern.ch/cclibs and http://github.com/qking/cclibs
+For more information consult https://cern.ch/cclibs and https://github.com/qking/cclibs
 
 Please let us know if you use cclibs in your projects: cclibs-devs@cern.ch
 
@@ -9,7 +9,7 @@ If you would like to be notified about new releases then write to this address a
 
 Libreg is nearly finished though minor changes and bug fixes continue since V5. Most of the change in V6 were in cctest and concerned support for the new GLOBAL CYCLE_SELECTOR parameter. This is step towards the new libcc and the multi-threaded ccrt, which will be based on cctest.
 
-Libcc/ccrt will be started in early 2015, however, the priority will be to deply libreg into operation, which will probably take the three months.
+Libcc/ccrt will be started in early 2015, however, the priority will be to deploy libreg into operation, which will probably take the first three months of 2015.
 
 Quentin
 
