@@ -1,8 +1,8 @@
-# CCTEST - FGClite tests script - @100Hz
+# CCTEST - FGClite tests script @1kHz
 
 GLOBAL RUN_DELAY                1.0
 GLOBAL STOP_DELAY               1.0
-GLOBAL ITER_PERIOD_US           10000
+GLOBAL ITER_PERIOD_US           1000
 GLOBAL STOP_ON_ERROR            ENABLED
 GLOBAL FG_LIMITS                ENABLED
 GLOBAL SIM_LOAD                 ENABLED
@@ -30,7 +30,7 @@ LIMITS V_QUADRANTS41            5.0,8.0
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS            2.0
+VS V_REF_DELAY_ITERS            20.0
 VS BANDWIDTH                    1000.0
 VS TAU_ZERO                     0.0
 VS Z                            0.9
@@ -46,15 +46,14 @@ LOAD SIM_TC_ERROR               -0.1
 # Measurement parameters
 
 MEAS I_REG_SELECT               FILTERED
-MEAS I_DELAY_ITERS              0.58
-MEAS V_DELAY_ITERS              0.1
-MEAS I_FIR_LENGTHS              2,1
+MEAS I_DELAY_ITERS              1.3
+MEAS V_DELAY_ITERS              1.3
+MEAS I_FIR_LENGTHS              20,1
 MEAS I_SIM_NOISE_PP             0.000
 MEAS V_SIM_NOISE_PP             0.000
-MEAS TONE_HALF_PERIOD_ITERS     1
-MEAS I_SIM_TONE_AMP             0.001
-MEAS INVALID_MEAS_PERIOD_ITERS  100
-MEAS INVALID_MEAS_REPEAT_ITERS  2
+MEAS TONE_HALF_PERIOD_ITERS     10
+MEAS I_SIM_TONE_AMP             0.01
+MEAS INVALID_MEAS_PERIOD_ITERS  0
 
 # Current regulation
 
@@ -74,24 +73,24 @@ REF REG_MODE                    CURRENT
 
 # PLEP test
 
-GLOBAL FILE                     amps-plep-20ms-100Hz
-IREG PERIOD_ITERS               2
+GLOBAL FILE                     amps-plep-20ms-1kHz
+IREG PERIOD_ITERS               20
 RUN
 
-GLOBAL FILE                     amps-plep-40ms-100Hz
-IREG PERIOD_ITERS               4
+GLOBAL FILE                     amps-plep-40ms-1kHz
+IREG PERIOD_ITERS               40
 RUN
 
-GLOBAL FILE                     amps-plep-60ms-100Hz
-IREG PERIOD_ITERS               6
+GLOBAL FILE                     amps-plep-60ms-1kHz
+IREG PERIOD_ITERS               60
 RUN
 
-GLOBAL FILE                     amps-plep-80ms-100Hz
-IREG PERIOD_ITERS               8
+GLOBAL FILE                     amps-plep-80ms-1kHz
+IREG PERIOD_ITERS               80
 RUN
 
-GLOBAL FILE                     amps-plep-100ms-100Hz
-IREG PERIOD_ITERS               10
+GLOBAL FILE                     amps-plep-100ms-1kHz
+IREG PERIOD_ITERS               100
 RUN
 
 # EOF

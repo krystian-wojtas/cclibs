@@ -35,7 +35,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <stdbool.h>
-#include <stdlib.h>     // For NULL
+#include <stdlib.h>                         // For NULL
 
 // Constants
 
@@ -144,11 +144,11 @@ void fgSetMinMax(struct fg_meta *meta, float ref);
  * indicates the type of error (REF, RATE, ACCELERATION). The meta::error.data array
  * provides extra information about limit:
  * <PRE>
- * |RETURN VALUE                 |ERROR.DATA[0]|ERROR.DATA[1]       |ERROR.DATA[2]|
- * |-----------------------------|-------------|--------------------|-------------|
- * |FG_OUT_OF_LIMITS             |ref          |min                 |max          |
- * |FG_OUT_OF_RATE_LIMITS        |rate         |limits->rate        |rate_limit*  |
- * |FG_OUT_OF_ACCELERATION_LIMITS|acceleration |limits->acceleration|acc_limit**  |
+ * |RETURN VALUE                 |ERROR.DATA[0]|ERROR.DATA[1]|ERROR.DATA[2]       |
+ * |-----------------------------|-------------|-------------|--------------------|
+ * |FG_OUT_OF_LIMITS             |ref          |min          |max                 |
+ * |FG_OUT_OF_RATE_LIMITS        |rate         |rate_limit*  |limits->rate        |       
+ * |FG_OUT_OF_ACCELERATION_LIMITS|acceleration |acc_limit**  |limits->acceleration|
  * </PRE>
  *
  * rate_limit = (1.0 + FG_CLIP_LIMIT_FACTOR) * limits::rate

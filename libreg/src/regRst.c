@@ -1,5 +1,5 @@
 /*!
- * @file  rst.c
+ * @file  regRst.c
  * @brief Converter Control Regulation library RST regulation algorithm functions
  *
  * <h2>Copyright</h2>

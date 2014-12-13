@@ -1,5 +1,5 @@
 /*!
- * @file  err.c
+ * @file  regErr.c
  * @brief Converter Control Regulation library regulation error functions
  *
  * <h2>Copyright</h2>

@@ -1,9 +1,6 @@
 /*!
- * @file  load.c
+ * @file  regLoad.c
  * @brief Converter Control Regulation library Load-related functions
- * @author Quentin King
- * @author Martin Veenstra
- * @author Hugues Thiesen
  *
  * <h2>Copyright</h2>
  *

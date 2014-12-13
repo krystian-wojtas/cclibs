@@ -1,10 +1,6 @@
 /*!
- * @file  sim.c
+ * @file  regSim.c
  * @brief Converter Control Regulation library voltage source and load simulation functions
- * @author Quentin King
- * @author Martin Veenstra
- * @author Hugues Thiesen
- * @author Pierre Dejoue
  *
  * <h2>Copyright</h2>
  *

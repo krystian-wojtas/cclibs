@@ -1,5 +1,5 @@
 /*!
- * @file  ramp.c
+ * @file  fgRamp.c
  * @brief Generate fast ramp based on Parabola-Parabola function
  *
  * <h2>Copyright</h2>
@@ -25,7 +25,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "libfg/ramp.h"
+
+
 
 enum fg_error fgRampInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
@@ -37,6 +40,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 {
     enum fg_error  fg_error;                     // Reference limits status
     struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
+    struct fg_ramp_pars p;                       // Local RAMP pars - copied to user *pars if there are no errors
 
     // Check that parameters are valid
 
@@ -52,7 +56,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
     // Calculate ramp parameters always with zero initial ramp rate
 
-    fgRampCalc(config, delay, init_ref, 0.0, pars, meta);
+    fgRampCalc(config, delay, init_ref, 0.0, &p, meta);
 
     // Check limits if supplied
 
@@ -60,7 +64,7 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
     {
         // Check limits at the start of the parabolic acceleration (segment 1)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, init_ref, 0.0, pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, init_ref, 0.0, p.acceleration, meta)))
         {
             meta->error.index = 1;
             goto error;
@@ -68,12 +72,16 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
         // Check limits at the end of the parabolic deceleration (segment 2)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, config->final, 0.0, pars->deceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, config->final, 0.0, p.deceleration, meta)))
         {
             meta->error.index = 2;
             goto error;
         }
     }
+
+    // Copy valid set of parameters to user's pars structure
+
+    memcpy(pars, &p, sizeof(p));
 
     return(FG_OK);
 
@@ -89,8 +97,8 @@ enum fg_error fgRampInit(struct fg_limits          *limits,
 
 bool fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 {
-    bool        func_running = true;        // Returned value
-    uint32_t    time_shift_alg    = 0;      // Time shift adjustment algorithm index
+    bool        is_func_running = true;     // Returned value
+    uint32_t    time_shift_alg  = 0;        // Time shift adjustment algorithm index
     float       r;
     float       ref_rate_limit;             // Limit on ref due to rate limit
     float       period;                     // Time period calculated using prev_time
@@ -203,7 +211,7 @@ bool fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 
             // End of function
  
-            func_running = false;
+            is_func_running = false;
         }
 
         // Keep ramp reference for next iteration (before rate limiter)
@@ -262,7 +270,7 @@ bool fgRampGen(struct fg_ramp_pars *pars, const double *time, float *ref)
 
     *ref = r;
 
-    return(func_running);
+    return(is_func_running);
 }
 
 

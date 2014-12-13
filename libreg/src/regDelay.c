@@ -1,5 +1,5 @@
 /*!
- * @file  delay.c
+ * @file  regDelay.c
  * @brief Converter Control Regulation library signal delay functions
  *
  * <h2>Copyright</h2>

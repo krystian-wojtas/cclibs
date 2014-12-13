@@ -1,5 +1,5 @@
 /*!
- * @file  meas.c
+ * @file  regMeas.c
  * @brief Converter Control Regulation library measurement-related functions
  *
  * <h2>Copyright</h2>
@@ -35,6 +35,8 @@
  * @returns Value of reg_meas_filter::fir_accumulator adjusted by reg_meas_filter::integer_to_float factor
  */
 static float regMeasFirFilterRT(struct reg_meas_filter *filter);
+
+
 
 
 // Non-Real-Time Functions - do not call these from the real-time thread or interrupt

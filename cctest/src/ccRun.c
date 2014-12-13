@@ -370,8 +370,8 @@ void ccRunSimulation(void)
 \*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t        iteration_idx     = 0;        // Iteration index
-    bool            abort             = false;    // Abort function flag
-    bool            func_running      = true;     // Function running flag
+    bool            is_abort_active   = false;    // Abort function flag
+    bool            is_func_running   = true;     // Function running flag
     float           ref;                          // Function generator reference value
     float           perturb_volts     = 0.0;      // Voltage perturbation to apply to circuit
     double          iter_time         = 0.0;      // Iteration time (since start of run)
@@ -427,7 +427,7 @@ void ccRunSimulation(void)
                     ccDynamicEconomy(ref_time, ref);
                 }
 
-                func_running = ccrun.fgen_func(ccrun.fgen_pars, &ref_time, &ref);
+                is_func_running = ccrun.fgen_func(ccrun.fgen_pars, &ref_time, &ref);
             }
 
             // Call ConvRegulate every iteration to keep RST histories up to date
@@ -440,9 +440,9 @@ void ccRunSimulation(void)
             {
                 // If function should be aborted
 
-                if(abort == false && ccpars_global.abort_time > 0.0 && iter_time >= ccpars_global.abort_time)
+                if(is_abort_active == false && ccpars_global.abort_time > 0.0 && iter_time >= ccpars_global.abort_time)
                 {
-                    abort = true;
+                    is_abort_active = true;
 
                     if(ccRunAbort(iter_time) == EXIT_FAILURE)
                     {
@@ -452,7 +452,7 @@ void ccRunSimulation(void)
 
                 // else if function has finished
 
-                else if(func_running == false)
+                else if(is_func_running == false)
                 {
                     // Starting a new function can change conv.reg_mode, but not our local copy of reg_mode
 
@@ -480,7 +480,7 @@ void ccRunSimulation(void)
 
         // Simulate voltage source and load response (with voltage perturbation added)
 
-        regConvSimulateRT(&conv, perturb_volts);
+        regConvSimulateRT(&conv, NULL, perturb_volts);
 
         // Check if simulated converter should be trip
 
@@ -542,7 +542,7 @@ void ccRunFuncGen(void)
     uint32_t    cyc_sel;                    // Cycle selector for the current cycle
     uint32_t    func_idx;                   // Function index
     uint32_t    iteration_idx   = 0;        // Iteration index
-    bool        func_running    = true;     // Function running flag
+    bool        is_func_running = true;     // Function running flag
     double      iter_time       = 0.0;      // Iteration time (since start of run)
     double      ref_time;                   // Reference time (since start of function)
     double      func_start_time;            // Function start time (relative to start of run)
@@ -566,11 +566,11 @@ void ccRunFuncGen(void)
 
         // Generate reference value using libfg function
 
-        func_running = ccrun.fgen_func(ccrun.fgen_pars, &ref_time, &conv.v.ref);
+        is_func_running = ccrun.fgen_func(ccrun.fgen_pars, &ref_time, &conv.v.ref);
 
         // If reference function has finished
 
-        if(ref_time > ccrun.func_duration && func_running == 0)
+        if(ref_time > ccrun.func_duration && is_func_running == false)
         {
             // If not yet into the stop delay period, advance to next function
 

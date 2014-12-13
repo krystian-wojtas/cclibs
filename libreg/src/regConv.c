@@ -1,5 +1,5 @@
 /*!
- * @file  conv.c
+ * @file  regConv.c
  * @brief Converter Control Regulation library higher-level functions.
  *
  * <h2>Copyright</h2>
@@ -751,7 +751,7 @@ void regConvSimInit(struct reg_conv *conv, enum reg_mode reg_mode, float start)
 
     regConvSignalPrepareRT(conv, reg_mode, 0, 0);
     regConvModeSetRT(conv, reg_mode);
-    regConvSimulateRT(conv, 0.0);
+    regConvSimulateRT(conv, NULL, 0.0);
 }
 
 
@@ -763,153 +763,6 @@ void regConvMeasInit(struct reg_conv *conv, struct reg_meas_signal *v_meas_p, st
     conv->b.input_p = (b_meas_p == NULL ? &null_signal : b_meas_p);;
     conv->i.input_p = (i_meas_p == NULL ? &null_signal : i_meas_p);;
     conv->v.input_p = (v_meas_p == NULL ? &null_signal : v_meas_p);
-}
-
-
-void regConvRefCheckInit(struct reg_conv *conv, enum reg_mode reg_mode, float init_ref, enum reg_enabled_disabled invert_limits)
-{
-    conv->ref_check.reg_mode        = reg_mode;
-    conv->ref_check.num_samples     = 0;
-    conv->ref_check.sum_ref_squared = 0.0;
-    conv->ref_check.prev_ref        = init_ref;
-    conv->ref_check.lim_v           = conv->v.lim_ref;
-
-    regLimRefInvert(&conv->ref_check.lim_v, invert_limits);
-
-    // Calculate initial voltage assuming rate of change of reference and voltage is zero
-
-    switch(conv->ref_check.reg_mode)
-    {
-        case REG_FIELD:
-
-            conv->ref_check.prev_v = init_ref * (conv->b.op_rst_pars.active->openloop_forward.ref[0] +
-                                                 conv->b.op_rst_pars.active->openloop_forward.ref[1]) /
-                                          (1.0 - conv->b.op_rst_pars.active->openloop_forward.act[1]);
-            break;
-
-        case REG_CURRENT:
-
-            conv->ref_check.prev_v = init_ref * (conv->i.op_rst_pars.active->openloop_forward.ref[0] +
-                                                 conv->i.op_rst_pars.active->openloop_forward.ref[1]) /
-                                          (1.0 - conv->i.op_rst_pars.active->openloop_forward.act[1]);
-            break;
-
-        case REG_NONE:
-        case REG_VOLTAGE:
-
-            break;
-    }
-}
-
-
-
-bool regConvRefCheck(struct reg_conv *conv, float ref, float *v_min_limit, float *v_max_limit,
-                     float *estimated_v, float *estimated_i)
-{
-    float   i = 0.0;
-    float   v = 0.0;
-    struct reg_lim_ref *lim_v = &conv->ref_check.lim_v;
-
-    // Accumulate ref squared to allow RMS calculation at the end
-
-    conv->ref_check.num_samples++;
-    conv->ref_check.sum_ref_squared += (ref * ref);
-
-    // Estimate voltage required for this reference
-
-    switch(conv->ref_check.reg_mode)
-    {
-        case REG_FIELD:
-
-            v = conv->b.op_rst_pars.active->openloop_forward.ref[0] * ref +
-                conv->b.op_rst_pars.active->openloop_forward.ref[1] * conv->ref_check.prev_ref +
-                conv->b.op_rst_pars.active->openloop_forward.act[1] * conv->ref_check.prev_v;
-
-            conv->ref_check.prev_v = v;
-
-            // Estimate circuit current assuming parallel resistor is not significant
-
-            i = regLoadFieldToCurrentRT(&conv->load_pars, ref);
-
-            break;
-
-        case REG_CURRENT:
-
-            i = ref;
-
-            v = conv->i.op_rst_pars.active->openloop_forward.ref[0] * ref +
-                conv->i.op_rst_pars.active->openloop_forward.ref[1] * conv->ref_check.prev_ref +
-                conv->i.op_rst_pars.active->openloop_forward.act[1] * conv->ref_check.prev_v;
-
-            conv->ref_check.prev_v = v;
-
-            // Compensate voltage for magnet saturation
-
-            v = regLoadVrefSatRT(&conv->load_pars, i, v);
-
-            break;
-
-        case REG_NONE:
-        case REG_VOLTAGE:
-
-            return(false);
-    }
-
-    conv->ref_check.prev_ref = ref;
-
-    // Return estimated voltage and current by reference if pointers are provided
-
-    if(estimated_v != NULL)
-    {
-        *estimated_v = v;
-    }
-
-    if(estimated_i != NULL)
-    {
-        *estimated_i = i;
-    }
-
-    // Calculate voltage limits for this current
-
-    regLimVrefCalcRT(lim_v, i);
-
-    // Return voltage limits by reference if pointers are provided and return true if voltage limits are exceeded
-
-    if(lim_v->invert_limits == REG_DISABLED)
-    {
-        if(v_min_limit != NULL)
-        {
-            *v_min_limit = lim_v->min_clip;
-        }
-
-        if(v_max_limit != NULL)
-        {
-            *v_max_limit = lim_v->max_clip;
-        }
-
-        return(v <  lim_v->min_clip || v >  lim_v->max_clip);
-    }
-    else // invert_limits == REG_ENABLED
-    {
-        if(v_min_limit != NULL)
-        {
-            *v_min_limit = -lim_v->max_clip;
-        }
-
-        if(v_max_limit != NULL)
-        {
-            *v_max_limit = -lim_v->min_clip;
-        }
-
-        return(v < -lim_v->max_clip || v > -lim_v->min_clip);
-    }
-}
-
-
-
-float regConvRefCheckRms(struct reg_conv *conv)
-{
-    return(sqrt(conv->ref_check.sum_ref_squared)/(float)conv->ref_check.num_samples);
 }
 
 
@@ -972,7 +825,7 @@ static void regConvSignalPrepareRT(struct reg_conv *conv, enum reg_mode reg_mode
             /*!
              * If multiple systems must synchronize their regulation periods, then the regulation
              * period (reg_period_iters * iter_period_us) should divide into 12s exactly.
-             * This awk script lists the periods in microseconds from 100us to 10000us (10kHz to 10Hz) that do this:
+             * This awk command lists the periods in microseconds from 100us to 10000us (10kHz to 10Hz) that do this:
              *     awk 'BEGIN { for(us=100 ; us<=100000 ; us++) { g = 12000000/us; if (int(g) == g) print us}}'
              */
 
@@ -1059,8 +912,8 @@ static void regConvModeSetFieldOrCurrentRT(struct reg_conv *conv, enum reg_mode 
 
     reg_signal = conv->reg_signal = (reg_mode == REG_FIELD ? &conv->b : &conv->i);
 
-    rst_pars         =  reg_signal->rst_pars;
-    rst_vars         = &reg_signal->rst_vars;
+    rst_pars   =  reg_signal->rst_pars;
+    rst_vars   = &reg_signal->rst_vars;
 
     // If actuation is CURRENT_REF then current regulation is open-loop in libreg
 
@@ -1502,21 +1355,30 @@ void regConvRegulateRT(struct reg_conv *conv, float *ref)
 
 
 
-void regConvSimulateRT(struct reg_conv *conv, float v_perturbation)
+void regConvSimulateRT(struct reg_conv *conv, float *v_circuit, float v_perturbation)
 {
-    float v_circuit;      // Simulated v_circuit without V_REF_DELAY
+    float v_circ;      // Simulated v_circuit without V_REF_DELAY
 
     // If Actuation is VOLTAGE
 
     if(conv->par_values.global_actuation[0] == REG_VOLTAGE_REF)
     {
-        // Simulate voltage source response to v_ref without taking into account V_REF_DELAY
+        if(v_circuit == NULL)
+        {
+            // Simulate voltage source response to v_ref without taking into account V_REF_DELAY
 
-        v_circuit = regSimVsRT(&conv->sim_vs_pars, &conv->sim_vs_vars, conv->v.ref_limited);
+            v_circ = regSimVsRT(&conv->sim_vs_pars, &conv->sim_vs_vars, conv->v.ref_limited);
+        }
+        else
+        {
+            // Use circuit voltage simulated by the application (e.g. by libvreg)
 
-        // Simulate load current and field in response to sim_advanced_v_circuit plus the perturbation
+            v_circ = conv->sim_load_vars.circuit_voltage = *v_circuit;
+        }
 
-        regSimLoadRT(&conv->sim_load_pars, &conv->sim_load_vars, conv->sim_vs_pars.is_vs_undersampled, v_circuit + v_perturbation);
+        // Simulate load current and field in response to v_circuit plus the perturbation, also without taking into account V_REF_DELAY
+
+        regSimLoadRT(&conv->sim_load_pars, &conv->sim_load_vars, conv->sim_vs_pars.is_vs_undersampled, v_circ + v_perturbation);
     }
     else // Actuation is CURRENT_REF
     {

@@ -1,5 +1,5 @@
 /*!
- * @file  test.c
+ * @file  fgTest.c
  * @brief Generate test functions (STEPS, SQUARE, SINE or COSINE)
  *
  * <h2>Copyright</h2>
@@ -25,6 +25,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "libfg/test.h"
 
 
@@ -37,44 +38,73 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
                          struct fg_test_pars       *pars,
                          struct fg_meta            *meta)
 {
-    enum fg_error  fg_error;       // Limits status
-    uint32_t       n_cyc;          // int(num_cycles)
-    float          inv_n_cyc;      // 1.0 / n_cyc
-    float          end;            // Final reference value
-    float          range[2];       // Range of reference value
+    enum fg_error  fg_error;       // Error code
     struct fg_meta local_meta;     // Local meta data in case user meta is NULL
+    struct fg_test_pars p;         // Local TEST pars - copied to user *pars only if there are no errors
+    float          window[2];      // Max/min window scaling sine or cosine
 
     // Reset meta structure - uses local_meta if meta is NULL
 
     meta = fgResetMeta(meta, &local_meta, init_ref);
 
+    // Check if number of cycles is less than 1
+
+    if(config->num_cycles < 0.6)
+    {
+        meta->error.index   = 1;
+        meta->error.data[0] = config->num_cycles;
+
+        fg_error = FG_INVALID_TIME;
+        goto error;
+    }
+
     // Prepare parameter structure
 
-    n_cyc     = (uint32_t)(config->num_cycles + 0.4999);
-    inv_n_cyc = 1.0 / (float)n_cyc;
-
-    pars->duration    = (float)n_cyc * config->period;
-    pars->half_period = 0.5 * config->period;
-    pars->delay       = delay;
-    pars->frequency   = 1.0 / config->period;
-    pars->ref_amp     = config->amplitude_pp;
-    pars->type        = config->type;
-    pars->use_window  = config->use_window;
+    p.delay            = delay;
+    p.num_cycles       = (uint32_t)(config->num_cycles + 0.4999);
+    p.duration         = (float)p.num_cycles * config->period;
+    p.half_period      = 0.5 * config->period;
+    p.frequency        = 1.0 / config->period;
+    p.ref_amp          = config->amplitude_pp;
+    p.type             = config->type;
+    p.is_window_active = config->is_window_active;
+    p.ref_initial      = init_ref;
+    p.ref_final        = init_ref;
 
     // Check if total duration is too long
 
-    if(pars->duration > 1.0E6)
+    if(p.duration > 1.0E6)
     {
-        meta->error.data[0] = pars->duration;
+        meta->error.index   = 2;
+        meta->error.data[0] = p.duration;
         meta->error.data[1] = 1.0E6;
 
         fg_error = FG_INVALID_TIME;
         goto error;
     }
 
-    // Calculate amplitude related parameters
+    // Prepare range scaling if window is active and the number of cycles is 1
 
-    end = pars->ref_initial = pars->ref_final = init_ref;
+    if(p.is_window_active && p.num_cycles == 1)
+    {
+        if(config->type == FG_TEST_SINE)    // Windowed SINE
+        {
+            window[0] =  0.649519053;            // +3.sqrt(3)/8
+            window[1] = -0.649519053;            // -3.sqrt(3)/8
+        }
+        else                                // Windowed COSINE
+        {
+            window[0] =  1.0 / 8.0;              // +1/8
+            window[1] = -1.0;                    // -1
+        }
+    }
+    else    // Window not active the whole time
+    {
+        window[0] =  1.0;
+        window[1] = -1.0;
+    }
+
+    // Calculate amplitude related parameters
 
     fg_error = FG_OK;
 
@@ -82,69 +112,33 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     {
         case FG_TEST_STEPS:
 
-            pars->ref_final += pars->ref_amp;
-            pars->ref_amp   *= inv_n_cyc;
+            p.ref_final += p.ref_amp;
+            p.ref_amp   /= (float)p.num_cycles;
 
-            end      = pars->ref_final;
-            range[0] = pars->ref_initial;
-            range[1] = pars->ref_final;
-
-            fgSetMinMax(meta, range[1]);
-
-            // Check clip limits only if supplied
-
-            if(limits != NULL)
-            {
-                if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_final, 0.0, 0.0, meta)))
-                {
-                    goto error;
-                }
-            }
-
+            fgSetMinMax(meta, p.ref_final);
             break;
 
         case FG_TEST_SQUARE:
+ 
+            // Square wave is created from 2 x half cycles
 
-            range[0] = pars->ref_initial;
-            range[1] = pars->ref_initial + pars->ref_amp;
+            p.num_cycles *= 2;
 
-            fgSetMinMax(meta, range[1]);
-
-            // Check clip limits only if supplied
-
-            if(limits != NULL)
-            {
-                if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial + pars->ref_amp, 0.0, 0.0, meta)))
-                {
-                    goto error;
-                }
-            }
-
+            fgSetMinMax(meta, p.ref_initial + p.ref_amp);
             break;
 
         case FG_TEST_SINE:
         case FG_TEST_COSINE:
 
-            pars->ref_amp *= 0.5;
-            range[0]       = pars->ref_initial - pars->ref_amp;
-            range[1]       = pars->ref_initial + pars->ref_amp;
+            p.ref_amp *= 0.5;
 
-            fgSetMinMax(meta, range[1]);
-
-            if(limits != NULL)  // Check clip limits only if supplied
-            {
-                if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial + pars->ref_amp, 0.0, 0.0, meta)) ||
-                   (fg_error = fgCheckRef(limits, limits_polarity, pars->ref_initial - pars->ref_amp, 0.0, 0.0, meta)))
-                {
-                    goto error;
-                }
-            }
-
+            fgSetMinMax(meta, init_ref + p.ref_amp * window[0]);
+            fgSetMinMax(meta, init_ref + p.ref_amp * window[1]);
             break;
 
         default: // Invalid function type requested
 
-            meta->error.data[0] = config->type;
+            meta->error.data[0] = (float)config->type;
 
             fg_error = FG_BAD_PARAMETER;
             goto error;
@@ -152,8 +146,12 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
     // Complete meta data
 
-    meta->duration  = pars->duration;
-    meta->range.end = end;
+    meta->duration  = p.duration;
+    meta->range.end = p.ref_final;;
+
+    // Copy valid set of parameters to user's pars structure
+
+    memcpy(pars, &p, sizeof(p));
 
     return(FG_OK);
 
@@ -169,11 +167,9 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
 bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 {
-    uint32_t    period_idx;
     double      radians;
     float       cos_rads = 0.0;
     float       delta_ref;
-    float       new_ref;
     double      func_time;                     // Time within function
 
     // Both *time and delay must be 64-bit doubles if time is UNIX time
@@ -182,7 +178,7 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 
     // Pre-acceleration coast
 
-    if(func_time <= 0.0)
+    if(func_time < 0.0)
     {
         *ref = pars->ref_initial;
 
@@ -193,30 +189,36 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 
     else if(func_time < pars->duration)
     {
+        uint32_t    period_idx;
+
         switch(pars->type)
         {
             case FG_TEST_STEPS:
 
-                period_idx = 1 + (uint32_t)(func_time * pars->frequency);
-                new_ref    = pars->ref_initial + pars->ref_amp * (float)period_idx;
+                // Calculate period index and clip to number of cycles in case of floating point errors
 
-                if(*ref != new_ref)
+                period_idx = 1 + (uint32_t)(func_time * pars->frequency);
+
+                if(period_idx > pars->num_cycles)
                 {
-                    *ref = new_ref;
+                    period_idx = pars->num_cycles;
                 }
 
+                *ref = pars->ref_initial + pars->ref_amp * (float)period_idx;
                 return(true);
 
             case FG_TEST_SQUARE:
 
-                period_idx = 1 - ((uint32_t)(2.0 * func_time * pars->frequency) & 0x1);
-                new_ref    = pars->ref_initial + (period_idx ? pars->ref_amp : 0.0);
+                // Calculate period index and clip to number of cycles in case of floating point errors
 
-                if(*ref != new_ref)
+                period_idx = 1 + (uint32_t)(2.0 * func_time * pars->frequency);
+
+                if(period_idx > pars->num_cycles)
                 {
-                    *ref = new_ref;
+                    period_idx = pars->num_cycles;
                 }
 
+                *ref = pars->ref_initial + (period_idx & 0x1 ? pars->ref_amp : 0.0);
                 return(true);
 
             case FG_TEST_SINE:
@@ -239,9 +241,8 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 
         // For SINE and COSINE: Apply cosine window if enabled
 
-        if(pars->use_window &&
-          (func_time < pars->half_period ||
-           pars->duration - func_time < pars->half_period))
+        if(pars->is_window_active &&
+          (func_time < pars->half_period || pars->duration - func_time < pars->half_period))
         {
             // Calc Cosine window
 

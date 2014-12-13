@@ -70,7 +70,7 @@ struct fg_test_config
     float               amplitude_pp;       //!< Ref peak-to-peak amplitude
     float               num_cycles;         //!< Number of cycles/steps. This is rounded to the nearest integer.
     float               period;             //!< Period
-    bool                use_window;         //!< Window control: true to use window for sine & cosine.
+    bool                is_window_active;   //!< Window control: true to use window for sine & cosine.
 };
 
 /*!
@@ -79,8 +79,9 @@ struct fg_test_config
 struct fg_test_pars
 {
     enum fg_test_type   type;               //!< Type of test function
-    bool                use_window;         //!< Window control: true to use window for sine & cosine.
+    bool                is_window_active;   //!< Window control: true to use window for sine & cosine.
     double              delay;              //!< Time before start of function
+    uint32_t            num_cycles;         //!< Number of cycles or steps.
     float               duration;           //!< period * number of cycles
     float               frequency;          //!< 1 / period
     float               half_period;        //!< period / 2

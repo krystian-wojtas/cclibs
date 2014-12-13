@@ -4,7 +4,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -27,6 +27,8 @@
 
 #include "libfg.h"
 
+
+
 struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, float init_ref)
 {
     uint32_t idx;
@@ -38,10 +40,14 @@ struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, f
         meta = local_meta;
     }
 
-    // Reset all field in meta structure
+    // Reset all field in meta structure if pointer is valid
 
     if(meta != NULL)
     {
+        // Explicitly set floats to zero because on early TI DSPs do not use IEEE758 
+        // floating point format. For example, for the TMS320C32, 0.0 is 0x80000000 
+        // while 0x00000000 has the value 1.0.
+
         for(idx = 0 ; idx < FG_ERR_DATA_LEN ; idx++)
         {
             meta->error.data[idx] = 0.0;
@@ -71,6 +77,7 @@ void fgSetMinMax(struct fg_meta *meta, float ref)
         meta->range.min = ref;
     }
 }
+
 
 
 
@@ -125,9 +132,9 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
     if(limits->rate >  0.0 &&
        fabs(rate)   > (limit =((1.0 + FG_CLIP_LIMIT_FACTOR) * limits->rate)))
     {
-        meta->error.data[0] = limits->rate;
+        meta->error.data[0] = rate;
         meta->error.data[1] = limit;
-        meta->error.data[2] = rate;
+        meta->error.data[2] = limits->rate;
 
         return(FG_OUT_OF_RATE_LIMITS);
     }
@@ -137,9 +144,9 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
     if(limits->acceleration >  0.0 &&
        fabs(acceleration)   > (limit = ((1.0 + FG_CLIP_LIMIT_FACTOR) * limits->acceleration)))
     {
-        meta->error.data[0] = limits->acceleration;
+        meta->error.data[0] = acceleration;
         meta->error.data[1] = limit;
-        meta->error.data[2] = acceleration;
+        meta->error.data[2] = limits->acceleration;
 
         return(FG_OUT_OF_ACCELERATION_LIMITS);
     }

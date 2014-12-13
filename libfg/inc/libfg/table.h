@@ -54,8 +54,8 @@ struct fg_table_config
 {
     float       *ref;               //!< Table reference values
     float       *time;              //!< Table time values
-    uintptr_t   ref_n_elements;     //!< Number of elements in reference array
-    uintptr_t   time_n_elements;    //!< Number of elements in time array
+    uintptr_t   ref_num_elements;   //!< Number of elements in reference array
+    uintptr_t   time_num_elements;  //!< Number of elements in time array
 };
 
 /*!
@@ -65,7 +65,7 @@ struct fg_table_pars
 {
     uint32_t    seg_idx;            //!< Segment index
     uint32_t    prev_seg_idx;       //!< Previous segment index for which gradient was calculated
-    uintptr_t   n_elements;         //!< Number of elements in table
+    uint32_t    num_points;         //!< Number of points in table
     double      delay;              //!< Time before start of function
     float       *ref;               //!< Table reference values
     float       *time;              //!< Table time values
@@ -90,7 +90,7 @@ extern "C" {
  * @param[out] meta             Diagnostic information. Set to NULL if not required.
  *
  * @retval FG_OK on success
- * @retval FG_BAD_ARRAY_LEN if there are less than two points, or elements of config are different lengths
+ * @retval FG_BAD_ARRAY_LEN if there are less than two points, or ref and time arrays are different lengths
  * @retval FG_INVALID_TIME if first time value is not zero, or time values are not at least min_time_step seconds apart
  * @retval FG_OUT_OF_LIMITS if reference value exceeds limits
  * @retval FG_OUT_OF_RATE_LIMITS if rate of change of reference exceeds limits

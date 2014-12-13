@@ -7,10 +7,9 @@ Please let us know if you use cclibs in your projects: cclibs-devs@cern.ch
 
 If you would like to be notified about new releases then write to this address and ask to be added to the cclibs-users mailing list.
 
-Libreg is basically finished. V6 is a major upgrade that adds the concept of the cycle selector to cctest. 
-This will allow thorough testing of the LOAD SELECT and LOAD TEST SELECT parameters in libreg.
+Libreg is nearly finished though minor changes and bug fixes continue since V5. Most of the change in V6 were in cctest and concerned support for the new GLOBAL CYCLE_SELECTOR parameter. This is step towards the new libcc and the multi-threaded ccrt, which will be based on cctest.
 
-Work will soon focus on libcc and the associated test program ccrt. Both should be ready by mid-2015.
+Libcc/ccrt will be started in early 2015, however, the priority will be to deply libreg into operation, which will probably take the three months.
 
 Quentin
 

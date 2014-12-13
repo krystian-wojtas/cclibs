@@ -1,5 +1,5 @@
 /*!
- * @file  trim.c
+ * @file  fgTrim.c
  * @brief Generate linear and cubic trim functions
  *
  * <h2>Copyright</h2>
@@ -25,7 +25,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "libfg/trim.h"
+
+
 
 enum fg_error fgTrimInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
@@ -35,14 +38,15 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
                          struct fg_trim_pars       *pars,
                          struct fg_meta            *meta)
 {
-    enum fg_error  fg_error;       // Status from limits checking
-    bool           inverted_trim;  // Inverted trim flag
-    float          acceleration;   // Acceleration
-    float          duration;       // Trim duration
-    float          duration2;      // Trim duration based on acceleration limit
-    float          delta_ref;      // Trim reference change
-    float          rate_lim;       // Limiting
-    struct fg_meta local_meta;     // Local meta data in case user meta is NULL
+    enum fg_error  fg_error;         // Error code
+    struct fg_meta local_meta;       // Local meta data in case user meta is NULL
+    struct fg_trim_pars p;           // Local TRIM pars - copied to user *pars only if there are no errors
+    bool           is_trim_inverted; // Inverted trim flag
+    float          acceleration;     // Acceleration
+    float          duration;         // Trim duration
+    float          duration2;        // Trim duration based on acceleration limit
+    float          delta_ref;        // Trim reference change
+    float          rate_lim;         // Limiting
 
     // Reset meta structure - uses local_meta if meta is NULL
 
@@ -50,25 +54,25 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
     // Save parameters
 
-    pars->delay       = delay;
-    pars->ref_initial = init_ref;
-    pars->ref_final   = config->final;
+    p.delay       = delay;
+    p.ref_initial = init_ref;
+    p.ref_final   = config->final;
 
     // Assess if ramp is rising or falling
 
-    delta_ref = pars->ref_final - init_ref;
+    delta_ref = p.ref_final - init_ref;
 
     if(delta_ref < 0.0)
     {
-        inverted_trim   = true;
-        meta->range.min = pars->ref_final;
-        meta->range.max = pars->ref_initial;
+        is_trim_inverted = true;
+        meta->range.min  = p.ref_final;
+        meta->range.max  = p.ref_initial;
     }
     else
     {
-        inverted_trim   = false;
-        meta->range.min = pars->ref_initial;
-        meta->range.max = pars->ref_final;
+        is_trim_inverted = false;
+        meta->range.min  = p.ref_initial;
+        meta->range.max  = p.ref_final;
     }
 
     // Prepare cubic factors according to trim type
@@ -77,21 +81,21 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
     {
         case FG_TRIM_CUBIC:
 
-            pars->a = 1.0;
-            pars->c = 1.5;
+            p.a = 1.0;
+            p.c = 1.5;
             break;
 
         case FG_TRIM_LINEAR:
 
-            pars->a = 0.0;
-            pars->c = 1.0;
+            p.a = 0.0;
+            p.c = 1.0;
             break;
 
         default:
 
             if(meta != NULL)
             {
-                meta->error.index     = 1;
+                meta->error.index   = 1;
                 meta->error.data[0] = config->type;
             }
 
@@ -115,14 +119,14 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
         rate_lim = limits->rate;
 
-        if(inverted_trim == true)
+        if(is_trim_inverted)
         {
             rate_lim = -rate_lim;
         }
 
-        duration = pars->c * delta_ref / rate_lim;                      // Calculate duration based on rate_lim
+        duration = p.c * delta_ref / rate_lim;                      // Calculate duration based on rate_lim
 
-        if(pars->a != 0.0)                                                  // If Cubic trim
+        if(p.a != 0.0)                                                  // If Cubic trim
         {
             if(limits->acceleration <= 0.0)                                     // Protect against zero acc
             {
@@ -148,25 +152,25 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
         duration = config->duration;
     }
 
-    pars->a *= -2.0 * delta_ref / (duration * duration * duration);
-    pars->c *= delta_ref / duration;
+    p.a *= -2.0 * delta_ref / (duration * duration * duration);
+    p.c *= delta_ref / duration;
 
     // Calculate offsets
 
-    pars->time_offset = 0.5 * duration;
-    pars->ref_offset  = 0.5 * (pars->ref_initial + pars->ref_final);
+    p.time_offset = 0.5 * duration;
+    p.ref_offset  = 0.5 * (p.ref_initial + p.ref_final);
 
     // Calculate acceleration  (note a=0 for Linear trim)
 
-    acceleration = fabs(3.0 * pars->a * duration);
+    acceleration = fabs(3.0 * p.a * duration);
 
     // If supplied, check limits at the beginning, middle and end
 
     if(limits != NULL)
     {
-        if((fg_error = fgCheckRef(limits, limits_polarity,  pars->ref_initial,    0.0, (config->type == FG_TRIM_CUBIC ? acceleration : 0.0), meta)) ||
-           (fg_error = fgCheckRef(limits, limits_polarity,  pars->ref_offset, pars->c, 0.0, meta)) ||
-           (fg_error = fgCheckRef(limits, limits_polarity,  pars->ref_final,      0.0, 0.0, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, p.ref_initial, 0.0, (config->type == FG_TRIM_CUBIC ? acceleration : 0.0), meta)) ||
+           (fg_error = fgCheckRef(limits, limits_polarity, p.ref_offset,  p.c, 0.0, meta)) ||
+           (fg_error = fgCheckRef(limits, limits_polarity, p.ref_final,   0.0, 0.0, meta)))
         {
             goto error;
         }
@@ -174,8 +178,12 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
     // Complete meta data
 
-    meta->duration  = pars->duration = duration;
-    meta->range.end = pars->ref_final;
+    meta->duration  = p.duration = duration;
+    meta->range.end = p.ref_final;
+
+    // Copy valid set of parameters to user's pars structure
+
+    memcpy(pars, &p, sizeof(p));
 
     return(FG_OK);
 

@@ -1,5 +1,5 @@
 /*!
- * @file  pppl.c
+ * @file  fgPppl.c
  * @brief Generate Parabola-Parabola-Parabola-Linear (PPPL) functions
  *
  * <h2>Copyright</h2>
@@ -25,6 +25,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "libfg/pppl.h"
 
 enum fg_error fgPpplInit(struct fg_limits          *limits,
@@ -35,7 +36,9 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
                          struct fg_pppl_pars       *pars,
                          struct fg_meta            *meta)
 {
-    enum fg_error  fg_error;                     // Status from limits checking
+    enum fg_error  fg_error;                     // Error code
+    struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
+    struct fg_pppl_pars p;                       // Local PPPL pars - copied to user *pars only if there are no errors
     uint32_t       n_pppls;                      // Number of PPPLs
     uint32_t       pppl_idx;                     // PPPL index (0-(FG_MAX_PPPLS-1))
     uint32_t       seg_idx;                      // Segment index (0-(4*FG_MAX_PPPLS-1))
@@ -46,11 +49,10 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
     float          r[FG_PPPL_N_SEGS];            // Reference at start of segment
     float          rate[FG_PPPL_N_SEGS];         // Rate of change of at start of segment
     float          acceleration[FG_PPPL_N_SEGS]; // Acceleration of each segment
-    float *        segs_t;                       // Pointer to pars->t
-    float *        segs_a0;                      // Pointer to pars->a0
-    float *        segs_a1;                      // Pointer to pars->a1
-    float *        segs_a2;                      // Pointer to pars->a2
-    struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
+    float *        segs_t;                       // Pointer to p.t
+    float *        segs_a0;                      // Pointer to p.a0
+    float *        segs_a1;                      // Pointer to p.a1
+    float *        segs_a2;                      // Pointer to p.a2
 
     meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
 
@@ -72,19 +74,19 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
 
     // Prepare to process all PPPLs
 
-    pars->seg_idx     = 0;
-    pars->ref_initial = init_ref;
-    pars->delay       = delay;
+    p.seg_idx     = 0;
+    p.ref_initial = init_ref;
+    p.delay       = delay;
 
     seg_idx = 0;
     r[0]    = init_ref;
     rate[0] = 0.0;
     time    = 0.0;
 
-    segs_t  = &pars->time[0];
-    segs_a0 = &pars->a0[0];
-    segs_a1 = &pars->a1[0];
-    segs_a2 = &pars->a2[0];
+    segs_t  = &p.time[0];
+    segs_a0 = &p.a0[0];
+    segs_a1 = &p.a1[0];
+    segs_a2 = &p.a2[0];
 
     // For all PPPLs
 
@@ -270,13 +272,17 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
         }
     }
 
-    pars->num_segs = num_segs;
-    pars->seg_idx  = 0;
+    p.num_segs = num_segs;
+    p.seg_idx  = 0;
 
     // Complete meta data
 
     meta->duration  = segs_t[num_segs-1];
     meta->range.end = segs_a0[num_segs-1];
+
+    // Copy valid set of parameters to user's pars structure
+
+    memcpy(pars, &p, sizeof(p));
 
     return(FG_OK);
 

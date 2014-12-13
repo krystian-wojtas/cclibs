@@ -1,5 +1,5 @@
 /*!
- * @file  table.c
+ * @file  fgTable.c
  * @brief Generate linearly interpolated table functions.
  *
  * <h2>Copyright</h2>
@@ -28,6 +28,8 @@
 #include "string.h"
 #include "libfg/table.h"
 
+
+
 enum fg_error fgTableInit(struct fg_limits         *limits,
                           enum   fg_limits_polarity limits_polarity,
                           struct fg_table_config   *config,
@@ -38,6 +40,7 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 {
     enum fg_error  fg_error;       // Limit checking status
     uint32_t       i;              // loop variable
+    uint32_t       num_points;     // Number of points in the table
     float          grad;           // Segment gradient
     struct fg_meta local_meta;     // Local meta data in case user meta is NULL
 
@@ -47,32 +50,68 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 
     // Initial checks of data integrity
 
-    if(config->ref_n_elements < 2 ||                        // If less than 2 points or
-       config->ref_n_elements != config->time_n_elements)   // time and ref arrays are not the same length
+    if(config->ref_num_elements < 2 ||                          // If less than 2 points or
+       config->ref_num_elements != config->time_num_elements)   // time and ref arrays are not the same length
     {
+        meta->error.data[0] = (float)config->ref_num_elements;
+        meta->error.data[1] = (float)config->time_num_elements;
+
         fg_error = FG_BAD_ARRAY_LEN;                            // Report bad array len
         goto error;
-
     }
 
     if(config->time[0] != 0.0)                              // If first time value is not zero
     {
-        if(meta != NULL)
-        {
-            meta->error.data[0] = config->time[0];
-        }
+        meta->error.data[0] = config->time[0];
+
         fg_error = FG_INVALID_TIME;                             // Report invalid time
         goto error;
+    }
+
+    // Check time vector and calculate min/max for table
+
+    num_points     = config->ref_num_elements;
+    min_time_step *= (1.0 - FG_CLIP_LIMIT_FACTOR);      // Adjust min time step to avoid rounding errs
+
+    for(i = 1 ; i < num_points ; i++)
+    {
+        if(config->time[i] < (config->time[i - 1] + min_time_step))        // Check time values
+        {
+            meta->error.index     = i;
+            meta->error.data[0] = config->time[i];
+            meta->error.data[1] = config->time[i - 1] + min_time_step;
+            meta->error.data[2] = min_time_step;
+
+            fg_error = FG_INVALID_TIME;                             // Report invalid time
+            goto error;
+        }
+
+        fgSetMinMax(meta, config->ref[i]);
+    }
+
+    // Check reference function limits
+
+    if(limits != NULL)
+    {
+        for(i = 1 ; i < num_points ; i++)
+        {
+            grad = (config->ref[i] - config->ref[i - 1]) / (config->time[i] - config->time[i - 1]);
+
+            if((fg_error = fgCheckRef(limits, limits_polarity, config->ref[i],     grad, 0.0, meta)) ||
+               (fg_error = fgCheckRef(limits, limits_polarity, config->ref[i - 1], grad, 0.0, meta)))
+            {
+                meta->error.index = i;
+                goto error;
+            }
+        }
     }
 
     // Prepare table parameters
 
     pars->delay        = delay;                             // Run delay
-    pars->n_elements   = config->ref_n_elements;            // Reference array length
-    pars->time         = config->time;                      // Reference time array
+    pars->num_points   = num_points;                        // Number of points in the table:
     pars->seg_idx      = 0;                                 // Reset segment index
     pars->prev_seg_idx = 0;                                 // Reset previous segment index
-    min_time_step     *= (1.0 - FG_CLIP_LIMIT_FACTOR);      // Adjust min time step to avoid rounding errs
 
     if(pars->ref == NULL)
     {
@@ -84,51 +123,16 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
         pars->time = config->time;                          // Reference time array
     }
 
-    // Check time vector and calculate min/max for table
-
-    for(i = 1 ; i < pars->n_elements ; i++)
-    {
-        if(pars->time[i] < (pars->time[i - 1] + min_time_step))        // Check time values
-        {
-            meta->error.index     = i;
-            meta->error.data[0] = pars->time[i];
-            meta->error.data[1] = pars->time[i - 1] + min_time_step;
-            meta->error.data[2] = min_time_step;
-
-            fg_error = FG_INVALID_TIME;                             // Report invalid time
-            goto error;
-        }
-
-        fgSetMinMax(meta, pars->ref[i]);
-    }
-
-    // Check reference function limits
-
-    if(limits != NULL)
-    {
-        for(i = 1 ; i < pars->n_elements ; i++)
-        {
-            grad = (pars->ref[i] - pars->ref[i - 1]) / (pars->time[i] - pars->time[i - 1]);
-
-            if((fg_error = fgCheckRef(limits, limits_polarity, pars->ref[i],     grad, 0.0, meta)) ||
-               (fg_error = fgCheckRef(limits, limits_polarity, pars->ref[i - 1], grad, 0.0, meta)))
-            {
-                meta->error.index = i;
-                goto error;
-            }
-        }
-    }
-
     // Copy data if pars arrays are different to config arrays
 
     if(pars->ref != config->ref)
     {
-        memcpy(pars->ref, config->ref, pars->n_elements * sizeof(pars->ref[0]));
+        memcpy(pars->ref, config->ref, num_points * sizeof(pars->ref[0]));
     }
 
     if(pars->time != config->time)
     {
-        memcpy(pars->time, config->time, pars->n_elements * sizeof(pars->time[0]));
+        memcpy(pars->time, config->time, num_points * sizeof(pars->time[0]));
     }
 
     // Complete meta data
@@ -169,10 +173,10 @@ bool fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
 
     while(func_time >= pars->time[pars->seg_idx])      // while time exceeds end of segment
     {
-        if(++pars->seg_idx >= pars->n_elements)                 // If vector complete
+        if(++pars->seg_idx >= pars->num_points)                 // If vector complete
         {
-            pars->seg_idx = pars->n_elements - 1;                   // Force segment index to last seg
-            *ref          = pars->ref[pars->n_elements - 1];        // Enter coast
+            pars->seg_idx = pars->num_points - 1;                   // Force segment index to last seg
+            *ref          = pars->ref[pars->num_points - 1];        // Enter coast
 
             return(false);
         }

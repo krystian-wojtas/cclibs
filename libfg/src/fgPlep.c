@@ -1,5 +1,5 @@
 /*!
- * @file  plep.c
+ * @file  fgPlep.c
  * @brief Generate Parabola-Linear-Exponential-Parabola (PLEP) function
  *
  * <h2>Copyright</h2>
@@ -25,8 +25,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "libfg/plep.h"
-#include <stdio.h>
+
+
 
 enum fg_error fgPlepInit(struct fg_limits          *limits,
                          enum   fg_limits_polarity  limits_polarity,
@@ -36,13 +38,14 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
                          struct fg_plep_pars       *pars,
                          struct fg_meta            *meta)
 {
-    enum fg_error  fg_error;                    // Limits status
+    enum fg_error  fg_error;                    // Error code
     struct fg_meta local_meta;                  // Local meta data in case user meta is NULL
+    struct fg_plep_pars p;                      // Local PLEP pars - copied to user *pars only if there are no errors
     uint32_t       i;                           // Loop variable
-    uint32_t       par_b4_lin_flag;             // Decelerating parabola before Linear flag
-    uint32_t       par_b4_exp_flag;             // Decelerating parabola before Exponential flag
-    uint32_t       exp_b4_lin_flag;             // Exponential before Linear flag
-    uint32_t       exp_f;                       // Exponential segment present flag
+    bool           is_exp;                      // Is exponential segment present flag
+    bool           is_par_b4_lin;               // Is decelerating parabola before linear flag
+    bool           is_par_b4_exp;               // Is decelerating parabola before exponential flag
+    bool           is_exp_b4_lin;               // Is exponential before linear flag
     float          delta_ref;                   // Initial ref minus final ref
     float          min_exp_final;               // Minimum allowable exp_final
     float          exp_rate;                    // Initial rate of change for exponential segment
@@ -50,7 +53,7 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
     float          delta_time1_lin;             // Time between the top of first parabolic segment and the start of linear segment
     float          delta_time1_exp;             // Time until exponential segment
     float          ref_time;                    // Segment time accumulator
-    float          inv_acc;                     // 1 / pars->acceleration
+    float          inv_acc;                     // 1 / p.acceleration
     float          delta_time[FG_PLEP_N_SEGS+1];// Segment durations
 
     meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
@@ -68,33 +71,33 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
     // Prepare variables
 
-    pars->acceleration = fabs(config->acceleration);
-    pars->linear_rate  = fabs(config->linear_rate);
-    pars->final_rate   = config->final_rate;
-    pars->delay        = delay;
+    p.acceleration = fabs(config->acceleration);
+    p.linear_rate  = fabs(config->linear_rate);
+    p.final_rate   = config->final_rate;
+    p.delay        = delay;
 
     delta_ref = init_ref - config->final;       // Total reference change
-    inv_acc   = 1.0 / pars->acceleration;       // Inverse acceleration
+    inv_acc   = 1.0 / p.acceleration;           // Inverse acceleration
 
-    delta_time[0] = delta_time[1] = delta_time[2] = delta_time[3] = 0.0;        // Clear segment times
+    delta_time[0] = delta_time[1] = delta_time[2] = delta_time[3] = 0.0; // Clear segment times
 
     // Calculate final accelerating parabola
 
-    if(pars->final_rate >= 0.0)
+    if(p.final_rate >= 0.0)
     {
-        pars->final_acc = pars->acceleration;
+        p.final_acc = p.acceleration;
     }
     else
     {
-        pars->final_acc = -pars->acceleration;
+        p.final_acc = -p.acceleration;
     }
 
-    delta_time[5] = pars->final_rate / pars->final_acc;
-    pars->ref[4]  = config->final - 0.5 * pars->final_rate * delta_time[5];
+    delta_time[5] = p.final_rate / p.final_acc;
+    p.ref[4]      = config->final - 0.5 * p.final_rate * delta_time[5];
 
     // Allow exponential segment if all conditions are satisfied :
 
-    exp_f = (pars->final_rate == 0.0              &&     // The final rate is zero
+    is_exp = (p.final_rate == 0.0                 &&     // The final rate is zero
              init_ref * config->final >= 0.0      &&     // The PLEP doesn't cross zero
              fabs(init_ref) > fabs(config->final) &&     // The magnitude of the current is decreasing
              config->exp_tc > 0.0);                      // The exponential time constant is greater than zero
@@ -103,105 +106,107 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
     if(delta_ref >= 0.0)                       // Descending PLEP
     {
-        pars->normalisation = 1.0;
-        pars->ref[5]        = config->final;             // Normalised final reference
+        p.normalisation = 1.0;
+        p.ref[5]        = config->final;             // Normalised final reference
     }
     else                                        // Ascending PLEP
     {
-        pars->normalisation = -1.0;
-        init_ref            = -init_ref;                 // Normalised initial reference
-        delta_ref           = -delta_ref;                // Normalised delta
-        pars->ref[4]        = -pars->ref[4];             // Normalised penultimate reference
-        pars->ref[5]        = -config->final;            // Normalised final reference
-        pars->final_rate    = -pars->final_rate;         // Normalised final rate
-        pars->final_acc     = -pars->final_acc;          // Normalised final acceleration
+        p.normalisation = -1.0;
+        init_ref        = -init_ref;                 // Normalised initial reference
+        delta_ref       = -delta_ref;                // Normalised delta
+        p.ref[4]        = -p.ref[4];                 // Normalised penultimate reference
+        p.ref[5]        = -config->final;            // Normalised final reference
+        p.final_rate    = -p.final_rate;             // Normalised final rate
+        p.final_acc     = -p.final_acc;              // Normalised final acceleration
     }
 
-    pars->ref[0] = init_ref;
+    p.ref[0] = init_ref;
 
     // Prepare for exponential section if required
 
-    if(exp_f)
+    if(is_exp)
     {
-        pars->inv_exp_tc = -1.0 / config->exp_tc;
+        p.inv_exp_tc = -1.0 / config->exp_tc;
 
-        min_exp_final = config->final - 0.5 * pars->acceleration * config->exp_tc * config->exp_tc;
+        min_exp_final = config->final - 0.5 * p.acceleration * config->exp_tc * config->exp_tc;
 
-        if(config->exp_final < min_exp_final)           // Clip exp final at minimum permitted value
+        // Clip exp final at minimum permitted value
+
+        if(config->exp_final < min_exp_final)  
         {
-            pars->exp_final = min_exp_final;
+            p.exp_final = min_exp_final;
         }
         else
         {
-            pars->exp_final = config->exp_final;
+            p.exp_final = config->exp_final;
         }
 
         // Calculate rate at start of exp segment
 
-        exp_rate = (pars->exp_final - init_ref) * pars->inv_exp_tc;
+        exp_rate = (p.exp_final - init_ref) * p.inv_exp_tc;
 
         // Clip linear rate of change to exp limit
 
-        if(exp_rate < pars->linear_rate)
+        if(exp_rate < p.linear_rate)
         {
-            pars->linear_rate = exp_rate;
+            p.linear_rate = exp_rate;
         }
     }
 
     // Calculate PLEP parameters for different cases: 1.P-P, 2.P-E-P, 3.P-L-P, 4.P-L-E-P
 
-    pars->linear_rate   = -pars->linear_rate;   // Always strictly negative
-    pars->acceleration  = -pars->acceleration;  // Always strictly negative
-    inv_acc             = -inv_acc;             // Always strictly negative
+    p.linear_rate   = -p.linear_rate;   // Always strictly negative
+    p.acceleration  = -p.acceleration;  // Always strictly negative
+    inv_acc         = -inv_acc;         // Always strictly negative
 
     // Delta times between the start of the first parabola and either the start of the second
     // parabola (P-P, P-E-P cases) or the start of the linear segment (P-L-P, P-L-E-P cases)
 
-    delta_time1_par = sqrt(inv_acc * (pars->ref[4] - pars->ref[0]));
-    delta_time1_lin = pars->linear_rate * inv_acc;
+    delta_time1_par = sqrt(inv_acc * (p.ref[4] - p.ref[0]));
+    delta_time1_lin = p.linear_rate * inv_acc;
 
-    if(exp_f)
+    if(is_exp)
     {
         delta_time1_exp = sqrt(config->exp_tc * config->exp_tc +
-                               2.0 * inv_acc * (pars->exp_final - pars->ref[0])) - config->exp_tc;
+                               2.0 * inv_acc * (p.exp_final - p.ref[0])) - config->exp_tc;
     }
     else
     {
         delta_time1_exp = 1.0E30;
     }
 
-    par_b4_lin_flag = (delta_time1_par < delta_time1_lin);
-    par_b4_exp_flag = (delta_time1_par < delta_time1_exp);
-    exp_b4_lin_flag = (delta_time1_exp < delta_time1_lin);
+    is_par_b4_lin = (delta_time1_par < delta_time1_lin);
+    is_par_b4_exp = (delta_time1_par < delta_time1_exp);
+    is_exp_b4_lin = (delta_time1_exp < delta_time1_lin);
 
     // Case 1 : P-P
 
-    if(par_b4_lin_flag && par_b4_exp_flag)
+    if(is_par_b4_lin && is_par_b4_exp)
     {
         delta_time[1] = delta_time[4] = delta_time1_par;
-        pars->ref[1] = pars->ref[2] = pars->ref[3] = 0.5 * (pars->ref[0] + pars->ref[4]);
+        p.ref[1] = p.ref[2] = p.ref[3] = 0.5 * (p.ref[0] + p.ref[4]);
 
         goto end;
     }
 
     // Case 2 : P-E-P
 
-    if(exp_b4_lin_flag)
+    if(is_exp_b4_lin)
     {
         delta_time[1] = delta_time1_exp;
-        pars->ref[1] = pars->ref[2] = pars->ref[0] + 0.5 * pars->acceleration * delta_time[1] * delta_time[1];
+        p.ref[1] = p.ref[2] = p.ref[0] + 0.5 * p.acceleration * delta_time[1] * delta_time[1];
 
         exp_par:        // From goto exp_par;
 
         delta_time[4] = config->exp_tc - sqrt(config->exp_tc * config->exp_tc +
-                                              2.0 * inv_acc * (pars->ref[4] - pars->exp_final));
+                                              2.0 * inv_acc * (p.ref[4] - p.exp_final));
 
-        delta_time[3] = -config->exp_tc * log((pars->ref[4] - pars->exp_final -
-                                               0.5 * pars->acceleration * delta_time[4] * delta_time[4]) /
-                                              (pars->ref[2] - pars->exp_final));
+        delta_time[3] = -config->exp_tc * log((p.ref[4] - p.exp_final -
+                                               0.5 * p.acceleration * delta_time[4] * delta_time[4]) /
+                                              (p.ref[2] - p.exp_final));
 
-        pars->ref[3]    = pars->ref[4] - 0.5 * pars->acceleration * delta_time[4] * delta_time[4];
-        pars->ref_exp   = pars->ref[2] - pars->exp_final;
+        p.ref[3]  = p.ref[4] - 0.5 * p.acceleration * delta_time[4] * delta_time[4];
+        p.ref_exp = p.ref[2] - p.exp_final;
 
         goto end;
     }
@@ -209,19 +214,19 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
     // Case 3, 4 : P-L-P or P-L-E-P
 
     delta_time[1] = delta_time1_lin;
-    pars->ref[1] = pars->ref[0] + 0.5 * pars->acceleration * delta_time[1] * delta_time[1];
+    p.ref[1] = p.ref[0] + 0.5 * p.acceleration * delta_time[1] * delta_time[1];
 
-    pars->ref[3] = pars->ref[4] - 0.5 * inv_acc * pars->linear_rate * pars->linear_rate;
+    p.ref[3] = p.ref[4] - 0.5 * inv_acc * p.linear_rate * p.linear_rate;
 
-    if(exp_f)
+    if(is_exp)
     {
-        pars->ref[2] = pars->exp_final - pars->linear_rate * config->exp_tc;
+        p.ref[2] = p.exp_final - p.linear_rate * config->exp_tc;
 
-        if(pars->ref[2] > pars->ref[3])
+        if(p.ref[2] > p.ref[3])
         {
             // Case 4 : P-L-E-P
 
-            delta_time[2] = (pars->ref[2] - pars->ref[1]) / pars->linear_rate;
+            delta_time[2] = (p.ref[2] - p.ref[1]) / p.linear_rate;
 
             goto exp_par;       // part of Case 2: P-E-P above
         }
@@ -229,27 +234,27 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
     // Case 3 : P-L-P
 
-    pars->ref[2]  = pars->ref[3];
-    delta_time[2] = (pars->ref[2] - pars->ref[1]) / pars->linear_rate;
-    delta_time[4] = pars->linear_rate * inv_acc;
+    p.ref[2]      = p.ref[3];
+    delta_time[2] = (p.ref[2] - p.ref[1]) / p.linear_rate;
+    delta_time[4] = p.linear_rate * inv_acc;
 
     // Calculate segment times and min/max reference 
 
     end:        // From goto end;
 
-    ref_time = 0.0;;
+    ref_time = 0.0;
 
     for(i = 0 ; i <= FG_PLEP_N_SEGS ; i++)
     {
-        ref_time     += delta_time[i];
-        pars->time[i] = ref_time;
+        ref_time += delta_time[i];
+        p.time[i] = ref_time;
 
-        fgSetMinMax(meta, pars->normalisation * pars->ref[i]);
+        fgSetMinMax(meta, p.normalisation * p.ref[i]);
     }
 
     // Complete meta data
 
-    meta->duration  = pars->time[5];
+    meta->duration  = p.time[5];
     meta->range.end = config->final;
 
     // Check limits if supplied
@@ -258,9 +263,9 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
     {
         // Check limits at the end of the parabolic acceleration (segment 1)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[1],
-                                 (pars->normalisation * pars->acceleration * (pars->time[1] - pars->time[0])),
-                                  pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, p.normalisation * p.ref[1],
+                                 (p.normalisation * p.acceleration * (p.time[1] - p.time[0])),
+                                  p.acceleration, meta)))
         {
             meta->error.index = 1;
             goto error;
@@ -268,10 +273,10 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
         // Check limits at the end of the linear segment (segment 2)
 
-        if(pars->time[2] > pars->time[1] &&
-           (fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[2],
-                                  pars->normalisation * pars->linear_rate,
-                                  pars->acceleration, meta)))
+        if(p.time[2] > p.time[1] &&
+           (fg_error = fgCheckRef(limits, limits_polarity, p.normalisation * p.ref[2],
+                                  p.normalisation * p.linear_rate,
+                                  p.acceleration, meta)))
         {
             meta->error.index = 2;
             goto error;
@@ -279,9 +284,9 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
         // Check limits at the end of the exponential decay (segment 3)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[3],
-                                 (pars->normalisation * pars->acceleration * (pars->time[4] - pars->time[3])),
-                                  pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, p.normalisation * p.ref[3],
+                                 (p.normalisation * p.acceleration * (p.time[4] - p.time[3])),
+                                  p.acceleration, meta)))
         {
             meta->error.index = 3;
             goto error;
@@ -289,8 +294,8 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
         // Check limits at the end of the parabolic deceleration (segment 4)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[4],
-                                  0.0, pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, p.normalisation * p.ref[4],
+                                  0.0, p.acceleration, meta)))
         {
             meta->error.index = 4;
             goto error;
@@ -298,13 +303,17 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
         // Check limits at the end of the parabolic acceleration (segment 5)
 
-        if((fg_error = fgCheckRef(limits, limits_polarity, pars->normalisation * pars->ref[5],
-                                 config->final_rate, pars->acceleration, meta)))
+        if((fg_error = fgCheckRef(limits, limits_polarity, p.normalisation * p.ref[5],
+                                  config->final_rate, p.acceleration, meta)))
         {
             meta->error.index = 5;
             goto error;
         }
     }
+
+    // Copy valid set of parameters to user's pars structure
+
+    memcpy(pars, &p, sizeof(p));
 
     return(FG_OK);
 
@@ -320,7 +329,7 @@ enum fg_error fgPlepInit(struct fg_limits          *limits,
 
 bool fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
 {
-    bool     ref_running = true;            // Reference running flag is the return value
+    bool     is_func_running = true;        // Reference function running flag is the return value
     float    r;                             // Normalised reference
     double   func_time;                     // Time within function
     float    seg_time;                      // Time within segment
@@ -395,7 +404,7 @@ bool fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
 
     else
     {
-        ref_running = false;
+        is_func_running = false;
 
         // seg_time is relative to end of function
 
@@ -408,7 +417,7 @@ bool fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref)
 
     *ref = pars->normalisation * r;
 
-    return(ref_running);
+    return(is_func_running);
 }
 
 // EOF

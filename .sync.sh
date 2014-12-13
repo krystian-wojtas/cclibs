@@ -13,6 +13,7 @@ done
 cd ~/projects/cclibs/
 
 rsync -av \
+--exclude 'archive/' \
 --exclude 'Linux/' \
 --exclude 'results/' \
 --exclude 'webplots/' \

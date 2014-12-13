@@ -47,20 +47,6 @@
 // Global power converter regulation structures
 
 /*!
- * Reference function check structures
- */
-
-struct reg_ref_check
-{
-    enum   reg_mode             reg_mode;               //!< Regulation mode. Can be #REG_VOLTAGE, #REG_CURRENT or #REG_FIELD.
-    uint32_t                    num_samples;            //!< Number of reference samples
-    float                       sum_ref_squared;        //!< Sum of ref^2
-    float                       prev_ref;               //!< Previous reference
-    float                       prev_v;                 //!< Previous estimated voltage
-    struct reg_lim_ref          lim_v;                  //!< Voltage limits structure
-};
-
-/*!
  * Measurement simulation structure
  */
 struct reg_conv_sim_meas
@@ -144,7 +130,6 @@ struct reg_conv
     bool                        is_openloop;            //!< Open loop when true, closed loop when false
     struct reg_conv_signal     *reg_signal;             //!< Pointer to currently regulated signal structure. Can be reg_conv::b or reg_conv::i.
     struct reg_lim_ref         *lim_ref;                //!< Pointer to the currently active reference limit (b, i or v)
-    struct reg_ref_check        ref_check;              //!< Reference function check data
     double                      reg_period;             //!< Regulation period
     float                       ref_advance;            //!< Time to advance reference function
 
@@ -427,9 +412,11 @@ void regConvRegulateRT(struct reg_conv *conv, float *ref);
  * This is a Real-Time function.
  *
  * @param[in,out] conv                 Pointer to converter regulation structure.
+ * @param[in]     v_circuit            Pointer to simulated circuit voltage or NULL if function should
+ *                                     perform the simulation using the voltage source model.
  * @param[in]     v_perturbation       Voltage perturbation to add to the simulated circuit voltage.
  */
-void regConvSimulateRT(struct reg_conv *conv, float v_perturbation);
+void regConvSimulateRT(struct reg_conv *conv, float *v_circuit, float v_perturbation);
 
 #ifdef __cplusplus
 }

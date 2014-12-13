@@ -90,7 +90,7 @@ bool ccRefDirectGen(struct fg_table_pars *pars, const double *time, float *ref)
     {
         // If vector is already complete or is now complete
 
-        if(pars->seg_idx >= pars->n_elements || ++pars->seg_idx >= pars->n_elements)
+        if(pars->seg_idx >= pars->num_points || ++pars->seg_idx >= pars->num_points)
         {
             // Return function running flag from RAMP function
 
@@ -266,10 +266,10 @@ uint32_t ccRefInitTABLE(struct fg_meta *fg_meta, uint32_t cyc_sel)
 
     // Link table data to table config structure
 
-    config.ref             = ccpars_table.ref[cyc_sel];
-    config.time            = ccpars_table.time[cyc_sel];
-    config.ref_n_elements  = table_pars[0].num_elements[cyc_sel];
-    config.time_n_elements = table_pars[1].num_elements[cyc_sel];
+    config.ref               = ccpars_table.ref[cyc_sel];
+    config.time              = ccpars_table.time[cyc_sel];
+    config.ref_num_elements  = table_pars[0].num_elements[cyc_sel];
+    config.time_num_elements = table_pars[1].num_elements[cyc_sel];
 
     // Try to initialise the TABLE
 
@@ -360,11 +360,11 @@ uint32_t ccRefInitSINE(struct fg_meta *fg_meta, uint32_t cyc_sel)
 
     // Prepare TEST config structure
 
-    config.type         = FG_TEST_SINE;
-    config.amplitude_pp = ccpars_test.amplitude_pp[cyc_sel][0];
-    config.num_cycles   = ccpars_test.num_cycles  [cyc_sel][0];
-    config.period       = ccpars_test.period      [cyc_sel][0];
-    config.use_window   = ccpars_test.use_window  [cyc_sel][0];
+    config.type             = FG_TEST_SINE;
+    config.amplitude_pp     = ccpars_test.amplitude_pp[cyc_sel][0];
+    config.num_cycles       = ccpars_test.num_cycles  [cyc_sel][0];
+    config.period           = ccpars_test.period      [cyc_sel][0];
+    config.is_window_active = ccpars_test.use_window  [cyc_sel][0];
 
     // Try to initialise the SINE
 
@@ -392,11 +392,11 @@ uint32_t ccRefInitCOSINE(struct fg_meta *fg_meta, uint32_t cyc_sel)
 
     // Prepare TEST config structure
 
-    config.type         = FG_TEST_COSINE;
-    config.amplitude_pp = ccpars_test.amplitude_pp[cyc_sel][0];
-    config.num_cycles   = ccpars_test.num_cycles  [cyc_sel][0];
-    config.period       = ccpars_test.period      [cyc_sel][0];
-    config.use_window   = ccpars_test.use_window  [cyc_sel][0];
+    config.type             = FG_TEST_COSINE;
+    config.amplitude_pp     = ccpars_test.amplitude_pp[cyc_sel][0];
+    config.num_cycles       = ccpars_test.num_cycles  [cyc_sel][0];
+    config.period           = ccpars_test.period      [cyc_sel][0];
+    config.is_window_active = ccpars_test.use_window  [cyc_sel][0];
 
     // Try to initialise the COSINE
 

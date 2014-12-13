@@ -1,0 +1,57 @@
+# Test default parameters
+
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL GROUP                sandbox
+GLOBAL PROJECT              OpTest
+
+VS V_REF_DELAY              1
+
+LIMITS B_ACCELERATION       1.000000E+003
+LIMITS V_ACCELERATION       1.000000E+003
+
+IREG PERIOD_ITERS           7
+BREG PERIOD_ITERS           11
+
+# Mixed functions
+
+REF FUNCTION(1)             SINE CTRIM PPPL PLEP RAMP TABLE PULSE
+REF REG_MODE(1)             F    C     V    F    V    C     F
+
+GLOBAL CYCLE_SELECTOR       1    2     3    4    5    6     7
+
+TEST INITIAL_REF(1)         1
+
+PLEP INITIAL_REF()         2
+PLEP FINAL_REF()           3
+
+PPPL INITIAL_REF(3)         2
+PPPL REF4(3)                3
+
+TRIM INITIAL_REF(2)         2
+TRIM FINAL_REF(2)           3
+
+RAMP INITIAL_REF(5)         2
+RAMP FINAL_REF(5)           3
+RAMP LINEAR_RATE(5)         0
+
+TABLE REF()                 2 2.5 2.5 3.0
+
+PULSE TIME(7)               0
+PULSE DURATION(7)           1
+PULSE REF(7)                4
+
+MEAS I_SIM_NOISE_PP         1E-3
+MEAS B_SIM_NOISE_PP         1E-3
+
+DEFAULT V_ACCELERATION      10
+DEFAULT V_DECELERATION      10
+DEFAULT I_ACCELERATION      10
+DEFAULT I_DECELERATION      10
+DEFAULT B_ACCELERATION      10
+DEFAULT B_DECELERATION      10
+
+GLOBAL FILE                 mixed
+RUN
+
+# EOF

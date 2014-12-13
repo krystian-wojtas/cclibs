@@ -1,8 +1,6 @@
 /*!
- * @file   lim.c
+ * @file   regLim.c
  * @brief  Converter Control Regulation library limit functions for field/current/voltage reference and field/current measurement
- * @author Quentin.King@cern.ch
- * @author Pierre.Dejoue@cern.ch
  *
  * <h2>Copyright</h2>
  *
