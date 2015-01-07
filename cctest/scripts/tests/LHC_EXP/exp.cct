@@ -31,10 +31,10 @@ LIMITS V_QUADRANTS41        0.0,0.0
 
 # CMS Voltage source parameters
 
-VS V_REF_DELAY_ITERS        10.0
-VS BANDWIDTH                100.0
-VS TAU_ZERO                 0.0
-VS Z                        0.9
+PC ACT_DELAY_ITERS          10.0
+PC BANDWIDTH                100.0
+PC TAU_ZERO                 0.0
+PC Z                        0.9
 
 # CMS Load parameters
 
@@ -99,10 +99,10 @@ LIMITS V_QUADRANTS41        0.0,0.0
 
 # CMS Voltage source parameters
 
-VS V_REF_DELAY_ITERS        10.0
-VS BANDWIDTH                1000.0
-VS TAU_ZERO                 0.0
-VS Z                        0.9
+PC ACT_DELAY_ITERS          10.0
+PC BANDWIDTH                1000.0
+PC TAU_ZERO                 0.0
+PC Z                        0.9
 
 # CMS Load parameters
 

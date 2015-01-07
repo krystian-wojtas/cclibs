@@ -3,16 +3,13 @@
  * @brief Generate Parabola-Linear-Exponential-Parabola (PLEP) functions
  *
  * A PLEP can have up to five segments: Parabola-Linear-Exponential-Parabola-Parabola.
- * The exponential is only required when ramping down a 1-quadrant converter. The
+ * The exponential is only interesting when ramping down a 1-quadrant converter. The
  * normalised PLEP is always calculated as a descending function: if the PLEP is
  * ascending, the normalised PLEP is obtained by reflecting it around zero.
- * The function is defined
- * by the arrays fg_plep_pars::ref and fg_plep_pars::time. These contain the segment
- * times and normalised values.
+ * The function is defined by the arrays fg_plep::ref and fg_plep::time. 
+ * These contain the segment times and normalised values.
  *
- * The PLEP function is special because it can be initialised with a non-zero
- * initial rate of change. fgPlepCalc() accepts an initial reference and initial
- * rate of change of reference. The final reference can also have a non-zero rate
+ * The PLEP function is special because the final reference can have a non-zero rate
  * of change. If the final rate of change is not zero, this adds a fifth parabolic
  * segment. This can be an extension of the fourth parabola, or it can have the
  * opposite acceleration.
@@ -25,7 +22,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -53,30 +50,15 @@
 
 // Constants
 
-#define FG_PLEP_N_SEGS          5           //!< Number of segments: P-L-E-P-P = 5
-
-// Types
-
-/*!
- * PLEP function configuration
- */
-struct fg_plep_config
-{
-    float       final;                      //!< Final reference
-    float       acceleration;               //!< Acceleration of the parabolic segments (absolute value is used)
-    float       linear_rate;                //!< Maximum linear rate (absolute value is used)
-    float       final_rate;                 //!< Final rate of change
-    float       exp_tc;                     //!< Exponential time constant
-    float       exp_final;                  //!< End reference of exponential segment (can be zero)
-};
+#define FG_PLEP_NUM_SEGS        5           //!< Number of segments: P-L-E-P-P = 5
 
 /*!
  * PLEP function parameters
  */
-struct fg_plep_pars
+struct fg_plep
 {
-    double      delay;                      //!< Time before start of function (s).
-    float       normalisation;              //!< 1.0 for descending ramps, -1.0 for ascending ramps.
+    double      delay;                      //!< Time before start of function.
+    float       normalisation;              //!< 1.0 for descending PLEP, -1.0 for ascending PLEP.
     float       acceleration;               //!< Parabolic acceleration/deceleration.
     float       final_acc;                  //!< Normalised final parabolic acceleration.
     float       linear_rate;                //!< Linear rate of change (always negative).
@@ -84,8 +66,8 @@ struct fg_plep_pars
     float       ref_exp;                    //!< Initial reference for exponential segment.
     float       inv_exp_tc;                 //!< Time constant for exponential segment.
     float       exp_final;                  //!< End reference of exponential segment.
-    float       ref [FG_PLEP_N_SEGS+1];     //!< End of segment normalised references. See also #FG_PLEP_N_SEGS.
-    float       time[FG_PLEP_N_SEGS+1];     //!< End of segment times. See also #FG_PLEP_N_SEGS.
+    float       ref [FG_PLEP_NUM_SEGS+1];   //!< End of segment normalised references. See also #FG_PLEP_NUM_SEGS.
+    float       time[FG_PLEP_NUM_SEGS+1];   //!< End of segment times. See also #FG_PLEP_NUM_SEGS.
 };
 
 #ifdef __cplusplus
@@ -95,25 +77,43 @@ extern "C" {
 // External functions
 
 /*!
- * Check PLEP function configuration and initialise parameters.
+ * Initialise PLEP function.
  *
- * @param[in]  limits           Pointer to fgc_limits structure (or NULL).
- * @param[in]  limits_polarity  Control of limits inversion.
- * @param[in]  config           Pointer to fg_plep_config structure.
- * @param[in]  delay            Delay before the start of the function.
- * @param[in]  init_ref         Initial reference value.
- * @param[out] pars             Pointer to fg_plep_pars structure.
- * @param[out] meta             Diagnostic information. Set to NULL if not required.
+ * @param[in]  limits             Pointer to fgc_limits structure (or NULL if no limits checking required).
+ * @param[in]  is_pol_switch_auto True if polarity switch can be changed automatically.
+ * @param[in]  is_pol_switch_neg  True if polarity switch is currently in the negative position.
+ * @param[in]  delay              Delay before the start of the function.
+ * @param[in]  initial_ref        Initial reference value.
+ * @param[in]  final_ref          Final reference value.
+ * @param[in]  final_rate         Final rate of change.
+ * @param[in]  acceleration       Acceleration/deceleration value. Absolute value is used.
+ * @param[in]  linear_rate        Maximum linear rate. Absolute value is used.
+ * @param[in]  exp_tc             Time constant for exponential section.
+ * @param[in]  exp_final          Final reference for exponential section.
+ * @param[out] pars               Pointer to fg_plep structure.
+ * @param[out] meta               Diagnostic information. Set to NULL if not required.
  *
  * @retval FG_OK on success
- * @retval FG_BAD_PARAMETER if values in <em>config</em> are invalid
+ * @retval FG_BAD_PARAMETER if any input parameters are invalid
  * @retval FG_OUT_OF_LIMITS if reference value exceeds limits
  * @retval FG_OUT_OF_RATE_LIMITS if rate of change of reference exceeds limits
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
-enum fg_error fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                         struct fg_plep_config *config, double delay, float init_ref,
-                         struct fg_plep_pars *pars, struct fg_meta *meta);
+enum fg_error fgPlepInit(struct fg_limits *limits, 
+                         bool   is_pol_switch_auto,
+                         bool   is_pol_switch_neg,
+                         double delay, 
+                         float  initial_ref,
+                         float  final_ref,
+                         float  final_rate,
+                         float  acceleration,
+                         float  linear_rate,
+                         float  exp_tc,
+                         float  exp_final,
+                         struct fg_plep *pars, 
+                         struct fg_meta *meta);
+
+
 
 /*!
  * Generate the reference for the PLEP function.
@@ -123,7 +123,7 @@ enum fg_error fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity limit
  * The reference is adjusted (de-normalised) if the PLEP is ascending, by simply
  * flipping the sign.
  *
- * @param[in]  pars             Pointer to fg_plep_pars structure containing the
+ * @param[in]  pars             Pointer to fg_plep structure containing the
  *                              coordinates of the transition points between the
  *                              segments of the PLEP function:
  *                              <ul>
@@ -134,21 +134,14 @@ enum fg_error fgPlepInit(struct fg_limits *limits, enum fg_limits_polarity limit
  *                              <li>pars->time[4], pars->ref[4]: End of the second (decelerating) parabola</li>
  *                              <li>pars->time[5], pars->ref[5]: End of the third (accelerating) parabola and end of the PLEP function</li>
  *                              </ul>
- * @param[in]  time             Current time within the function. Note that time
- *                              is passed by const reference rather than by value.
- *                              This allows the user to initialise an array of
- *                              pointers to functions with the pointer to
- *                              fgPlepGen(). If time is passed by value then the
- *                              compiler promotes the float to double and prevents
- *                              correct initialisation.
- * @param[out] ref              Pointer to the reference value from the previous
- *                              iteration. This may have been clipped if any
- *                              limits were reached.
+ * @param[in]  time             Pointer to time within the function.
+ * @param[out] ref              Pointer to the reference value.
  *
- * @retval false    if time is beyond the end of the function.
- * @retval true     if time is before the end of the function.
+ * @retval FG_GEN_BEFORE_FUNC   if time is before the start of the function.
+ * @retval FG_GEN_DURING_FUNC   if time is during the function.
+ * @retval FG_GEN_AFTER_FUNC    if time is after the end of the function.
  */
-bool fgPlepGen(struct fg_plep_pars *pars, const double *time, float *ref);
+enum fg_gen_status fgPlepGen(struct fg_plep *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }

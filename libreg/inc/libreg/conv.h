@@ -34,15 +34,9 @@
 #ifndef LIBREG_CONV_H
 #define LIBREG_CONV_H
 
-// Include header files
-
-#include <stdint.h>
-#include <stdbool.h>
-
 // Global power converter regulation constants
 
-#define REG_N_LOADS                             4       //!< Number of loads addressed by LOAD SELECT
-#define REG_INHIBIT_MAX_ABS_ERR_ITERATIONS      10      //!< Number of iterations to inhibit max_abs_err calculation
+#define REG_NUM_LOADS                           4       //!< Number of loads addressed by LOAD SELECT
 
 // Global power converter regulation structures
 
@@ -61,7 +55,7 @@ struct reg_conv_sim_meas
  */
 struct reg_conv_rst_pars
 {
-    bool                        use_next_pars;          //!< Flag to indicate whether to switch to the next set of RST parameters in the RT thread
+    bool                        is_next_ready;          //!< Flag to indicate if the next set of RST parameters are ready to use
     struct reg_rst_pars        *active;                 //!< Pointer to active parameters in pars[]
     struct reg_rst_pars        *next;                   //!< Pointer to next parameters in pars[]
     struct reg_rst_pars         pars[2];                //!< Structures for active and next RST parameter
@@ -73,9 +67,11 @@ struct reg_conv_rst_pars
 struct reg_conv_signal
 {
     enum reg_enabled_disabled   regulation;             //!< Option to regulate this signal is enabled or disabled
+    bool                        is_delayed_ref_available; //!< Flag to indicate if the next set of RST parameters are ready to use
     uint32_t                    iteration_counter;      //!< Iteration counter (within each regulation period)
     uint32_t                    reg_period_iters;       //!< Regulation period (in iterations) for Operational and Test parameters
-    double                      reg_period;             //!< Regulation period(s) for Operational and Test parameters
+    float                       reg_period;             //!< Regulation period(s) for Operational and Test parameters
+    float                       inv_reg_period;         //!< Regulation frequency(Hz) for Operational and Test parameters
     struct reg_meas_signal     *input_p;                //!< Pointer to input measurement signal structure
     struct reg_meas_signal      input;                  //!< Input measurement and measurement status
     uint32_t                    invalid_input_counter;  //!< Counter for invalid input measurements
@@ -116,7 +112,7 @@ struct reg_conv_voltage
 struct reg_conv
 {
     uint32_t                    iter_period_us;         //!< Iteration (measurement) period in microseconds
-    double                      iter_period;            //!< Iteration (measurement) period in seconds
+    float                       iter_period;            //!< Iteration (measurement) period in seconds
 
     // Libreg initialization parameter structures
 
@@ -128,9 +124,10 @@ struct reg_conv
     enum   reg_mode             reg_mode;               //!< Regulation mode. Can be #REG_NONE, #REG_VOLTAGE, #REG_CURRENT or #REG_FIELD.
     enum   reg_rst_source       reg_rst_source;         //!< RST parameter source. Can be #REG_OPERATIONAL_RST_PARS or #REG_TEST_RST_PARS.
     bool                        is_openloop;            //!< Open loop when true, closed loop when false
+    bool                        is_max_abs_err_enabled; //!< Calculate max_abs_err when true, reset to abs_err when false
     struct reg_conv_signal     *reg_signal;             //!< Pointer to currently regulated signal structure. Can be reg_conv::b or reg_conv::i.
     struct reg_lim_ref         *lim_ref;                //!< Pointer to the currently active reference limit (b, i or v)
-    double                      reg_period;             //!< Regulation period
+    float                       reg_period;             //!< Regulation period
     float                       ref_advance;            //!< Time to advance reference function
 
     float                       meas;                   //!< Field or current regulated measurement
@@ -151,17 +148,17 @@ struct reg_conv
 
     struct reg_conv_signal      b;                      //!< Field regulation parameters and variables
     struct reg_conv_signal      i;                      //!< Current regulation parameters and variables
-    struct reg_conv_voltage     v;                      //!< Voltage regulation parameters and variables. Voltage is regulated by voltage source.
+    struct reg_conv_voltage     v;                      //!< Voltage regulation parameters and variables. Voltage is not regulated by libreg.
 
     // Load parameters and variables structures
 
     struct reg_load_pars        load_pars;              //!< Circuit load model for regulation for LOAD SELECT
     struct reg_load_pars        load_pars_test;         //!< Circuit load model for regulation for LOAD TEST_SELECT
 
-    struct reg_sim_vs_pars      sim_vs_pars;            //!< Voltage source simulation parameters
+    struct reg_sim_pc_pars      sim_pc_pars;            //!< Power converter (voltage source or current source) simulation parameters
     struct reg_sim_load_pars    sim_load_pars;          //!< Circuit load model for simulation
 
-    struct reg_sim_vs_vars      sim_vs_vars;            //!< Voltage source simulation variables
+    struct reg_sim_pc_vars      sim_pc_vars;            //!< Power converter (voltage source or current source) simulation variables
     struct reg_sim_load_vars    sim_load_vars;          //!< Load simulation variables
 
     // RMS current limits
@@ -181,42 +178,50 @@ extern "C" {
  * Set up internal pointers within the reg_conv struct and set the iteration period from the supplied parameter.
  * reg_conv::reg_mode is initialised to #REG_NONE and reg_conv::reg_rst_source is initialised to #REG_OPERATIONAL_RST_PARS.
  * The field_regulation and current_regulation parameters are used to enable or disable the option to regulate
- * current or field.
+ * current or field. Disabling an unused regulation mode reduces processing overhead.
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt.
  *
  * @param[out]    conv               Pointer to converter regulation structure.
- * @param[in]     iter_period_us     Iteration (measurement) period in microseconds
- * @param[in]     field_regulation   Field regulation control (ENABLED/DISABLED)
- * @param[in]     current_regulation Current regulation control (ENABLED/DISABLED)
+ * @param[in]     iter_period_us     Iteration (measurement) period in microseconds.
+ * @param[in]     field_regulation   Field regulation control (ENABLED/DISABLED).
+ * @param[in]     current_regulation Current regulation control (ENABLED/DISABLED).
  */
 void regConvInit(struct reg_conv *conv, uint32_t iter_period_us,
                  enum reg_enabled_disabled field_regulation, enum reg_enabled_disabled current_regulation);
 
+
+
 /*!
  * Check libreg parameters for changes and run appropriate initialisation functions.
- * This should be called by the non-real-time thread of the application whenever any libreg parameters
+ * This should be called by the background thread of the application whenever any libreg parameters
  * have changed.
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt.
  *
- * @param[out]    conv           Pointer to converter regulation structure.
+ * @param[in,out] conv           Pointer to converter regulation structure.
  * @param[in]     pars_mask      Parameter function mask (normally set to zero since the function will check
  *                               for parameters that have changed and will set the mask internally. Each set
- *                               bit will trigger the execution of the initialisation functions.
+ *                               bit will trigger the execution of the initialisation functions. If set
+ *                               to 0xFFFFFFFF it will force all initialisation functions to be executed.
  */
 void regConvPars(struct reg_conv *conv, uint32_t pars_mask);
 
+
+
 /*!
- * Initialise a simulation with a given regulation mode and measurement of the associated signal.
+ * Initialise the simulation of the power converter and load with a given regulation mode and initial simulated
+ * measurement of the associated signal.
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt
  *
  * @param[in,out] conv                 Pointer to converter regulation structure.
  * @param[in]     reg_mode             Initial regulation mode.
- * @param[in]     start                Initial value for signal identified by reg_mode.
+ * @param[in]     init_meas            Initial value for signal identified by reg_mode.
  */
-void regConvSimInit(struct reg_conv *conv, enum reg_mode reg_mode, float start);
+void regConvSimInit(struct reg_conv *conv, enum reg_mode reg_mode, float init_meas);
+
+
 
 /*!
  * Initialise a converter structure with voltage, current and field measurement signal structures.
@@ -224,7 +229,7 @@ void regConvSimInit(struct reg_conv *conv, enum reg_mode reg_mode, float start);
  * values are supplied, the appropriate pointer is set to point to a statically-allocated object
  * with reg_meas_signal::signal = 0.
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt
  *
  * @param[out]    conv        Pointer to converter regulation structure.
  * @param[in]     v_meas_p    Pointer to voltage input measurement signal structure. NULL is allowed.
@@ -233,45 +238,6 @@ void regConvSimInit(struct reg_conv *conv, enum reg_mode reg_mode, float start);
  */
 void regConvMeasInit(struct reg_conv *conv, struct reg_meas_signal *v_meas_p, struct reg_meas_signal *i_meas_p, struct reg_meas_signal *b_meas_p);
 
-/*!
- * Initialise reference function check
- *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
- *
- * @param[in,out] conv                 Pointer to the converter regulation structure.
- * @param[in]     reg_mode             #REG_CURRENT or #REG_FIELD for reference function to be checked.
- * @param[in]     init_ref             Initial reference (field or current).
- * @param[in]     invert_limits        #REG_ENABLED if voltage limits should be inverterd, otherwise #REG_DISABLED.
- *
- * @returns   true if es
- */
-void regConvRefCheckInit(struct reg_conv *conv, enum reg_mode reg_mode, float init_ref, enum reg_enabled_disabled invert_limits);
-
-/*!
- * Initialise reference function check
- *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
- *
- * @param[in,out] conv                 Pointer to the converter regulation structure.
- * @param[in]     reg_mode             #REG_CURRENT or #REG_FIELD for reference function to be checked.
- * @param[in]     init_ref             Initial reference (field or current).
- * @param[in]     invert_limits        #REG_ENABLED if voltage limits should be inverterd, otherwise #REG_DISABLED.
- *
- * @returns   true if es
- */
-bool regConvRefCheck(struct reg_conv *conv, float ref, float *v_min_limit, float *v_max_limit,
-                     float *estimated_v, float *estimated_i);
-
-/*!
- * Initialise reference function check
- *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
- *
- * @param[in]     conv                 Pointer to the converter regulation structure.
- *
- * @returns   Root mean squared for the reference function that was just checked using
- */
-float regConvRefCheckRms(struct reg_conv *conv);
 
 
 /*!
@@ -303,6 +269,8 @@ float regConvRefCheckRms(struct reg_conv *conv);
  */
 void regConvModeSetRT(struct reg_conv *conv, enum reg_mode reg_mode);
 
+
+
 /*!
  * Start of real-time processing on each iteration.
  * Receive new voltage, current and field measurements, then apply limits and filters.
@@ -331,19 +299,23 @@ void regConvModeSetRT(struct reg_conv *conv, enum reg_mode reg_mode);
  *
  * This is a Real-Time function (thread safe).
  *
- * @param[in,out] conv                 Pointer to the converter regulation structure.
- * @param[in]     reg_rst_source       #REG_OPERATIONAL_RST_PARS or #REG_TEST_RST_PARS
- * @param[in]     unix_time            Unix time for this iteration
- * @param[in]     us_time              Microsecond time for this iteration
- * @param[in]     use_sim_meas         If zero, use the real field, current and voltage measurements
- *                                     and measurement statuses supplied by the application. Otherwise
- *                                     use simulated measurements. If simulated measurements are used,
- *                                     all instances of reg_meas_signal::status are set to #REG_MEAS_SIGNAL_OK.
+ * @param[in,out] conv                      Pointer to the converter regulation structure.
+ * @param[in]     reg_rst_source            #REG_OPERATIONAL_RST_PARS or #REG_TEST_RST_PARS
+ * @param[in]     unix_time                 Unix time for this iteration
+ * @param[in]     us_time                   Microsecond time for this iteration
+ * @param[in]     use_sim_meas              If false, use the real field, current and voltage measurements
+ *                                          and measurement statuses supplied by the application. Otherwise
+ *                                          use simulated measurements. If simulated measurements are used,
+ *                                          all instances of reg_meas_signal::status are set to #REG_MEAS_SIGNAL_OK.
+ * @param[in]     is_max_abs_err_enabled    If true, then the max_abs_err will be calculated. If false
+ *                                          it will be reset to equal the abs_err.
  *
  * @returns Iteration number (0 indicates that the reference should be calculated on this iteration)
  */
 uint32_t regConvMeasSetRT(struct reg_conv *conv, enum reg_rst_source reg_rst_source,
-                          uint32_t unix_time, uint32_t us_time, uint32_t use_sim_meas);
+                          uint32_t unix_time, uint32_t us_time, bool use_sim_meas, bool is_max_abs_err_enabled);
+
+
 
 /*!
  * Regulate voltage, current or field for one regulation period.
@@ -386,11 +358,13 @@ uint32_t regConvMeasSetRT(struct reg_conv *conv, enum reg_rst_source reg_rst_sou
  */
 void regConvRegulateRT(struct reg_conv *conv, float *ref);
 
+
+
 /*!
  * Simulate the voltage source and load and the measurements of the voltage, current and field.
  *
  * If the actuation is #REG_VOLTAGE_REF, the voltage source response to the reference voltage is simulated with
- * regSimVsRT(), without taking into account V_REF_DELAY (see reg_sim_load_vars). The voltage reference comes from
+ * regSimVsRT(), without taking into account PC_REF_DELAY (see reg_sim_load_vars). The voltage reference comes from
  * reg_conv_voltage::ref_limited. The load current and field are simulated with regSimLoadRT() in response to the
  * voltage source response plus the perturbation (specified as <em>v_perturbation</em>).
  *
@@ -412,8 +386,8 @@ void regConvRegulateRT(struct reg_conv *conv, float *ref);
  * This is a Real-Time function.
  *
  * @param[in,out] conv                 Pointer to converter regulation structure.
- * @param[in]     v_circuit            Pointer to simulated circuit voltage or NULL if function should
- *                                     perform the simulation using the voltage source model.
+ * @param[in]     v_circuit            Pointer to simulated circuit voltage or NULL if regConvSimulateRT() should
+ *                                     perform the simulation using the power converter model.
  * @param[in]     v_perturbation       Voltage perturbation to add to the simulated circuit voltage.
  */
 void regConvSimulateRT(struct reg_conv *conv, float *v_circuit, float v_perturbation);

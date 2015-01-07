@@ -8,10 +8,10 @@ GLOBAL PROJECT              RAMP
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS        1.0
-VS BANDWIDTH                2000
-VS TAU_ZERO                 0.0
-VS Z                        0.9
+PC ACT_DELAY_ITERS          1.0
+PC BANDWIDTH                2000
+PC TAU_ZERO                 0.0
+PC Z                        0.9
 
 # Load parameters
 

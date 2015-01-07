@@ -5,7 +5,7 @@ GLOBAL FG_LIMITS            ENABLED
 GLOBAL GROUP                sandbox
 GLOBAL PROJECT              RegMode
 
-VS V_REF_DELAY              1
+PC ACT_DELAY_ITERS          1
 
 LIMITS B_ACCELERATION       1.000000E+003
 LIMITS V_ACCELERATION       1.000000E+003

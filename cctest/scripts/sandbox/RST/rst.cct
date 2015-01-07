@@ -38,10 +38,9 @@ LIMITS V_QUADRANTS41        0.0,0.0
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS        0.5
-VS BANDWIDTH                2000.0
-VS TAU_ZERO                 0.0
-VS Z                        0.9
+PC BANDWIDTH                2000.0
+PC TAU_ZERO                 0.0
+PC Z                        0.9
 
 # Load parameters
 
@@ -72,6 +71,7 @@ MEAS V_SIM_NOISE_PP         0.0
 MEAS TONE_HALF_PERIOD_ITERS 100
 MEAS B_SIM_TONE_AMP         0.0
 MEAS I_SIM_TONE_AMP         0.0
+MEAS INVALID_PROBABILITY    0.05
 
 # PPPL parameters
 
@@ -86,6 +86,8 @@ PPPL DURATION4                0.1,      0.2,      0.01
 
 # Without noise
 
+GLOBAL REG_ERR_RATE         MEASUREMENT
+
 # Test 1 - unfiltered
 
 REF REG_MODE                CURRENT
@@ -98,27 +100,27 @@ IREG AUXPOLE4_HZ            20
 IREG AUXPOLE5_HZ            20
 IREG AUXPOLES2_Z            0.5
 
-VS V_REF_DELAY_ITERS        0.2
+PC ACT_DELAY_ITERS          0.2
 GLOBAL FILE                 nn-amps-pppl-unf-0.26
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        5.5
+PC ACT_DELAY_ITERS          5.5
 GLOBAL FILE                 nn-amps-pppl-unf-0.79
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        8.5
+PC ACT_DELAY_ITERS          8.5
 GLOBAL FILE                 nn-amps-pppl-unf-1.09
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        14.5
+PC ACT_DELAY_ITERS          14.5
 GLOBAL FILE                 nn-amps-pppl-unf-1.69
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        18.5
+PC ACT_DELAY_ITERS          18.5
 GLOBAL FILE                 nn-amps-pppl-unf-2.09
 REF FUNCTION                PPPL
 RUN
@@ -127,22 +129,31 @@ RUN
 
 MEAS I_REG_SELECT           FILTERED
 
-VS V_REF_DELAY_ITERS        1.5
+MEAS I_DELAY_ITERS          1.0
+MEAS I_FIR_LENGTHS          3, 1
+PC ACT_DELAY_ITERS          0.0
+GLOBAL FILE                 nn-amps-pppl-fil-0.31
+REF FUNCTION                PPPL
+RUN
+MEAS I_DELAY_ITERS          1.3
+MEAS I_FIR_LENGTHS          10, 1
+
+PC ACT_DELAY_ITERS          1.5
 GLOBAL FILE                 nn-amps-pppl-fil-0.84
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        4.5
+PC ACT_DELAY_ITERS          4.5
 GLOBAL FILE                 nn-amps-pppl-fil-1.14
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        11.5
+PC ACT_DELAY_ITERS          11.5
 GLOBAL FILE                 nn-amps-pppl-fil-1.84
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        14.5
+PC ACT_DELAY_ITERS          14.5
 GLOBAL FILE                 nn-amps-pppl-fil-2.14
 REF FUNCTION                PPPL
 RUN
@@ -151,27 +162,27 @@ RUN
 
 MEAS I_REG_SELECT           EXTRAPOLATED
 
-VS V_REF_DELAY_ITERS        1.5
+PC ACT_DELAY_ITERS          1.5
 GLOBAL FILE                 nn-amps-pppl-ext-0.26
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        7.5
+PC ACT_DELAY_ITERS          7.5
 GLOBAL FILE                 nn-amps-pppl-ext-0.86
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        10.5
+PC ACT_DELAY_ITERS          10.5
 GLOBAL FILE                 nn-amps-pppl-ext-1.16
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        16.5
+PC ACT_DELAY_ITERS          16.5
 GLOBAL FILE                 nn-amps-pppl-ext-1.76
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        20.5
+PC ACT_DELAY_ITERS          20.5
 GLOBAL FILE                 nn-amps-pppl-ext-2.16
 REF FUNCTION                PPPL
 RUN
@@ -188,27 +199,27 @@ BREG AUXPOLE4_HZ            20
 BREG AUXPOLE5_HZ            20
 BREG AUXPOLES2_Z            0.5
 
-VS V_REF_DELAY_ITERS        0.5
+PC ACT_DELAY_ITERS          0.5
 GLOBAL FILE                 nn-gauss-pppl-unf-0.29
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        5.5
+PC ACT_DELAY_ITERS          5.5
 GLOBAL FILE                 nn-gauss-pppl-unf-0.79
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        8.5
+PC ACT_DELAY_ITERS          8.5
 GLOBAL FILE                 nn-gauss-pppl-unf-1.09
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        14.5
+PC ACT_DELAY_ITERS          14.5
 GLOBAL FILE                 nn-gauss-pppl-unf-1.69
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        18.5
+PC ACT_DELAY_ITERS          18.5
 GLOBAL FILE                 nn-gauss-pppl-unf-2.09
 REF FUNCTION                PPPL
 RUN
@@ -217,22 +228,22 @@ RUN
 
 MEAS B_REG_SELECT           FILTERED
 
-VS V_REF_DELAY_ITERS        1.5
+PC ACT_DELAY_ITERS          1.5
 GLOBAL FILE                 nn-gauss-pppl-fil-0.84
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        4.5
+PC ACT_DELAY_ITERS          4.5
 GLOBAL FILE                 nn-gauss-pppl-fil-1.14
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        11.5
+PC ACT_DELAY_ITERS          11.5
 GLOBAL FILE                 nn-gauss-pppl-fil-1.84
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        14.5
+PC ACT_DELAY_ITERS          14.5
 GLOBAL FILE                 nn-gauss-pppl-fil-2.14
 REF FUNCTION                PPPL
 RUN
@@ -241,32 +252,34 @@ RUN
 
 MEAS B_REG_SELECT           EXTRAPOLATED
 
-VS V_REF_DELAY_ITERS        1.5
+PC ACT_DELAY_ITERS          1.5
 GLOBAL FILE                 nn-gauss-pppl-ext-0.26
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        7.5
+PC ACT_DELAY_ITERS          7.5
 GLOBAL FILE                 nn-gauss-pppl-ext-0.86
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        10.5
+PC ACT_DELAY_ITERS          10.5
 GLOBAL FILE                 nn-gauss-pppl-ext-1.16
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        16.5
+PC ACT_DELAY_ITERS          16.5
 GLOBAL FILE                 nn-gauss-pppl-ext-1.76
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        20.5
+PC ACT_DELAY_ITERS          20.5
 GLOBAL FILE                 nn-gauss-pppl-ext-2.16
 REF FUNCTION                PPPL
 RUN
 
 # With Noise
+
+GLOBAL REG_ERR_RATE         REGULATION
 
 MEAS B_SIM_NOISE_PP         0.05
 MEAS I_SIM_NOISE_PP         0.05
@@ -284,27 +297,27 @@ IREG AUXPOLE4_HZ            30
 IREG AUXPOLE5_HZ            30
 IREG AUXPOLES2_Z            0.5
 
-VS V_REF_DELAY_ITERS        0.2
+PC ACT_DELAY_ITERS          0.2
 GLOBAL FILE                 amps-pppl-unf-0.26
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        5.5
+PC ACT_DELAY_ITERS          5.5
 GLOBAL FILE                 amps-pppl-unf-0.79
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        8.5
+PC ACT_DELAY_ITERS          8.5
 GLOBAL FILE                 amps-pppl-unf-1.09
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        14.5
+PC ACT_DELAY_ITERS          14.5
 GLOBAL FILE                 amps-pppl-unf-1.69
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        18.5
+PC ACT_DELAY_ITERS          18.5
 GLOBAL FILE                 amps-pppl-unf-2.09
 REF FUNCTION                PPPL
 RUN
@@ -313,22 +326,22 @@ RUN
 
 MEAS I_REG_SELECT           FILTERED
 
-VS V_REF_DELAY_ITERS        1.5
+PC ACT_DELAY_ITERS          1.5
 GLOBAL FILE                 amps-pppl-fil-0.84
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        4.5
+PC ACT_DELAY_ITERS          4.5
 GLOBAL FILE                 amps-pppl-fil-1.14
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        11.5
+PC ACT_DELAY_ITERS          11.5
 GLOBAL FILE                 amps-pppl-fil-1.84
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        14.5
+PC ACT_DELAY_ITERS          14.5
 GLOBAL FILE                 amps-pppl-fil-2.14
 REF FUNCTION                PPPL
 RUN
@@ -337,27 +350,27 @@ RUN
 
 MEAS I_REG_SELECT           EXTRAPOLATED
 
-VS V_REF_DELAY_ITERS        1.5
+PC ACT_DELAY_ITERS          1.5
 GLOBAL FILE                 amps-pppl-ext-0.26
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        7.5
+PC ACT_DELAY_ITERS          7.5
 GLOBAL FILE                 amps-pppl-ext-0.86
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        10.5
+PC ACT_DELAY_ITERS          10.5
 GLOBAL FILE                 amps-pppl-ext-1.16
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        16.5
+PC ACT_DELAY_ITERS          16.5
 GLOBAL FILE                 amps-pppl-ext-1.76
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        20.5
+PC ACT_DELAY_ITERS          20.5
 GLOBAL FILE                 amps-pppl-ext-2.16
 REF FUNCTION                PPPL
 RUN
@@ -374,27 +387,27 @@ BREG AUXPOLE4_HZ            30
 BREG AUXPOLE5_HZ            30
 BREG AUXPOLES2_Z            0.5
 
-VS V_REF_DELAY_ITERS        0.5
+PC ACT_DELAY_ITERS          0.5
 GLOBAL FILE                 gauss-pppl-unf-0.29
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        5.5
+PC ACT_DELAY_ITERS          5.5
 GLOBAL FILE                 gauss-pppl-unf-0.79
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        8.5
+PC ACT_DELAY_ITERS          8.5
 GLOBAL FILE                 gauss-pppl-unf-1.09
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        14.5
+PC ACT_DELAY_ITERS          14.5
 GLOBAL FILE                 gauss-pppl-unf-1.69
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        18.5
+PC ACT_DELAY_ITERS          18.5
 GLOBAL FILE                 gauss-pppl-unf-2.09
 REF FUNCTION                PPPL
 RUN
@@ -403,22 +416,22 @@ RUN
 
 MEAS B_REG_SELECT           FILTERED
 
-VS V_REF_DELAY_ITERS        1.5
+PC ACT_DELAY_ITERS          1.5
 GLOBAL FILE                 gauss-pppl-fil-0.84
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        4.5
+PC ACT_DELAY_ITERS          4.5
 GLOBAL FILE                 gauss-pppl-fil-1.14
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        11.5
+PC ACT_DELAY_ITERS          11.5
 GLOBAL FILE                 gauss-pppl-fil-1.84
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        14.5
+PC ACT_DELAY_ITERS          14.5
 GLOBAL FILE                 gauss-pppl-fil-2.14
 REF FUNCTION                PPPL
 RUN
@@ -427,27 +440,27 @@ RUN
 
 MEAS B_REG_SELECT           EXTRAPOLATED
 
-VS V_REF_DELAY_ITERS        1.5
+PC ACT_DELAY_ITERS          1.5
 GLOBAL FILE                 gauss-pppl-ext-0.26
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        7.5
+PC ACT_DELAY_ITERS          7.5
 GLOBAL FILE                 gauss-pppl-ext-0.86
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        10.5
+PC ACT_DELAY_ITERS          10.5
 GLOBAL FILE                 gauss-pppl-ext-1.16
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        16.5
+PC ACT_DELAY_ITERS          16.5
 GLOBAL FILE                 gauss-pppl-ext-1.76
 REF FUNCTION                PPPL
 RUN
 
-VS V_REF_DELAY_ITERS        20.5
+PC ACT_DELAY_ITERS          20.5
 GLOBAL FILE                 gauss-pppl-ext-2.16
 REF FUNCTION                PPPL
 RUN

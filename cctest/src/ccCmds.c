@@ -34,6 +34,7 @@
 #include "ccCmds.h"
 #include "ccTest.h"
 #include "ccSigs.h"
+#include "ccFlot.h"
 #include "ccInit.h"
 #include "ccRun.h"
 #include "ccDebug.h"
@@ -512,7 +513,7 @@ uint32_t ccCmdsRun(uint32_t cmd_idx, char **remaining_line)
              return(EXIT_FAILURE);
         }
 
-        ccSigsFlot(flot_file, filename);
+        ccFlot(flot_file, filename);
 
         fclose(flot_file);
     }

@@ -67,7 +67,7 @@
 #include "pars/load.h"
 #include "pars/meas.h"
 #include "pars/reg.h"
-#include "pars/vs.h"
+#include "pars/pc.h"
 #include "pars/ref.h"
 #include "pars/default.h"
 
@@ -91,20 +91,38 @@ enum cccmds_enum
 {
     /* Global parameters */
     CMD_GLOBAL,
-    CMD_DEFAULT,    CMD_LIMITS,    CMD_LOAD,    CMD_MEAS,    CMD_BREG,    CMD_IREG,    CMD_VS,
+    CMD_DEFAULT,
+    CMD_LIMITS,
+    CMD_LOAD,
+    CMD_MEAS,
+    CMD_BREG,
+    CMD_IREG,
+    CMD_PC,
     CMD_REF,
     /* Function parameters */
-    CMD_PLEP,    CMD_PPPL,    CMD_PULSE,
+    CMD_PLEP,
+    CMD_PPPL,
+    CMD_PULSE,
     CMD_RAMP,
-    CMD_TABLE,    CMD_TEST,
+    CMD_TABLE,
+    CMD_TEST,
     CMD_TRIM,
-    /* Commands */    CMD_HELP,    CMD_LS,    CMD_CD,
+    /* Commands */
+    CMD_HELP,
+    CMD_LS,
+    CMD_CD,
     CMD_PWD,
-    CMD_READ,    CMD_SAVE,    CMD_DEBUG,    CMD_RUN,
+    CMD_READ,
+    CMD_SAVE,
+    CMD_DEBUG,
+    CMD_RUN,
     CMD_EXIT,
     CMD_QUIT,
 
-    N_CMDS};// Define array of commands
+    N_CMDS
+    };
+    
+    // Define array of commands
 
 struct cccmds
 {
@@ -126,7 +144,7 @@ CCCMDS_EXT struct cccmds cmds[] // The order must match enum cccmds_enum (above)
     { "MEAS",    ccCmdsPar  , meas_pars   , "           Print or set MEAS parameter(s)"                         },
     { "BREG",    ccCmdsPar  , breg_pars   , "           Print or set BREG parameter(s)"                         },
     { "IREG",    ccCmdsPar  , ireg_pars   , "           Print or set IREG parameter(s)"                         },
-    { "VS",      ccCmdsPar  , vs_pars     , "           Print or set VS parameter(s)"                           },
+    { "PC",      ccCmdsPar  , pc_pars     , "           Print or set PC parameter(s)"                           },
     { "REF",     ccCmdsPar  , ref_pars    , "           Print or set REF parameter(s)"                          },
     // Function parameters
     { "PLEP",    ccCmdsPar  , plep_pars   , "           Print or set PLEP function parameter(s)"                },

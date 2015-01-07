@@ -10,9 +10,9 @@ GLOBAL PROJECT              POPS
 
 # Voltage source parameters
 
-VS BANDWIDTH                180
-VS Z                        0.9
-VS V_REF_DELAY_ITERS        4.989
+PC BANDWIDTH                180
+PC Z                        0.9
+PC ACT_DELAY_ITERS          4.989
 
 # Measurement parameters
 

@@ -17,8 +17,6 @@
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
   Purpose:  Header file for cctest program output signals
-
-  Authors:  Quentin.King@cern.ch
 \*---------------------------------------------------------------------------------------------------------*/
 
 #ifndef CCSIGS_H
@@ -38,7 +36,7 @@
 
 // Constants
 
-#define FLOT_PATH               "../.."
+#define DIG_STEP        0.5      // Digital signal step size
 
 // Signal constants
 
@@ -123,6 +121,8 @@ enum ccsig_idx
     DIG_V_REF_RATE_CLIP,
     DIG_V_REG_ERR_WARN,
     DIG_V_REG_ERR_FLT,
+
+    DIG_INVALID_MEAS,           // Invalid measurement
 
     NUM_SIGNALS
 };
@@ -218,6 +218,8 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
     { "V_REF_RATE_CLIP",        DIGITAL,        "TRAIL_STEP" },
     { "V_REG_ERR_WARN",         DIGITAL,        "TRAIL_STEP" },
     { "V_REG_ERR_FLT",          DIGITAL,        "TRAIL_STEP" },
+
+    { "INVALID_MEAS",           DIGITAL,        "TRAIL_STEP" },
 }
 #endif
 ;
@@ -227,7 +229,6 @@ CCSIGS_EXT struct signals signals[]     // IMPORTANT: This must be in the same o
 void     ccSigsInit              (void);
 void     ccSigsStore             (double time);
 void     ccSigsStoreCursor       (enum ccsig_idx idx, char *cursor_label);
-void     ccSigsFlot              (FILE *f, char *filename);
 uint32_t ccSigsReportBadValues   (void);
 
 #endif

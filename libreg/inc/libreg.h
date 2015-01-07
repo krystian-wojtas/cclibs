@@ -5,10 +5,11 @@
  * The converter control regulation library provides support for:
  * <ol>
  * <li>Field, Current and voltage limits</li>
- * <li>RST-based regulation</li>
+ * <li>Control of a voltage source or current source</li>
+ * <li>RST-based regulation of field or current with a voltage source</li>
  * <li>Regulation error calculation</li>
- * <li>Voltage source simulation</li>
- * <li>Magnet load definition and simulation</li>
+ * <li>Voltage or current source simulation</li>
+ * <li>Magnet load definition and simulation with magnet saturation compensation</li>
  * </ol>
  * 
  * <h2>Contact</h2>
@@ -53,7 +54,7 @@ enum reg_enabled_disabled
 };
 
 /*!
- * Regulation parameters actuation (voltage or current)
+ * Power converter actuation (voltage or current reference)
  */
 enum reg_actuation
 {
@@ -77,6 +78,21 @@ enum reg_err_rate
 {
     REG_ERR_RATE_REGULATION,                            //!< Calculate regulation error at regulation rate
     REG_ERR_RATE_MEASUREMENT                            //!< Calculate regulation error at measurement rate
+};
+
+/*!
+ * RST Jury's test result
+ */
+enum reg_jurys_result
+{
+    REG_JR_OK,                                          //!< Jury's Test Result: Okay
+    REG_JR_OHMS_PAR_TOO_SMALL,                          //!< Jury's Test Result: Parallel resistance is too small
+    REG_JR_PURE_DELAY_TOO_LARGE,                        //!< Jury's Test Result: Pure delay is too large (max is 2.4 periods)
+    REG_JR_S0_IS_ZERO,                                  //!< Jury's Test Result: S[0] is zero (or negative)
+    REG_JR_SUM_S_IS_NEGATIVE,                           //!< Jury's Test Result: Sum(S) is negative
+    REG_JR_SUM_EVEN_S_LESS_THAN_SUM_ODD_S,              //!< Jury's Test Result: Sum(Even S) < Sum(Odd S)
+    REG_JR_S_HAS_UNSTABLE_POLE,                         //!< Jury's Test Result: Unstable pole in S
+    REG_JR_NUM_VALUES                                   //!< Number of Jury's result constants
 };
 
 // Include all libreg header files

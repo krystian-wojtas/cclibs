@@ -28,7 +28,9 @@
 #include <math.h>
 #include "libreg.h"
 
-// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+
+
+// Background functions - do not call these from the real-time thread or interrupt
 
 void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim, float low_lim, float zero_lim)
 {
@@ -46,7 +48,7 @@ void regLimMeasInit(struct reg_lim_meas *lim_meas, float pos_lim, float neg_lim,
 
 
 
-void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fault, float rms_tc, double iter_period)
+void regLimRmsInit(struct reg_lim_rms *lim_rms, float rms_warning, float rms_fault, float rms_tc, float iter_period)
 {
     if(rms_tc > 0.0)
     {

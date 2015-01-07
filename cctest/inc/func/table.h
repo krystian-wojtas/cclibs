@@ -36,6 +36,10 @@
 #define CCPARS_TABLE_EXT extern
 #endif
 
+// Libfg TABLE parameter structures
+
+CCPARS_TABLE_EXT struct fg_table fg_table[CC_NUM_CYC_SELS];
+
 // Table data structure
 
 #define TABLE_LEN       10000
@@ -44,19 +48,15 @@ struct ccpars_table
 {
     // cctest TABLE parameters
 
-    float                       ref [CC_NUM_CYC_SELS][TABLE_LEN];     // Reference array
-    float                       time[CC_NUM_CYC_SELS][TABLE_LEN];     // Time array
-
-    // Libfg TABLE variables
-
-    struct fg_table_pars        pars[CC_NUM_CYC_SELS];                // Libfg parameters for TABLE
+    float                       ref [TABLE_LEN];                // Reference array
+    float                       time[TABLE_LEN];                // Time array
 };
 
-CCPARS_TABLE_EXT struct ccpars_table ccpars_table
+CCPARS_TABLE_EXT struct ccpars_table ccpars_table[CC_NUM_CYC_SELS]
 #ifdef GLOBALS
 = {//     Default value                Parameter
-    { { 0.0, 1.0, 1.0, 0.0 } },     // TABLE REF
-    { { 0.0, 1.0, 2.0, 3.0 } },     // TABLE TIME
+    { { 0.0, 1.0, 1.0, 0.0 },       // TABLE REF
+      { 0.0, 1.0, 2.0, 3.0 } },     // TABLE TIME
 }
 #endif
 ;
@@ -64,9 +64,9 @@ CCPARS_TABLE_EXT struct ccpars_table ccpars_table
 
 CCPARS_TABLE_EXT struct ccpars   table_pars[]
 #ifdef GLOBALS
-= {// "Signal name", type,      max_n_els, *enum,        *value,               num_defaults  flags
-    { "REF",         PAR_FLOAT, TABLE_LEN,  NULL, { .f = &ccpars_table.ref [0][0] }, 4, PARS_CYCLE_SELECTOR },
-    { "TIME",        PAR_FLOAT, TABLE_LEN,  NULL, { .f = &ccpars_table.time[0][0] }, 4, PARS_CYCLE_SELECTOR },
+= {// "Signal name", type,      max_n_els, *enum,       *value,            num_defaults      cyc_sel_step      flags
+    { "REF",         PAR_FLOAT, TABLE_LEN,  NULL, { .f = ccpars_table[0].ref  }, 4, sizeof(struct ccpars_table), 0 },
+    { "TIME",        PAR_FLOAT, TABLE_LEN,  NULL, { .f = ccpars_table[0].time }, 4, sizeof(struct ccpars_table), 0 },
     { NULL }
 }
 #endif

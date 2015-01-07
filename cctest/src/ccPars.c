@@ -37,12 +37,6 @@
 #include "ccRef.h"
 #include "ccRun.h"
 
-// Constants
-
-#define PARS_INT_FORMAT          "% d"
-#define PARS_FLOAT_FORMAT        "% .6E"
-#define PARS_DOUBLE_FORMAT       "% 20.16E"
-
 /*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 /*---------------------------------------------------------------------------------------------------------*\
@@ -71,6 +65,7 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
     size_t               arg_len;
     struct ccpars_enum  *par_enum;
     struct ccpars_enum  *par_enum_matched;
+    union value_p        value_p;
 
     // Prepare array index
 
@@ -78,7 +73,7 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
     // Prepare cycle selector range
 
-    if(cctest.cyc_sel == CC_NO_INDEX || (par->flags & PARS_CYCLE_SELECTOR) == 0)
+    if(cctest.cyc_sel == CC_NO_INDEX || par->cyc_sel_step == 0)
     {
         max_pars = par->max_num_elements - array_idx;
     }
@@ -134,7 +129,8 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
             for(cyc_sel = cyc_sel_from ; cyc_sel <= cyc_sel_to ; cyc_sel++)
             {
-                par->value_p.u[array_idx + cyc_sel * par->max_num_elements] = (uint32_t)int_value;
+                value_p.c = par->value_p.c + cyc_sel * par->cyc_sel_step;
+                value_p.u[array_idx] = (uint32_t)int_value;
             }
             break;
 
@@ -153,24 +149,8 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
             for(cyc_sel = cyc_sel_from ; cyc_sel <= cyc_sel_to ; cyc_sel++)
             {
-                par->value_p.f[array_idx + cyc_sel * par->max_num_elements] = (float)double_value;
-            }
-            break;
-
-        case PAR_DOUBLE:
-
-            double_value = strtod(arg, &remaining_arg);
-
-            if(*remaining_arg != '\0' || errno != 0)
-            {
-                ccTestPrintError("invalid double for %s %s[%u]: '%s'",
-                        cmd_name, par->name, array_idx, arg);
-                return(EXIT_FAILURE);
-            }
-
-            for(cyc_sel = cyc_sel_from ; cyc_sel <= cyc_sel_to ; cyc_sel++)
-            {
-                par->value_p.d[array_idx + cyc_sel * par->max_num_elements] = double_value;
+                value_p.c = par->value_p.c + cyc_sel * par->cyc_sel_step;
+                value_p.f[array_idx] = (float)double_value;
             }
             break;
 
@@ -190,8 +170,9 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
             for(cyc_sel = cyc_sel_from ; cyc_sel <= cyc_sel_to ; cyc_sel++)
             {
-                free(par->value_p.s[array_idx + cyc_sel * par->max_num_elements]);
-                par->value_p.s[array_idx + cyc_sel * par->max_num_elements] = strcpy(malloc(arg_len+1),arg);
+                value_p.c = par->value_p.c + cyc_sel * par->cyc_sel_step;
+                free(value_p.s[array_idx]);
+                value_p.s[array_idx] = strcpy(malloc(arg_len+1),arg);
             }
             break;
 
@@ -236,7 +217,8 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
 
             for(cyc_sel = cyc_sel_from ; cyc_sel <= cyc_sel_to ; cyc_sel++)
             {
-                par->value_p.u[array_idx + cyc_sel * par->max_num_elements] = par_enum_matched->value;
+                value_p.c = par->value_p.c + cyc_sel * par->cyc_sel_step;
+                value_p.u[array_idx] = par_enum_matched->value;
             }
             break;
         }
@@ -277,7 +259,9 @@ uint32_t ccParsGet(char *cmd_name, struct ccpars *par, char **remaining_line)
             if(array_idx < num_elements &&
               (cctest.array_idx == CC_NO_INDEX || array_idx > (cctest.array_idx + 1)))
             {
-                memset(&par->value_p.c[ccpars_sizeof_type[par->type] * (array_idx + cyc_sel * par->max_num_elements)],
+                value_p.c = par->value_p.c + cyc_sel * par->cyc_sel_step;
+
+                memset(&value_p.c[ccpars_sizeof_type[par->type] * array_idx],
                        0,
                        ccpars_sizeof_type[par->type] * (num_elements - array_idx));
 
@@ -309,33 +293,30 @@ static void ccParsPrintElement(FILE *f, struct ccpars *par, uint32_t cyc_sel, ui
 {
     if(array_idx < par->num_elements[cyc_sel])
     {
-        uint32_t base_idx = cyc_sel * par->max_num_elements;
+        union value_p value_p;
+
+        value_p.c = par->value_p.c + cyc_sel * par->cyc_sel_step;
 
         switch(par->type)
         {
         case PAR_UNSIGNED:
 
-            fprintf(f, PARS_INT_FORMAT, par->value_p.u[base_idx + array_idx]);
+            fprintf(f, PARS_INT_FORMAT, value_p.u[array_idx]);
             break;
 
         case PAR_FLOAT:
 
-            fprintf(f, PARS_FLOAT_FORMAT, par->value_p.f[base_idx + array_idx]);
-            break;
-
-        case PAR_DOUBLE:
-
-            fprintf(f, PARS_DOUBLE_FORMAT, par->value_p.d[base_idx + array_idx]);
+            fprintf(f, PARS_FLOAT_FORMAT, value_p.f[array_idx]);
             break;
 
         case PAR_STRING:
 
-            fprintf(f, " %s", par->value_p.s[base_idx + array_idx]);
+            fprintf(f, PARS_STRING_FORMAT, value_p.s[array_idx]);
             break;
 
         case PAR_ENUM:
 
-            fprintf(f, " %s", ccParsEnumString(par->ccpars_enum, par->value_p.u[base_idx + array_idx]));
+            fprintf(f, PARS_STRING_FORMAT, ccParsEnumString(par->ccpars_enum, value_p.u[array_idx]));
             break;
         }
     }
@@ -353,13 +334,19 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par, uint32_t cyc_sel, 
     uint32_t  idx_local;
     uint32_t  cyc_sel_from;
     uint32_t  cyc_sel_to;
-    uint32_t  cyc_sel_local;
 
     // Determine cycle selector range from cyc_sel
 
-    if((par->flags & PARS_CYCLE_SELECTOR) == 0 || cyc_sel == CC_NO_INDEX)
+    if(par->cyc_sel_step == 0)
     {
-        cyc_sel_from = cyc_sel_to = 0;
+        if(cyc_sel == CC_NO_INDEX || cyc_sel == CC_ALL_CYCLES || cyc_sel == 0)
+        {
+            cyc_sel_from = cyc_sel_to = 0;
+        }
+        else // return immediately if non-cyc_sel parameters when non-zero cyc_sel supplied
+        {
+            return;
+        }
     }
     else
     {
@@ -367,6 +354,10 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par, uint32_t cyc_sel, 
         {
             cyc_sel_from = 0;
             cyc_sel_to   = CC_MAX_CYC_SEL;
+        }
+        else if(cyc_sel == CC_NO_INDEX)
+        {
+            cyc_sel_from = cyc_sel_to = 0;
         }
         else
         {
@@ -376,9 +367,9 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par, uint32_t cyc_sel, 
 
     // Print values for each cycle selector within the range2
 
-    for(cyc_sel_local = cyc_sel_from ; cyc_sel_local <= cyc_sel_to ; cyc_sel_local++)
+    for(cyc_sel = cyc_sel_from ; cyc_sel <= cyc_sel_to ; cyc_sel++)
     {
-        num_elements = par->num_elements[cyc_sel_local];
+        num_elements = par->num_elements[cyc_sel];
 
         if(num_elements > 0)
         {
@@ -388,9 +379,9 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par, uint32_t cyc_sel, 
 
             // Print cycle selector if non zero
 
-            if(cyc_sel_local > 0)
+            if(cyc_sel > 0)
             {
-                num_characters += fprintf(f, "(%u)", cyc_sel_local);
+                num_characters += fprintf(f, "(%u)", cyc_sel);
             }
 
             // If array index provided, then just display this one element
@@ -417,7 +408,7 @@ void ccParsPrint(FILE *f, char *cmd_name, struct ccpars *par, uint32_t cyc_sel, 
 
             for(idx_local = idx_from ; idx_local <= idx_to ; idx_local++)
             {
-                ccParsPrintElement(f, par, cyc_sel_local, idx_local);
+                ccParsPrintElement(f, par, cyc_sel, idx_local);
             }
 
             fputc('\n',f);
@@ -430,10 +421,26 @@ void ccParsPrintAll(FILE *f, char *cmd_name, struct ccpars *par, uint32_t cyc_se
   This function will print the name and value(s) for all parameters for one command.
 \*---------------------------------------------------------------------------------------------------------*/
 {
-    while(par->name != NULL)
+    // If ALL_CYCLES specifed by ()
+
+    if(cyc_sel == CC_ALL_CYCLES)
     {
-        ccParsPrint(f, cmd_name, par, cyc_sel, array_idx);
-        par++;
+        struct ccpars *pars = par;
+
+        for(cyc_sel = 0 ; cyc_sel <= CC_MAX_CYC_SEL ; cyc_sel++)
+        {
+            for(par = pars ; par->name != NULL ; par++)
+            {
+                ccParsPrint(f, cmd_name, par, cyc_sel, array_idx);
+            }
+        }
+    }
+    else // Use supplied cyc_sel
+    {
+        while(par->name != NULL)
+        {
+            ccParsPrint(f, cmd_name, par++, cyc_sel, array_idx);
+        }
     }
 }
 

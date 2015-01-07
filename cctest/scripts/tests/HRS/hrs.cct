@@ -10,10 +10,10 @@ GLOBAL PROJECT              HRS
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS        0.1
-VS BANDWIDTH                1000
-VS TAU_ZERO                 0.0
-VS Z                        0.9
+PC ACT_DELAY_ITERS          0.1
+PC BANDWIDTH                1000
+PC TAU_ZERO                 0.0
+PC Z                        0.9
 
 # Measurement parameters
 
@@ -29,8 +29,8 @@ MEAS I_SIM_TONE_AMP         0.0
 # Current regulation        ---- BRUKER ----        ---- COMMET ----            
 #                           HRS90       HRS60       HRS90       HRS60
 IREG PERIOD_ITERS           1           1           1           1             
-IREG AUXPOLE1_HZ            10          10          10          10
-IREG AUXPOLES2_HZ           10          10          10          10
+IREG AUXPOLE1_HZ            80          80          80          80
+IREG AUXPOLES2_HZ           80          80          80          80
 IREG AUXPOLES2_Z            0.5         0.5         0.5         0.5
 
 # Limits

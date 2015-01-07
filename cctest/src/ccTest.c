@@ -17,10 +17,6 @@
             along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
   Purpose:  Test program for libfg and libreg (function generation and regulation)
-
-  Authors:  Quentin.King@cern.ch
-            Stephen.Page@cern.ch
-
 \*---------------------------------------------------------------------------------------------------------*/
 
 #include <stdio.h>
@@ -46,6 +42,7 @@
 #include "ccRun.h"
 #include "ccRef.h"
 #include "ccSigs.h"
+#include "ccFlot.h"
 
 // mkdir command
 
@@ -659,4 +656,5 @@ void ccTestGetBasePath(char *argv0)
     }
 #endif
 }
+
 // EOF

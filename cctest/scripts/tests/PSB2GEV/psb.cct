@@ -11,10 +11,10 @@ GLOBAL PROJECT              PSB2GEV
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS        5.0
-VS BANDWIDTH                200
-VS TAU_ZERO                 0.0
-VS Z                        0.9
+PC ACT_DELAY_ITERS          5.0
+PC BANDWIDTH                200
+PC TAU_ZERO                 0.0
+PC Z                        0.9
 
 # Measurement parameters
 
@@ -100,27 +100,27 @@ READ functions/amps/table_d
 RUN
 
 GLOBAL FILE                 psb-rb-quantization-0.1V
-VS QUANTIZATION             0.1
+PC QUANTIZATION             0.1
 RUN
 
 GLOBAL FILE                 psb-rb-quantization-0.3V
-VS QUANTIZATION             0.3
+PC QUANTIZATION             0.3
 RUN
 
 GLOBAL FILE                 psb-rb-quantization-1V
-VS QUANTIZATION             1
+PC QUANTIZATION             1
 RUN
 
 GLOBAL FILE                 psb-rb-quantization-3V
-VS QUANTIZATION             3
+PC QUANTIZATION             3
 RUN
 
 GLOBAL FILE                 psb-rb-quantization-10V
-VS QUANTIZATION             10
+PC QUANTIZATION             10
 RUN
 
 GLOBAL FILE                 psb-rb-quantization-30V
-VS QUANTIZATION             30
+PC QUANTIZATION             30
 RUN
 
 # EOF

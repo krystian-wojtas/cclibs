@@ -34,18 +34,60 @@
 #define CCPARS_REG_EXT extern
 #endif
 
+// Reg status enum for ccDebug only
+
+CCPARS_GLOBAL_EXT struct ccpars_enum enum_reg_status[]
+#ifdef GLOBALS
+= {
+    { REG_OK,                                "OK"                       },
+    { REG_WARNING,                           "WARNING"                  },
+    { REG_FAULT,                             "FAULT"                    },
+    { 0,                                      NULL                      },
+}
+#endif
+;
+
+// Reg Jury's test result  enum for ccDebug only
+
+CCPARS_GLOBAL_EXT struct ccpars_enum enum_reg_jurys_result[]
+#ifdef GLOBALS
+= {
+    { REG_JR_OK,                             "OK"                       },
+    { REG_JR_OHMS_PAR_TOO_SMALL,             "OHMS_PAR<1M"              },
+    { REG_JR_PURE_DELAY_TOO_LARGE,           "Pure Delay>2.4 periods"   },
+    { REG_JR_S0_IS_ZERO,                     "S[0]==0"                  },
+    { REG_JR_SUM_S_IS_NEGATIVE,              "Sum(S)<0"                 },
+    { REG_JR_SUM_EVEN_S_LESS_THAN_SUM_ODD_S, "Sum(Even S)<Sum(Odd S)"   },
+    { REG_JR_S_HAS_UNSTABLE_POLE,            "S has unstable pole"      },
+    { 0,                                      NULL                      },
+}
+#endif
+;
+
+// Reg RST source enum for ccDebug only
+
+CCPARS_GLOBAL_EXT struct ccpars_enum enum_reg_rst_source[]
+#ifdef GLOBALS
+= {
+    { REG_OPERATIONAL_RST_PARS,              "OPERATIONAL"              },
+    { REG_TEST_RST_PARS,                     "TEST"                     },
+    { 0,                                      NULL                      },
+}
+#endif
+;
+
 // Field and current Regulation parameters
 
 struct ccpars_reg_pars
 {
-    uint32_t            period_iters       [REG_N_LOADS];       // Regulation period in iteration periods
-    float               pure_delay_periods [REG_N_LOADS];       // Regulation pure delay in periods (0 to use automatic calculation)
-    float               track_delay_periods[REG_N_LOADS];       // Regulation track delay in periods (0 to use automatic calculation)
-    float               auxpole1_hz        [REG_N_LOADS];       // Frequency of (real) auxiliary pole 1
-    float               auxpoles2_hz       [REG_N_LOADS];       // Frequency of (conjugate) auxiliary poles 2 & 3
-    float               auxpoles2_z        [REG_N_LOADS];       // Damping of (conjugate) auxiliary poles 2 & 3
-    float               auxpole4_hz        [REG_N_LOADS];       // Frequency of (real) auxiliary pole 4
-    float               auxpole5_hz        [REG_N_LOADS];       // Frequency of (real) auxiliary pole 5
+    uint32_t            period_iters       [REG_NUM_LOADS];     // Regulation period in iteration periods
+    float               pure_delay_periods [REG_NUM_LOADS];     // Regulation pure delay in periods (0 to use automatic calculation)
+    float               track_delay_periods[REG_NUM_LOADS];     // Regulation track delay in periods (0 to use automatic calculation)
+    float               auxpole1_hz        [REG_NUM_LOADS];     // Frequency of (real) auxiliary pole 1
+    float               auxpoles2_hz       [REG_NUM_LOADS];     // Frequency of (conjugate) auxiliary poles 2 & 3
+    float               auxpoles2_z        [REG_NUM_LOADS];     // Damping of (conjugate) auxiliary poles 2 & 3
+    float               auxpole4_hz        [REG_NUM_LOADS];     // Frequency of (real) auxiliary pole 4
+    float               auxpole5_hz        [REG_NUM_LOADS];     // Frequency of (real) auxiliary pole 5
     struct reg_rst      rst;                                    // RST coefficients
     struct reg_rst      test_rst;                               // Test RST coefficients
 };
@@ -100,21 +142,21 @@ CCPARS_REG_EXT struct reg_conv conv;            // Libreg converter regulation s
 
 CCPARS_REG_EXT struct ccpars breg_pars[]
 #ifdef GLOBALS
-= {// "Signal name"          type,         max_n_els,       *enum,       *value,                             num_defaults,     flags
-    { "PERIOD_ITERS",        PAR_UNSIGNED, REG_N_LOADS,      NULL, { .u = ccpars_breg.period_iters        }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "PURE_DELAY_PERIODS",  PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_breg.pure_delay_periods  }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "TRACK_DELAY_PERIODS", PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_breg.track_delay_periods }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLE1_HZ",         PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_breg.auxpole1_hz         }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLES2_HZ",        PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_breg.auxpoles2_hz        }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLES2_Z",         PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_breg.auxpoles2_z         }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLE4_HZ",         PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_breg.auxpole4_hz         }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLE5_HZ",         PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_breg.auxpole5_hz         }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "R",                   PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_breg.rst.r               }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "S",                   PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_breg.rst.s               }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "T",                   PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_breg.rst.t               }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "TEST_R",              PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_breg.test_rst.r          }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "TEST_S",              PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_breg.test_rst.s          }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "TEST_T",              PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_breg.test_rst.t          }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
+= {// "Signal name"          type,         max_n_els,         *enum,       *value,                             num_defaults, cyc_sel_step, flags
+    { "PERIOD_ITERS",        PAR_UNSIGNED, REG_NUM_LOADS,      NULL, { .u = ccpars_breg.period_iters        }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "PURE_DELAY_PERIODS",  PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_breg.pure_delay_periods  }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "TRACK_DELAY_PERIODS", PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_breg.track_delay_periods }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLE1_HZ",         PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_breg.auxpole1_hz         }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLES2_HZ",        PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_breg.auxpoles2_hz        }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLES2_Z",         PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_breg.auxpoles2_z         }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLE4_HZ",         PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_breg.auxpole4_hz         }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLE5_HZ",         PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_breg.auxpole5_hz         }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "R",                   PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_breg.rst.r               }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "S",                   PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_breg.rst.s               }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "T",                   PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_breg.rst.t               }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "TEST_R",              PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_breg.test_rst.r          }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "TEST_S",              PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_breg.test_rst.s          }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "TEST_T",              PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_breg.test_rst.t          }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
     { NULL }
 }
 #endif
@@ -122,21 +164,21 @@ CCPARS_REG_EXT struct ccpars breg_pars[]
 
 CCPARS_REG_EXT struct ccpars ireg_pars[]
 #ifdef GLOBALS
-= {// "Signal name"          type,         max_n_els,       *enum,       *value,                             num_defaults,     flags
-    { "PERIOD_ITERS",        PAR_UNSIGNED, REG_N_LOADS,      NULL, { .u = ccpars_ireg.period_iters        }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "PURE_DELAY_PERIODS",  PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_ireg.pure_delay_periods  }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "TRACK_DELAY_PERIODS", PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_ireg.track_delay_periods }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLE1_HZ",         PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_ireg.auxpole1_hz         }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLES2_HZ",        PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_ireg.auxpoles2_hz        }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLES2_Z",         PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_ireg.auxpoles2_z         }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLE4_HZ",         PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_ireg.auxpole4_hz         }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "AUXPOLE5_HZ",         PAR_FLOAT,    REG_N_LOADS,      NULL, { .f = ccpars_ireg.auxpole5_hz         }, REG_N_LOADS,      PARS_FIXED_LENGTH },
-    { "R",                   PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_ireg.rst.r               }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "S",                   PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_ireg.rst.s               }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "T",                   PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_ireg.rst.t               }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "TEST_R",              PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_ireg.test_rst.r          }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "TEST_S",              PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_ireg.test_rst.s          }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
-    { "TEST_T",              PAR_DOUBLE,   REG_N_RST_COEFFS, NULL, { .d = ccpars_ireg.test_rst.t          }, REG_N_RST_COEFFS, PARS_FIXED_LENGTH },
+= {// "Signal name"          type,         max_n_els,         *enum,       *value,                             num_defaults, cyc_sel_step, flags
+    { "PERIOD_ITERS",        PAR_UNSIGNED, REG_NUM_LOADS,      NULL, { .u = ccpars_ireg.period_iters        }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "PURE_DELAY_PERIODS",  PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_ireg.pure_delay_periods  }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "TRACK_DELAY_PERIODS", PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_ireg.track_delay_periods }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLE1_HZ",         PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_ireg.auxpole1_hz         }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLES2_HZ",        PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_ireg.auxpoles2_hz        }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLES2_Z",         PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_ireg.auxpoles2_z         }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLE4_HZ",         PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_ireg.auxpole4_hz         }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "AUXPOLE5_HZ",         PAR_FLOAT,    REG_NUM_LOADS,      NULL, { .f = ccpars_ireg.auxpole5_hz         }, REG_NUM_LOADS,      0, PARS_FIXED_LENGTH },
+    { "R",                   PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_ireg.rst.r               }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "S",                   PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_ireg.rst.s               }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "T",                   PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_ireg.rst.t               }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "TEST_R",              PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_ireg.test_rst.r          }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "TEST_S",              PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_ireg.test_rst.s          }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
+    { "TEST_T",              PAR_FLOAT,    REG_NUM_RST_COEFFS, NULL, { .f = ccpars_ireg.test_rst.t          }, REG_NUM_RST_COEFFS, 0, PARS_FIXED_LENGTH },
     { NULL }
 }
 #endif

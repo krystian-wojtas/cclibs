@@ -30,7 +30,7 @@
 
 
 
-// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+// Background functions - do not call these from the real-time thread or interrupt
 
 void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_threshold)
 {
@@ -58,7 +58,7 @@ void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_
 
 // Real-Time Functions
 
-void regErrResetLimitsVarsRT(struct reg_err *err, uint32_t inhibit_max_abs_err_counter)
+void regErrResetLimitsVarsRT(struct reg_err *err)
 {
     err->err            = 0.0;
     err->max_abs_err    = 0.0;
@@ -68,8 +68,6 @@ void regErrResetLimitsVarsRT(struct reg_err *err, uint32_t inhibit_max_abs_err_c
 
     err->fault.flag     = false;
     err->fault.filter   = 0.0;
-
-    err->inhibit_max_abs_err_counter = inhibit_max_abs_err_counter;
 }
 
 
@@ -106,7 +104,7 @@ static void regErrLimitRT(struct reg_err_limit *err_limit, float abs_err)
 
 
 
-void regErrCheckLimitsRT(struct reg_err *err, float delayed_ref, float meas)
+void regErrCheckLimitsRT(struct reg_err *err, bool is_max_abs_err_enabled, float delayed_ref, float meas)
 {
     float       abs_error;
 
@@ -122,14 +120,9 @@ void regErrCheckLimitsRT(struct reg_err *err, float delayed_ref, float meas)
 
     // Down count the max_abs_err inhibit counter
 
-    if(err->inhibit_max_abs_err_counter > 0)
+    if(is_max_abs_err_enabled == false)
     {
-        // When down counter hits zero, reset max_abs_err to the current abs error value
-
-        if(--err->inhibit_max_abs_err_counter == 0)
-        {
-            err->max_abs_err = abs_error;
-        }
+        err->max_abs_err = 0.0;
     }
     else if(abs_error > err->max_abs_err)
     {

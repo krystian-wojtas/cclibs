@@ -43,12 +43,12 @@
 #define PARS_MAX_REPORT_LINES       1000
 #define PARS_INT_FORMAT             "% d"
 #define PARS_FLOAT_FORMAT           "% .6E"
-#define PARS_DOUBLE_FORMAT          "% 20.16E"
+#define PARS_TIME_FORMAT            "% .6f"
+#define PARS_STRING_FORMAT          " %s"
 
 // struct ccpars flags
 
 #define PARS_FIXED_LENGTH           0x01
-#define PARS_CYCLE_SELECTOR         0x02
 
 // Enums
 
@@ -56,7 +56,6 @@ enum ccpars_type
 {
     PAR_UNSIGNED,
     PAR_FLOAT,
-    PAR_DOUBLE,
     PAR_STRING,
     PAR_ENUM
 };
@@ -68,7 +67,6 @@ CCPARS_EXT uint32_t ccpars_sizeof_type[]
 = {
     sizeof(uint32_t),
     sizeof(float),
-    sizeof(double),
     sizeof(char *),
     sizeof(uint32_t)
 }
@@ -82,16 +80,16 @@ struct ccpars
     enum ccpars_type    type;
     uint32_t            max_num_elements;
     struct ccpars_enum *ccpars_enum;
-    union
+    union value_p
     {
-        double         *d;
-        float          *f;
-        uint32_t       *u;
         char           *c;
+        uint32_t       *u;
+        float          *f;
         char          **s;
     } value_p;
 
     uint32_t            num_default_elements;
+    uint32_t            cyc_sel_step;
     uint32_t            flags;
     uint32_t           *num_elements;           // Initialised by ccInitParNumElements()
 };

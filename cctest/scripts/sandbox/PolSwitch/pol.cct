@@ -30,7 +30,7 @@ LIMITS V_QUADRANTS41        0.0,0.0
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS        1.0
+PC ACT_DELAY_ITERS          1.0
 
 # Load parameters
 

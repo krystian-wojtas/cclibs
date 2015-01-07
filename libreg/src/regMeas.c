@@ -25,6 +25,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <string.h>
 #include "libreg.h"
 
@@ -32,14 +33,13 @@
  * Classical two-stage box-car FIR filter used by regMeasFilterRT() and regMeasFilterInit().
  *
  * @param[in,out] filter    Measurement filter parameters and values
- * @returns Value of reg_meas_filter::fir_accumulator adjusted by reg_meas_filter::integer_to_float factor
+ * @returns       Value of reg_meas_filter::fir_accumulator adjusted by reg_meas_filter::integer_to_float factor
  */
 static float regMeasFirFilterRT(struct reg_meas_filter *filter);
 
 
 
-
-// Non-Real-Time Functions - do not call these from the real-time thread or interrupt
+// Background functions - do not call these from the real-time thread or interrupt
 
 void regMeasFilterInitBuffer(struct reg_meas_filter *filter, int32_t *buf)
 {
@@ -327,7 +327,7 @@ float regMeasNoiseAndToneRT(struct reg_noise_and_tone *noise_and_tone)
 
 
 
-void regMeasRateRT(struct reg_meas_rate *meas_rate, float filtered_meas, float period, int32_t period_iters)
+void regMeasRateRT(struct reg_meas_rate *meas_rate, float filtered_meas, float inv_period, int32_t period_iters)
 {
     float    *history_buf = meas_rate->history_buf;     // Local pointer to history buffer for efficiency
     uint32_t  idx;                                      // Local copy of index of most recent sample
@@ -343,10 +343,10 @@ void regMeasRateRT(struct reg_meas_rate *meas_rate, float filtered_meas, float p
 
         // Estimate rate using linear regression through last four samples
 
-        meas_rate->estimate = (2.0 / 20.0) / period * (3.0 * (history_buf[ idx ] -
-                                                              history_buf[(idx - 3) & REG_MEAS_RATE_BUF_MASK]) +
-                                                             (history_buf[(idx - 1) & REG_MEAS_RATE_BUF_MASK]  -
-                                                              history_buf[(idx - 2) & REG_MEAS_RATE_BUF_MASK]));
+        meas_rate->estimate = (2.0 / 20.0) * inv_period * (3.0 * (history_buf[ idx ] -
+                                                                  history_buf[(idx - 3) & REG_MEAS_RATE_BUF_MASK]) +
+                                                                 (history_buf[(idx - 1) & REG_MEAS_RATE_BUF_MASK]  -
+                                                                  history_buf[(idx - 2) & REG_MEAS_RATE_BUF_MASK]));
     }
 }
 

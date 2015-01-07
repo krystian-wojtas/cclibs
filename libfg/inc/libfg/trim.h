@@ -2,8 +2,9 @@
  * @file    trim.h
  * @brief   Generate linear and cubic trim functions
  *
- * Two types of trim function are supported, linear and cubic. For more details, see
- * <a href="../pdf/TRIMS.pdf">TRIMS.pdf</a>.
+ * Two types of trim function are supported, linear and cubic. It is possible to 
+ * define the duration of the trim, or to go as fast as possible while respecting
+ * the limits. For more details, see <a href="../pdf/TRIMS.pdf">TRIMS.pdf</a>.
  *
  * <h2>CTRIM or Cubic Trim (fg_trim_type::FG_TRIM_CUBIC)</h2>
  *
@@ -25,7 +26,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -64,26 +65,16 @@ enum fg_trim_type
 };
 
 /*!
- * Trim function configuration
- */
-struct fg_trim_config
-{
-    enum fg_trim_type   type;           //!< Type of trim
-    float               duration;       //!< Time duration
-    float               final;          //!< Final reference
-};
-
-/*!
  * Trim function parameters
  */
-struct fg_trim_pars
+struct fg_trim
 {
-    double              delay;          //!< Time before start of function
-    float               duration;       //!< Function duration
-    float               time_offset;    //!< Timebase offset for cubic
-    float               ref_initial;    //!< Initial reference
-    float               ref_final;      //!< Final reference
-    float               ref_offset;     //!< Reference offset
+    double              delay;          //!< Time before start of function.
+    float               duration;       //!< Function duration.
+    float               time_offset;    //!< Timebase offset for cubic.
+    float               ref_offset;     //!< Reference offset.
+    float               initial_ref;    //!< Initial reference.
+    float               final_ref;      //!< Final reference.
     float               a;              //!< Coefficient for cubic term. \f$r = a \cdot t^3 + c \cdot t\f$
     float               c;              //!< Coefficient for constant term. \f$r = a \cdot t^3 + c \cdot t\f$
 };
@@ -95,15 +86,18 @@ extern "C" {
 // External functions
 
 /*!
- * Check Trim configuration and initialise parameters for each segment.
+ * Initialise TRIM function.
  *
- * @param[in]  limits           Limits to check each segment against
- * @param[in]  limits_polarity  Polarity limits to check each segment against
- * @param[in]  config           Trim configuration parameters
- * @param[in]  delay            RUN_DELAY, delay before the start of the function
- * @param[in]  ref              Initial reference value
- * @param[out] pars             Trim function parameters for each segment
- * @param[out] meta             Diagnostic information. Set to NULL if not required.
+ * @param[in]  limits              Pointer to fgc_limits structure (or NULL if no limits checking required).
+ * @param[in]  is_pol_switch_auto  True if polarity switch can be changed automatically.
+ * @param[in]  is_pol_switch_neg   True if polarity switch is currently in the negative position.
+ * @param[in]  delay               Delay before the start of the function.
+ * @param[in]  initial_ref         Initial reference value.
+ * @param[in]  final_ref           Final reference value.
+ * @param[in]  type                Type of trim function (LINEAR or CUBIC).
+ * @param[in]  duration            Function duration (Zero to go as fast as limits allow).
+ * @param[out] pars                Pointer to trim function parameters.
+ * @param[out] meta                Pointer to diagnostic information. Set to NULL if not required.
  *
  * @retval FG_OK on success
  * @retval FG_BAD_PARAMETER on parameter errors
@@ -111,27 +105,31 @@ extern "C" {
  * @retval FG_OUT_OF_RATE_LIMITS if rate of change of reference exceeds limits
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
-enum fg_error fgTrimInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                           struct fg_trim_config *config, float delay, float init_ref,
-                           struct fg_trim_pars *pars, struct fg_meta *meta);
+enum fg_error fgTrimInit(struct fg_limits *limits, 
+                         bool   is_pol_switch_auto,
+                         bool   is_pol_switch_neg,
+                         double delay, 
+                         enum   fg_trim_type type,
+                         float  initial_ref,
+                         float  final_ref,
+                         float  duration,
+                         struct fg_trim *pars, 
+                         struct fg_meta *meta);
+
+
 
 /*!
  * Generate the reference for the Trim function.
  *
- * @param[in]  pars            Trim function parameters for each segment
- * @param[in]  time            Current time within the function. Note that time
- *                             is passed by const reference rather than by value.
- *                             This allows the user to initialise an array of
- *                             pointers to functions with the pointer to
- *                             fgTrimGen(). If time is passed by value then the
- *                             compiler promotes the float to double and prevents
- *                             correct initialisation.
- * @param[out] ref             Derived reference value
+ * @param[in]  pars            Pointer to trim function parameters.
+ * @param[in]  time            Pointer to time within the function.
+ * @param[out] ref             Pointer to reference value.
  *
- * @retval false    if time is beyond the end of the function
- * @retval true     if time is within the function (or before the start of the function)
+ * @retval FG_GEN_BEFORE_FUNC   if time is before the start of the function.
+ * @retval FG_GEN_DURING_FUNC   if time is during the function.
+ * @retval FG_GEN_AFTER_FUNC    if time is after the end of the function.
  */
-bool fgTrimGen (struct fg_trim_pars *pars, const double *time, float *ref);
+enum fg_gen_status fgTrimGen (struct fg_trim *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }

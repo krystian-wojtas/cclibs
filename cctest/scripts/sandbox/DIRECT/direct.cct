@@ -1,14 +1,14 @@
 # Test default parameters
 
 GLOBAL RUN_DELAY            0.1
-GLOBAL STOP_DELAY           0.1
+GLOBAL STOP_DELAY           0.5
 GLOBAL CYCLE_SELECTOR       1 2
 GLOBAL SIM_LOAD             ENABLED
 GLOBAL FG_LIMITS            DISABLED
 GLOBAL GROUP                sandbox
 GLOBAL PROJECT              DIRECT
 
-VS V_REF_DELAY              1
+PC ACT_DELAY_ITERS          1
 
 LIMITS B_ACCELERATION       1.000000E+003
 LIMITS I_ACCELERATION       1.000000E+003

@@ -103,7 +103,7 @@ BEGIN {
 
         # Detect if parameter is an array based on LOAD SELECT
 
-        if($par_length_column == "REG_N_LOADS")
+        if($par_length_column == "REG_NUM_LOADS")
         {
             # Set REG_LOAD_SELECT flag to inform regConvParsCheck() that this parameter is based on LOAD SELECT
 
@@ -219,7 +219,7 @@ BEGIN {
     print " */\n"                                                                                > of
     print "#ifndef LIBREG_PARS_H"                                                                > of
     print "#define LIBREG_PARS_H\n"                                                              > of
-    print "#define REG_N_PARS                    ", n_pars                                       > of
+    print "#define REG_NUM_PARS                  ", n_pars                                       > of
     print "#define REG_PAR_NOT_USED              (void*)0\n"                                     > of
 
     print "#define regConvParInitPointer(conv,par_name,value_p)        (conv)->pars.par_name.value=value_p"             > of

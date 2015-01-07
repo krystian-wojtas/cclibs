@@ -36,33 +36,33 @@
 #define CCPARS_TEST_EXT extern
 #endif
 
+// Libfg TEST parameter structures
+
+CCPARS_TEST_EXT struct fg_test fg_test[CC_NUM_CYC_SELS];
+
 // Test parameters structure
 
 struct ccpars_test
 {
     // cctest TEST parameters
 
-    float                       initial_ref [CC_NUM_CYC_SELS][1];     // Initial reference
-    enum fg_test_type           type        [CC_NUM_CYC_SELS][1];     // Type of test function
-    float                       amplitude_pp[CC_NUM_CYC_SELS][1];     // Ref peak-to-peak amplitude
-    float                       num_cycles  [CC_NUM_CYC_SELS][1];     // Number of cycles/steps. This is rounded to the nearest integer.
-    float                       period      [CC_NUM_CYC_SELS][1];     // Period
-    enum reg_enabled_disabled   use_window  [CC_NUM_CYC_SELS][1];     // Window control: true to use window for sine & cosine.
-
-    // Libfg TEST variables
-
-    struct fg_test_pars         pars[CC_NUM_CYC_SELS];                // Libfg parameters for TEST
+    float                       initial_ref;                    // Initial reference
+    enum fg_test_type           type;                           // Type of test function
+    float                       amplitude_pp;                   // Ref peak-to-peak amplitude
+    float                       num_cycles;                     // Number of cycles/steps. This is rounded to the nearest integer.
+    float                       period;                         // Period
+    enum reg_enabled_disabled   use_window;                     // Window control: true to use window for sine & cosine.
 };
 
-CCPARS_TEST_EXT struct ccpars_test ccpars_test
+CCPARS_TEST_EXT struct ccpars_test ccpars_test[CC_NUM_CYC_SELS]
 #ifdef GLOBALS
 = {// Default value                Parameter
-    { { 0.0            } },     // TEST INITIAL_REF
-    { { FG_TEST_COSINE } },     // Overwritten by init function (SINE, COSINE, STEPS or SQUARE)
-    { { 2.0            } },     // TEST AMPLITUDE_PP
-    { { 3.0            } },     // TEST NUM_CYCLES
-    { { 2.0            } },     // TEST PERIOD
-    { { REG_ENABLED    } },     // TEST WINDOW
+    {   0.0,                    // TEST INITIAL_REF
+        FG_TEST_COSINE,         // Overwritten by init function (SINE, COSINE, STEPS or SQUARE)
+        2.0,                    // TEST AMPLITUDE_PP
+        3.0,                    // TEST NUM_CYCLES
+        2.0,                    // TEST PERIOD
+        REG_ENABLED      },     // TEST WINDOW
 }
 #endif
 ;
@@ -71,12 +71,12 @@ CCPARS_TEST_EXT struct ccpars_test ccpars_test
 
 CCPARS_TEST_EXT struct ccpars test_pars[]
 #ifdef GLOBALS
-= {// "Signal name"   type,     max_n_els,*enum,                         *value,                      num_defaults  flags
-    { "INITIAL_REF",  PAR_FLOAT,    1,     NULL,                  { .f = &ccpars_test.initial_ref [0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "AMPLITUDE_PP", PAR_FLOAT,    1,     NULL,                  { .f = &ccpars_test.amplitude_pp[0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "NUM_CYCLES",   PAR_FLOAT,    1,     NULL,                  { .f = &ccpars_test.num_cycles  [0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "PERIOD",       PAR_FLOAT,    1,     NULL,                  { .f = &ccpars_test.period      [0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "WINDOW",       PAR_ENUM,     1,     enum_enabled_disabled, { .u = &ccpars_test.use_window  [0][0] }, 1, PARS_CYCLE_SELECTOR },
+= {// "Signal name"   type,     max_n_els,*enum,                         *value,                   num_defaults      cyc_sel_step   flags
+    { "INITIAL_REF",  PAR_FLOAT,    1,     NULL,                  { .f = &ccpars_test[0].initial_ref  }, 1, sizeof(struct ccpars_test), 0 },
+    { "AMPLITUDE_PP", PAR_FLOAT,    1,     NULL,                  { .f = &ccpars_test[0].amplitude_pp }, 1, sizeof(struct ccpars_test), 0 },
+    { "NUM_CYCLES",   PAR_FLOAT,    1,     NULL,                  { .f = &ccpars_test[0].num_cycles   }, 1, sizeof(struct ccpars_test), 0 },
+    { "PERIOD",       PAR_FLOAT,    1,     NULL,                  { .f = &ccpars_test[0].period       }, 1, sizeof(struct ccpars_test), 0 },
+    { "WINDOW",       PAR_ENUM,     1,     enum_enabled_disabled, { .u = &ccpars_test[0].use_window   }, 1, sizeof(struct ccpars_test), 0 },
     { NULL }
 }
 #endif

@@ -4,7 +4,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -30,29 +30,34 @@
 
 
 
-enum fg_error fgTestInit(struct fg_limits          *limits,
-                         enum   fg_limits_polarity  limits_polarity,
-                         struct fg_test_config     *config,
-                         double                     delay,
-                         float                      init_ref,
-                         struct fg_test_pars       *pars,
-                         struct fg_meta            *meta)
+enum fg_error fgTestInit(struct fg_limits *limits, 
+                         bool   is_pol_switch_auto,
+                         bool   is_pol_switch_neg,
+                         double delay, 
+                         enum   fg_test_type type,
+                         float  initial_ref,
+                         float  amplitude_pp,
+                         float  num_cycles,
+                         float  period,
+                         bool   is_window_active,
+                         struct fg_test *pars, 
+                         struct fg_meta *meta)
 {
     enum fg_error  fg_error;       // Error code
     struct fg_meta local_meta;     // Local meta data in case user meta is NULL
-    struct fg_test_pars p;         // Local TEST pars - copied to user *pars only if there are no errors
-    float          window[2];      // Max/min window scaling sine or cosine
+    struct fg_test p;              // Local TEST pars - copied to user *pars only if there are no errors
+    float          window[2];      // Max/min window scaling for sine or cosine
 
     // Reset meta structure - uses local_meta if meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, init_ref);
+    meta = fgResetMeta(meta, &local_meta, delay, initial_ref);
 
     // Check if number of cycles is less than 1
 
-    if(config->num_cycles < 0.6)
+    if(num_cycles < 0.6)
     {
         meta->error.index   = 1;
-        meta->error.data[0] = config->num_cycles;
+        meta->error.data[0] = num_cycles;
 
         fg_error = FG_INVALID_TIME;
         goto error;
@@ -61,15 +66,15 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     // Prepare parameter structure
 
     p.delay            = delay;
-    p.num_cycles       = (uint32_t)(config->num_cycles + 0.4999);
-    p.duration         = (float)p.num_cycles * config->period;
-    p.half_period      = 0.5 * config->period;
-    p.frequency        = 1.0 / config->period;
-    p.ref_amp          = config->amplitude_pp;
-    p.type             = config->type;
-    p.is_window_active = config->is_window_active;
-    p.ref_initial      = init_ref;
-    p.ref_final        = init_ref;
+    p.num_cycles       = (uint32_t)(num_cycles + 0.4999);
+    p.duration         = (float)p.num_cycles * period;
+    p.half_period      = 0.5 * period;
+    p.frequency        = 1.0 / period;
+    p.amplitude        = amplitude_pp;
+    p.type             = type;
+    p.is_window_active = is_window_active;
+    p.initial_ref      = initial_ref;
+    p.final_ref        = initial_ref;
 
     // Check if total duration is too long
 
@@ -87,7 +92,7 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
     if(p.is_window_active && p.num_cycles == 1)
     {
-        if(config->type == FG_TEST_SINE)    // Windowed SINE
+        if(type == FG_TEST_SINE)            // Windowed SINE
         {
             window[0] =  0.649519053;            // +3.sqrt(3)/8
             window[1] = -0.649519053;            // -3.sqrt(3)/8
@@ -108,14 +113,14 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
     fg_error = FG_OK;
 
-    switch(config->type)
+    switch(type)
     {
         case FG_TEST_STEPS:
 
-            p.ref_final += p.ref_amp;
-            p.ref_amp   /= (float)p.num_cycles;
+            p.final_ref += p.amplitude;
+            p.amplitude   /= (float)p.num_cycles;
 
-            fgSetMinMax(meta, p.ref_final);
+            fgSetMinMax(meta, p.final_ref);
             break;
 
         case FG_TEST_SQUARE:
@@ -124,21 +129,21 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
             p.num_cycles *= 2;
 
-            fgSetMinMax(meta, p.ref_initial + p.ref_amp);
+            fgSetMinMax(meta, p.initial_ref + p.amplitude);
             break;
 
         case FG_TEST_SINE:
         case FG_TEST_COSINE:
 
-            p.ref_amp *= 0.5;
+            p.amplitude *= 0.5;
 
-            fgSetMinMax(meta, init_ref + p.ref_amp * window[0]);
-            fgSetMinMax(meta, init_ref + p.ref_amp * window[1]);
+            fgSetMinMax(meta, initial_ref + p.amplitude * window[0]);
+            fgSetMinMax(meta, initial_ref + p.amplitude * window[1]);
             break;
 
         default: // Invalid function type requested
 
-            meta->error.data[0] = (float)config->type;
+            meta->error.data[0] = (float)type;
 
             fg_error = FG_BAD_PARAMETER;
             goto error;
@@ -147,7 +152,9 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
     // Complete meta data
 
     meta->duration  = p.duration;
-    meta->range.end = p.ref_final;;
+    meta->range.end = p.final_ref;;
+
+    fgSetFuncPolarity(meta, is_pol_switch_auto, is_pol_switch_neg);
 
     // Copy valid set of parameters to user's pars structure
 
@@ -165,7 +172,7 @@ enum fg_error fgTestInit(struct fg_limits          *limits,
 
 
 
-bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
+enum fg_gen_status fgTestGen(struct fg_test *pars, const double *time, float *ref)
 {
     double      radians;
     float       cos_rads = 0.0;
@@ -180,9 +187,9 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
 
     if(func_time < 0.0)
     {
-        *ref = pars->ref_initial;
+        *ref = pars->initial_ref;
 
-        return(true);
+        return(FG_GEN_BEFORE_FUNC);
     }
 
     // Operate N cycles following delay
@@ -204,8 +211,9 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
                     period_idx = pars->num_cycles;
                 }
 
-                *ref = pars->ref_initial + pars->ref_amp * (float)period_idx;
-                return(true);
+                *ref = pars->initial_ref + pars->amplitude * (float)period_idx;
+
+                return(FG_GEN_DURING_FUNC);
 
             case FG_TEST_SQUARE:
 
@@ -218,25 +226,26 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
                     period_idx = pars->num_cycles;
                 }
 
-                *ref = pars->ref_initial + (period_idx & 0x1 ? pars->ref_amp : 0.0);
-                return(true);
+                *ref = pars->initial_ref + (period_idx & 0x1 ? pars->amplitude : 0.0);
+
+                return(FG_GEN_DURING_FUNC);
 
             case FG_TEST_SINE:
 
                 radians   = (2.0 * 3.1415926535897932) * pars->frequency * func_time;
-                delta_ref = pars->ref_amp * sin(radians);
+                delta_ref = pars->amplitude * sin(radians);
                 break;
 
             case FG_TEST_COSINE:
 
                 radians   = (2.0 * 3.1415926535897932) * pars->frequency * func_time;
                 cos_rads  = cos(radians);
-                delta_ref = pars->ref_amp * cos_rads;
+                delta_ref = pars->amplitude * cos_rads;
                 break;
 
             default: // Invalid function type requested
 
-                return(false);
+                return(FG_GEN_AFTER_FUNC);
         }
 
         // For SINE and COSINE: Apply cosine window if enabled
@@ -249,19 +258,16 @@ bool fgTestGen(struct fg_test_pars *pars, const double *time, float *ref)
            delta_ref *= 0.5 * (1 - (pars->type == FG_TEST_SINE ? cos(radians) : cos_rads));
         }
 
-        *ref = pars->ref_initial + delta_ref;
+        *ref = pars->initial_ref + delta_ref;
+
+        return(FG_GEN_DURING_FUNC);
     }
 
-    // Coast
+    // Coast after function
 
-    else
-    {
-        *ref = pars->ref_final;
+    *ref = pars->final_ref;
 
-        return(false);
-    }
-
-    return(true);
+    return(FG_GEN_AFTER_FUNC);
 }
 
 // EOF

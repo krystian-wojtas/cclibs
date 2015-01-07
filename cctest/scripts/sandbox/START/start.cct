@@ -8,10 +8,10 @@ GLOBAL PROJECT              START
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS        1.0
-VS BANDWIDTH                2000
-VS TAU_ZERO                 0.0
-VS Z                        0.9
+PC ACT_DELAY_ITERS          1.0
+PC BANDWIDTH                2000
+PC TAU_ZERO                 0.0
+PC Z                        0.9
 
 # Measurement parameters
 
@@ -82,7 +82,7 @@ RAMP LINEAR_RATE(1)         0.0
 
 # CURRENT Actuation
 
-GLOBAL ACTUATION            CURRENT
+PC ACTUATION                CURRENT
 
 LOAD SELECT                 0
 GLOBAL FILE                 start-ramp-abort-iref
@@ -97,7 +97,7 @@ RUN
 
 # VOLTAGE Actuation
 
-GLOBAL ACTUATION            VOLTAGE
+PC ACTUATION                VOLTAGE
 LIMITS INVERT               DISABLED
 RAMP FINAL_REF              1.0
 RAMP INITIAL_REF(1)         2

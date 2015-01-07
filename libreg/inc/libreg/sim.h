@@ -1,6 +1,6 @@
 /*!
  * @file  sim.h
- * @brief Converter Control Regulation library voltage source and load simulation functions
+ * @brief Converter Control Regulation library power converter and load simulation functions
  *
  * <h2>Contact</h2>
  *
@@ -38,10 +38,46 @@
 
 // Constants
 
-#define REG_N_VS_SIM_COEFFS                     4               //!< Number of Voltage Source simulation coefficients
-#define REG_VS_SIM_UNDERSAMPLED_THRESHOLD       0.25            //!< Threshold for calculated VS delay in iteration periods
+#define REG_NUM_PC_SIM_COEFFS                   4               //!< Number of power converter (voltage or current source) simulation coefficients
+#define REG_PC_SIM_UNDERSAMPLED_THRESHOLD       0.25            //!< Threshold for calculated power converter delay in iteration periods
 
 // Simulation structures
+
+/*!
+ * Power converter simulation parameters
+ *
+ * Libreg supports the control of either a current source (PC ACTUATION is CURRENT_REF) and a 
+ * voltage source (PC ACTUATION is VOLTAGE REF). The same power converter simulation model is
+ * used in either case with the response being either the voltage applied to the 
+ * circuit, or the current driven through the circuit. Libreg can use the Tustin algorithm
+ * to calculate the z-coefficients for a second order model, or the application can supply the
+ * coefficient for (up to) a third order model.
+ *
+ * PC ACT_DELAY_ITERS defines the delay between the start of an iteration in which the actuation 
+ * (voltage or current reference) is calculated and the time that it enters the simulation of the voltage
+ * or current source. This models the delay that might be due to computation time, DAC signal filtering, 
+ * or a digital link between the controller running libreg and the power converter electronics.
+ * Both the power converter and load models disregard this delay and execute as if it were zero.
+ * The delay is then added to the simulated measurement of the simulated signals.
+ */
+struct reg_sim_pc_pars
+{
+    float                       num[REG_NUM_PC_SIM_COEFFS];     //!< Numerator coefficients b0, b1, b2, etc. See also #REG_NUM_PC_SIM_COEFFS.
+    float                       den[REG_NUM_PC_SIM_COEFFS];     //!< Denominator coefficients a0, a2, a2, etc.
+    float                       act_delay_iters;                //!< Delay before the voltage/current reference is applied to the voltage/current source.
+    float                       rsp_delay_iters;                //!< Power converter response delay for steady actuation ramp.
+    float                       gain;                           //!< \f[gain = \frac{\sum den}{\sum num}\f].
+    bool                        is_pc_undersampled;             //!< Simulated power converter is under-sampled flag.
+};
+
+/*!
+ * Power converter simulation variables
+ */
+struct reg_sim_pc_vars
+{
+    float                       act[REG_NUM_PC_SIM_COEFFS];     //!< Actuation history.
+    float                       rsp[REG_NUM_PC_SIM_COEFFS];     //!< Voltage/current source response history ignoring PC ACT_DELAY_ITERS.
+};
 
 /*!
  * Load simulation parameters
@@ -57,41 +93,19 @@ struct reg_sim_load_pars
 /*!
  * Load simulation variables
  *
- * V_REF_DELAY is the delay between the start of an iteration in which the voltage
- * reference is calculated and the time that it enters the simulation of the voltage
- * source. This models the delay that might be due to a DAC settling, or a digital
- * link between a current controller and the voltage source electronics.
+ * PC ACT_DELAY_ITERS defines the delay between the start of an iteration in which the actuation 
+ * (voltage or current reference) is calculated and the time that it enters the simulation of the voltage
+ * or current source. This models the delay that might be due to computation time, DAC signal filtering, 
+ * or a digital link between the controller running libreg and the power converter electronics.
  */
 struct reg_sim_load_vars
 {
-    float                       circuit_voltage;                //!< Circuit voltage (without V_REF_DELAY)
-    float                       circuit_current;                //!< Circuit current (without V_REF_DELAY)
-    float                       magnet_current;                 //!< Magnet current  (without V_REF_DELAY)
-    float                       magnet_field;                   //!< Magnet field    (without V_REF_DELAY)
-    float volatile              integrator;                     //!< Integrator for simulated current
-    float                       compensation;                   //!< Compensation for Kahan Summation
-};
-
-/*!
- * Voltage source simulation parameters
- */
-struct reg_sim_vs_pars
-{
-    float                       num  [REG_N_VS_SIM_COEFFS];     //!< Numerator coefficients b0, b1, b2, etc. See also #REG_N_VS_SIM_COEFFS
-    float                       den  [REG_N_VS_SIM_COEFFS];     //!< Denominator coefficients a0, a2, a2, etc. See also #REG_N_VS_SIM_COEFFS
-    float                       v_ref_delay_iters;              //!< Delay before the voltage reference is applied to the voltage source
-    float                       vs_delay_iters;                 //!< Voltage source delay for steady ramp in iterations
-    float                       gain;                           //!< \f[gain = \frac{\sum den}{\sum num}\f]
-    bool                        is_vs_undersampled;             //!< Simulated voltage source is under-sampled flag
-};
-
-/*!
- * Voltage source simulation variables
- */
-struct reg_sim_vs_vars
-{
-    float                       v_ref    [REG_N_VS_SIM_COEFFS]; //!< Voltage reference history. See also #REG_N_VS_SIM_COEFFS
-    float                       v_circuit[REG_N_VS_SIM_COEFFS]; //!< Simulated circuit voltage history. See also #REG_N_VS_SIM_COEFFS
+    float                       circuit_voltage;                //!< Circuit voltage (without PC ACT_DELAY_ITERS).
+    float                       circuit_current;                //!< Circuit current (without PC ACT_DELAY_ITERS).
+    float                       magnet_current;                 //!< Magnet current  (without PC ACT_DELAY_ITERS).
+    float                       magnet_field;                   //!< Magnet field    (without PC ACT_DELAY_ITERS).
+    float volatile              integrator;                     //!< Integrator for simulated current.
+    float                       compensation;                   //!< Compensation for Kahan Summation.
 };
 
 #ifdef __cplusplus
@@ -101,9 +115,46 @@ extern "C" {
 // Simulation functions
 
 /*!
+ * Initialise power converter (voltage source or current source) model. 
+ * This function sets or clears reg_sim_pc_pars::is_pc_undersampled flag.
+ *
+ * This is a background function: do not call from the real-time thread or interrupt.
+ *
+ * @param[in,out] pars                 Pointer to power converter simulation parameters.
+ * @param[in]     iter_period          Simulation iteration period in seconds.
+ * @param[in]     act_delay_iters      Delay before the actuation is applied to the power converter.
+ * @param[in]     bandwidth            Second order model bandwidth (-3 dB). Set to zero to use num,den.
+ * @param[in]     z                    Second order model damping.
+ * @param[in]     tau_zero             Second order zero time constant. Set to 0 if not required.
+ * @param[in]     num                  Third order model numerator coefficients (used if bandwidth is zero).
+ * @param[in]     den                  Third order model denominator coefficients (used if bandwidth is zero).
+ */
+void regSimPcInit(struct reg_sim_pc_pars *pars, float iter_period, float act_delay_iters,
+                  float bandwidth, float z, float tau_zero,
+                  float num[REG_NUM_PC_SIM_COEFFS], float den[REG_NUM_PC_SIM_COEFFS]);
+
+
+
+/*!
+ * Initialise the power converter simulation history to be in steady-state with the given initial response.
+ *
+ * <strong>Note:</strong> the model's gain must be calculated (using regSimPcInit()) before calling this function.
+ *
+ * This is a background function: do not call from the real-time thread or interrupt.
+ *
+ * @param[in]     pars                 Pointer to power converter simulation parameters.
+ * @param[out]    vars                 Pointer to power converter simulation variables.
+ * @param[in]     init_rsp             Initial power converter model response.
+ * @returns       Steady-state actuation that will produce the supplied response.
+ */
+float regSimPcInitHistory(struct reg_sim_pc_pars *pars, struct reg_sim_pc_vars *vars, float init_rsp);
+
+
+
+/*!
  * Initialise the load simulation parameters structure.
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt.
  *
  * @param[out]    sim_load_pars        Load simulation parameters object to update
  * @param[in]     load_pars            Load parameters
@@ -117,10 +168,12 @@ extern "C" {
  */
 void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, struct reg_load_pars *load_pars, float sim_load_tc_error, float sim_period);
 
+
+
 /*!
  * Initialises the load simulation with the field b_init.
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt.
  *
  * @param[in]     pars                 Load simulation parameters
  * @param[in,out] vars                 Load simulation values object to update
@@ -128,10 +181,12 @@ void regSimLoadInit(struct reg_sim_load_pars *sim_load_pars, struct reg_load_par
  */
 void regSimLoadSetField(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float b_init);
 
+
+
 /*!
  * Initialise the load simulation with the current
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt.
  *
  * @param[in]     pars                 Load simulation parameters
  * @param[in,out] vars                 Load simulation values object to update
@@ -139,10 +194,12 @@ void regSimLoadSetField(struct reg_sim_load_pars *pars, struct reg_sim_load_vars
  */
 void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float i_init);
 
+
+
 /*!
  * Initialise the load simulation with the load voltage
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt.
  *
  * @param[in]     pars                 Load simulation parameters
  * @param[in,out] vars                 Load simulation values object to update
@@ -150,52 +207,21 @@ void regSimLoadSetCurrent(struct reg_sim_load_pars *pars, struct reg_sim_load_va
  */
 void regSimLoadSetVoltage(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, float v_init);
 
-/*!
- * Initialise voltage source model. This function sets or clears
- * reg_sim_vs_pars::vs_undersampled_flag.
- *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
- *
- * @param[in,out] pars                 Load simulation parameters object to update
- * @param[in]     iter_period          Simulation iteration period
- * @param[in]     v_ref_delay_iters    Delay before the voltage reference is applied to the voltage source
- * @param[in]     bandwidth            VS 2nd order model bandwidth (-3 dB). Set to zero to use num,den.
- * @param[in]     z                    2nd order model damping
- * @param[in]     tau_zero             2nd order optional zero time constant. Set to zero if not used.
- * @param[in]     num                  VS model numerator coefficients (used if bandwidth is zero)
- * @param[in]     den                  VS model denominator coefficients (used if bandwidth is zero)
- */
-void regSimVsInit(struct reg_sim_vs_pars *pars, double iter_period, float v_ref_delay_iters,
-                  float bandwidth, float z, float tau_zero,
-                  float num[REG_N_VS_SIM_COEFFS], float den[REG_N_VS_SIM_COEFFS]);
+
 
 /*!
- * Initialise the voltage source simulation history to be in steady-state with the given
- * v_circuit value.
+ * Simulate the power converter response to the specified actuation.
  *
- * <strong>Note:</strong> the gain must be calculated (using regSimVsInit()) before
- * calling this function.
+ * This is a Real-Time function.
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
- *
- * @param[in]     pars                 Load simulation parameters
- * @param[out]    vars                 Load simulation values object to update
- * @param[in]     v_circuit            Load voltage
- * @returns Steady-state voltage reference
+ * @param[in]     pars                 Pointer to power converter simulation parameters.
+ * @param[in,out] vars                 Pointer to power converter simulation variables.
+ * @param[in]     act                  Actuation (voltage or current reference).
+ * @returns       Load voltage or current (according to PC ACTUATION)
  */
-float regSimVsInitHistory(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_circuit);
+float regSimPcRT(struct reg_sim_pc_pars *pars, struct reg_sim_pc_vars *vars, float act);
 
-/*!
- * Simulate the voltage source in response to the specified voltage reference.
- *
- * This is a Real-Time function (thread safe).
- *
- * @param[in]     pars                 Load simulation parameters
- * @param[in,out] vars                 Load simulation values object to update
- * @param[in]     v_ref                Voltage reference
- * @returns Load voltage
- */
-float regSimVsRT(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, float v_ref);
+
 
 /*!
  * Simulate the current in the load in response to the specified load voltage. The algorithm
@@ -207,16 +233,16 @@ float regSimVsRT(struct reg_sim_vs_pars *pars, struct reg_sim_vs_vars *vars, flo
  * 
  * This is a Real-Time function (thread safe).
  *
- * @param[in]     pars                 Load simulation parameters
- * @param[in,out] vars                 Load simulation values object to update
- * @param[in]     is_vs_undersampled   Voltage Source undersampled flag. If false, use first-order interpolation
+ * @param[in]     pars                 Load simulation parameters.
+ * @param[in,out] vars                 Load simulation values object to update.
+ * @param[in]     is_pc_undersampled   Voltage Source undersampled flag. If false, use first-order interpolation
  *                                     of voltage. If true, voltage source is undersampled: use final
  *                                     voltage for complete sample.
  * @param[in]     v_circuit            Load voltage, stored in reg_sim_load_vars::circuit_voltage for the next
  *                                     iteration.
- * @returns Circuit current
+ * @returns       Circuit current
  */
-float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, bool is_vs_undersampled, float v_circuit);
+float regSimLoadRT(struct reg_sim_load_pars *pars, struct reg_sim_load_vars *vars, bool is_pc_undersampled, float v_circuit);
 
 #ifdef __cplusplus
 }

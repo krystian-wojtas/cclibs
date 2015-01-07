@@ -1,8 +1,8 @@
-# CCTEST - FGClite tests script
+# CCTEST - FGClite tests script @50Hz
 
-GLOBAL RUN_DELAY                1.0
-GLOBAL STOP_DELAY               1.0
-GLOBAL ITER_PERIOD_US           1000
+GLOBAL RUN_DELAY                3.0
+GLOBAL STOP_DELAY               3.0
+GLOBAL ITER_PERIOD_US           20000
 GLOBAL STOP_ON_ERROR            ENABLED
 GLOBAL FG_LIMITS                ENABLED
 GLOBAL SIM_LOAD                 ENABLED
@@ -30,10 +30,10 @@ LIMITS V_QUADRANTS41            5.0,8.0
 
 # Voltage source parameters
 
-VS V_REF_DELAY_ITERS            20.0
-VS BANDWIDTH                    1000.0
-VS TAU_ZERO                     0.0
-VS Z                            0.9
+PC ACT_DELAY_ITERS              1.0
+PC BANDWIDTH                    1000.0
+PC TAU_ZERO                     0.0
+PC Z                            0.9
 
 # Load parameters
 
@@ -45,15 +45,15 @@ LOAD SIM_TC_ERROR               -0.1
 
 # Measurement parameters
 
-MEAS I_REG_SELECT               FILTERED
-MEAS I_DELAY_ITERS              1.3
-MEAS V_DELAY_ITERS              1.3
-MEAS I_FIR_LENGTHS              20,1
+MEAS I_REG_SELECT               UNFILTERED
+MEAS I_DELAY_ITERS              0.54
+MEAS V_DELAY_ITERS              0.54
+MEAS I_FIR_LENGTHS              1,1
 MEAS I_SIM_NOISE_PP             0.000
 MEAS V_SIM_NOISE_PP             0.000
-MEAS TONE_HALF_PERIOD_ITERS     10
-MEAS I_SIM_TONE_AMP             0.01
-MEAS INVALID_MEAS_PERIOD_ITERS  0
+MEAS TONE_HALF_PERIOD_ITERS     1
+MEAS I_SIM_TONE_AMP             0.0
+MEAS INVALID_PROBABILITY        0.15
 
 # Current regulation
 
@@ -71,22 +71,53 @@ PLEP LINEAR_RATE                1
 REF FUNCTION                    PLEP
 REF REG_MODE                    CURRENT
 
-# PLEP test
+GLOBAL REG_ERR_RATE             MEASUREMENT
+
+# PLEP test - no noise
+
+GLOBAL FILE                     nn-amps-plep-20ms
+IREG PERIOD_ITERS               1
+RUN
+
+GLOBAL FILE                     nn-amps-plep-40ms
+IREG PERIOD_ITERS               2
+RUN
+
+GLOBAL FILE                     nn-amps-plep-60ms
+IREG PERIOD_ITERS               3
+RUN
+
+GLOBAL FILE                     nn-amps-plep-80ms
+IREG PERIOD_ITERS               4
+RUN
+
+GLOBAL FILE                     nn-amps-plep-100ms
+IREG PERIOD_ITERS               5
+RUN
+
+# PLEP tests with noise
+
+MEAS I_SIM_NOISE_PP             0.002
+MEAS V_SIM_NOISE_PP             0.0002
 
 GLOBAL FILE                     amps-plep-20ms
-IREG PERIOD_ITERS               20
+IREG PERIOD_ITERS               1
 RUN
 
 GLOBAL FILE                     amps-plep-40ms
-IREG PERIOD_ITERS               40
+IREG PERIOD_ITERS               2
 RUN
 
 GLOBAL FILE                     amps-plep-60ms
-IREG PERIOD_ITERS               60
+IREG PERIOD_ITERS               3
 RUN
 
 GLOBAL FILE                     amps-plep-80ms
-IREG PERIOD_ITERS               80
+IREG PERIOD_ITERS               4
+RUN
+
+GLOBAL FILE                     amps-plep-100ms
+IREG PERIOD_ITERS               5
 RUN
 
 # EOF

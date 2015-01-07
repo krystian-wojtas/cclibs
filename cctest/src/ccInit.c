@@ -55,7 +55,7 @@ void ccInitPars(void)
         {
             while(par->name != NULL)
             {
-                bool is_cyc_sel_par = (par->flags & PARS_CYCLE_SELECTOR) != 0;
+                bool is_cyc_sel_par = par->cyc_sel_step != 0;
 
                 // Allocate the space for the number of elements and initialise just the first number of elements
                 // from default value
@@ -73,7 +73,7 @@ void ccInitPars(void)
                     {
                         par->num_elements[cyc_sel] = par->num_default_elements;
 
-                        memcpy(&par->value_p.c[ccpars_sizeof_type[par->type] * cyc_sel * par->max_num_elements],
+                        memcpy(&par->value_p.c[cyc_sel * par->cyc_sel_step],
                                &par->value_p.c[0],
                                ccpars_sizeof_type[par->type] * par->num_default_elements);
                     }
@@ -155,7 +155,19 @@ uint32_t ccInitFunctions(void)
 
     for(idx = 0 ; idx < ccrun.num_cycles ; idx++)
     {
-        cyc_sel = ccpars_global.cycle_selector[idx];
+        // Set cyc_sel and reg_rst_source taking GLOBAL TEST_CYC_SEL and GLOBAL TEST_REF_CYC_SEL into account
+
+        cyc_sel = ccpars_global.cycle_selector[idx]; 
+
+        ccrun.cycle[idx].reg_rst_source = ccpars_global.test_cyc_sel == 0 || ccpars_global.test_cyc_sel != cyc_sel ? 
+                                          REG_OPERATIONAL_RST_PARS : REG_TEST_RST_PARS;
+
+        if(ccrun.cycle[idx].reg_rst_source == REG_TEST_RST_PARS && ccpars_global.test_ref_cyc_sel > 0)
+        {
+            cyc_sel = ccpars_global.test_ref_cyc_sel;
+        }
+
+        ccrun.cycle[idx].cyc_sel = cyc_sel;
 
         // If function this cycle selector has not yet been initialised
 
@@ -163,17 +175,17 @@ uint32_t ccInitFunctions(void)
         {
             // Check that FUNCTION is not NONE
 
-            if(ccpars_ref.function[cyc_sel][0] == FG_NONE)
+            if(ccpars_ref[cyc_sel].function == FG_NONE)
             {
                 ccTestPrintError("REF FUNCTION(%u) must not be NONE", cyc_sel);
                 return(EXIT_FAILURE);
             }
 
-            // Check that reg_mode is compatible with actuation
+            // Check that reg_mode is compatible with PC ACTUATION
 
-            if(ccpars_global.actuation == REG_CURRENT_REF)
+            if(ccpars_pc.actuation == REG_CURRENT_REF)
             {
-                if(ccpars_ref.reg_mode[cyc_sel][0] != REG_CURRENT)
+                if(ccpars_ref[cyc_sel].reg_mode != REG_CURRENT)
                 {
                     ccTestPrintError("REF REG_MODE(%u) must CURRENT when GLOBAL ACTUATION is CURRENT", cyc_sel);
                     return(EXIT_FAILURE);
@@ -182,7 +194,7 @@ uint32_t ccInitFunctions(void)
 
             // Initialise pointer to function generation limits
 
-            switch(ccpars_ref.reg_mode[cyc_sel][0])
+            switch(ccpars_ref[cyc_sel].reg_mode)
             {
                 case REG_NONE: break;
                 case REG_FIELD:
@@ -217,10 +229,16 @@ uint32_t ccInitFunctions(void)
 
             // Try to arm the function for this cycle selector
 
-            func = &funcs[ccpars_ref.function[cyc_sel][0]];
+            func = &funcs[ccpars_ref[cyc_sel].function];
 
-            if(func->init_func(&ccrun.fg_meta[cyc_sel], cyc_sel) == EXIT_FAILURE)
+            if(func->init_func(&ccrun.fg_meta[cyc_sel], cyc_sel) != FG_OK)
             {
+                ccTestPrintError("failed to initialise %s(%u) : %s : error_idx=%u : error_data=%g,%g,%g,%g", 
+                        ccParsEnumString(enum_function_type, ccpars_ref[cyc_sel].function),
+                        cyc_sel,
+                        ccParsEnumString(enum_fg_error, ccrun.fg_meta[cyc_sel].fg_error),
+                        ccrun.fg_meta[cyc_sel].error.data[0],ccrun.fg_meta[cyc_sel].error.data[1],
+                        ccrun.fg_meta[cyc_sel].error.data[2],ccrun.fg_meta[cyc_sel].error.data[3]);
                 exit_status = EXIT_FAILURE;
             }
 
@@ -251,7 +269,7 @@ uint32_t ccInitFunctions(void)
 
     for(idx = 0 ; idx < ccrun.num_cycles ; idx++)
     {
-        if(ccpars_ref.function[ccpars_global.cycle_selector[idx]] == FG_NONE)
+        if(ccpars_ref[ccpars_global.cycle_selector[idx]].function == FG_NONE)
         {
             ccTestPrintError("cycle %u of %u (selector %u) is not armed", idx, ccrun.num_cycles, ccpars_global.cycle_selector[idx]);
             return(EXIT_FAILURE);
@@ -281,6 +299,7 @@ uint32_t ccInitSimLoad(void)
   parameters are valid and initialises the simulation.
 \*---------------------------------------------------------------------------------------------------------*/
 {
+    uint32_t exit_status = EXIT_SUCCESS;
     static struct reg_meas_signal invalid_meas = { 0.0, false };
 
     // Enabled of commands whose parameters should be included in debug output
@@ -289,11 +308,18 @@ uint32_t ccInitSimLoad(void)
     cmds[CMD_LOAD   ].is_enabled = true;
     cmds[CMD_LIMITS ].is_enabled = true;
     cmds[CMD_MEAS   ].is_enabled = true;
-    cmds[CMD_VS     ].is_enabled = true;
+    cmds[CMD_PC     ].is_enabled = true;
     cmds[CMD_REF    ].is_enabled = true;
     cmds[CMD_BREG   ].is_enabled = ccrun.is_breg_enabled;
     cmds[CMD_IREG   ].is_enabled = ccrun.is_ireg_enabled;
 
+    // Set random_threshold for good measurements based on MEAS PROB_INVALID_SIGNAL
+
+    if(ccpars_meas.invalid_probability > 0.0 && ccpars_meas.invalid_probability < 1.0)
+    {
+        ccrun.invalid_meas.random_threshold = (long)(RAND_MAX * ccpars_meas.invalid_probability);
+    }
+    
     // Prepare an invalid signal to allow recovery from invalid signals to be tested
 
     regConvMeasInit(&conv, &invalid_meas, &invalid_meas, &invalid_meas);
@@ -310,8 +336,7 @@ uint32_t ccInitSimLoad(void)
 
     // Initialise libreg parameter pointers to cctest variables
 
-    regConvParInitPointer(&conv,global_actuation              ,&ccpars_global.actuation);
-    regConvParInitPointer(&conv,global_reg_err_rate           ,&ccpars_global.reg_err_rate);
+    regConvParInitPointer(&conv,reg_err_rate                  ,&ccpars_global.reg_err_rate);
 
     regConvParInitPointer(&conv,breg_period_iters             ,&ccpars_breg.period_iters);
     regConvParInitPointer(&conv,breg_pure_delay_periods       ,&ccpars_breg.pure_delay_periods);
@@ -402,24 +427,26 @@ uint32_t ccInitSimLoad(void)
     regConvParInitPointer(&conv,meas_b_sim_tone_amp           ,&ccpars_meas.b_sim_tone_amp);
     regConvParInitPointer(&conv,meas_i_sim_tone_amp           ,&ccpars_meas.i_sim_tone_amp);
 
-    regConvParInitPointer(&conv,vs_v_ref_delay_iters          ,&ccpars_vs.v_ref_delay_iters);
-    regConvParInitPointer(&conv,vs_bandwidth                  ,&ccpars_vs.bandwidth);
-    regConvParInitPointer(&conv,vs_z                          ,&ccpars_vs.z);
-    regConvParInitPointer(&conv,vs_tau_zero                   ,&ccpars_vs.tau_zero);
-    regConvParInitPointer(&conv,vs_sim_num                    ,&ccpars_vs.sim_vs_pars.num);
-    regConvParInitPointer(&conv,vs_sim_den                    ,&ccpars_vs.sim_vs_pars.den);
+    regConvParInitPointer(&conv,pc_actuation                  ,&ccpars_pc.actuation);
+    regConvParInitPointer(&conv,pc_act_delay_iters            ,&ccpars_pc.act_delay_iters);
+    regConvParInitPointer(&conv,pc_bandwidth                  ,&ccpars_pc.bandwidth);
+    regConvParInitPointer(&conv,pc_z                          ,&ccpars_pc.z);
+    regConvParInitPointer(&conv,pc_tau_zero                   ,&ccpars_pc.tau_zero);
+    regConvParInitPointer(&conv,pc_sim_num                    ,&ccpars_pc.sim_pc_pars.num);
+    regConvParInitPointer(&conv,pc_sim_den                    ,&ccpars_pc.sim_pc_pars.den);
 
     // Initialise simulation
 
-    regConvSimInit(&conv, ccpars_ref.reg_mode[ccpars_global.cycle_selector[0]][0],
+    regConvSimInit(&conv, ccpars_ref[ccpars_global.cycle_selector[0]].reg_mode,
                           ccrun.fg_meta[ccpars_global.cycle_selector[0]].range.start);
 
     // Check simulated voltage source gain
 
-    if(fabs(conv.sim_vs_pars.gain - 1.0) > 0.05)
+    if(fabs(conv.sim_pc_pars.gain - 1.0) > 0.05)
     {
-        ccTestPrintError("voltage source model gain (%.3f) has an error of more than 5%%", conv.sim_vs_pars.gain);
-        return(EXIT_FAILURE);
+        ccTestPrintError("voltage source model gain (%.3f) has an error of more than 5%%", conv.sim_pc_pars.gain);
+
+        exit_status = EXIT_FAILURE;
     }
 
     // Check initialisation of field regulation
@@ -430,13 +457,24 @@ uint32_t ccInitSimLoad(void)
         {
             ccTestPrintError("REG_MODE FIELD is not permitted for a resistive circuit "
                              "(circuit time constant is less than 1/3 x iteration period)");
-            return(EXIT_FAILURE);
+
+            exit_status = EXIT_FAILURE;
         }
 
         if(conv.b.last_op_rst_pars.status == REG_FAULT)
         {
-            ccTestPrintError("failed to initialise FIELD RST regulator: Jury's test index = %d", conv.b.last_op_rst_pars.jurys_result);
-            return(EXIT_FAILURE);
+            ccTestPrintError("failed to initialise operational FIELD RST regulator: %s",
+                            ccParsEnumString(enum_reg_jurys_result, conv.b.last_op_rst_pars.jurys_result));
+
+            exit_status = EXIT_FAILURE;
+        }
+
+        if(ccpars_global.test_cyc_sel > 0 && conv.b.last_test_rst_pars.status == REG_FAULT)
+        {
+            ccTestPrintError("failed to initialise test FIELD RST regulator: %s",
+                            ccParsEnumString(enum_reg_jurys_result, conv.b.last_test_rst_pars.jurys_result));
+
+            exit_status = EXIT_FAILURE;
         }
 
         if(conv.b.last_op_rst_pars.status == REG_WARNING)
@@ -452,8 +490,18 @@ uint32_t ccInitSimLoad(void)
     {
         if(conv.i.last_op_rst_pars.status == REG_FAULT)
         {
-            ccTestPrintError("failed to initialise CURRENT RST regulator: Jury's test index = %d", conv.i.last_op_rst_pars.jurys_result);
-            return(EXIT_FAILURE);
+            ccTestPrintError("failed to initialise operational CURRENT RST regulator: %s",
+                            ccParsEnumString(enum_reg_jurys_result, conv.i.last_op_rst_pars.jurys_result));
+
+            exit_status = EXIT_FAILURE;
+        }
+
+        if(ccpars_global.test_cyc_sel > 0 && conv.i.last_test_rst_pars.status == REG_FAULT)
+        {
+            ccTestPrintError("failed to initialise test CURRENT RST regulator: %s",
+                            ccParsEnumString(enum_reg_jurys_result, conv.i.last_test_rst_pars.jurys_result));
+
+            exit_status = EXIT_FAILURE;
         }
 
         if(conv.i.last_op_rst_pars.status == REG_WARNING)
@@ -463,6 +511,6 @@ uint32_t ccInitSimLoad(void)
         }
     }
 
-    return(EXIT_SUCCESS);
+    return(exit_status);
 }
 // EOF

@@ -79,17 +79,17 @@ CCPARS_DEFAULT_EXT struct ccpars_default ccpars_default
 
 CCPARS_GLOBAL_EXT struct ccpars default_pars[]
 #ifdef GLOBALS
-= {// "Signal name"       type,  max_n_els, *enum,        *value,                                       num_defaults
-    { "V_ACCELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_VOLTAGE].acceleration   }, 1 },
-    { "V_DECELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_VOLTAGE].deceleration   }, 1 },
-    { "V_LINEAR_RATE",    PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_VOLTAGE].linear_rate    }, 1 },
-    { "I_ACCELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_CURRENT].acceleration   }, 1 },
-    { "I_DECELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_CURRENT].deceleration   }, 1 },
-    { "I_LINEAR_RATE",    PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_CURRENT].linear_rate    }, 1 },
-    { "B_ACCELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_FIELD].acceleration     }, 1 },
-    { "B_DECELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_FIELD].deceleration     }, 1 },
-    { "B_LINEAR_RATE",    PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_FIELD].linear_rate      }, 1 },
-    { "PLATEAU_DURATION", PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.plateau_duration                 }, 1 },
+= {// "Signal name"       type,  max_n_els, *enum,        *value,                             num_defaults,cyc_sel_step,flags
+    { "V_ACCELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_VOLTAGE].acceleration   }, 1, 0, 0 },
+    { "V_DECELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_VOLTAGE].deceleration   }, 1, 0, 0 },
+    { "V_LINEAR_RATE",    PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_VOLTAGE].linear_rate    }, 1, 0, 0 },
+    { "I_ACCELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_CURRENT].acceleration   }, 1, 0, 0 },
+    { "I_DECELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_CURRENT].deceleration   }, 1, 0, 0 },
+    { "I_LINEAR_RATE",    PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_CURRENT].linear_rate    }, 1, 0, 0 },
+    { "B_ACCELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_FIELD].acceleration     }, 1, 0, 0 },
+    { "B_DECELERATION",   PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_FIELD].deceleration     }, 1, 0, 0 },
+    { "B_LINEAR_RATE",    PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.pars[REG_FIELD].linear_rate      }, 1, 0, 0 },
+    { "PLATEAU_DURATION", PAR_FLOAT, 1,      NULL, { .f = &ccpars_default.plateau_duration                 }, 1, 0, 0 },
     { NULL }
 }
 #endif

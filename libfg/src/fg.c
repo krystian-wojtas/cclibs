@@ -29,7 +29,7 @@
 
 
 
-struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, float init_ref)
+struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, double delay, float initial_ref)
 {
     uint32_t idx;
 
@@ -53,12 +53,15 @@ struct fg_meta * fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, f
             meta->error.data[idx] = 0.0;
         }
 
-        meta->error.index = 0;
-        meta->duration    = 0.0;
-        meta->range.end   = 0.0;
-        meta->range.start = init_ref;
-        meta->range.min   = init_ref;
-        meta->range.max   = init_ref;
+        meta->error.index     = 0;
+        meta->polarity        = FG_FUNC_POL_ZERO;
+        meta->limits_inverted = false;
+        meta->delay           = delay;
+        meta->duration        = 0.0;
+        meta->range.end       = 0.0;
+        meta->range.start     = initial_ref;
+        meta->range.min       = initial_ref;
+        meta->range.max       = initial_ref;
     }
 
     return(meta);
@@ -71,6 +74,7 @@ void fgSetMinMax(struct fg_meta *meta, float ref)
     if(ref > meta->range.max)
     {
         meta->range.max = ref;
+
     }
     else if(ref < meta->range.min)
     {
@@ -80,9 +84,33 @@ void fgSetMinMax(struct fg_meta *meta, float ref)
 
 
 
+void fgSetFuncPolarity(struct fg_meta *meta,
+                       bool   is_pol_switch_auto,
+                       bool   is_pol_switch_neg)
+{
+    if(meta->range.max > 0.0)
+    {
+        meta->polarity |= FG_FUNC_POL_POSITIVE;
+    }
 
-enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                         float ref, float rate, float acceleration, struct fg_meta *meta)
+    if(meta->range.min < 0.0)
+    {
+        meta->polarity |= FG_FUNC_POL_NEGATIVE;
+    }
+
+    // Set limits inversion control based on the switch control and state
+
+    meta->limits_inverted =(is_pol_switch_auto == false && is_pol_switch_neg == true) || 
+                           (is_pol_switch_auto == true  && meta->polarity == FG_FUNC_POL_NEGATIVE);
+}
+
+
+
+enum fg_error fgCheckRef(struct fg_limits *limits, 
+                         float  ref, 
+                         float  rate, 
+                         float  acceleration, 
+                         struct fg_meta *meta)
 {
     float    max;
     float    min;
@@ -97,23 +125,18 @@ enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limit
 
     // Invert limits if necessary
 
-    if( limits_polarity == FG_LIMITS_POL_NEGATIVE ||
-       (limits_polarity == FG_LIMITS_POL_AUTO && meta->range.min < 0.0))
+    if(meta->limits_inverted)
     {
         // Invert limits - only required for unipolar converters so limits->neg will be zero
 
         max = -(1.0 - FG_CLIP_LIMIT_FACTOR) * limits->min;
         min = -(1.0 + FG_CLIP_LIMIT_FACTOR) * limits->pos;
-
-        meta->invert_limits = true;
     }
     else // Limits do not need to be inverted
     {
         max = (1.0 + FG_CLIP_LIMIT_FACTOR) * limits->pos;
         min = (limits->neg < 0.0 ? (1.0 + FG_CLIP_LIMIT_FACTOR) * limits->neg :
                                    (1.0 - FG_CLIP_LIMIT_FACTOR) * limits->min);
-
-        meta->invert_limits = false;
     }
 
     // Check reference level

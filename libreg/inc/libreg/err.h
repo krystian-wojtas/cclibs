@@ -50,17 +50,12 @@ struct reg_err_limit
  */
 struct reg_err
 {
-    uint32_t                    inhibit_max_abs_err_counter;    //!< Down counter to inhibit max_abs_err calculation
     float                       delayed_ref;                    //!< Delayed reference
     float                       err;                            //!< Regulation error
     float                       max_abs_err;                    //!< Max absolute error
     struct reg_err_limit        warning;                        //!< Warning limit structure
     struct reg_err_limit        fault;                          //!< Fault limit structure
 };
-/*!
- * Regulation error macros
- */
-#define regErrInhibitMaxAbsErrRT(err,iterations) (err)->inhibit_max_abs_err_counter=iterations
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,7 +64,7 @@ extern "C" {
 /*!
  * Initialise the warning and fault limits of the reg_err structure.
  *
- * This is a non-Real-Time function: do not call from the real-time thread or interrupt
+ * This is a background function: do not call from the real-time thread or interrupt
  *
  * @param[out]   err                  Pointer to regulation error structure.
  * @param[in]    warning_threshold    New warning threshold. If set to zero, reset
@@ -79,28 +74,30 @@ extern "C" {
  */
 void regErrInitLimits(struct reg_err *err, float warning_threshold, float fault_threshold);
 
+
+
 /*!
  * Reset the reg_err structure variables to zero.
- * <strong>Note:</strong> reg_err::max_abs_err is not reset.
  *
- * This is a Real-Time function (thread safe).
+ * This is a Real-Time function.
  *
- * @param[out]   err                            Pointer to regulation error structure.
- * @param[in]    inhibit_max_abs_err_counter    Number of calls to regErrCheckLimitsRT() during which the max_abs_err
- *                                              calculation should be inhibited.
+ * @param[out]   err                        Pointer to regulation error structure.
  */
-void regErrResetLimitsVarsRT(struct reg_err *err, uint32_t inhibit_max_abs_err_counter);
+void regErrResetLimitsVarsRT(struct reg_err *err);
+
+
 
 /*!
  * Calculate the regulation error and check the error limits (if supplied).
  *
  * This is a Real-Time function (thread safe).
  *
- * @param[in,out] err                Pointer to regulation error structure
- * @param[in]     delayed_ref        Value to store in reg_err::delayed_ref, so it can be logged if required
- * @param[in]     meas               reg_err::err is set to <em>delayed_ref - meas</em>.
+ * @param[in,out] err                       Pointer to regulation error structure
+ * @param[in]     is_max_abs_err_enabled    Set to true if max_abs_err is to be calculated
+ * @param[in]     delayed_ref               Value to store in reg_err::delayed_ref, so it can be logged if required
+ * @param[in]     meas                      reg_err::err is set to <em>delayed_ref - meas</em>.
  */
-void regErrCheckLimitsRT(struct reg_err *err, float delayed_ref, float meas);
+void regErrCheckLimitsRT(struct reg_err *err, bool is_max_abs_err_enabled, float delayed_ref, float meas);
 
 #ifdef __cplusplus
 }

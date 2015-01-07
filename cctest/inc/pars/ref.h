@@ -35,6 +35,20 @@
 #define CCPARS_REF_EXT extern
 #endif
 
+// Function polarity enum (for debug only)
+
+CCPARS_GLOBAL_EXT struct ccpars_enum enum_func_pol[]
+#ifdef GLOBALS
+= {
+    { FG_FUNC_POL_ZERO,      "ZERO"     },
+    { FG_FUNC_POL_POSITIVE,  "POSITIVE" },
+    { FG_FUNC_POL_NEGATIVE,  "NEGATIVE" },
+    { FG_FUNC_POL_BOTH,      "BOTH"     },
+    { 0,                      NULL      },
+}
+#endif
+;
+    
 // Pre-function policies enum
 
 enum prefunc_policy
@@ -126,19 +140,19 @@ CCPARS_GLOBAL_EXT struct ccpars_enum enum_fg_error[]
 
 struct ccpars_ref
 {
-    enum reg_mode               reg_mode            [CC_NUM_CYC_SELS][1];     // Regulation mode (VOLTAGE, CURRENT or FIELD)
-    enum fg_types               function            [CC_NUM_CYC_SELS][1];     // Ref function type
-    enum prefunc_policy         prefunc_policy      [CC_NUM_CYC_SELS][1];     // Pre-function policy
-    float                       prefunc_min_ref     [CC_NUM_CYC_SELS][1];     // Minimum reference for pre-function
+    enum reg_mode               reg_mode;               // Regulation mode (VOLTAGE, CURRENT or FIELD)
+    enum fg_types               function;               // Ref function type
+    enum prefunc_policy         prefunc_policy;         // Pre-function policy
+    float                       prefunc_min_ref;        // Minimum reference for pre-function
 };
 
-CCPARS_REF_EXT struct ccpars_ref ccpars_ref
+CCPARS_REF_EXT struct ccpars_ref ccpars_ref[CC_NUM_CYC_SELS]
 #ifdef GLOBALS
 = {//   Default value                  Parameter
-    { { REG_VOLTAGE  } },           // REF REG_MODE(0)
-    { { FG_SINE      } },           // REF FUNCTION(0)
-    { { PREFUNC_RAMP } },           // REF PREFUNC_POLICY(0)
-    { { 0.0          } },           // REF PREFUNC_MIN_REF(0)
+  {   REG_VOLTAGE,              // REF REG_MODE(0)
+      FG_SINE,                  // REF FUNCTION(0)
+      PREFUNC_RAMP,             // REF PREFUNC_POLICY(0)
+      0.0            }          // REF PREFUNC_MIN_REF(0)
 }
 #endif
 ;
@@ -156,11 +170,11 @@ enum ref_pars_index_enum
 
 CCPARS_GLOBAL_EXT struct ccpars ref_pars[]
 #ifdef GLOBALS
-= {// "Signal name"      type,  max_n_els, *enum,                       *value,                        num_defaults, flags
-    { "REG_MODE",        PAR_ENUM,  1,      enum_reg_mode,       { .u = &ccpars_ref.reg_mode       [0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "FUNCTION",        PAR_ENUM,  1,      enum_function_type,  { .u = &ccpars_ref.function       [0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "PREFUNC_POLICY",  PAR_ENUM,  1,      enum_prefunc_policy, { .u = &ccpars_ref.prefunc_policy [0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "PREFUNC_MIN_REF", PAR_FLOAT, 1,      NULL,                { .f = &ccpars_ref.prefunc_min_ref[0][0] }, 1, PARS_CYCLE_SELECTOR },
+= {// "Signal name"      type,  max_n_els, *enum,                       *value,                     num_defaults,    cyc_sel_step,    flags
+    { "REG_MODE",        PAR_ENUM,  1,      enum_reg_mode,       { .u = &ccpars_ref[0].reg_mode        }, 1, sizeof(struct ccpars_ref), 0 },
+    { "FUNCTION",        PAR_ENUM,  1,      enum_function_type,  { .u = &ccpars_ref[0].function        }, 1, sizeof(struct ccpars_ref), 0 },
+    { "PREFUNC_POLICY",  PAR_ENUM,  1,      enum_prefunc_policy, { .u = &ccpars_ref[0].prefunc_policy  }, 1, sizeof(struct ccpars_ref), 0 },
+    { "PREFUNC_MIN_REF", PAR_FLOAT, 1,      NULL,                { .f = &ccpars_ref[0].prefunc_min_ref }, 1, sizeof(struct ccpars_ref), 0 },
     { NULL }
 }
 #endif

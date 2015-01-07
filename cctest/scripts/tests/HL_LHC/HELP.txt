@@ -1,0 +1,9 @@
+to execute:
+
+./make.sh
+
+This is not run automatically with the rest of the cctest scripts because it generates so much data (2GB).
+
+
+In results/*.csv the left table are time steps and right are currents against minimum time step for all circuits.
+

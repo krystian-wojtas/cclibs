@@ -4,7 +4,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -30,13 +30,17 @@
 
 
 
-enum fg_error fgTableInit(struct fg_limits         *limits,
-                          enum   fg_limits_polarity limits_polarity,
-                          struct fg_table_config   *config,
-                          double                    delay,
-                          float                     min_time_step,
-                          struct fg_table_pars     *pars,
-                          struct fg_meta           *meta)
+enum fg_error fgTableInit(struct   fg_limits *limits, 
+                          bool     is_pol_switch_auto,
+                          bool     is_pol_switch_neg,
+                          double   delay, 
+                          float    min_time_step,
+                          float   *ref,
+                          uint32_t ref_num_els,
+                          float   *time,
+                          uint32_t time_num_els,
+                          struct   fg_table *pars, 
+                          struct   fg_meta *meta)
 {
     enum fg_error  fg_error;       // Limit checking status
     uint32_t       i;              // loop variable
@@ -46,23 +50,23 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 
     // Reset meta structure - uses local_meta if meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, config->ref[0]);
+    meta = fgResetMeta(meta, &local_meta, delay, ref[0]);
 
     // Initial checks of data integrity
 
-    if(config->ref_num_elements < 2 ||                          // If less than 2 points or
-       config->ref_num_elements != config->time_num_elements)   // time and ref arrays are not the same length
+    if(ref_num_els < 2 ||                          // If less than 2 points or
+       ref_num_els != time_num_els)   // time and ref arrays are not the same length
     {
-        meta->error.data[0] = (float)config->ref_num_elements;
-        meta->error.data[1] = (float)config->time_num_elements;
+        meta->error.data[0] = (float)ref_num_els;
+        meta->error.data[1] = (float)time_num_els;
 
         fg_error = FG_BAD_ARRAY_LEN;                            // Report bad array len
         goto error;
     }
 
-    if(config->time[0] != 0.0)                              // If first time value is not zero
+    if(time[0] != 0.0)                              // If first time value is not zero
     {
-        meta->error.data[0] = config->time[0];
+        meta->error.data[0] = time[0];
 
         fg_error = FG_INVALID_TIME;                             // Report invalid time
         goto error;
@@ -70,35 +74,42 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 
     // Check time vector and calculate min/max for table
 
-    num_points     = config->ref_num_elements;
+    num_points     = ref_num_els;
     min_time_step *= (1.0 - FG_CLIP_LIMIT_FACTOR);      // Adjust min time step to avoid rounding errs
 
     for(i = 1 ; i < num_points ; i++)
     {
-        if(config->time[i] < (config->time[i - 1] + min_time_step))        // Check time values
+        if(time[i] < (time[i - 1] + min_time_step))        // Check time values
         {
             meta->error.index     = i;
-            meta->error.data[0] = config->time[i];
-            meta->error.data[1] = config->time[i - 1] + min_time_step;
+            meta->error.data[0] = time[i];
+            meta->error.data[1] = time[i - 1] + min_time_step;
             meta->error.data[2] = min_time_step;
 
             fg_error = FG_INVALID_TIME;                             // Report invalid time
             goto error;
         }
 
-        fgSetMinMax(meta, config->ref[i]);
+        fgSetMinMax(meta, ref[i]);
     }
 
-    // Check reference function limits
+    // Complete meta data
+
+    meta->duration  = time[i - 1];
+    meta->range.end = ref [i - 1];
+
+    fgSetFuncPolarity(meta, is_pol_switch_auto, is_pol_switch_neg);
+
+    // Check reference function limits if provided
 
     if(limits != NULL)
     {
         for(i = 1 ; i < num_points ; i++)
         {
-            grad = (config->ref[i] - config->ref[i - 1]) / (config->time[i] - config->time[i - 1]);
+            grad = (ref[i] - ref[i - 1]) / (time[i] - time[i - 1]);
 
-            if((fg_error = fgCheckRef(limits, limits_polarity, config->ref[i],     grad, 0.0, meta)) ||
-               (fg_error = fgCheckRef(limits, limits_polarity, config->ref[i - 1], grad, 0.0, meta)))
+            if((fg_error = fgCheckRef(limits, ref[i],     grad, 0.0, meta)) ||
+               (fg_error = fgCheckRef(limits, ref[i - 1], grad, 0.0, meta)))
             {
                 meta->error.index = i;
                 goto error;
@@ -108,37 +119,32 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 
     // Prepare table parameters
 
-    pars->delay        = delay;                             // Run delay
-    pars->num_points   = num_points;                        // Number of points in the table:
-    pars->seg_idx      = 0;                                 // Reset segment index
-    pars->prev_seg_idx = 0;                                 // Reset previous segment index
+    pars->delay        = delay;
+    pars->num_points   = num_points;
+    pars->seg_idx      = 0;
+    pars->prev_seg_idx = 0;
 
     if(pars->ref == NULL)
     {
-        pars->ref = config->ref;                            // Reference value array
+        pars->ref = ref;
     }
 
     if(pars->time == NULL)
     {
-        pars->time = config->time;                          // Reference time array
+        pars->time = time;
     }
 
-    // Copy data if pars arrays are different to config arrays
+    // Copy data if pars arrays are different
 
-    if(pars->ref != config->ref)
+    if(pars->ref != ref)
     {
-        memcpy(pars->ref, config->ref, num_points * sizeof(pars->ref[0]));
+        memcpy(pars->ref, ref, num_points * sizeof(ref[0]));
     }
 
-    if(pars->time != config->time)
+    if(pars->time != time)
     {
-        memcpy(pars->time, config->time, num_points * sizeof(pars->time[0]));
+        memcpy(pars->time, time, num_points * sizeof(time[0]));
     }
-
-    // Complete meta data
-
-    meta->duration  = pars->time[i - 1];
-    meta->range.end = pars->ref [i - 1];
 
     return(FG_OK);
 
@@ -152,7 +158,7 @@ enum fg_error fgTableInit(struct fg_limits         *limits,
 
 
 
-bool fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
+enum fg_gen_status fgTableGen(struct fg_table *pars, const double *time, float *ref)
 {
     double   func_time;                     // Time within function
 
@@ -162,11 +168,11 @@ bool fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
 
     // Pre-acceleration coast
 
-    if(func_time <= 0.0)
+    if(func_time < 0.0)
     {
          *ref = pars->ref[0];
 
-         return(true);
+         return(FG_GEN_BEFORE_FUNC);
     }
 
     // Scan through table to find segment containing the current time
@@ -178,7 +184,7 @@ bool fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
             pars->seg_idx = pars->num_points - 1;                   // Force segment index to last seg
             *ref          = pars->ref[pars->num_points - 1];        // Enter coast
 
-            return(false);
+            return(FG_GEN_AFTER_FUNC);
         }
     }
 
@@ -200,7 +206,7 @@ bool fgTableGen(struct fg_table_pars *pars, const double *time, float *ref)
 
     *ref = pars->ref[pars->seg_idx]  - (pars->time[pars->seg_idx] - func_time) * pars->seg_grad;
 
-    return(true);
+    return(FG_GEN_DURING_FUNC);
 }
 
 // EOF

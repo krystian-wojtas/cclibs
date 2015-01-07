@@ -30,9 +30,9 @@
 #include "ccRun.h"
 #include "ccPars.h"
 
-/*---------------------------------------------------------------------------------------------------------*/
+
+
 static char * ccDebugLabel(char *format, ...)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     va_list     argv;
     uint32_t    num_chars;
@@ -55,21 +55,23 @@ static char * ccDebugLabel(char *format, ...)
 
     return(debug_label);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
+
+
 static void ccDebugFuncMeta(FILE *f, char *prefix, uint32_t cyc_sel)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t i;
 
-    fprintf(f,"%s  %s\n", ccDebugLabel("%s function(%u)"             , prefix, cyc_sel), ccParsEnumString(enum_function_type,    ccpars_ref.function[cyc_sel][0]));
-    fprintf(f,"%s  %s\n", ccDebugLabel("%s reg_mode(%u)"             , prefix, cyc_sel), ccParsEnumString(enum_reg_mode,         ccpars_ref.reg_mode[cyc_sel][0]));
-    fprintf(f,"%s  %s\n", ccDebugLabel("%s fg_meta(%u).invert_limits", prefix, cyc_sel), ccParsEnumString(enum_enabled_disabled, ccrun.fg_meta[cyc_sel].invert_limits));
+    fprintf(f,"%s " PARS_STRING_FORMAT "\n", ccDebugLabel("%s function(%u)"               , prefix, cyc_sel), ccParsEnumString(enum_function_type,    ccpars_ref[cyc_sel].function));
+    fprintf(f,"%s " PARS_STRING_FORMAT "\n", ccDebugLabel("%s reg_mode(%u)"               , prefix, cyc_sel), ccParsEnumString(enum_reg_mode,         ccpars_ref[cyc_sel].reg_mode));
+    fprintf(f,"%s " PARS_STRING_FORMAT "\n", ccDebugLabel("%s fg_meta(%u).polarity"       , prefix, cyc_sel), ccParsEnumString(enum_func_pol,         ccrun.fg_meta[cyc_sel].polarity));
+    fprintf(f,"%s " PARS_STRING_FORMAT "\n", ccDebugLabel("%s fg_meta(%u).limits_inverted", prefix, cyc_sel), ccParsEnumString(enum_enabled_disabled, ccrun.fg_meta[cyc_sel].limits_inverted));
 
     if(ccrun.fg_meta[cyc_sel].fg_error != FG_OK)
     {
-        fprintf(f,"%s  %s\n",                 ccDebugLabel("%s fg_meta(%u).fg_error"   , prefix, cyc_sel), ccParsEnumString(enum_fg_error, ccrun.fg_meta[cyc_sel].fg_error));
-        fprintf(f,"%s " PARS_INT_FORMAT "\n", ccDebugLabel("%s fg_meta(%u).error.index", prefix, cyc_sel), ccrun.fg_meta[cyc_sel].error.index);
-        fprintf(f,"%s",                       ccDebugLabel("%s fg_meta(%u).error.data ", prefix, cyc_sel));
+        fprintf(f,"%s " PARS_STRING_FORMAT "\n", ccDebugLabel("%s fg_meta(%u).fg_error"   , prefix, cyc_sel), ccParsEnumString(enum_fg_error, ccrun.fg_meta[cyc_sel].fg_error));
+        fprintf(f,"%s " PARS_INT_FORMAT    "\n", ccDebugLabel("%s fg_meta(%u).error.index", prefix, cyc_sel), ccrun.fg_meta[cyc_sel].error.index);
+        fprintf(f,"%s",                          ccDebugLabel("%s fg_meta(%u).error.data ", prefix, cyc_sel));
 
         for(i = 0 ; i < FG_ERR_DATA_LEN ; i++)
         {
@@ -79,15 +81,35 @@ static void ccDebugFuncMeta(FILE *f, char *prefix, uint32_t cyc_sel)
         fputc('\n',f);
     }
 
+    fprintf(f,"%s " PARS_TIME_FORMAT  "\n",  ccDebugLabel("%s fg_meta(%u).delay"      , prefix, cyc_sel), ccrun.fg_meta[cyc_sel].delay      );
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n",  ccDebugLabel("%s fg_meta(%u).duration"   , prefix, cyc_sel), ccrun.fg_meta[cyc_sel].duration   );
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n",  ccDebugLabel("%s fg_meta(%u).range.start", prefix, cyc_sel), ccrun.fg_meta[cyc_sel].range.start);
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n",  ccDebugLabel("%s fg_meta(%u).range.end"  , prefix, cyc_sel), ccrun.fg_meta[cyc_sel].range.end  );
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n",  ccDebugLabel("%s fg_meta(%u).range.min"  , prefix, cyc_sel), ccrun.fg_meta[cyc_sel].range.min  );
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n\n",ccDebugLabel("%s fg_meta(%u).range.max"  , prefix, cyc_sel), ccrun.fg_meta[cyc_sel].range.max  );
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
+
+
+static void ccDebugPrintCycle(FILE *f, uint32_t cycle_idx) 
+{
+    uint32_t cyc_sel = ccrun.cycle[cycle_idx].cyc_sel;
+
+    fprintf(f,"%s  %s(%d)  %s\n", ccDebugLabel("GLOBAL CYCLE_SELECTOR[%u]", cycle_idx),
+                                  ccParsEnumString(enum_function_type, ccpars_ref[cyc_sel].function),
+                                  cyc_sel,
+                                  ccParsEnumString(enum_reg_mode,      ccpars_ref[cyc_sel].reg_mode));
+
+    fprintf(f,"%s " PARS_STRING_FORMAT "\n",  ccDebugLabel("ccrun.cycle[%u].reg_rst_source", cycle_idx),
+                                              ccParsEnumString(enum_reg_rst_source, ccrun.cycle[cycle_idx].reg_rst_source));
+
+    fprintf(f,"%s " PARS_FLOAT_FORMAT "\n",   ccDebugLabel("ccrun.cycle[%u].ref_advance", cycle_idx), ccrun.cycle[cycle_idx].ref_advance);
+    fprintf(f,"%s " PARS_FLOAT_FORMAT "\n\n", ccDebugLabel("ccrun.cycle[%u].max_abs_err", cycle_idx), ccrun.cycle[cycle_idx].max_abs_err);
+}
+
+
+
 static void ccDebugPrintLoad(FILE *f, char *prefix, struct reg_load_pars *load_pars)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     // Report internally calculated load parameters
 
@@ -115,13 +137,13 @@ static void ccDebugPrintLoad(FILE *f, char *prefix, struct reg_load_pars *load_p
         fprintf(f,"%s " PARS_FLOAT_FORMAT "\n\n",ccDebugLabel("%s sat.l_clip"  , prefix), load_pars->sat.l_clip  );
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
+
+
 static void ccDebugPrintMeas(FILE *f, char *prefix, struct reg_meas_filter *meas_filter)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     fprintf(f,"%s " PARS_INT_FORMAT   "\n",  ccDebugLabel("%s fir_length[0]"          , prefix), meas_filter->fir_length[0]          );
     fprintf(f,"%s " PARS_INT_FORMAT   "\n",  ccDebugLabel("%s fir_length[1]"          , prefix), meas_filter->fir_length[1]          );
-    fprintf(f,"%s " PARS_INT_FORMAT   "\n",  ccDebugLabel("%s fir_length[0]"          , prefix), meas_filter->fir_length[0]          );
     fprintf(f,"%s " PARS_INT_FORMAT   "\n",  ccDebugLabel("%s extrapolation_len_iters", prefix), meas_filter->extrapolation_len_iters);
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n",  ccDebugLabel("%s float_to_integer"       , prefix), meas_filter->float_to_integer       );
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n",  ccDebugLabel("%s integer_to_float"       , prefix), meas_filter->integer_to_float       );
@@ -129,14 +151,15 @@ static void ccDebugPrintMeas(FILE *f, char *prefix, struct reg_meas_filter *meas
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n",  ccDebugLabel("%s delay_iters[0]"         , prefix), meas_filter->delay_iters[0]         );
     fprintf(f,"%s " PARS_FLOAT_FORMAT "\n\n",ccDebugLabel("%s delay_iters[1]"         , prefix), meas_filter->delay_iters[1]         );
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
+
+
 static void ccDebugPrintReg(FILE *f, char *prefix, struct reg_rst_pars *rst_pars)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t i;
 
-    fprintf(f,"%s " PARS_INT_FORMAT    "\n", ccDebugLabel("%s status"             , prefix), rst_pars->status                 );
-    fprintf(f,"%s " PARS_INT_FORMAT    "\n", ccDebugLabel("%s jurys_result"       , prefix), rst_pars->jurys_result           );
+    fprintf(f,"%s " PARS_STRING_FORMAT "\n", ccDebugLabel("%s status"             , prefix), ccParsEnumString(enum_reg_status,       rst_pars->status));
+    fprintf(f,"%s " PARS_STRING_FORMAT "\n", ccDebugLabel("%s jurys_result"       , prefix), ccParsEnumString(enum_reg_jurys_result, rst_pars->jurys_result));
     fprintf(f,"%s " PARS_INT_FORMAT    "\n", ccDebugLabel("%s alg_index"          , prefix), rst_pars->alg_index              );
     fprintf(f,"%s " PARS_INT_FORMAT    "\n", ccDebugLabel("%s dead_beat"          , prefix), rst_pars->dead_beat              );
     fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s modulus_margin"     , prefix), rst_pars->modulus_margin         );
@@ -144,22 +167,25 @@ static void ccDebugPrintReg(FILE *f, char *prefix, struct reg_rst_pars *rst_pars
 
     fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s pure_delay_periods" , prefix), rst_pars->pure_delay_periods     );
     fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s track_delay_periods", prefix), rst_pars->track_delay_periods    );
+    fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s ref_advance",         prefix), rst_pars->ref_advance            );
     fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s ref_delay_periods"  , prefix), rst_pars->ref_delay_periods      );
+    fprintf(f,"%s " PARS_STRING_FORMAT "\n", ccDebugLabel("%s reg_err_meas_select", prefix), ccParsEnumString(enum_reg_meas_select, rst_pars->reg_err_meas_select));
 
-    fprintf(f,"%s " PARS_DOUBLE_FORMAT "\n", ccDebugLabel("%s openloop_fwd_ref[0]", prefix), rst_pars->openloop_forward.ref[0]);
-    fprintf(f,"%s " PARS_DOUBLE_FORMAT "\n", ccDebugLabel("%s openloop_fwd_ref[1]", prefix), rst_pars->openloop_forward.ref[1]);
-    fprintf(f,"%s " PARS_DOUBLE_FORMAT "\n", ccDebugLabel("%s openloop_fwd_act[1]", prefix), rst_pars->openloop_forward.act[1]);
+    fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s openloop_fwd_ref[0]", prefix), rst_pars->openloop_forward.ref[0]);
+    fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s openloop_fwd_ref[1]", prefix), rst_pars->openloop_forward.ref[1]);
+    fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s openloop_fwd_act[1]", prefix), rst_pars->openloop_forward.act[1]);
 
-    fprintf(f,"%s " PARS_DOUBLE_FORMAT "\n", ccDebugLabel("%s openloop_rev_ref[1]", prefix), rst_pars->openloop_reverse.ref[1]);
-    fprintf(f,"%s " PARS_DOUBLE_FORMAT "\n", ccDebugLabel("%s openloop_rev_act[0]", prefix), rst_pars->openloop_reverse.act[0]);
-    fprintf(f,"%s " PARS_DOUBLE_FORMAT "\n", ccDebugLabel("%s openloop_rev_act[1]", prefix), rst_pars->openloop_reverse.act[1]);
+    fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s openloop_rev_ref[1]", prefix), rst_pars->openloop_reverse.ref[1]);
+    fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s openloop_rev_act[0]", prefix), rst_pars->openloop_reverse.act[0]);
+    fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s openloop_rev_act[1]", prefix), rst_pars->openloop_reverse.act[1]);
 
-    fprintf(f,"%s " PARS_DOUBLE_FORMAT "\n", ccDebugLabel("%s t0_correction"      , prefix), rst_pars->t0_correction          );
+    fprintf(f,"%s " PARS_INT_FORMAT    "\n", ccDebugLabel("%s rst_order"          , prefix), rst_pars->rst_order              );
+    fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n", ccDebugLabel("%s t0_correction"      , prefix), rst_pars->t0_correction          );
 
-    for(i = 0 ; i < REG_N_RST_COEFFS ; i++)
+    for(i = 0 ; i < REG_NUM_RST_COEFFS ; i++)
     {
-        fprintf(f,"%s " PARS_DOUBLE_FORMAT " " PARS_DOUBLE_FORMAT " " PARS_DOUBLE_FORMAT " "
-                        PARS_DOUBLE_FORMAT " " PARS_DOUBLE_FORMAT " " PARS_DOUBLE_FORMAT "\n", ccDebugLabel("%s R:S:T:A:B:AS+BR", prefix),
+        fprintf(f,"%s " PARS_FLOAT_FORMAT " " PARS_FLOAT_FORMAT " " PARS_FLOAT_FORMAT " "
+                        PARS_FLOAT_FORMAT " " PARS_FLOAT_FORMAT " " PARS_FLOAT_FORMAT "\n", ccDebugLabel("%s R:S:T:A:B:AS+BR", prefix),
                         rst_pars->rst.r[i],
                         rst_pars->rst.s[i],
                         rst_pars->rst.t[i],
@@ -170,9 +196,10 @@ static void ccDebugPrintReg(FILE *f, char *prefix, struct reg_rst_pars *rst_pars
 
     fputc('\n',f);
 }
-/*---------------------------------------------------------------------------------------------------------*/
+
+
+
 void ccDebugPrint(FILE *f)
-/*---------------------------------------------------------------------------------------------------------*/
 {
     uint32_t i;
     uint32_t cyc_sel;
@@ -195,23 +222,18 @@ void ccDebugPrint(FILE *f)
 
         for(i = 0 ; i < ccrun.num_cycles ; i++)
         {
-            fprintf(f,"%s " PARS_INT_FORMAT ":%s\n", ccDebugLabel("GLOBAL CYCLE_SELECTOR[%u]" , i),
-                                                     ccpars_global.cycle_selector[i],
-                                                     ccParsEnumString(enum_function_type, ccpars_ref.function[ccpars_global.cycle_selector[i]][0]));
-
-            fprintf(f,"%s " PARS_DOUBLE_FORMAT "\n",   ccDebugLabel("ccrun.func[%u].ref_advance", i), ccrun.func[i].ref_advance);
-            fprintf(f,"%s " PARS_FLOAT_FORMAT  "\n\n", ccDebugLabel("ccrun.func[%u].max_abs_err", i), ccrun.func[i].max_abs_err);
+            ccDebugPrintCycle(f, i);
         }
 
-        // Report load select and test_load select
+        // Report load select and test_load select variables
 
-        fprintf(f,"%s " PARS_INT_FORMAT "\n",  ccDebugLabel("%s select", "LOAD"), conv.par_values.load_select[0]);
+        fprintf(f,"%s " PARS_INT_FORMAT "\n", ccDebugLabel("%s select", "LOAD"), conv.par_values.load_select[0]);
 
         ccDebugPrintLoad(f, "LOAD", &conv.load_pars);
 
-        if(ccrun.is_test_select_used)
+        if(ccpars_global.test_cyc_sel > 0)
         {
-            fprintf(f,"%s " PARS_INT_FORMAT   "\n",  ccDebugLabel("TEST_LOAD", "select"), conv.par_values.load_test_select[0]);
+            fprintf(f,"%s " PARS_INT_FORMAT "\n", ccDebugLabel("%s select", "TEST_LOAD"), conv.par_values.load_test_select[0]);
 
             ccDebugPrintLoad(f, "TEST_LOAD", &conv.load_pars_test);
         }
@@ -226,38 +248,63 @@ void ccDebugPrint(FILE *f)
             ccDebugPrintLoad(f, "SIMLOAD", &conv.sim_load_pars.load_pars);
         }
 
-        // Report internally calculated voltage source parameters
+        // Report internally calculated power converter variables
 
-        for(i = 0 ; i < REG_N_VS_SIM_COEFFS ; i++)
+        for(i = 0 ; i < REG_NUM_PC_SIM_COEFFS ; i++)
         {
-            fprintf(f,"%s " PARS_DOUBLE_FORMAT " " PARS_DOUBLE_FORMAT "\n", ccDebugLabel( "%s num[%u]:den[%u]", "SIMVS", i, i),
-                     conv.sim_vs_pars.num[i],
-                     conv.sim_vs_pars.den[i]);
+            fprintf(f,"%s " PARS_FLOAT_FORMAT " " PARS_FLOAT_FORMAT "\n", ccDebugLabel( "%s num[%u]:den[%u]", "SIMPC", i, i),
+                     conv.sim_pc_pars.num[i],
+                     conv.sim_pc_pars.den[i]);
         }
 
-        fprintf(f,"\n%s " PARS_INT_FORMAT   "\n",   ccDebugLabel("%s is_vs_undersampled", "SIMVS"), conv.sim_vs_pars.is_vs_undersampled);
-        fprintf(f,"%s "   PARS_FLOAT_FORMAT "\n",   ccDebugLabel("%s vs_delay_iters"    , "SIMVS"), conv.sim_vs_pars.vs_delay_iters    );
-        fprintf(f,"%s "   PARS_FLOAT_FORMAT "\n\n", ccDebugLabel("%s gain"              , "SIMVS"), conv.sim_vs_pars.gain              );
+        fprintf(f,"\n%s " PARS_INT_FORMAT   "\n",   ccDebugLabel("%s is_pc_undersampled", "SIMPC"), conv.sim_pc_pars.is_pc_undersampled);
+        fprintf(f,"%s "   PARS_FLOAT_FORMAT "\n",   ccDebugLabel("%s rsp_delay_iters"   , "SIMPC"), conv.sim_pc_pars.rsp_delay_iters   );
+        fprintf(f,"%s "   PARS_FLOAT_FORMAT "\n\n", ccDebugLabel("%s gain"              , "SIMPC"), conv.sim_pc_pars.gain              );
 
-        // Report internally calculated field measurement filter and regulation parameters
+        // Report measurement variables
+
+        fprintf(f,"%s "   " %ld"            "\n",   ccDebugLabel("%s invalid.random_threshold", "MEAS"), ccrun.invalid_meas.random_threshold);
+
+        if(ccrun.invalid_meas.random_threshold > 0)
+        {
+            fprintf(f,"%s " PARS_INT_FORMAT  "\n",  ccDebugLabel("%s b.invalid_input_counter", "MEAS"), conv.b.invalid_input_counter);
+            fprintf(f,"%s " PARS_INT_FORMAT  "\n",  ccDebugLabel("%s i.invalid_input_counter", "MEAS"), conv.i.invalid_input_counter);
+            fprintf(f,"%s " PARS_INT_FORMAT  "\n",  ccDebugLabel("%s v.invalid_input_counter", "MEAS"), conv.v.invalid_input_counter);
+        }
+
+        fputc('\n',f);
+
+
+        // Report internally calculated field measurement filter and regulation variables
 
         if(conv.b.regulation == REG_ENABLED)
         {
             ccDebugPrintMeas(f, "MEAS B", &conv.b.meas);
 
             ccDebugPrintReg(f, "BREG", &conv.b.last_op_rst_pars);
+            
+            if(ccpars_global.test_cyc_sel > 0)
+            {
+                ccDebugPrintReg(f, "BREG_TEST", &conv.b.last_test_rst_pars);
+            }
         }
 
-        // Report current meas_filter parameters
+        // Report current meas_filter variables
 
         ccDebugPrintMeas(f, "MEAS I", &conv.i.meas);
 
-        // Report internally calculated current regulation parameters
+        // Report internally calculated current regulation variables
 
         if(conv.i.regulation == REG_ENABLED)
         {
             ccDebugPrintReg(f, "IREG", &conv.i.last_op_rst_pars);
+
+            if(ccpars_global.test_cyc_sel > 0)
+            {
+                ccDebugPrintReg(f, "IREG_TEST", &conv.i.last_test_rst_pars);
+            }
         }
     }
 }
+
 // EOF

@@ -1,0 +1,122 @@
+# CCTEST - GPS tests script
+
+GLOBAL RUN_DELAY            0.0
+GLOBAL STOP_DELAY           0.1
+GLOBAL ITER_PERIOD_US       1000
+GLOBAL FG_LIMITS            ENABLED
+GLOBAL SIM_LOAD             ENABLED
+GLOBAL GROUP                tests
+GLOBAL PROJECT              GPS
+
+# Voltage source parameters
+
+PC ACT_DELAY_ITERS          0.1
+PC BANDWIDTH                1000
+PC TAU_ZERO                 0.0
+PC Z                        0.9
+
+# Measurement parameters
+
+MEAS I_REG_SELECT           UNFILTERED
+MEAS B_DELAY_ITERS          0.13
+MEAS I_DELAY_ITERS          0.13
+MEAS V_DELAY_ITERS          0.13
+MEAS I_FIR_LENGTHS          1,0
+MEAS I_SIM_NOISE_PP         0.0
+MEAS V_SIM_NOISE_PP         0.0
+MEAS TONE_HALF_PERIOD_ITERS 100
+MEAS I_SIM_TONE_AMP         0.0
+
+# Current regulation        
+
+IREG PERIOD_ITERS           1           1
+IREG AUXPOLE1_HZ            80          80  
+IREG AUXPOLES2_HZ           80          80
+IREG AUXPOLES2_Z            0.5         0.5
+
+# Limits
+
+LIMITS B_POS                4500.0      4500.0            
+LIMITS B_MIN                200         200     
+LIMITS B_NEG                0.0         0.0    
+LIMITS B_RATE               500000.0    500000.0
+LIMITS B_ACCELERATION       5.0E6       5.0E6  
+LIMITS B_ERR_WARNING        50.0        50.0    
+LIMITS B_ERR_FAULT          0.0         0.0    
+
+LIMITS I_POS                200.0       200.0             
+LIMITS I_MIN                10.0        10.0    
+LIMITS I_NEG                0.0         0.0    
+LIMITS I_RATE               50000.0     50000.0
+LIMITS I_ACCELERATION       5.0E6       5.0E6  
+LIMITS I_ERR_WARNING        5.0         5.0    
+LIMITS I_ERR_FAULT          0.0         0.0    
+
+LIMITS V_POS               42.0         50.0
+LIMITS V_NEG                0.0         0.0 
+LIMITS V_RATE               0.0
+LIMITS V_ACCELERATION       0.0
+LIMITS V_ERR_WARNING        0.0
+LIMITS V_ERR_FAULT          0.0
+
+# CCTEST load : GPS
+
+LOAD OHMS_SER               0.213       0.213          
+LOAD OHMS_PAR               1.0E8       1.0E8  
+LOAD OHMS_MAG               0.0         0.0    
+LOAD HENRYS                 0.015       0.015
+LOAD GAUSS_PER_AMP          22.5        22.5
+LOAD SIM_TC_ERROR           0.0
+
+# Reference
+
+PULSE TIME()                0.0
+PULSE DURATION()            1.0
+PULSE REF(1)                470        3630      1000      2000
+
+REF REG_MODE()              FIELD
+REF FUNCTION()              PULSE
+REF PREFUNC_POLICY()        RAMP
+
+DEFAULT B_ACCELERATION      1.000000E+04
+DEFAULT B_DECELERATION      1.000000E+04
+DEFAULT B_LINEAR_RATE       0.000000E+00
+
+DEFAULT I_ACCELERATION      1.000000E+02
+DEFAULT I_DECELERATION      1.000000E+02
+DEFAULT I_LINEAR_RATE       0.000000E+00
+
+GLOBAL CYCLE_SELECTOR       1 2 3 4 
+
+# -- Without Noise --
+
+# Simulations with Bruker
+
+GLOBAL FILE                 gps-bruker-nn
+LOAD SELECT                 0
+RUN
+
+# Simulations with COBALT
+
+PC QUANTIZATION             1.0E-03
+GLOBAL FILE                 gps-cobalt-nn
+LOAD SELECT                 1
+RUN
+
+# -- With Noise --
+
+# Simulations with Bruker
+
+MEAS B_SIM_NOISE_PP         0.05
+
+GLOBAL FILE                 gps-bruker
+LOAD SELECT                 0
+RUN
+
+# Simulations with COBALT
+
+GLOBAL FILE                 gps-cobalt
+LOAD SELECT                 1
+RUN
+
+# EOF

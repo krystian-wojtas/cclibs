@@ -4,16 +4,16 @@ GLOBAL ITER_PERIOD_US           1000
 GLOBAL GROUP                    sandbox
 GLOBAL PROJECT                  CurrentRef
 
-GLOBAL ACTUATION                CURRENT
 GLOBAL SIM_LOAD                 ENABLED
 GLOBAL FG_LIMITS                DISABLED
 
 PLEP INITIAL_REF                0.2
 PLEP FINAL_REF                  2
 
-VS BANDWIDTH                    10
-VS Z                            1.0
-VS V_REF_DELAY                  1.0
+PC ACTUATION                    CURRENT
+PC BANDWIDTH                    10
+PC Z                            1.0
+PC ACT_DELAY_ITERS              1.0
 
 IREG PERIOD_ITERS               1
 MEAS I_FIR_LENGTHS              4 2

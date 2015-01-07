@@ -36,29 +36,29 @@
 #define CCPARS_TRIM_EXT extern
 #endif
 
+// Libfg TRIM parameter structures
+
+CCPARS_TRIM_EXT struct fg_trim fg_trim[CC_NUM_CYC_SELS];
+
 // Trim parameters structure
 
 struct ccpars_trim
 {
     // cctest TRIM parameters
 
-    float                       initial_ref[CC_NUM_CYC_SELS][1];      // Initial reference
-    enum fg_trim_type           type       [CC_NUM_CYC_SELS][1];      // Type of trim
-    float                       duration   [CC_NUM_CYC_SELS][1];      // Time duration
-    float                       final      [CC_NUM_CYC_SELS][1];      // Final reference
-
-    // Libfg TRIM variables
-
-    struct fg_trim_pars         pars[CC_NUM_CYC_SELS];                // Libfg parameters for TRIM
+    float                       initial_ref;                    // Initial reference
+    enum fg_trim_type           type;                           // Type of trim
+    float                       duration;                       // Time duration
+    float                       final_ref;                      // Final reference
 };
 
-CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim
+CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim[CC_NUM_CYC_SELS]
 #ifdef GLOBALS
 = {// Default value                Parameter
-    { { 0.0            } },     // TRIM INITIAL_REF
-    { { FG_TRIM_LINEAR } },     // Overwritten by init function (LTRIM or CTRIM)
-    { { 1.0            } },     // TRIM DURATION
-    { { 1.0            } },     // TRIM FINAL
+    {   0.0,                    // TRIM INITIAL_REF
+        FG_TRIM_LINEAR,         // Overwritten by init function (LTRIM or CTRIM)
+        1.0,                    // TRIM DURATION
+        1.0              },     // TRIM FINAL
 }
 #endif
 ;
@@ -67,10 +67,10 @@ CCPARS_TRIM_EXT struct ccpars_trim ccpars_trim
 
 CCPARS_TRIM_EXT struct ccpars   trim_pars[]
 #ifdef GLOBALS
-= {// "Signal name"  type,    max_n_els,*enum,        *value,                     num_defaults  flags
-    { "INITIAL_REF", PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.initial_ref[0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "FINAL_REF",   PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.final      [0][0] }, 1, PARS_CYCLE_SELECTOR },
-    { "DURATION",    PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim.duration   [0][0] }, 1, PARS_CYCLE_SELECTOR },
+= {// "Signal name"  type,    max_n_els,*enum,        *value,                  num_defaults      cyc_sel_step     flags
+    { "INITIAL_REF", PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim[0].initial_ref }, 1, sizeof(struct ccpars_trim), 0 },
+    { "FINAL_REF",   PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim[0].final_ref   }, 1, sizeof(struct ccpars_trim), 0 },
+    { "DURATION",    PAR_FLOAT,   1,     NULL, { .f = &ccpars_trim[0].duration    }, 1, sizeof(struct ccpars_trim), 0 },
     { NULL }
 }
 #endif

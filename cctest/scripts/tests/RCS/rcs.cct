@@ -33,10 +33,10 @@ LIMITS V_ERR_WARNING        0.0
 LIMITS V_ERR_FAULT          0.0
 LIMITS V_QUADRANTS41        0.0,0.0
 
-VS V_REF_DELAY_ITERS        5.0
-VS BANDWIDTH                1000.0
-VS TAU_ZERO                 0.0
-VS Z                        0.9
+PC ACT_DELAY_ITERS          5.0
+PC BANDWIDTH                1000.0
+PC TAU_ZERO                 0.0
+PC Z                        0.9
 
 LOAD OHMS_SER               0.0
 LOAD OHMS_PAR               1.0E8

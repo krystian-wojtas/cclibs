@@ -65,6 +65,7 @@ clean:
 	rm -f $(exec) $(dep_path)/*.d $(obj_path)/*.o $(inc_path)/flot.h
 	rm -r $(libreg_inc)/pars.h $(libreg_inc)/init_pars.h 
 	rm -rf results/debug results/csv results/webplots/tests/* results/webplots/sandbox/*
+	rm -rf scripts/test/HL_LHC/cctest scripts/test/HL_LHC/results 
 
 $(exec): $(objects) $(libfg) $(libreg)
 	@[ -d $(@D) ] || mkdir -p $(@D)
@@ -100,6 +101,9 @@ sandbox:
 tests:
 	./scripts/tests/run_all.sh
 
+hllhc:
+	./scripts/tests/HL_LHC/make.sh
+
 # Make test output the new reference
 
 reference:
@@ -121,12 +125,14 @@ test:
 # Refresh flot related files to sdcard projects folder (for debian on Nexus 10)
 
 sdrefresh:
-	cp -r results/webplots/flot      $(sd_path)
-	cp -r results/webplots/colorbox  $(sd_path)
-	cp -r results/webplots/modernizr $(sd_path)
+	cp -r results/webplots/flot                 $(sd_path)
+	cp -r results/webplots/flot-downsample      $(sd_path)
+	cp -r results/webplots/flot-selection       $(sd_path)
+	cp -r results/webplots/colorbox             $(sd_path)
+	cp -r results/webplots/modernizr            $(sd_path)
 
 # List targets
 
-.PHONY: all clean reference test flot sandbox tests sdrefresh
+.PHONY: all clean reference test flot sandbox tests hllhc sdrefresh
 
 # EOF

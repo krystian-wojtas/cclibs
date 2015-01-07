@@ -22,19 +22,13 @@
 \*---------------------------------------------------------------------------------------------------------*/
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 
 #include "ccCmds.h"
 #include "ccTest.h"
 #include "ccRun.h"
 #include "ccSigs.h"
-#include "ccDebug.h"
-#include "flot.h"
+#include "ccFlot.h"
 
-#define DIG_STEP        0.5      // Digital signal step size
-
-static unsigned flot_index;      // Index into flot buffers
 static float    dig_offset;      // Offset to stack digital signals for FGCSPY and LVDV output formats
 
 /*---------------------------------------------------------------------------------------------------------*/
@@ -170,9 +164,8 @@ void ccSigsInit(void)
 {
     uint32_t    idx;
 
-    // Reset FLOT buffer index
-
     flot_index = 0;
+    dig_offset = 0.0;
 
     // Start with all signals disabled and reset bad values counter
 
@@ -185,7 +178,7 @@ void ccSigsInit(void)
 
     // Voltage reference is always enabled when converter actuation is voltage ref
 
-    if(ccpars_global.actuation == REG_VOLTAGE_REF)
+    if(ccpars_pc.actuation == REG_VOLTAGE_REF)
     {
         ccSigsEnableSignal(ANA_V_REF);
     }
@@ -200,8 +193,8 @@ void ccSigsInit(void)
         signals[ANA_B_MAGNET ].time_offset =
         signals[ANA_I_MAGNET ].time_offset =
         signals[ANA_I_CIRCUIT].time_offset =
-        signals[ANA_V_CIRCUIT].time_offset = conv.iter_period * (ccpars_vs.v_ref_delay_iters +
-                                            (conv.sim_vs_pars.is_vs_undersampled == 0 ? 0.0 : conv.sim_vs_pars.vs_delay_iters));
+        signals[ANA_V_CIRCUIT].time_offset = conv.iter_period * (ccpars_pc.act_delay_iters +
+                                            (conv.sim_pc_pars.is_pc_undersampled == 0 ? 0.0 : conv.sim_pc_pars.rsp_delay_iters));
 
         // Enable cursor signals only if CSV output is for the Labview Dataviewer (LVDV)
 
@@ -210,7 +203,7 @@ void ccSigsInit(void)
             ccSigsEnableSignal(CSR_FUNC);
         }
 
-        if(ccpars_global.actuation == REG_VOLTAGE_REF)
+        if(ccpars_pc.actuation == REG_VOLTAGE_REF)
         {
             // Voltage source simulation signals
 
@@ -242,7 +235,6 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(ANA_B_REF);
                 ccSigsEnableSignal(ANA_B_REF_LIMITED);
                 ccSigsEnableSignal(ANA_B_REF_RST);
-                ccSigsEnableSignal(ANA_B_REF_OPENLOOP);
                 ccSigsEnableSignal(ANA_B_REF_DELAYED);
                 ccSigsEnableSignal(ANA_B_MAGNET);
                 ccSigsEnableSignal(ANA_B_MEAS);
@@ -253,6 +245,11 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(DIG_B_MEAS_TRIP);
                 ccSigsEnableSignal(DIG_B_REF_CLIP);
                 ccSigsEnableSignal(DIG_B_REF_RATE_CLIP);
+
+                if(ccpars_limits.b_neg[ccpars_load.select] >= 0.0)
+                {
+                    ccSigsEnableSignal(ANA_B_REF_OPENLOOP);
+                }
 
                 if(ccpars_limits.b_low[ccpars_load.select] > 0.0)
                 {
@@ -284,13 +281,17 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(ANA_I_REF);
                 ccSigsEnableSignal(ANA_I_REF_LIMITED);
                 ccSigsEnableSignal(ANA_I_REF_RST);
-                ccSigsEnableSignal(ANA_I_REF_OPENLOOP);
                 ccSigsEnableSignal(ANA_I_REF_DELAYED);
                 ccSigsEnableSignal(ANA_I_ERR);
                 ccSigsEnableSignal(ANA_MAX_ABS_I_ERR);
                 ccSigsEnableSignal(ANA_V_REF_SAT);
                 ccSigsEnableSignal(DIG_I_REF_CLIP);
                 ccSigsEnableSignal(DIG_I_REF_RATE_CLIP);
+
+                if(ccpars_limits.i_neg[ccpars_load.select] >= 0.0)
+                {
+                    ccSigsEnableSignal(ANA_I_REF_OPENLOOP);
+                }
 
                 if(ccpars_limits.i_err_warning[ccpars_load.select] > 0.0)
                 {
@@ -379,6 +380,13 @@ void ccSigsInit(void)
                 ccSigsEnableSignal(DIG_I_RMS_LOAD_FLT);
             }
         }
+
+        // INVALID_MEAS signal
+
+        if(ccrun.invalid_meas.random_threshold > 0)
+        {
+            ccSigsEnableSignal(DIG_INVALID_MEAS);
+        }
     }
 
     // If CSV output is enabled, write header to CSV file
@@ -432,7 +440,7 @@ void ccSigsStore(double time)
 
     if(ccpars_global.sim_load == REG_ENABLED)
     {
-        if(ccpars_global.actuation == REG_CURRENT_REF)
+        if(ccpars_pc.actuation == REG_CURRENT_REF)
         {
             ccSigsStoreAnalog (ANA_I_REF,          conv.ref);
             ccSigsStoreAnalog (ANA_I_REF_LIMITED,  conv.ref_limited);
@@ -551,6 +559,8 @@ void ccSigsStore(double time)
         ccSigsStoreDigital(DIG_V_REG_ERR_WARN, conv.v.err.warning.flag);
         ccSigsStoreDigital(DIG_V_REF_CLIP,     conv.v.lim_ref.flags.clip);
         ccSigsStoreDigital(DIG_V_REF_RATE_CLIP,conv.v.lim_ref.flags.rate);
+
+        ccSigsStoreDigital(DIG_INVALID_MEAS,   ccrun.invalid_meas.flag);
     }
 
     // Increment FLOT data index, but clip to max number of FLOT points
@@ -605,332 +615,9 @@ void ccSigsStore(double time)
         fputc('\n',cctest.csv_file);
     }
 }
-/*---------------------------------------------------------------------------------------------------------*/
-static uint32_t ccSigsFlotInvalidSignal(FILE *f, enum ccsig_idx sig_idx, char label)
-{
-    double         time;
-    uint32_t       iteration_idx;
-    uint32_t       n_points = 0;
 
-    if(signals[sig_idx].control == REG_ENABLED)
-    {
-        fprintf(f,"\"INVALID_%c\": { lines: { show:false }, points: { show:true },\ndata:[", label);
 
-        for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
-        {
-            // Only print changed values when meta_data is TRAIL_STEP
 
-            if((iteration_idx % ccpars_meas.invalid_meas_period_iters) < ccpars_meas.invalid_meas_repeat_iters)
-            {
-                time = conv.iter_period * iteration_idx;
-
-                fprintf(f,"[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
-                n_points++;
-            }
-        }
-
-        fputs("]\n },\n",f);
-    }
-
-    return(n_points);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static uint32_t ccSigsFlotRefs(FILE *f, double end_time)
-{
-    uint32_t       cyc_sel;
-    uint32_t       n_points;
-
-    // For each cycle selector
-
-    for(cyc_sel = n_points = 0 ; cyc_sel < CC_NUM_CYC_SELS ; cyc_sel++)
-    {
-        if(ccrun.is_used[cyc_sel])
-        {
-            uint32_t cycle_idx;
-
-            fprintf(f,"\"(%u) %s\": { lines: { show:false }, points: { show:true },\ndata:[",
-                      cyc_sel, ccParsEnumString(enum_function_type, ccpars_ref.function[cyc_sel][0]));
-
-            for(cycle_idx = 0 ; cycle_idx < ccrun.num_cycles ; cycle_idx++)
-            {
-                if(cyc_sel == ccpars_global.cycle_selector[cycle_idx])
-                {
-                    uint32_t    n;
-                    uint32_t    iteration_idx;
-                    double      time = 0.0;;
-                    double      end_func_time;
-
-                    fprintf(f,"[%.6f,%.7E],[%.6f,%.7E],[%.6f,%.7E],",
-                              ccrun.func[cycle_idx].func_start_time,
-                              ccrun.fg_meta[cyc_sel].range.start,
-                              ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay,
-                              ccrun.fg_meta[cyc_sel].range.start,
-                              ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccrun.fg_meta[cyc_sel].duration,
-                              ccrun.fg_meta[cyc_sel].range.end);
-
-                    n_points += 3;
-
-                    switch(ccpars_ref.function[cyc_sel][0])
-                    {
-                    default: break;     // Suppress compiler warning
-
-                    case FG_TABLE:
-                    case FG_DIRECT:
-
-                        n = table_pars[0].num_elements[cyc_sel] - 1;
-
-                        for(iteration_idx = 1 ; iteration_idx < n ; iteration_idx++)
-                        {
-                            time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccpars_table.time[cyc_sel][iteration_idx];
-
-                            if(time < end_time)
-                            {
-                                fprintf(f,"[%.6f,%.7E],", time, ccpars_table.ref[cyc_sel][iteration_idx]);
-                                n_points++;
-                            }
-                        }
-                        break;
-
-                    case FG_PPPL:
-
-                        time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay;
-
-                        fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.initial_ref[cyc_sel][0]);
-                        n_points++;
-
-                        n = ccpars_pppl.pars[cyc_sel].num_segs - 1;
-
-                        for(iteration_idx = 1 ; iteration_idx < n ; iteration_idx++)
-                        {
-                            time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccpars_pppl.pars[cyc_sel].time[iteration_idx];
-
-                            if(time < end_time)
-                            {
-                                fprintf(f,"[%.6f,%.7E],", time, ccpars_pppl.pars[cyc_sel].a0[iteration_idx]);
-                                n_points++;
-                            }
-                        }
-                        break;
-
-                    case FG_PLEP:
-
-                        time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay;
-
-                        fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.initial_ref[cyc_sel][0]);
-                        n_points++;
-
-                        for(iteration_idx = 1 ; iteration_idx <  FG_PLEP_N_SEGS ; iteration_idx++)
-                        {
-                            time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccpars_plep.pars[cyc_sel].time[iteration_idx];
-
-                            if(time < end_time)
-                            {
-                                fprintf(f,"[%.6f,%.7E],", time, ccpars_plep.pars[cyc_sel].normalisation * ccpars_plep.pars[cyc_sel].ref[iteration_idx]);
-                                n_points++;
-                            }
-                        }
-                        break;
-                    }
-
-                    // End of function point
-
-                    end_func_time = ccrun.func[cycle_idx].func_start_time + ccpars_global.run_delay + ccrun.fg_meta[cyc_sel].duration;
-
-                    if(end_func_time > time && end_func_time < end_time)
-                    {
-                        fprintf(f,"[%.6f,%.7E]", end_func_time, ccrun.fg_meta[cyc_sel].range.end);
-                    }
-                }
-            }
-            fputs("]\n }\n,",f);
-        }
-    }
-
-    return(n_points);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static uint32_t ccSigsFlotAnalog(FILE *f)
-{
-    uint32_t       sig_idx;
-    uint32_t       n_points;
-
-    // Print enabled analog signal values
-
-    for(sig_idx = n_points = 0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
-    {
-        if(signals[sig_idx].control == REG_ENABLED && signals[sig_idx].type == ANALOG)
-        {
-            uint32_t       iteration_idx;
-            float          time_offset;
-
-            time_offset = signals[sig_idx].time_offset;
-
-            fprintf(f,"\"%s\": { lines: { steps:%s }, points: { show:false },\ndata:[",
-                    signals[sig_idx].name,
-                    signals[sig_idx].meta_data[0] == 'T' ? "true" : "false");
-
-            for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
-            {
-                // Only print changed values when meta_data is TRAIL_STEP
-
-                if(iteration_idx == 0 ||
-                   iteration_idx == (flot_index - 1) ||
-                   signals[sig_idx].meta_data[0] != 'T' ||
-                   signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
-                {
-                    double  time;
-
-                    if(ccpars_global.reverse_time == REG_DISABLED)
-                    {
-                        time = conv.iter_period * iteration_idx + time_offset;
-                    }
-                    else
-                    {
-                        time = conv.iter_period * (ccrun.num_iterations - iteration_idx - 1);
-                    }
-
-                    fprintf(f,"[%.6f,%.7E],", time, signals[sig_idx].buf[iteration_idx]);
-                    n_points++;
-                }
-            }
-            fputs("]\n },\n",f);
-        }
-    }
-
-    return(n_points);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-static uint32_t ccSigsFlotDigital(FILE *f)
-{
-    uint32_t       sig_idx;
-    uint32_t       n_points;
-
-    for(sig_idx = n_points = 0, dig_offset = -DIG_STEP/2.0 ; sig_idx < NUM_SIGNALS ; sig_idx++)
-    {
-        if(signals[sig_idx].control == REG_ENABLED && signals[sig_idx].type == DIGITAL)
-        {
-            uint32_t  iteration_idx;
-
-            dig_offset -= 1.0;
-
-            fprintf(f,"\"%s\": {\n lines: { steps:%s },\n data:[",
-                    signals[sig_idx].name,
-                    signals[sig_idx].meta_data[0] == 'T' ? "true" : "false");
-
-            for(iteration_idx = 0; iteration_idx < flot_index; iteration_idx++)
-            {
-                double time;
-
-                // Only print changed values when meta_data is TRAIL_STEP
-
-                if(iteration_idx == 0 ||
-                   iteration_idx == (flot_index - 1) ||
-                   signals[sig_idx].meta_data[0] != 'T' ||
-                   signals[sig_idx].buf[iteration_idx] != signals[sig_idx].buf[iteration_idx-1])
-                {
-                    if(ccpars_global.reverse_time == REG_DISABLED)
-                    {
-                        time = conv.iter_period * iteration_idx;
-                    }
-                    else
-                    {
-                        time = conv.iter_period * (ccrun.num_iterations - iteration_idx - 1);
-                    }
-
-                    fprintf(f,"[%.6f,%.2f],", time, signals[sig_idx].buf[iteration_idx] + dig_offset);
-                    n_points++;
-                }
-            }
-            fputs("]\n },\n",f);
-        }
-    }
-
-    return(n_points);
-}
-/*---------------------------------------------------------------------------------------------------------*/
-void ccSigsFlot(FILE *f, char *filename)
-{;
-    uint32_t       n_points;
-    struct cccmds *cmd;
-    double         end_time = (double)flot_index * 1.0E-6 * (double)ccpars_global.iter_period_us;
-
-    // Warn user if FLOT data was truncated
-
-    if(flot_index >= ccpars_global.flot_points_max)
-    {
-        printf("Warning - FLOT data truncated to %u points\n",ccpars_global.flot_points_max);
-    }
-
-    // Print start of FLOT html page including flot path to all the javascript libraries
-
-    fprintf(f,flot[0],filename,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH,FLOT_PATH);
-
-    // Create Flot signals using points to represent the reference data
-
-    n_points = ccSigsFlotRefs(f, end_time);
-
-    // Mark dynamic economy if in use
-
-    if(ccrun.dyn_eco.log.length > 0 && ccrun.dyn_eco.log.time[0] < end_time)
-    {
-        uint32_t       sig_idx;
-
-        fputs("\"DYN_ECO\": { lines: { show:false }, points: { show:true },\ndata:[",f);
-
-        for(sig_idx = 0 ; sig_idx < ccrun.dyn_eco.log.length && ccrun.dyn_eco.log.time[sig_idx] < end_time ; sig_idx++, n_points++)
-        {
-            fprintf(f,"[%.6f,%.7E],", ccrun.dyn_eco.log.time[sig_idx], ccrun.dyn_eco.log.ref[sig_idx]);
-        }
-        fputs("]\n },\n",f);
-     }
-
-    // Highlight invalid points if enabled
-
-    if(ccpars_meas.invalid_meas_period_iters > 0 && ccpars_meas.invalid_meas_repeat_iters > 0)
-    {
-        n_points += ccSigsFlotInvalidSignal(f, ANA_B_MEAS, 'B');
-        n_points += ccSigsFlotInvalidSignal(f, ANA_I_MEAS, 'I');
-        n_points += ccSigsFlotInvalidSignal(f, ANA_V_MEAS, 'V');
-    }
-
-    // Print enabled analog signal values
-
-    n_points += ccSigsFlotAnalog(f);
-
-    // Print start of digital signals
-
-    fputs(flot[1],f);
-
-    // Print enabled digital signal values
-
-    n_points += ccSigsFlotDigital(f);
-
-    // Print command parameter values to become a colorbox pop-up
-
-    fprintf(f, flot[2], CC_VERSION);    // Version is embedded in the About pop-up title: "About cctest vx.xx"
-
-    for(cmd = cmds ; cmd->name != NULL ; cmd++)
-    {
-        if(cmd->is_enabled == true)
-        {
-            fputc('\n',f);
-            ccParsPrintAll(f, cmd->name, cmd->pars, CC_ALL_CYCLES, CC_NO_INDEX);
-        }
-    }
-
-    // Print debug variable to become a colorbox pop-up
-
-    fputs(flot[3],f);
-
-    fprintf(f,"%-*s %u\n\n", PARS_INDENT, "FLOT n_points", n_points);
-
-    ccDebugPrint(f);
-
-    // Write HTML file footer
-
-    fputs(flot[4],f);
-}
-/*---------------------------------------------------------------------------------------------------------*/
 uint32_t ccSigsReportBadValues(void)
 {
     uint32_t    idx;

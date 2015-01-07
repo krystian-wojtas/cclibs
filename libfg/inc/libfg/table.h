@@ -5,7 +5,7 @@
  * This function is provided with a list of reference values and times that the
  * reference values take effect, i.e. it calculates the reference by table lookup.
  *
- * Using linear interpolation results in an error between the actual linear
+ * Note that if the calling application Using linear interpolation results in an error between the actual linear
  * reference and the ideal parabolic reference. It can be shown that for parabola
  * \f$y = \frac{at^{2}}{2}\f$, the maximum interpolation error for segment
  * \f$0 \leq t \leq T\f$ is \f$\epsilon_{max} = \frac{aT^{2}}{8}\f$.
@@ -19,7 +19,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -45,31 +45,18 @@
 
 #include "libfg.h"
 
-// Types
-
-/*!
- * Table function configuration
- */
-struct fg_table_config
-{
-    float       *ref;               //!< Table reference values
-    float       *time;              //!< Table time values
-    uintptr_t   ref_num_elements;   //!< Number of elements in reference array
-    uintptr_t   time_num_elements;  //!< Number of elements in time array
-};
-
 /*!
  * Table function parameters
  */
-struct fg_table_pars
+struct fg_table
 {
-    uint32_t    seg_idx;            //!< Segment index
-    uint32_t    prev_seg_idx;       //!< Previous segment index for which gradient was calculated
-    uint32_t    num_points;         //!< Number of points in table
-    double      delay;              //!< Time before start of function
-    float       *ref;               //!< Table reference values
-    float       *time;              //!< Table time values
-    float       seg_grad;           //!< Gradient of reference for segment fg_table_pars::prev_seg_idx
+    double      delay;              //!< Time before start of function.
+    uint32_t    seg_idx;            //!< Segment index.
+    uint32_t    prev_seg_idx;       //!< Previous segment index for which gradient was calculated.
+    uint32_t    num_points;         //!< Number of points in table.
+    float       *ref;               //!< Table reference values.
+    float       *time;              //!< Table time values.
+    float       seg_grad;           //!< Gradient of reference for segment fg_table::prev_seg_idx.
 };
 
 #ifdef __cplusplus
@@ -79,15 +66,19 @@ extern "C" {
 // External functions
 
 /*!
- * Check Table function configuration and initialise parameters.
+ * Initialise TABLE function.
  *
- * @param[in]  limits           Limits to check each segment against
- * @param[in]  limits_polarity  Polarity limits to check each segment against
- * @param[in]  config           Table configuration parameters
- * @param[in]  delay            RUN_DELAY, delay before the start of the function
- * @param[in]  min_time_step    Minimum time between interpolation points
- * @param[out] pars             Table function parameters
- * @param[out] meta             Diagnostic information. Set to NULL if not required.
+ * @param[in]  limits             Pointer to fgc_limits structure (or NULL if no limits checking required).
+ * @param[in]  is_pol_switch_auto True if polarity switch can be changed automatically.
+ * @param[in]  is_pol_switch_neg  True if polarity switch is currently in the negative position.
+ * @param[in]  delay              Delay before the start of the function.
+ * @param[in]  min_time_step      Minimum time between points in the table.
+ * @param[in] *ref                Array of reference values.
+ * @param[in]  ref_num_els        Number of elements in reference array.
+ * @param[in] *time               Array of time values.
+ * @param[in]  time_num_els       Number of elements in time array.
+ * @param[out] pars               Pointer to table function parameters.
+ * @param[out] meta               Pointer to diagnostic information. Set to NULL if not required.
  *
  * @retval FG_OK on success
  * @retval FG_BAD_ARRAY_LEN if there are less than two points, or ref and time arrays are different lengths
@@ -96,27 +87,32 @@ extern "C" {
  * @retval FG_OUT_OF_RATE_LIMITS if rate of change of reference exceeds limits
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if acceleration exceeds limits
  */
-enum fg_error fgTableInit(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                          struct fg_table_config *config, double delay, float min_time_step,
-                          struct fg_table_pars *pars, struct fg_meta *meta);
+enum fg_error fgTableInit(struct   fg_limits *limits, 
+                          bool     is_pol_switch_auto,
+                          bool     is_pol_switch_neg,
+                          double   delay, 
+                          float    min_time_step,
+                          float   *ref,
+                          uint32_t ref_num_els,
+                          float   *time,
+                          uint32_t time_num_els,
+                          struct   fg_table *pars, 
+                          struct   fg_meta *meta);
+
+
 
 /*!
  * Generate the reference for the Table function.
  *
- * @param[in]  pars             Table function parameters
- * @param[in]  time             Current time within the function. Note that time
- *                              is passed by const reference rather than by value.
- *                              This allows the user to initialise an array of
- *                              pointers to functions with the pointer to
- *                              fgTableGen(). If time is passed by value then the
- *                              compiler promotes the float to double and prevents
- *                              correct initialisation.
- * @param[out] ref              Derived reference value
+ * @param[in]  pars             Pointer to table function parameters.
+ * @param[in]  time             Pointer to time within the function.
+ * @param[out] ref              Pointer to reference value.
  *
- * @retval false    if time is beyond the end of the function
- * @retval true     if time is within a segment (or before the start of the first segment)
+ * @retval FG_GEN_BEFORE_FUNC   if time is before the start of the function.
+ * @retval FG_GEN_DURING_FUNC   if time is during the function.
+ * @retval FG_GEN_AFTER_FUNC    if time is after the end of the function.
  */
-bool fgTableGen(struct fg_table_pars *pars, const double *time, float *ref);
+enum fg_gen_status fgTableGen(struct fg_table *pars, const double *time, float *ref);
 
 #ifdef __cplusplus
 }

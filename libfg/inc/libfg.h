@@ -8,7 +8,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -33,14 +33,24 @@
 #define LIBFG_H
 
 #include <stdint.h>
-#include <math.h>
 #include <stdbool.h>
-#include <stdlib.h>                         // For NULL
+#include <stdlib.h>
+#include <math.h>
 
 // Constants
 
-#define FG_CLIP_LIMIT_FACTOR    0.001       //!< Scale factor for user limits
-#define FG_ERR_DATA_LEN         4           //!< meta::error.data array length
+#define FG_CLIP_LIMIT_FACTOR    0.001           //!< Scale factor for user limits
+#define FG_ERR_DATA_LEN         4               //!< meta::error.data array length
+
+/*!
+ * FG Library Gen function return status
+ */
+enum fg_gen_status
+{
+    FG_GEN_AFTER_FUNC,
+    FG_GEN_DURING_FUNC,
+    FG_GEN_BEFORE_FUNC,
+};
 
 /*!
  * FG Library error numbers
@@ -57,38 +67,14 @@ enum fg_error
 };
 
 /*!
- * Polarity of limits
+ * Polarity of function
  */
-enum fg_limits_polarity
+enum fg_func_pol
 {
-    FG_LIMITS_POL_NORMAL,                   //!< Normal limits with no manipulation
-    FG_LIMITS_POL_NEGATIVE,                 //!< Limits should be inverted
-    FG_LIMITS_POL_AUTO                      //!< Limits should be tested based upon the polarity of the reference
-};
-
-/*!
- * Diagnostic meta data structure
- */
-struct fg_meta
-{
-    enum fg_error   fg_error;               //!< Function error number
-    bool            invert_limits;          //!< Limits inverted flag
-
-    struct
-    {
-        uint32_t    index;                  //!< Error index from Init function
-        float       data[FG_ERR_DATA_LEN];  //!< Error debug data
-    } error;                                //!< Used to indicate why the reference function was rejected
-
-    float           duration;               //!< Function duration (not including delay)
-
-    struct
-    {
-        float       start;                  //!< Reference value at start of function
-        float       end;                    //!< Reference value at the end of the function
-        float       min;                    //!< Minimum value of the function
-        float       max;                    //!< Maximum value of the function
-    } range;
+    FG_FUNC_POL_ZERO,                           //!< Function is entirely zero
+    FG_FUNC_POL_POSITIVE,                       //!< Function is entirely positive
+    FG_FUNC_POL_NEGATIVE,                       //!< Function is entirely negative
+    FG_FUNC_POL_BOTH                            //!< Function is both positive and negative
 };
 
 /*!
@@ -96,11 +82,38 @@ struct fg_meta
  */
 struct fg_limits
 {
-    float           pos;                    //!< Positive reference limit
-    float           min;                    //!< Minimum absolute reference limit
-    float           neg;                    //!< Negative reference limit
-    float           rate;                   //!< Rate of change limit
-    float           acceleration;           //!< Acceleration limit
+    float               pos;                    //!< Positive reference limit
+    float               min;                    //!< Minimum absolute reference limit
+    float               neg;                    //!< Negative reference limit
+    float               rate;                   //!< Rate of change limit
+    float               acceleration;           //!< Acceleration limit
+};
+
+/*!
+ * Diagnostic meta data structure
+ */
+struct fg_meta
+{
+    enum fg_error       fg_error;               //!< Function error number
+    enum fg_func_pol    polarity;               //!< Function polarity
+    bool                limits_inverted;        //!< Function was checked against inverted limits
+
+    struct
+    {
+        uint32_t        index;                  //!< Error index from Init function
+        float           data[FG_ERR_DATA_LEN];  //!< Error debug data
+    } error;                                    //!< Used to indicate why the reference function was rejected
+
+    double              delay;                  //!< Delay before the function starts (double needed to if Unix Time is used)
+    float               duration;               //!< Function duration (not including delay)
+
+    struct
+    {
+        float           start;                  //!< Reference value at start of function
+        float           end;                    //!< Reference value at the end of the function
+        float           min;                    //!< Minimum value of the function
+        float           max;                    //!< Maximum value of the function
+    } range;
 };
 
 // External functions
@@ -113,9 +126,9 @@ extern "C" {
  * Reset all the meta data fields.
  *
  * When a function is initialized, a meta data structure is filled with a summary of the function's
- * characteristics, including the duration, min/max and start and end values. Normally, the
- * <em>meta</em> parameter is received from the calling application and it may be NULL. The libfg
- * Init function passes a pointer to transient meta structure on the stack in <em>local_meta</em>
+ * characteristics, including the delay, duration, min/max and start and end values. Normally, the
+ * <em>meta</em> parameter is received from the calling application, but it may be NULL. The libfg
+ * Init function passes a pointer to a transient meta structure on the stack in <em>local_meta</em>
  * and this is used when the application's pointer is NULL. This simplifies the code in libfg because
  * a meta structure is always available.
  *
@@ -123,17 +136,35 @@ extern "C" {
  * @param[out] local_meta Pointer to fg_meta data structure to use if <em>meta</em> is NULL.
  * @param[in]  init_ref   Initial value for the start, min and max.
  *
- * @return Pointer to the fg_meta structure that was reset (<em>meta</em> or <em>local_meta</em> if meta is NULL).
+ * @retval     Pointer to the fg_meta structure that was reset 
+ *             (<em>meta</em> or <em>local_meta</em> if meta is NULL).
  */
-struct fg_meta *fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, float init_ref);
+struct fg_meta *fgResetMeta(struct fg_meta *meta, struct fg_meta *local_meta, double delay, float init_ref);
+
+
 
 /*!
  * Set the meta min and max fields
  *
- * @param[out] meta      Pointer to fg_meta structure.
- * @param[in]  ref       Value for reference to check against meta min and max.
+ * @param[in,out] meta      Pointer to fg_meta structure.
+ * @param[in]     ref       Value for reference to check against meta min and max.
  */
 void fgSetMinMax(struct fg_meta *meta, float ref);
+
+
+
+/*!
+ * Set the meta min and max fields
+ *
+ * @param[in,out] meta            Pointer to fg_meta structure.
+ * @param[in]  is_pol_switch_auto True if polarity switch can be changed automatically.
+ * @param[in]  is_pol_switch_neg  True if polarity switch is currently in the negative position.
+ */
+void fgSetFuncPolarity(struct fg_meta *meta,
+                       bool   is_pol_switch_auto,
+                       bool   is_pol_switch_neg);
+
+
 
 /*!
  * Check function reference value, rate and acceleration against the supplied limits.
@@ -154,21 +185,22 @@ void fgSetMinMax(struct fg_meta *meta, float ref);
  * rate_limit = (1.0 + FG_CLIP_LIMIT_FACTOR) * limits::rate
  * acc_limit  = (1.0 + FG_CLIP_LIMIT_FACTOR) * limits::acceleration
  *
- * @param[in]  limits           Pointer to fg_limits structure.
- * @param[in]  limits_polarity  Control of limits inversion.
- *                              Important for unipolar converters with a polarity switch.
- * @param[in]  ref              Reference value.
- * @param[in]  rate             Rate of change of reference.
- * @param[in]  acceleration     Acceleration of reference.
- * @param[out] meta             Pointer to fg_meta structure used to return detailed error codes.
+ * @param[in]  limits        Pointer to fg_limits structure.
+ * @param[in]  ref           Reference value.
+ * @param[in]  rate          Rate of change of reference.
+ * @param[in]  acceleration  Acceleration of reference.
+ * @param[out] meta          Pointer to fg_meta structure used to return detailed error codes.
  *
  * @retval FG_OK on success.
  * @retval FG_OUT_OF_LIMITS if function value is out of limits.
  * @retval FG_OUT_OF_RATE_LIMITS if function rate of change is out of limits.
  * @retval FG_OUT_OF_ACCELERATION_LIMITS if function acceleration is out of limits.
  */
-enum fg_error fgCheckRef(struct fg_limits *limits, enum fg_limits_polarity limits_polarity,
-                         float ref, float rate, float acceleration, struct fg_meta *meta);
+enum fg_error fgCheckRef(struct fg_limits *limits, 
+                         float  ref, 
+                         float  rate, 
+                         float  acceleration, 
+                         struct fg_meta *meta);
 
 #ifdef __cplusplus
 }

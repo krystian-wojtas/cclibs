@@ -4,7 +4,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -28,45 +28,59 @@
 #include <string.h>
 #include "libfg/pppl.h"
 
-enum fg_error fgPpplInit(struct fg_limits          *limits,
-                         enum   fg_limits_polarity  limits_polarity,
-                         struct fg_pppl_config     *config,
-                         double                     delay,
-                         float                      init_ref,
-                         struct fg_pppl_pars       *pars,
-                         struct fg_meta            *meta)
+enum fg_error fgPpplInit(struct   fg_limits *limits, 
+                         bool     is_pol_switch_auto,
+                         bool     is_pol_switch_neg,
+                         double   delay, 
+                         float    initial_ref,
+                         float    acceleration1[FG_MAX_PPPLS],
+                         uint32_t acceleration1_num_els,       
+                         float    acceleration2[FG_MAX_PPPLS],
+                         uint32_t acceleration2_num_els,       
+                         float    acceleration3[FG_MAX_PPPLS],
+                         uint32_t acceleration3_num_els,       
+                         float    rate2        [FG_MAX_PPPLS],
+                         uint32_t rate2_num_els,               
+                         float    rate4        [FG_MAX_PPPLS],
+                         uint32_t rate4_num_els,               
+                         float    ref4         [FG_MAX_PPPLS],
+                         uint32_t ref4_num_els,                
+                         float    duration4    [FG_MAX_PPPLS],
+                         uint32_t duration4_num_els,           
+                         struct   fg_pppl *pars, 
+                         struct   fg_meta *meta)
 {
-    enum fg_error  fg_error;                     // Error code
-    struct fg_meta local_meta;                   // Local meta data in case user meta is NULL
-    struct fg_pppl_pars p;                       // Local PPPL pars - copied to user *pars only if there are no errors
-    uint32_t       n_pppls;                      // Number of PPPLs
-    uint32_t       pppl_idx;                     // PPPL index (0-(FG_MAX_PPPLS-1))
-    uint32_t       seg_idx;                      // Segment index (0-(4*FG_MAX_PPPLS-1))
-    uint32_t       num_segs;                     // Total number of segments (4, 8, 12, ...)
-    float          time;                         // End of segment times
-    float          acc_pow2;                     // Square of acceleration
-    float          delta_time[FG_PPPL_N_SEGS];   // Segment durations
-    float          r[FG_PPPL_N_SEGS];            // Reference at start of segment
-    float          rate[FG_PPPL_N_SEGS];         // Rate of change of at start of segment
-    float          acceleration[FG_PPPL_N_SEGS]; // Acceleration of each segment
-    float *        segs_t;                       // Pointer to p.t
-    float *        segs_a0;                      // Pointer to p.a0
-    float *        segs_a1;                      // Pointer to p.a1
-    float *        segs_a2;                      // Pointer to p.a2
+    enum fg_error  fg_error;                      // Error code
+    struct fg_meta local_meta;                    // Local meta data in case user meta is NULL
+    struct fg_pppl p;                             // Local PPPL pars - copied to user *pars only if there are no errors
+    uint32_t       n_pppls;                       // Number of PPPLs
+    uint32_t       pppl_idx;                      // PPPL index (0-(FG_MAX_PPPLS-1))
+    uint32_t       seg_idx;                       // Segment index (0-(4*FG_MAX_PPPLS-1))
+    uint32_t       num_segs;                      // Total number of segments (4, 8, 12, ...)
+    float          time;                          // End of segment times
+    float          acc_pow2;                      // Square of acceleration
+    float          delta_time  [FG_PPPL_NUM_SEGS];// Segment durations
+    float          r           [FG_PPPL_NUM_SEGS];// Reference at start of segment
+    float          rate        [FG_PPPL_NUM_SEGS];// Rate of change of at start of segment
+    float          acceleration[FG_PPPL_NUM_SEGS];// Acceleration of each segment
+    float *        segs_t;                        // Pointer to p.t
+    float *        segs_a0;                       // Pointer to p.a0
+    float *        segs_a1;                       // Pointer to p.a1
+    float *        segs_a2;                       // Pointer to p.a2
 
-    meta = fgResetMeta(meta, &local_meta, init_ref);  // Reset meta structure - uses local_meta if meta is NULL
+    meta = fgResetMeta(meta, &local_meta, delay, initial_ref);  // Reset meta structure - uses local_meta if meta is NULL
 
     // Check that number of PPPLs is the same for all seven parameters
 
-    n_pppls = config->numels_duration4;
+    n_pppls = duration4_num_els;
 
     if(!n_pppls ||
-        n_pppls != config->numels_acceleration1 ||
-        n_pppls != config->numels_acceleration2 ||
-        n_pppls != config->numels_acceleration3 ||
-        n_pppls != config->numels_rate2         ||
-        n_pppls != config->numels_rate4         ||
-        n_pppls != config->numels_ref4)
+        n_pppls != acceleration1_num_els ||
+        n_pppls != acceleration2_num_els ||
+        n_pppls != acceleration3_num_els ||
+        n_pppls != rate2_num_els         ||
+        n_pppls != rate4_num_els         ||
+        n_pppls != ref4_num_els)
     {
         fg_error = FG_BAD_ARRAY_LEN;
         goto error;
@@ -74,12 +88,12 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
 
     // Prepare to process all PPPLs
 
-    p.seg_idx     = 0;
-    p.ref_initial = init_ref;
-    p.delay       = delay;
+    p.seg_idx  = 0;
+    p.initial_ref = initial_ref;
+    p.delay    = delay;
 
     seg_idx = 0;
-    r[0]    = init_ref;
+    r[0]    = initial_ref;
     rate[0] = 0.0;
     time    = 0.0;
 
@@ -92,12 +106,12 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
 
     for(pppl_idx=0 ; pppl_idx < n_pppls ; pppl_idx++)
     {
-        r[3]    = config->ref4 [pppl_idx];
-        rate[3] = config->rate4[pppl_idx];
-        rate[1] = config->rate2[pppl_idx];
-        acceleration[0] = config->acceleration1[pppl_idx];
-        acceleration[1] = config->acceleration2[pppl_idx];
-        acceleration[2] = config->acceleration3[pppl_idx];
+        r[3]    = ref4 [pppl_idx];
+        rate[3] = rate4[pppl_idx];
+        rate[1] = rate2[pppl_idx];
+        acceleration[0] = acceleration1[pppl_idx];
+        acceleration[1] = acceleration2[pppl_idx];
+        acceleration[2] = acceleration3[pppl_idx];
 
         // TEST 1: If accelerations or rates are invalid - error.index = 1xx
 
@@ -116,7 +130,7 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
             goto error;
         }
 
-        delta_time[3] = config->duration4[pppl_idx];
+        delta_time[3] = duration4[pppl_idx];
         delta_time[0] = (rate[1] - rate[0]) / acceleration[0];
 
         r[1] = r[0] + 0.5 * delta_time[0] * (rate[0] + rate[1]);
@@ -258,27 +272,32 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
         seg_idx++;
     }
 
-    num_segs = seg_idx;
-
-    // Check the segments against the limits
-
-    for(seg_idx=0 ; seg_idx < num_segs ; seg_idx++)
-    {
-        if(limits != NULL && (fg_error = fgCheckRef(limits, limits_polarity,
-                                           segs_a0[seg_idx], segs_a1[seg_idx], segs_a2[seg_idx], meta)))
-        {
-            meta->error.index = seg_idx + 1;
-            goto error;
-        }
-    }
-
+    num_segs   = seg_idx;
     p.num_segs = num_segs;
     p.seg_idx  = 0;
 
     // Complete meta data
 
-    meta->duration  = segs_t[num_segs-1];
+    meta->duration  = segs_t [num_segs-1];
     meta->range.end = segs_a0[num_segs-1];
+
+    fgSetFuncPolarity(meta, is_pol_switch_auto, is_pol_switch_neg);
+
+    // Check the segments against the limits if provided
+
+    if(limits != NULL)
+    {
+        for(seg_idx=0 ; seg_idx < num_segs ; seg_idx++)
+        {
+            fg_error = fgCheckRef(limits, segs_a0[seg_idx], segs_a1[seg_idx], segs_a2[seg_idx], meta);
+
+            if(fg_error != FG_OK)
+            {
+                meta->error.index = seg_idx + 1;
+                goto error;
+            }
+        }
+    }
 
     // Copy valid set of parameters to user's pars structure
 
@@ -296,7 +315,7 @@ enum fg_error fgPpplInit(struct fg_limits          *limits,
 
 
 
-bool fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
+enum fg_gen_status fgPpplGen(struct fg_pppl *pars, const double *time, float *ref)
 {
     double func_time;               // Time within function
     float  seg_time;                // Time within segment
@@ -307,12 +326,12 @@ bool fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
 
     // Coast during run delay
 
-    if(func_time <= 0.0)
+    if(func_time < 0.0)
     {
         pars->seg_idx = 0;
-        *ref = pars->ref_initial;
+        *ref = pars->initial_ref;
 
-        return(true);
+        return(FG_GEN_BEFORE_FUNC);
     }
 
     // Scan through the PPPL segments to find segment containing the current time
@@ -326,7 +345,7 @@ bool fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
             pars->seg_idx = pars->num_segs - 1;
             *ref          = pars->a0[pars->seg_idx];
 
-            return(false);
+            return(FG_GEN_AFTER_FUNC);
         }
     }
 
@@ -344,7 +363,7 @@ bool fgPpplGen(struct fg_pppl_pars *pars, const double *time, float *ref)
     *ref = pars->a0[pars->seg_idx] +
           (pars->a1[pars->seg_idx] + pars->a2[pars->seg_idx] * seg_time) * seg_time;
 
-    return(true);
+    return(FG_GEN_DURING_FUNC);
 }
 
 // EOF

@@ -4,7 +4,7 @@
  *
  * <h2>Copyright</h2>
  *
- * Copyright CERN 2014. This project is released under the GNU Lesser General
+ * Copyright CERN 2015. This project is released under the GNU Lesser General
  * Public License version 3.
  * 
  * <h2>License</h2>
@@ -30,54 +30,57 @@
 
 
 
-enum fg_error fgTrimInit(struct fg_limits          *limits,
-                         enum   fg_limits_polarity  limits_polarity,
-                         struct fg_trim_config     *config,
-                         float                      delay,
-                         float                      init_ref,
-                         struct fg_trim_pars       *pars,
-                         struct fg_meta            *meta)
+enum fg_error fgTrimInit(struct fg_limits *limits, 
+                         bool   is_pol_switch_auto,
+                         bool   is_pol_switch_neg,
+                         double delay, 
+                         enum   fg_trim_type type,
+                         float  initial_ref,
+                         float  final_ref,
+                         float  duration,
+                         struct fg_trim *pars, 
+                         struct fg_meta *meta)
 {
     enum fg_error  fg_error;         // Error code
     struct fg_meta local_meta;       // Local meta data in case user meta is NULL
-    struct fg_trim_pars p;           // Local TRIM pars - copied to user *pars only if there are no errors
+    struct fg_trim p;                // Local TRIM pars - copied to user *pars only if there are no errors
     bool           is_trim_inverted; // Inverted trim flag
     float          acceleration;     // Acceleration
-    float          duration;         // Trim duration
+    float          duration1;        // Trim duration
     float          duration2;        // Trim duration based on acceleration limit
     float          delta_ref;        // Trim reference change
     float          rate_lim;         // Limiting
 
     // Reset meta structure - uses local_meta if meta is NULL
 
-    meta = fgResetMeta(meta, &local_meta, init_ref);
+    meta = fgResetMeta(meta, &local_meta, delay, initial_ref);
 
     // Save parameters
 
     p.delay       = delay;
-    p.ref_initial = init_ref;
-    p.ref_final   = config->final;
+    p.initial_ref = initial_ref;
+    p.final_ref   = final_ref;
 
     // Assess if ramp is rising or falling
 
-    delta_ref = p.ref_final - init_ref;
+    delta_ref = p.final_ref - initial_ref;
 
     if(delta_ref < 0.0)
     {
         is_trim_inverted = true;
-        meta->range.min  = p.ref_final;
-        meta->range.max  = p.ref_initial;
+        meta->range.min  = p.final_ref;
+        meta->range.max  = p.initial_ref;
     }
     else
     {
         is_trim_inverted = false;
-        meta->range.min  = p.ref_initial;
-        meta->range.max  = p.ref_final;
+        meta->range.min  = p.initial_ref;
+        meta->range.max  = p.final_ref;
     }
 
     // Prepare cubic factors according to trim type
 
-    switch(config->type)
+    switch(type)
     {
         case FG_TRIM_CUBIC:
 
@@ -93,11 +96,8 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
         default:
 
-            if(meta != NULL)
-            {
-                meta->error.index   = 1;
-                meta->error.data[0] = config->type;
-            }
+            meta->error.index   = 1;
+            meta->error.data[0] = type;
 
             fg_error = FG_BAD_PARAMETER;
             goto error;
@@ -105,9 +105,11 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
     // Calculate or check duration and complete cubic factors
 
-    if(config->duration < 1.0E-6)                                 // If duration is zero
+    if(duration < 1.0E-6)                
     {
-        if(limits == NULL)                                              // Check that limits were supplied
+        // If duration is zero then limits must be supplied
+
+        if(limits == NULL || limits->rate == 0.0)              
         {
             meta->error.index = 2;
 
@@ -124,11 +126,17 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
             rate_lim = -rate_lim;
         }
 
-        duration = p.c * delta_ref / rate_lim;                      // Calculate duration based on rate_lim
+        // Calculate duration based on rate_lim
 
-        if(p.a != 0.0)                                                  // If Cubic trim
+        duration1 = p.c * delta_ref / rate_lim;
+
+        // If Cubic trim
+
+        if(p.a != 0.0)
         {
-            if(limits->acceleration <= 0.0)                                     // Protect against zero acc
+            // Protect against zero acceleration
+
+            if(limits->acceleration <= 1.0E-6)
             {
                 meta->error.index   = 3;
                 meta->error.data[0] = limits->acceleration;
@@ -137,19 +145,17 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
                 goto error;
             }
 
-            duration2 = sqrt(fabs(6.0 * delta_ref / limits->acceleration));     // Calc duration based on
-                                                                                // acceleration limit
-            if(duration < duration2)                                            // and use the longer duration
+            // Calculate duration based on acceleration limit
+
+            duration2 = sqrt(fabs(6.0 * delta_ref / limits->acceleration));     
+                                                                               
+            if(duration1 < duration2)                                          
             {
-                duration = duration2;
+                duration1 = duration2;
             }
         }
 
-        config->duration = duration;                                    // Set duration to calculated value
-    }
-    else                                                        // else user has supplied a duration
-    {
-        duration = config->duration;
+        duration = duration1;
     }
 
     p.a *= -2.0 * delta_ref / (duration * duration * duration);
@@ -158,28 +164,30 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
     // Calculate offsets
 
     p.time_offset = 0.5 * duration;
-    p.ref_offset  = 0.5 * (p.ref_initial + p.ref_final);
+    p.ref_offset  = 0.5 * (p.initial_ref + p.final_ref);
 
     // Calculate acceleration  (note a=0 for Linear trim)
 
     acceleration = fabs(3.0 * p.a * duration);
 
-    // If supplied, check limits at the beginning, middle and end
+    // Complete meta data
+
+    meta->duration  = p.duration = duration;
+    meta->range.end = p.final_ref;
+
+    fgSetFuncPolarity(meta, is_pol_switch_auto, is_pol_switch_neg);
+
+    // Check limits at the beginning, middle and end if supplied
 
     if(limits != NULL)
     {
-        if((fg_error = fgCheckRef(limits, limits_polarity, p.ref_initial, 0.0, (config->type == FG_TRIM_CUBIC ? acceleration : 0.0), meta)) ||
-           (fg_error = fgCheckRef(limits, limits_polarity, p.ref_offset,  p.c, 0.0, meta)) ||
-           (fg_error = fgCheckRef(limits, limits_polarity, p.ref_final,   0.0, 0.0, meta)))
+        if((fg_error = fgCheckRef(limits, p.initial_ref, 0.0, type == FG_TRIM_CUBIC ? acceleration : 0.0, meta)) ||
+           (fg_error = fgCheckRef(limits, p.ref_offset,  p.c, 0.0, meta)) ||
+           (fg_error = fgCheckRef(limits, p.final_ref,   0.0, 0.0, meta)))
         {
             goto error;
         }
     }
-
-    // Complete meta data
-
-    meta->duration  = p.duration = duration;
-    meta->range.end = p.ref_final;
 
     // Copy valid set of parameters to user's pars structure
 
@@ -197,7 +205,7 @@ enum fg_error fgTrimInit(struct fg_limits          *limits,
 
 
 
-bool fgTrimGen(struct fg_trim_pars *pars, const double *time, float *ref)
+enum fg_gen_status fgTrimGen(struct fg_trim *pars, const double *time, float *ref)
 {
     double   func_time;                     // Time within function
     float    seg_time;                      // Time within segment
@@ -208,9 +216,11 @@ bool fgTrimGen(struct fg_trim_pars *pars, const double *time, float *ref)
 
     // Pre-trim coast
 
-    if(func_time <= 0.0)
+    if(func_time < 0.0)
     {
-        *ref = pars->ref_initial;
+        *ref = pars->initial_ref;
+
+        return(FG_GEN_BEFORE_FUNC);
     }
 
     // Trim
@@ -219,18 +229,15 @@ bool fgTrimGen(struct fg_trim_pars *pars, const double *time, float *ref)
     {
         seg_time = func_time - pars->time_offset;
         *ref   = pars->ref_offset + seg_time * (pars->a * seg_time * seg_time + pars->c);
+
+        return(FG_GEN_DURING_FUNC);
     }
 
     // Post-trim coast
 
-    else
-    {
-        *ref = pars->ref_final;
+    *ref = pars->final_ref;
 
-        return(false);
-    }
-
-    return(true);
+    return(FG_GEN_AFTER_FUNC);
 }
 
 // EOF

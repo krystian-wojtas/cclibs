@@ -28,7 +28,7 @@
 #include <math.h>
 #include "libreg/delay.h"
 
-// Non-Real-Time Functions: do not call these from the real-time thread or interrupt
+// Background functions: do not call these from the real-time thread or interrupt
 
 void regDelayInitDelay(struct reg_delay *delay, float delay_iters)
 {
@@ -51,6 +51,8 @@ void regDelayInitDelay(struct reg_delay *delay, float delay_iters)
     delay->delay_int  = (int32_t)delay_int;
 }
 
+
+
 void regDelayInitVars(struct reg_delay *delay, float initial_signal)
 {
     uint32_t    i;
@@ -60,6 +62,8 @@ void regDelayInitVars(struct reg_delay *delay, float initial_signal)
         delay->buf[i] = initial_signal;
     }
 }
+
+
 
 // Real-Time Functions
 

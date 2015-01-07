@@ -38,39 +38,39 @@
 
 struct ccpars_limits
 {
-    float   b_pos              [REG_N_LOADS];      // Field positive trip limit
-    float   b_min              [REG_N_LOADS];      // Field minimum regulation limit
-    float   b_neg              [REG_N_LOADS];      // Field negative trip limit
-    float   b_rate             [REG_N_LOADS];      // Field rate of change clip limit
-    float   b_acceleration     [REG_N_LOADS];      // Field acceleration clip limit
-    float   b_closeloop        [REG_N_LOADS];      // Field regulation closed loop limit
-    float   b_low              [REG_N_LOADS];      // Field low limit
-    float   b_zero             [REG_N_LOADS];      // Field zero limit
-    float   b_err_warning      [REG_N_LOADS];      // Field regulation error warning limit
-    float   b_err_fault        [REG_N_LOADS];      // Field regulation error fault limit
+    float   b_pos              [REG_NUM_LOADS];    // Field positive trip limit
+    float   b_min              [REG_NUM_LOADS];    // Field minimum regulation limit
+    float   b_neg              [REG_NUM_LOADS];    // Field negative trip limit
+    float   b_rate             [REG_NUM_LOADS];    // Field rate of change clip limit
+    float   b_acceleration     [REG_NUM_LOADS];    // Field acceleration clip limit
+    float   b_closeloop        [REG_NUM_LOADS];    // Field regulation closed loop limit
+    float   b_low              [REG_NUM_LOADS];    // Field low limit
+    float   b_zero             [REG_NUM_LOADS];    // Field zero limit
+    float   b_err_warning      [REG_NUM_LOADS];    // Field regulation error warning limit
+    float   b_err_fault        [REG_NUM_LOADS];    // Field regulation error fault limit
 
-    float   i_pos              [REG_N_LOADS];      // Current positive trip limit
-    float   i_min              [REG_N_LOADS];      // Current minimum regulation limit
-    float   i_neg              [REG_N_LOADS];      // Current negative trip limit
-    float   i_rate             [REG_N_LOADS];      // Current rate of change clip limit
-    float   i_acceleration     [REG_N_LOADS];      // Current acceleration clip limit
-    float   i_closeloop        [REG_N_LOADS];      // Current regulation closed loop limit
-    float   i_low              [REG_N_LOADS];      // Current low limit
-    float   i_zero             [REG_N_LOADS];      // Current zero limit
-    float   i_err_warning      [REG_N_LOADS];      // Current regulation error warning limit
-    float   i_err_fault        [REG_N_LOADS];      // Current regulation error fault limit
+    float   i_pos              [REG_NUM_LOADS];    // Current positive trip limit
+    float   i_min              [REG_NUM_LOADS];    // Current minimum regulation limit
+    float   i_neg              [REG_NUM_LOADS];    // Current negative trip limit
+    float   i_rate             [REG_NUM_LOADS];    // Current rate of change clip limit
+    float   i_acceleration     [REG_NUM_LOADS];    // Current acceleration clip limit
+    float   i_closeloop        [REG_NUM_LOADS];    // Current regulation closed loop limit
+    float   i_low              [REG_NUM_LOADS];    // Current low limit
+    float   i_zero             [REG_NUM_LOADS];    // Current zero limit
+    float   i_err_warning      [REG_NUM_LOADS];    // Current regulation error warning limit
+    float   i_err_fault        [REG_NUM_LOADS];    // Current regulation error fault limit
     float   i_quadrants41      [2];                // Current range for voltage exclusion zone for quadrants 4 and 1
 
     float   i_rms_tc;                              // Converter RMS current filter time constant
     float   i_rms_warning;                         // Converter RMS current warning limit
     float   i_rms_fault;                           // Converter RMS current fault limit
 
-    float   i_rms_load_tc      [REG_N_LOADS];      // Load RMS current filter time constant
-    float   i_rms_load_warning [REG_N_LOADS];      // Load RMS current warning limit
-    float   i_rms_load_fault   [REG_N_LOADS];      // Load RMS current fault limit
+    float   i_rms_load_tc      [REG_NUM_LOADS];    // Load RMS current filter time constant
+    float   i_rms_load_warning [REG_NUM_LOADS];    // Load RMS current warning limit
+    float   i_rms_load_fault   [REG_NUM_LOADS];    // Load RMS current fault limit
 
-    float   v_pos              [REG_N_LOADS];      // Voltage positive clip limit
-    float   v_neg              [REG_N_LOADS];      // Voltage negative clip limit
+    float   v_pos              [REG_NUM_LOADS];    // Voltage positive clip limit
+    float   v_neg              [REG_NUM_LOADS];    // Voltage negative clip limit
     float   v_rate;                                // Voltage rate of change clip limit
     float   v_acceleration;                        // Voltage acceleration clip limit
     float   v_err_warning;                         // Voltage regulation error warning limit
@@ -126,42 +126,42 @@ CCPARS_LIMITS_EXT struct ccpars_limits ccpars_limits
 
 CCPARS_LIMITS_EXT struct ccpars limits_pars[]
 #ifdef GLOBALS
-= {// "Signal name"         type,      max_n_els,  *enum,               *value,                             num_defaults, flags
-    { "B_POS",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_pos              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_MIN",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_min              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_NEG",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_neg              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_RATE",             PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_rate             }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_ACCELERATION",     PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_acceleration     }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_CLOSELOOP",        PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_closeloop        }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_LOW",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_low              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_ZERO",             PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_zero             }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_ERR_WARNING",      PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_err_warning      }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "B_ERR_FAULT",        PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.b_err_fault        }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_POS",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_pos              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_MIN",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_min              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_NEG",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_neg              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_RATE",             PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_rate             }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_ACCELERATION",     PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_acceleration     }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_CLOSELOOP",        PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_closeloop        }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_LOW",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_low              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_ZERO",             PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_zero             }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_ERR_WARNING",      PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_err_warning      }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_ERR_FAULT",        PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_err_fault        }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_QUADRANTS41",      PAR_FLOAT, 2,           NULL,        { .f =  ccpars_limits.i_quadrants41      }, 2,           PARS_FIXED_LENGTH },
-    { "I_RMS_TC",           PAR_FLOAT, 1,           NULL,        { .f = &ccpars_limits.i_rms_tc           }, 1,           0                 },
-    { "I_RMS_WARNING",      PAR_FLOAT, 1,           NULL,        { .f = &ccpars_limits.i_rms_warning      }, 1,           0                 },
-    { "I_RMS_FAULT",        PAR_FLOAT, 1,           NULL,        { .f = &ccpars_limits.i_rms_fault        }, 1,           0                 },
-    { "I_RMS_LOAD_TC",      PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_rms_load_tc      }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_RMS_LOAD_WARNING", PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_rms_load_warning }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "I_RMS_LOAD_FAULT",   PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.i_rms_load_fault   }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "V_POS",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.v_pos              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "V_NEG",              PAR_FLOAT, REG_N_LOADS, NULL,        { .f =  ccpars_limits.v_neg              }, REG_N_LOADS, PARS_FIXED_LENGTH },
-    { "V_RATE",             PAR_FLOAT, 1,           NULL,        { .f = &ccpars_limits.v_rate             }, 1,           0                 },
-    { "V_ACCELERATION",     PAR_FLOAT, 1,           NULL,        { .f = &ccpars_limits.v_acceleration     }, 1,           0                 },
-    { "V_ERR_WARNING",      PAR_FLOAT, 1,           NULL,        { .f = &ccpars_limits.v_err_warning      }, 1,           0                 },
-    { "V_ERR_FAULT",        PAR_FLOAT, 1,           NULL,        { .f = &ccpars_limits.v_err_fault        }, 1,           0                 },
-    { "V_QUADRANTS41",      PAR_FLOAT, 2,           NULL,        { .f =  ccpars_limits.v_quadrants41      }, 2,           PARS_FIXED_LENGTH },
-    { "INVERT",             PAR_ENUM,  1, enum_enabled_disabled, { .u = &ccpars_limits.invert             }, 1,           0                 },
+= {// "Signal name"         type,      max_n_els,  *enum,               *value,                             num_defaults,cyc_sel_step,flags
+    { "B_POS",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_pos              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_MIN",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_min              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_NEG",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_neg              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_RATE",             PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_rate             }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_ACCELERATION",     PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_acceleration     }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_CLOSELOOP",        PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_closeloop        }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_LOW",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_low              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_ZERO",             PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_zero             }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_ERR_WARNING",      PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_err_warning      }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "B_ERR_FAULT",        PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.b_err_fault        }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_POS",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_pos              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_MIN",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_min              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_NEG",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_neg              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_RATE",             PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_rate             }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_ACCELERATION",     PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_acceleration     }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_CLOSELOOP",        PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_closeloop        }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_LOW",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_low              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_ZERO",             PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_zero             }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_ERR_WARNING",      PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_err_warning      }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_ERR_FAULT",        PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_err_fault        }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_QUADRANTS41",      PAR_FLOAT, 2,             NULL,        { .f =  ccpars_limits.i_quadrants41      }, 2,             0, PARS_FIXED_LENGTH },
+    { "I_RMS_TC",           PAR_FLOAT, 1,             NULL,        { .f = &ccpars_limits.i_rms_tc           }, 1,             0, 0                 },
+    { "I_RMS_WARNING",      PAR_FLOAT, 1,             NULL,        { .f = &ccpars_limits.i_rms_warning      }, 1,             0, 0                 },
+    { "I_RMS_FAULT",        PAR_FLOAT, 1,             NULL,        { .f = &ccpars_limits.i_rms_fault        }, 1,             0, 0                 },
+    { "I_RMS_LOAD_TC",      PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_rms_load_tc      }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_RMS_LOAD_WARNING", PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_rms_load_warning }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "I_RMS_LOAD_FAULT",   PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.i_rms_load_fault   }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "V_POS",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.v_pos              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "V_NEG",              PAR_FLOAT, REG_NUM_LOADS, NULL,        { .f =  ccpars_limits.v_neg              }, REG_NUM_LOADS, 0, PARS_FIXED_LENGTH },
+    { "V_RATE",             PAR_FLOAT, 1,             NULL,        { .f = &ccpars_limits.v_rate             }, 1,             0, 0                 },
+    { "V_ACCELERATION",     PAR_FLOAT, 1,             NULL,        { .f = &ccpars_limits.v_acceleration     }, 1,             0, 0                 },
+    { "V_ERR_WARNING",      PAR_FLOAT, 1,             NULL,        { .f = &ccpars_limits.v_err_warning      }, 1,             0, 0                 },
+    { "V_ERR_FAULT",        PAR_FLOAT, 1,             NULL,        { .f = &ccpars_limits.v_err_fault        }, 1,             0, 0                 },
+    { "V_QUADRANTS41",      PAR_FLOAT, 2,             NULL,        { .f =  ccpars_limits.v_quadrants41      }, 2,             0, PARS_FIXED_LENGTH },
+    { "INVERT",             PAR_ENUM,  1, enum_enabled_disabled,   { .u = &ccpars_limits.invert             }, 1,             0, 0                 },
     { NULL }
 }
 #endif
